@@ -1,0 +1,46 @@
+# quivoto — configuració Apache (Plesk). Documentació: docs/DESPLEGAMENT.md
+
+# ---- HTTPS i domini canònic (sense www) ----
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Cloudflare i proxies posen la capçalera X-Forwarded-Proto
+  RewriteCond %{HTTP:X-Forwarded-Proto} =http [OR]
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# ---- Capçaleres de seguretat ----
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), interest-cohort=()"
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+  # Tot és local: ni scripts ni tipografies de tercers.
+  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'self'; base-uri 'self'"
+</IfModule>
+
+# ---- Memòria cau ----
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 30 days"
+  ExpiresByType text/html "access plus 10 minutes"
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript image/svg+xml application/json
+</IfModule>
+
+# ---- Res de llistats ni fitxers sensibles ----
+Options -Indexes
+<FilesMatch "^(config\.php|.*\.sqlite|.*\.sqlite-wal|.*\.sqlite-shm|\.git.*)$">
+  Require all denied
+</FilesMatch>
+
+ErrorDocument 404 /index.html

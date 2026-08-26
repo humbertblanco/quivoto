@@ -1,0 +1,315 @@
+{
+  "pages": [
+    {
+      "id": "page-identitat",
+      "name": "Identitat quivoto (D, tancada)"
+    },
+    {
+      "id": "page-noms",
+      "name": "Noms"
+    },
+    {
+      "id": "page-iteracio",
+      "name": "Iteració A + D (noms, mascotes, icones, pantalles)"
+    },
+    {
+      "id": "page-direccions",
+      "name": "Direccions (A, B, D, E, F, G)"
+    },
+    {
+      "id": "page-descartades",
+      "name": "Descartades"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1120,
+      "title": "Noms candidats",
+      "page": "page-noms"
+    },
+    {
+      "file": "DireccioA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 980,
+      "title": "A · Mascota + píndoles (1 personatge)",
+      "page": "page-direccions"
+    },
+    {
+      "file": "TestA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "A · Pantalla del test",
+      "page": "page-direccions"
+    },
+    {
+      "file": "DireccioB.dc.html",
+      "x": 0,
+      "y": 1120,
+      "w": 1440,
+      "h": 1040,
+      "title": "B · Campanya bold (mascota secundària)",
+      "page": "page-direccions"
+    },
+    {
+      "file": "TestB.dc.html",
+      "x": 1560,
+      "y": 1120,
+      "w": 390,
+      "h": 844,
+      "title": "B · Pantalla del test",
+      "page": "page-direccions"
+    },
+    {
+      "file": "DireccioD.dc.html",
+      "x": 0,
+      "y": 2300,
+      "w": 1440,
+      "h": 980,
+      "title": "D · El veïnat (diversos personatges)",
+      "page": "page-direccions"
+    },
+    {
+      "file": "TestD.dc.html",
+      "x": 1560,
+      "y": 1000,
+      "w": 390,
+      "h": 844,
+      "title": "Afirmació",
+      "page": "page-identitat"
+    },
+    {
+      "file": "DireccioE.dc.html",
+      "x": 0,
+      "y": 3420,
+      "w": 1440,
+      "h": 980,
+      "title": "E · La gent del poble (línia, diversos)",
+      "page": "page-direccions"
+    },
+    {
+      "file": "TestE.dc.html",
+      "x": 1560,
+      "y": 3420,
+      "w": 390,
+      "h": 844,
+      "title": "E · Pantalla del test",
+      "page": "page-direccions"
+    },
+    {
+      "file": "DireccioF.dc.html",
+      "x": 0,
+      "y": 4540,
+      "w": 1440,
+      "h": 980,
+      "title": "F · L'Urna, adhesius (1 personatge)",
+      "page": "page-direccions"
+    },
+    {
+      "file": "TestF.dc.html",
+      "x": 1560,
+      "y": 4540,
+      "w": 390,
+      "h": 844,
+      "title": "F · Pantalla del test",
+      "page": "page-direccions"
+    },
+    {
+      "file": "DireccioG.dc.html",
+      "x": 0,
+      "y": 5660,
+      "w": 1440,
+      "h": 980,
+      "title": "G · El mapa del poble (1 personatge)",
+      "page": "page-direccions"
+    },
+    {
+      "file": "TestG.dc.html",
+      "x": 1560,
+      "y": 5660,
+      "w": 390,
+      "h": 844,
+      "title": "G · Pantalla del test",
+      "page": "page-direccions"
+    },
+    {
+      "file": "DireccioC.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 980,
+      "title": "C · Geomètric Bauhaus (descartada)",
+      "page": "page-descartades"
+    },
+    {
+      "file": "TestC.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "C · Pantalla del test",
+      "page": "page-descartades"
+    },
+    {
+      "file": "NomsA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 760,
+      "title": "Noms en univers A",
+      "page": "page-iteracio"
+    },
+    {
+      "file": "NomsD.dc.html",
+      "x": 0,
+      "y": 900,
+      "w": 1440,
+      "h": 760,
+      "title": "Noms en univers D",
+      "page": "page-iteracio"
+    },
+    {
+      "file": "MascotesA.dc.html",
+      "x": 0,
+      "y": 1800,
+      "w": 1440,
+      "h": 760,
+      "title": "Mascotes candidates + híbrid A+D",
+      "page": "page-iteracio"
+    },
+    {
+      "file": "IconesA.dc.html",
+      "x": 0,
+      "y": 2700,
+      "w": 1440,
+      "h": 900,
+      "title": "Icones municipals · A",
+      "page": "page-iteracio"
+    },
+    {
+      "file": "IconesD.dc.html",
+      "x": 0,
+      "y": 3520,
+      "w": 1440,
+      "h": 900,
+      "title": "Icones municipals",
+      "page": "page-identitat"
+    },
+    {
+      "file": "HomeA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "A · Inici",
+      "page": "page-iteracio"
+    },
+    {
+      "file": "ResultatA.dc.html",
+      "x": 2030,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "A · Resultat",
+      "page": "page-iteracio"
+    },
+    {
+      "file": "HomeD.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Inici",
+      "page": "page-identitat"
+    },
+    {
+      "file": "ResultatD.dc.html",
+      "x": 2030,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Resultat",
+      "page": "page-identitat"
+    },
+    {
+      "file": "MarcaD.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1180,
+      "title": "Marca, sistema i dominis",
+      "page": "page-identitat"
+    },
+    {
+      "file": "FusioD.dc.html",
+      "x": 0,
+      "y": 1320,
+      "w": 1440,
+      "h": 900,
+      "title": "La fusió: protagonista + veïnat",
+      "page": "page-identitat"
+    },
+    {
+      "file": "CaresD.dc.html",
+      "x": 0,
+      "y": 2360,
+      "w": 1440,
+      "h": 1020,
+      "title": "16 veïns, una sola cara",
+      "page": "page-identitat"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "com-triar",
+      "x": 1560,
+      "y": 0,
+      "w": 360,
+      "page": "page-noms",
+      "text": "Com triar\n\n1) Tria un nom (o digues-ne un de nou).\n2) A la pàgina Direccions hi ha 6 universos visuals. Tria el que mana; es poden barrejar.\n3) Amb això fixo tokens, tipografies, mascota SVG i wordmark, i passo a les pantalles reals.\n\nTots els percentatges i partits són de mostra."
+    },
+    {
+      "id": "un-o-diversos",
+      "x": 2050,
+      "y": 0,
+      "w": 360,
+      "page": "page-direccions",
+      "text": "Un personatge o diversos?\n\nUN protagonista: A (urna + píndoles), F (l'Urna amb armari d'adhesius), G (en Fitó, el rètol del mapa).\n\nDIVERSOS: D (el veïnat: urna, bus, bloc, arbre, banc, contenidor), E (gent del poble dibuixada).\n\nB té mascota però secundària."
+    },
+    {
+      "id": "c-descartada",
+      "x": 2050,
+      "y": 0,
+      "w": 360,
+      "page": "page-descartades",
+      "text": "C queda descartada (la que menys t'agradava). La guardo per si volem reciclar-ne les xifres grans per als resultats."
+    },
+    {
+      "id": "iteracio-nota",
+      "x": 1560,
+      "y": 2000,
+      "w": 420,
+      "page": "page-iteracio",
+      "text": "Iteració sobre A i D\n\n- Fulls de noms: el mateix nom en cada univers.\n- Mascotes: 4 candidates amb 3 estats; a sota, l'híbrid (1 protagonista + veïnat secundari).\n- Icones: 16 temes en A i en D, amb variant amb ulls (icona = personatge).\n- Inici i resultat en tots dos estils, amb les icones com a xips de tema.\n\nTot amb dades de mostra."
+    },
+    {
+      "id": "identitat-nota",
+      "x": 2030,
+      "y": 1000,
+      "w": 390,
+      "page": "page-identitat",
+      "text": "Decidit\n\nNom: quivoto\nDominis: quivoto.cat (CA) i quienvoto.es (ES). Recomanat agafar tambe quivoto.com i quienvoto.com com a defensius.\nDireccio: D, el veinat.\nFusio: una protagonista (l'urna) + 16 veins que son les icones dels temes amb cara.\n\nObert: com es diu la mascota (l'Urna / la Uri / la Voto).\n\nDades de mostra a totes les pantalles."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-identitat"
+  }
+}

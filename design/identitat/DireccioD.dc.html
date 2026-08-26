@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gabarito:wght@500;700;900&family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;1,6..12,400&display=swap">
+  <style>
+    body { margin: 0; background: #FBF7EE; font-family: "Nunito Sans", "Helvetica Neue", Arial, sans-serif; color: #1E1B2E; }
+    a { color: #E2735A; } a:hover { color: #1E1B2E; }
+  </style>
+</helmet>
+<div style="width: 1440px; min-height: 980px; background: #FBF7EE; padding: 44px 56px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px;">
+
+  <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: inline-flex; background: #1E1B2E; color: #FBF7EE; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; width: max-content;">Direcció D · El veïnat</div>
+      <h1 style="margin: 0; font-family: 'Gabarito', sans-serif; font-weight: 900; font-size: 44px; line-height: 1; letter-spacing: -0.02em;">Tot el poble té cara</h1>
+      <p style="margin: 0; font-size: 17px; max-width: 860px; line-height: 1.4;">Un univers de personatges: l'urna, el bus, el bloc de pisos, el banc de la plaça, el contenidor, l'arbre. Cada tema del municipi té el seu veí, i els veïns t'acompanyen pel test. Pastel, rodó, amable. Mostrat amb el nom <strong>voto</strong>.</p>
+    </div>
+    <div style="font-size: 13px; color: #6B6680; text-align: right; line-height: 1.5;">Tipografia: Gabarito + Nunito Sans<br>Paleta: crema càlid · coral · menta · lavanda · tinta violeta</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 420px; gap: 24px;">
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+
+      <!-- Cast -->
+      <div style="background: #FFFFFF; border-radius: 28px; padding: 28px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6B6680;">El repartiment (un veí per tema)</div>
+        <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; text-align: center; font-size: 13px; font-weight: 600;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <svg width="110" height="110" viewBox="0 0 110 110"><rect x="12" y="30" width="86" height="66" rx="22" fill="#E2735A"></rect><rect x="38" y="24" width="34" height="10" rx="5" fill="#1E1B2E"></rect><circle cx="42" cy="60" r="8" fill="#FBF7EE"></circle><circle cx="68" cy="60" r="8" fill="#FBF7EE"></circle><circle cx="44" cy="61" r="4" fill="#1E1B2E"></circle><circle cx="70" cy="61" r="4" fill="#1E1B2E"></circle><path d="M46 78 q9 8 18 0" stroke="#1E1B2E" stroke-width="3.5" fill="none" stroke-linecap="round"></path></svg>
+            <span>Urna<br><span style="font-weight: 400; color: #6B6680;">Govern obert</span></span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <svg width="110" height="110" viewBox="0 0 110 110"><rect x="8" y="32" width="94" height="52" rx="16" fill="#BFE8D2"></rect><rect x="18" y="42" width="20" height="16" rx="4" fill="#FBF7EE"></rect><rect x="72" y="42" width="20" height="16" rx="4" fill="#FBF7EE"></rect><circle cx="46" cy="52" r="6" fill="#1E1B2E"></circle><circle cx="64" cy="52" r="6" fill="#1E1B2E"></circle><path d="M48 68 q7 6 14 0" stroke="#1E1B2E" stroke-width="3" fill="none" stroke-linecap="round"></path><circle cx="28" cy="88" r="9" fill="#1E1B2E"></circle><circle cx="82" cy="88" r="9" fill="#1E1B2E"></circle></svg>
+            <span>Bus<br><span style="font-weight: 400; color: #6B6680;">Mobilitat</span></span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <svg width="110" height="110" viewBox="0 0 110 110"><rect x="24" y="14" width="62" height="86" rx="10" fill="#C9C4F2"></rect><rect x="34" y="24" width="12" height="12" rx="3" fill="#FBF7EE"></rect><rect x="64" y="24" width="12" height="12" rx="3" fill="#FBF7EE"></rect><rect x="34" y="72" width="12" height="12" rx="3" fill="#FBF7EE"></rect><rect x="64" y="72" width="12" height="12" rx="3" fill="#FBF7EE"></rect><circle cx="44" cy="52" r="6" fill="#1E1B2E"></circle><circle cx="66" cy="52" r="6" fill="#1E1B2E"></circle><path d="M47 64 q8 6 16 0" stroke="#1E1B2E" stroke-width="3" fill="none" stroke-linecap="round"></path></svg>
+            <span>Bloc<br><span style="font-weight: 400; color: #6B6680;">Habitatge</span></span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <svg width="110" height="110" viewBox="0 0 110 110"><circle cx="55" cy="44" r="32" fill="#BFE8D2"></circle><circle cx="34" cy="58" r="20" fill="#BFE8D2"></circle><circle cx="76" cy="58" r="20" fill="#BFE8D2"></circle><rect x="49" y="70" width="12" height="30" rx="4" fill="#1E1B2E"></rect><circle cx="46" cy="44" r="6" fill="#1E1B2E"></circle><circle cx="66" cy="44" r="6" fill="#1E1B2E"></circle><path d="M48 56 q7 6 14 0" stroke="#1E1B2E" stroke-width="3" fill="none" stroke-linecap="round"></path></svg>
+            <span>Arbre<br><span style="font-weight: 400; color: #6B6680;">Medi ambient</span></span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <svg width="110" height="110" viewBox="0 0 110 110"><rect x="12" y="46" width="86" height="22" rx="8" fill="#E2735A"></rect><rect x="20" y="26" width="70" height="18" rx="7" fill="#E2735A"></rect><rect x="20" y="70" width="10" height="26" fill="#1E1B2E"></rect><rect x="80" y="70" width="10" height="26" fill="#1E1B2E"></rect><circle cx="44" cy="35" r="5" fill="#1E1B2E"></circle><circle cx="66" cy="35" r="5" fill="#1E1B2E"></circle><path d="M48 55 q7 6 14 0" stroke="#1E1B2E" stroke-width="3" fill="none" stroke-linecap="round"></path></svg>
+            <span>Banc<br><span style="font-weight: 400; color: #6B6680;">Espai públic</span></span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <svg width="110" height="110" viewBox="0 0 110 110"><path d="M20 40 h70 l-8 56 h-54z" fill="#C9C4F2"></path><rect x="14" y="28" width="82" height="14" rx="7" fill="#1E1B2E"></rect><circle cx="44" cy="62" r="6" fill="#1E1B2E"></circle><circle cx="66" cy="62" r="6" fill="#1E1B2E"></circle><path d="M46 78 q9 -6 18 0" stroke="#1E1B2E" stroke-width="3" fill="none" stroke-linecap="round"></path></svg>
+            <span>Contenidor<br><span style="font-weight: 400; color: #6B6680;">Neteja i residus</span></span></div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+        <div style="background: #BFE8D2; border-radius: 28px; padding: 24px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #2F5B47;">Com parlen</div>
+          <div style="background: #FFFFFF; border-radius: 20px 20px 20px 4px; padding: 14px 16px; font-size: 16px; line-height: 1.35; max-width: 320px;">Hola! Sóc el bus 12. A Sabadell em volen fer gratuït per a menors de 25. Tu què en penses?</div>
+          <div style="font-size: 13px; color: #2F5B47;">Cada afirmació la presenta el veí del tema, en bafarada. To de conversa, mai institucional.</div>
+        </div>
+        <div style="background: #C9C4F2; border-radius: 28px; padding: 24px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #3E3670;">Escala: el veí reacciona</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <svg width="54" height="54" viewBox="0 0 54 54"><circle cx="27" cy="27" r="24" fill="#FBF7EE"></circle><path d="M16 18 l8 5 M38 18 l-8 5" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round"></path><circle cx="20" cy="27" r="3" fill="#1E1B2E"></circle><circle cx="34" cy="27" r="3" fill="#1E1B2E"></circle><path d="M19 40 q8 -7 16 0" stroke="#1E1B2E" stroke-width="3" fill="none" stroke-linecap="round"></path></svg>
+            <svg width="54" height="54" viewBox="0 0 54 54"><circle cx="27" cy="27" r="24" fill="#FBF7EE"></circle><circle cx="20" cy="25" r="3" fill="#1E1B2E"></circle><circle cx="34" cy="25" r="3" fill="#1E1B2E"></circle><path d="M20 38 q7 -3 14 0" stroke="#1E1B2E" stroke-width="3" fill="none" stroke-linecap="round"></path></svg>
+            <svg width="54" height="54" viewBox="0 0 54 54"><circle cx="27" cy="27" r="24" fill="#FBF7EE"></circle><circle cx="20" cy="25" r="3" fill="#1E1B2E"></circle><circle cx="34" cy="25" r="3" fill="#1E1B2E"></circle><path d="M20 37 h14" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round"></path></svg>
+            <svg width="54" height="54" viewBox="0 0 54 54"><circle cx="27" cy="27" r="24" fill="#FBF7EE"></circle><circle cx="20" cy="25" r="3" fill="#1E1B2E"></circle><circle cx="34" cy="25" r="3" fill="#1E1B2E"></circle><path d="M19 35 q8 7 16 0" stroke="#1E1B2E" stroke-width="3" fill="none" stroke-linecap="round"></path></svg>
+            <svg width="54" height="54" viewBox="0 0 54 54"><circle cx="27" cy="27" r="24" fill="#E2735A"></circle><path d="M15 25 q5 -6 10 0 M29 25 q5 -6 10 0" stroke="#1E1B2E" stroke-width="3" fill="none" stroke-linecap="round"></path><path d="M18 33 q9 12 18 0z" fill="#1E1B2E"></path></svg>
+          </div>
+          <div style="font-size: 13px; color: #3E3670;">Les cinc cares valen per a tots els veïns: mateixos ulls, mateixa boca.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="background: #1E1B2E; color: #FBF7EE; border-radius: 28px; padding: 28px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-family: 'Gabarito', sans-serif; font-weight: 900; font-size: 84px; line-height: 0.9; letter-spacing: -0.04em;">voto</div>
+        <div style="font-size: 16px; line-height: 1.35; opacity: 0.85;">La "o" final és sempre un veí diferent segons la pàgina: l'urna a l'inici, el bus a mobilitat, el bloc a habitatge.</div>
+        <div style="display: flex; gap: 8px; margin-top: 4px;">
+          <div style="flex: 1; height: 40px; border-radius: 12px; background: #FBF7EE;"></div>
+          <div style="flex: 1; height: 40px; border-radius: 12px; background: #E2735A;"></div>
+          <div style="flex: 1; height: 40px; border-radius: 12px; background: #BFE8D2;"></div>
+          <div style="flex: 1; height: 40px; border-radius: 12px; background: #C9C4F2;"></div>
+          <div style="flex: 1; height: 40px; border-radius: 12px; background: #1E1B2E; border: 1px solid #555;"></div>
+        </div>
+      </div>
+      <div style="background: #FFFFFF; border-radius: 28px; padding: 24px; display: flex; flex-direction: column; gap: 12px; aspect-ratio: 1 / 1; justify-content: space-between;">
+        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700;"><span style="font-family: 'Gabarito', sans-serif; font-size: 18px;">voto</span><span style="color: #6B6680;">Sabadell</span></div>
+        <div style="display: flex; align-items: center; justify-content: center; position: relative; height: 170px;">
+          <svg width="170" height="170" viewBox="0 0 170 170" style="position: absolute;"><circle cx="85" cy="85" r="70" fill="none" stroke="#F1ECE0" stroke-width="22"></circle><path d="M85 15 a70 70 0 1 1 -66 91" fill="none" stroke="#E2735A" stroke-width="22" stroke-linecap="round"></path></svg>
+          <div style="text-align: center;"><div style="font-family: 'Gabarito', sans-serif; font-weight: 900; font-size: 48px; line-height: 1;">78%</div><div style="font-size: 13px; color: #6B6680;">amb ERC-AM</div></div>
+        </div>
+        <div style="display: flex; gap: 6px; justify-content: center;">
+          <span style="width: 34px; height: 34px; border-radius: 50%; background: #E2735A;"></span><span style="width: 34px; height: 34px; border-radius: 50%; background: #BFE8D2;"></span><span style="width: 34px; height: 34px; border-radius: 50%; background: #C9C4F2;"></span>
+        </div>
+        <div style="font-size: 12px; color: #6B6680; text-align: center;">Targeta per compartir (mostra): anell de coincidència + veïns dels teus 3 temes.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

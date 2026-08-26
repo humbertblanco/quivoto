@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /gracies.html
+Disallow: /es/gracies.html
+
+Sitemap: https://quivoto.cat/sitemap.xml

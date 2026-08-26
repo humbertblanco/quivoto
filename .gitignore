@@ -1,0 +1,12 @@
+# Secrets i dades: mai al repositori
+web/public/api/config.php
+web/private/data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Sistema
+.DS_Store
+node_modules/
+__pycache__/
+*.pyc
