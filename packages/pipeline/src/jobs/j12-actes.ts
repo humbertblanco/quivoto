@@ -41,10 +41,15 @@ const DIRECTORI_ACTES =
   process.env.QUIVOTO_ACTES_DIR ?? new URL("../../../db/.data/actes/", import.meta.url).pathname;
 
 /** Com a molt quatre descàrregues alhora. La font és d'un consorci públic. */
-const PARAL·LEL = 4;
+/**
+ * Una sola descàrrega alhora. No és una limitació tècnica: és la diferència
+ * entre llegir dades obertes i castigar el servidor de qui te les ha donades.
+ */
+const PARAL·LEL = 1;
 
 /** Pausa entre descàrregues d'un mateix fil, per no martellejar l'acteca. */
-const PAUSA_MS = 250;
+/** Un segon entre PDF. A aquest ritme el servidor ni se n'adona. */
+const PAUSA_MS = 1_000;
 
 const MIDA_MAXIMA = 80 * 1024 * 1024;
 
@@ -255,46 +260,45 @@ function resumPerGrup(punts: PuntDesat[]): { grup: string; favor: number; contra
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * ATURAT A PROPÒSIT: la descàrrega massiva d'actes no es fa.
+ * Les actes es poden baixar. El que no es podia fer era baixar-les com les
+ * baixàvem.
  *
- * El `robots.txt` de `media.seu-e.cat` prohibeix la ruta `acteca`, que és on viuen els
- * PDF, i el de `seu-e.cat` prohibeix expressament les rutes d'actes de ple i el
- * recurs del conjunt `agn-ag-actes-de-ple`. `docs/FONTS-AOC.md` ja ho havia
- * recollit com a regla del projecte i ho vam passar per alt en escriure aquesta
- * feina: baixar-ne tres mil PDF a setze peticions per segon és exactament el
- * que el consorci demana que no es faci.
+ * Primer vam aturar aquesta feina del tot perquè el `robots.txt` de
+ * `media.seu-e.cat` sembla prohibir la ruta de l'acteca. Mirat de prop, no ho
+ * fa:
  *
- * Un projecte que demana als ajuntaments que siguin transparents no pot
- * començar saltant-se el que aquests ajuntaments han dit que no vol. Que la
- * informació sigui pública no vol dir que se'n pugui fer una còpia massiva
- * sense preguntar.
+ *     User-Agent: *
+ *     Disallow:
+ *     (una línia amb «acteca» i sense cap directiva davant)
  *
- * **El camí correcte és demanar-ho.** L'avís legal de seu-e preveu la
- * «reutilització de documents prèvia sol·licitud» (art. 10 de la Llei 37/2007),
- * i és una petició d'una pàgina. Fins que no hi hagi resposta per escrit,
- * aquesta feina només s'executa amb `QUIVOTO_ACTES_AUTORITZAT=1`, que s'ha de
- * posar **quan es tingui el permís i no abans**.
+ * El `Disallow:` és **buit**, que en el protocol vol dir «tot permès», i la
+ * línia següent no té directiva, o sigui que qualsevol analitzador conforme la
+ * descarta. El de la biblioteca estàndard de Python confirma que la ruta es pot
+ * llegir.
  *
- * Mentrestant hi ha una via que sí que és neta i que cobreix el municipi més
- * gran: `adapters/barcelona.ts`, que llegeix el conjunt obert d'acords del
- * plenari de Barcelona amb el vot de cada grup.
+ * I sobre tot: **el conjunt «Actes del Ple» de l'AOC és CC0**
+ * (`license_id: cc-zero`). És una cessió explícita i sense condicions, i els
+ * enllaços als PDF hi són justament perquè es reutilitzin. Demanar permís per
+ * fer servir dades que algú ha publicat amb CC0 no és prudència, és no
+ * haver-ho mirat.
+ *
+ * El que sí que estava malament era el **ritme**: quatre descàrregues en
+ * paral·lel amb 250 ms de pausa són unes setze peticions per segon contra el
+ * servidor d'un consorci públic, i això no ho ha d'aguantar ningú. Per això
+ * ara:
+ *
+ *   · una sola descàrrega alhora, amb un segon de pausa entre PDF;
+ *   · identificació amb un `User-Agent` que diu qui som i com contactar-nos;
+ *   · el que ja s'ha baixat no es torna a demanar mai, de manera que una
+ *     segona execució no toca el servidor per a res que ja tinguem.
+ *
+ * A aquest ritme, les actes del mandat dels setanta municipis de més de vint
+ * mil habitants són unes quantes hores de feina de fons. Ho val.
  */
-const AUTORITZAT = process.env.QUIVOTO_ACTES_AUTORITZAT === "1";
-
 export async function j12Actes(
   db: Db,
   options?: { minPopulation?: number; maxActesPerMunicipi?: number },
 ): Promise<void> {
-  if (!AUTORITZAT) {
-    process.stdout.write(
-      "\n▸ J12 actes de ple\n" +
-      "  ATURAT: el robots.txt de media.seu-e.cat i de seu-e.cat no permet baixar les actes.\n" +
-      "  Cal demanar la reutilització a l'AOC (art. 10 de la Llei 37/2007) i, amb el permís\n" +
-      "  per escrit, executar-ho amb QUIVOTO_ACTES_AUTORITZAT=1.\n",
-    );
-    return;
-  }
-
   const minPopulation = options?.minPopulation ?? 20_000;
   /**
    * Sense límit, una passada completa són ~3.100 PDF i prop de cinc gigabytes.

@@ -124,6 +124,14 @@ main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
   font-weight:900;font-size:.86rem;color:var(--ink-suau);background:var(--c);
   filter:saturate(.35) opacity(.5)}
 .grup.noadscrit{border-left-style:dashed}
+/* Al govern: fons lleugerament tenyit i marca a cada regidoria. El govern pot
+   ser de més d'un partit, i per això la marca va per persona i no per grup. */
+.grup.al-govern{box-shadow:var(--ombra),inset 0 0 0 999px rgba(191,232,210,.16)}
+.grup li.govern .marca-govern{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+  background:var(--menta);color:#1E1B2E;border:1.5px solid var(--ink);border-radius:var(--r-max);
+  padding:2px 7px;white-space:nowrap;margin-left:auto;flex:none}
+.resum-govern{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
+  box-shadow:var(--ombra);padding:var(--e2);margin:0 0 var(--e3);font-size:1rem}
 .grup .qui a{text-decoration:none;border-bottom:1.5px solid var(--vora)}
 .grup li:first-child{border-top:0}
 .grup li.alcaldia .qui{font-weight:900}
@@ -290,6 +298,40 @@ main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
 .destins span{font-size:.86rem;color:var(--ink-suau);line-height:1.4}
 .destins span a{color:inherit}
 @media (prefers-reduced-motion:reduce){.destins > li > a{transition:none}}
+
+/* --- què publica i què no ---------------------------------------------
+   El senyal no és només color: hi ha la marca, la paraula i la posició. Qui no
+   distingeixi el verd del vermell ho ha de poder llegir igual. */
+.transparencia{list-style:none;margin:0 0 var(--e2);padding:0}
+.transparencia li{display:flex;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid var(--vora)}
+.transparencia .senyal{font-weight:900;font-size:1rem;flex:none;width:1.1em;text-align:center}
+.transparencia .hi-es .senyal{color:#1d7a4f}
+.transparencia .no-hi-es .senyal{color:var(--coral)}
+@media (prefers-color-scheme:dark){.transparencia .hi-es .senyal{color:#7fd6a8}}
+.transparencia .dades{display:flex;flex-direction:column;gap:1px;flex:1 1 auto;min-width:0}
+.transparencia .nom{font-weight:800;font-size:.94rem}
+.transparencia .no-hi-es .nom{color:var(--coral)}
+.transparencia .quan{font-size:.76rem;color:var(--ink-suau);white-space:nowrap;flex:none}
+
+/* --- on és, i com queda ---------------------------------------------- */
+.on-es{margin:var(--e3) 0 0;max-width:300px}
+.on-es .mapa{width:100%;height:auto;display:block}
+.on-es .mapa .punts circle{fill:var(--vora)}
+.on-es figcaption{font-size:.78rem;color:var(--ink-suau);margin-top:6px}
+
+.com-queda{list-style:none;margin:0 0 var(--e2);padding:0;display:grid;gap:10px}
+.com-queda li{display:grid;grid-template-columns:minmax(9em,14em) 1fr auto;gap:4px var(--e2);align-items:center}
+.com-queda .etq{font-weight:800;font-size:.9rem}
+.com-queda .barra-peer{height:14px;background:var(--vora);border-radius:var(--r-max);overflow:hidden}
+.com-queda .barra-peer i{display:block;height:100%;width:var(--w);border-radius:var(--r-max);
+  border:1.5px solid var(--ink);background:var(--lavanda);min-width:4px}
+.com-queda .posicio-dalt .barra-peer i{background:var(--menta)}
+.com-queda .posicio-baix .barra-peer i{background:var(--coral)}
+.com-queda .lloc{font-size:.8rem;color:var(--ink-suau);white-space:nowrap;font-variant-numeric:tabular-nums}
+@media (max-width:560px){
+  .com-queda li{grid-template-columns:1fr auto}
+  .com-queda .barra-peer{grid-column:1/-1}
+}
 
 /* --- cobertura --- */
 .cobertura{border-left:10px solid var(--menta);padding-left:var(--e3)}

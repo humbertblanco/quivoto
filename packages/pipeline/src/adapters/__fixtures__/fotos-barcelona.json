@@ -1,0 +1,47 @@
+[
+  {
+    "partit_politic": "PSC",
+    "nom": "Jaume",
+    "cognom_1": "Collboni",
+    "cognom_2": "Cuadrado",
+    "descripcio_carrec_ca": "Alcalde",
+    "dependencia_ca": "Consell Municipal",
+    "foto": "https://apidocs.barcelona.cat/retribucions_pro/JaumeCollboniCuadrado_Foto.jpg"
+  },
+  {
+    "partit_politic": "ERC",
+    "nom": "Elisenda",
+    "cognom_1": "Alamany",
+    "cognom_2": "Gutierrez",
+    "descripcio_carrec_ca": "Regidora",
+    "dependencia_ca": "Consell Municipal",
+    "foto": "https://apidocs.barcelona.cat/retribucions_pro/REG_AJB_ElisendaAlamanyiGutierrez_Foto_143x192.jpg"
+  },
+  {
+    "partit_politic": "PP",
+    "nom": "Antonio",
+    "cognom_1": "Verdera",
+    "cognom_2": "Puntí",
+    "descripcio_carrec_ca": "Regidor Adscrit",
+    "dependencia_ca": "Regidors adscrits al Districte de les Corts",
+    "foto": "https://apidocs.barcelona.cat/retribucions_pro/Antonio_Verdera_Punti_143x192.jpg"
+  },
+  {
+    "partit_politic": "",
+    "nom": "Àfrica Martina",
+    "cognom_1": "Cardona",
+    "cognom_2": "Gilbert",
+    "descripcio_carrec_ca": "Gerent",
+    "dependencia_ca": "Gerència del Districte de Sants-Montjuïc",
+    "foto": "https://apidocs.barcelona.cat/retribucions_pro/GER_AJB_Africa_Cardona.JPG"
+  },
+  {
+    "partit_politic": "",
+    "nom": "Adrià",
+    "cognom_1": "Carrillo",
+    "cognom_2": "Padró",
+    "descripcio_carrec_ca": "Assessor 4",
+    "dependencia_ca": "Grup Municipal Esquerra Republicana",
+    "foto": "https://apidocs.barcelona.cat/retribucions_pro/dni%20foto.png"
+  }
+]

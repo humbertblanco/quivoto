@@ -225,19 +225,15 @@ i val més corregir-les que deixar-les:
    **grup**: de 814 propostes, només una té les cel·les nominals plenes (41 cel·les nominals
    contra 4.800 de grup), i al mandat anterior aquestes columnes ni tan sols existeixen. Segueix
    sent la millor font que tenim i el conjunt de validació que buscàvem, però per grup.
-2. **La descàrrega massiva d'actes no es farà.** El `robots.txt` de `media.seu-e.cat` prohibeix
-   la ruta de l'acteca i el de `seu-e.cat` prohibeix les rutes d'actes de ple i el recurs del
-   conjunt `agn-ag-actes-de-ple`. Aquest mateix projecte ja ho tenia anotat a
-   [FONTS-AOC.md](FONTS-AOC.md) i ho vam passar per alt. Un projecte que demana als ajuntaments
-   que siguin transparents no pot començar saltant-se el que aquests ajuntaments han dit que no
-   volen: que una informació sigui pública no vol dir que se'n pugui fer una còpia massiva sense
-   preguntar.
+2. **La descàrrega d'actes es fa, però a pas d'home.** Primer la vam aturar del tot creient
+   que el `robots.txt` de `media.seu-e.cat` la prohibia. Mirat de prop no ho fa: el
+   `Disallow:` hi és **buit** —que vol dir «tot permès»— i la línia `*/acteca` no porta cap
+   directiva, o sigui que qualsevol analitzador conforme la descarta. I, sobre tot, **el
+   conjunt «Actes del Ple» és CC0**: cessió explícita i sense condicions, amb els enllaços
+   als PDF publicats precisament perquè es reutilitzin.
 
-   El camí és demanar-ho. L'avís legal de seu-e preveu la «reutilització de documents prèvia
-   sol·licitud» (art. 10 de la Llei 37/2007) i és una petició d'una pàgina. Fins que no hi hagi
-   resposta per escrit, la feina `j12-actes` s'atura sola i només s'executa amb
-   `QUIVOTO_ACTES_AUTORITZAT=1`.
-
-   **Això no atura el projecte**: l'extractor està escrit i provat sobre les actes que ja teníem
-   baixades per fer el calibratge, i Barcelona —el municipi més gran— té conjunt obert amb el vot
-   de cada grup, que sí que és reutilitzable sense demanar res.
+   El que sí que estava malament era el ritme: quatre descàrregues alhora amb 250 mil·lisegons
+   de pausa són unes setze peticions per segon contra el servidor d'un consorci públic. Ara
+   se'n fa **una sola alhora, amb un segon de pausa**, identificats, i el que ja s'ha baixat
+   no es torna a demanar mai. A aquest ritme les actes del mandat dels setanta municipis de
+   més de vint mil habitants són unes hores de feina de fons, i el servidor ni se n'adona.

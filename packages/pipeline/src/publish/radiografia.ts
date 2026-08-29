@@ -6,6 +6,7 @@ import {
 import { BRANDS_BY_ID, sameForce } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { hemicycle } from "./hemicycle";
+import { renderMapa, type PuntMapa } from "./mapa";
 import { slugify } from "../lib/text";
 import { INDEXABLE, SITE } from "./config";
 import { RADIOGRAFIA_CSS } from "./estil";
@@ -83,7 +84,15 @@ type TaxesMetric = {
   taxes: Record<string, { label: string; value: number; unit: string }>;
   medians: Record<string, number>;
 };
-type TransparencyMetric = { items: number; published: number; pct: number | null };
+type EstatItem = {
+  key: string; label: string; published: boolean; auto: boolean;
+  notApplicable: boolean; updatedOn: string | null; updatedYear: number | null;
+  bulk: boolean; catalunya: { published: number; of: number } | null;
+};
+type TransparencyMetric = {
+  items: number; published: number; pct: number | null;
+  detail?: EstatItem[];
+};
 type MoneyEntry = { label: string; perHead: number; total: number; share?: number };
 type RevenueMetric = { year: number; figures: MoneyEntry[]; medians: Record<string, number | null> };
 type SpendingMetric = { year: number; areas: MoneyEntry[]; totalPerHead: number; medians: Record<string, number | null> };
@@ -633,6 +642,7 @@ function renderCarrecsSeue(fitxa: FitxaCarrecs, colorPer: (grup: string | null) 
 
   const blocks = ordered
     .map(([name, list]) => {
+      const alGovern = list.filter((c) => c.equipGovern).length;
       const members = [...list]
         .sort((a, b) => (isMayor(b) ? 1 : 0) - (isMayor(a) ? 1 : 0))
         .map((c) => {
@@ -649,22 +659,48 @@ function renderCarrecsSeue(fitxa: FitxaCarrecs, colorPer: (grup: string | null) 
           const nom = c.fitxa
             ? `<a href="${escape(c.fitxa)}" target="_blank" rel="noopener">${escape(c.nom)}</a>`
             : escape(c.nom);
-          return `<li${isMayor(c) ? ' class="alcaldia"' : ""}>
+          const classes = [isMayor(c) ? "alcaldia" : "", c.equipGovern ? "govern" : "oposicio"]
+            .filter(Boolean)
+            .join(" ");
+          return `<li class="${classes}">
         ${retrat}
         <span class="dades"><span class="qui">${nom}</span>
         <span class="carrec">${escape(c.carrec)}</span></span>
+        ${c.equipGovern ? '<span class="marca-govern">govern</span>' : ""}
       </li>`;
         })
         .join("");
-      return `<div class="grup${noAdscrit(name) ? " noadscrit" : ""}" style="--c:${colorPer(name)}">
+      const totGovern = alGovern === list.length && alGovern > 0;
+      return `<div class="grup${noAdscrit(name) ? " noadscrit" : ""}${totGovern ? " al-govern" : ""}" style="--c:${colorPer(name)}">
       <h3><span class="marca-grup"></span>${escape(name)}
-        <span class="quants">${list.length}</span></h3>
+        <span class="quants">${list.length}${
+          alGovern > 0 ? (totGovern ? " · al govern" : ` · ${alGovern} al govern`) : ""
+        }</span></h3>
       <ul>${members}</ul>
     </div>`;
     })
     .join("");
 
-  return `<div class="plens${ambFoto ? " amb-retrats" : ""}">${blocks}</div>
+  // Qui forma el govern, que sovint no és un sol partit: de 453 municipis amb
+  // la dada, 195 tenen regidors de més d'un grup a l'equip de govern. La fitxa
+  // ho deia només a través de l'alcaldia, i això amagava totes les coalicions.
+  const govern = fitxa.carrecs.filter((c) => c.equipGovern);
+  const grupsGovern = [...new Set(govern.map((c) => c.grup).filter((g): g is string => Boolean(g)))];
+  const resumGovern =
+    govern.length === 0
+      ? ""
+      : `<p class="resum-govern">
+      <b>${govern.length} ${govern.length === 1 ? "regidoria forma" : "regidories formen"} el govern</b>
+      de ${fitxa.carrecs.length},
+      ${
+        grupsGovern.length > 1
+          ? `en coalició de ${grupsGovern.length} grups: ${grupsGovern.map((g) => escape(g)).join(", ")}.`
+          : grupsGovern.length === 1
+            ? `totes de ${escape(grupsGovern[0]!)}.`
+            : "."
+      }</p>`;
+
+  return `${resumGovern}<div class="plens${ambFoto ? " amb-retrats" : ""}">${blocks}</div>
   <p class="nota">Composició del ple segons la seu electrònica del mateix ajuntament,
   consultada el ${escape(fitxa.descarregat)}. Va més al dia que el registre de la Generalitat.
   ${
@@ -726,6 +762,48 @@ function renderCouncillors(councillors: readonly Councillor[]): string {
   <p class="nota">Composició actual del ple segons el registre de càrrecs electes de la
   Generalitat. Hi surten el nom, el càrrec i el grup, que és el que deriva del càrrec públic;
   cap dada de contacte. Si hi ha un error o vols que retirem alguna cosa, escriu-nos.</p>`;
+}
+
+/**
+ * Què publica l'ajuntament, ítem a ítem.
+ *
+ * **Aquí no s'afirma mai que un ajuntament NO publiqui una cosa.** El conjunt
+ * de l'AOC no distingeix entre «l'ajuntament no ho publica» i «l'ítem no consta
+ * al portal per a aquest ens», i publicar-ho com si fos el primer és acusar
+ * algú d'opac amb una dada que no ho diu. Ho vam comprovar amb les declaracions
+ * de béns d'Esplugues: al conjunt hi surten com a no publicades i a la seu hi
+ * són.
+ *
+ * Per tant només es mostra el que hi consta com a publicat, amb l'any de
+ * l'última actualització quan es pot afirmar, i la cobertura catalana com a
+ * context. El que falti no es menciona.
+ */
+function renderTransparencyDetail(items: readonly EstatItem[]): string {
+  const publicats = items.filter((i) => i.published && !i.notApplicable);
+  if (publicats.length === 0) return "";
+
+  const fila = (item: EstatItem): string => {
+    const cat = item.catalunya;
+    const quan =
+      item.updatedYear && !item.bulk
+        ? `<span class="quan">actualitzat el ${item.updatedYear}</span>`
+        : "";
+    return `<li class="hi-es">
+      <span class="senyal" aria-hidden="true">✓</span>
+      <span class="dades">
+        <span class="nom">${escape(item.label)}</span>
+        ${cat ? `<span class="secundari">el publiquen ${number(cat.published)} dels ${number(cat.of)} ajuntaments catalans</span>` : ""}
+      </span>
+      ${quan}
+    </li>`;
+  };
+
+  return `<ul class="transparencia">${publicats.map(fila).join("")}</ul>
+  <p class="nota">Apartats del portal de transparència que hi consten publicats, amb quants
+  ajuntaments catalans publiquen cadascun. <b>El que no surti en aquesta llista no vol dir
+  que l'ajuntament no ho publiqui</b>: el conjunt del Consorci AOC no distingeix entre un
+  apartat que no s'ha omplert i un que no hi consta, i no volem acusar ningú d'opac amb una
+  dada que no ho diu.</p>`;
 }
 
 function renderMayors(mayorsMetric: MayorsMetric): string {
@@ -796,7 +874,60 @@ function summarySentence(data: RadiografiaData): string {
   return `${parts.join(", ")}.`;
 }
 
-export function renderRadiografia(data: RadiografiaData): string {
+/**
+ * Com queda el municipi respecte dels de la seva mida, en una sola imatge.
+ *
+ * Els percentils ja surten indicador per indicador dins del bloc dels comptes,
+ * però escampats no es llegeixen. Junts sí: es veu d'una ullada si un poble és
+ * dels que deuen més o dels que paguen abans, i en quines coses destaca.
+ *
+ * La barra va sempre de pitjor a millor **dins del grup**, no de menys a més:
+ * al deute, menys és millor, i pintar-ho al revés faria llegir el gràfic girat.
+ */
+function renderComQueda(comparacio: readonly PeerComparison[], grup: { label: string; size: number } | null): string {
+  const amb = comparacio.filter((c) => c.percentile !== null);
+  if (amb.length < 3 || !grup) return "";
+
+  const NOMS: Record<string, string> = {
+    "estalvi-net": "El que sobra cada any",
+    "deute-habitant": "Deute per habitant",
+    "deute-ingressos": "Deute sobre els ingressos",
+    "saldo-no-financer": "Saldo no financer",
+    "carrega-financera": "Càrrega financera",
+    "execucio-inversions": "Inversions executades",
+    pmp: "Rapidesa pagant els proveïdors",
+    "estalvi-brut": "Estalvi brut",
+  };
+
+  const files = amb
+    .map((c) => {
+      // El percentil el dona la posició dins del grup de menys a més. Quan
+      // menys és millor, es gira, perquè la barra sempre vulgui dir el mateix:
+      // com més llarga, millor està aquest municipi.
+      const bo = c.lowerIsBetter ? 100 - c.percentile! : c.percentile!;
+      const posicio = bo >= 75 ? "dalt" : bo <= 25 ? "baix" : "mig";
+      return `<li class="posicio-${posicio}">
+      <span class="etq">${escape(NOMS[c.key] ?? c.key)}</span>
+      <span class="barra-peer"><i style="--w:${bo}%"></i></span>
+      <span class="lloc">${bo >= 50 ? "millor" : "pitjor"} que el ${bo >= 50 ? bo : 100 - bo} %</span>
+    </li>`;
+    })
+    .join("");
+
+  const bons = amb.filter((c) => (c.lowerIsBetter ? 100 - c.percentile! : c.percentile!) >= 75).length;
+  const dolents = amb.filter((c) => (c.lowerIsBetter ? 100 - c.percentile! : c.percentile!) <= 25).length;
+
+  return `<p class="entrada-bloc">Comparat amb els <b>${grup.size} municipis catalans ${escape(grup.label)}</b>.
+  ${bons > 0 ? `Destaca en ${bons} ${bons === 1 ? "indicador" : "indicadors"}` : "No destaca en cap indicador"}${
+    dolents > 0 ? ` i va endarrerit en ${dolents}` : ""
+  }.</p>
+  <ul class="com-queda">${files}</ul>
+  <p class="nota">Cada barra és la posició dins del grup, i sempre vol dir el mateix: com més
+  llarga, millor està aquest municipi en aquell indicador. Comparar-lo amb tot Catalunya
+  barrejaria Barcelona amb pobles de tres-cents habitants i no voldria dir res.</p>`;
+}
+
+export function renderRadiografia(data: RadiografiaData, mapa: readonly PuntMapa[] = []): string {
   const m = data.municipality;
   const current = data.results.M20231;
   const government = data.government;
@@ -882,6 +1013,14 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
     ${m.electoralSystem === "llistes tancades" ? "llistes tancades" : escape(m.electoralSystem)}
   </p>
   ${summarySentence(data) ? `<p class="resum">${summarySentence(data)}</p>` : ""}
+  ${
+    mapa.length > 0
+      ? `<figure class="on-es">
+      ${renderMapa(mapa, { amplada: 300, destacat: m.slug, descripcio: `Mapa de Catalunya amb ${m.name} destacat` })}
+      <figcaption>${escape(m.name)}, entre els 947 municipis de Catalunya</figcaption>
+    </figure>`
+      : ""
+  }
 </section>
 
 <nav class="index" aria-label="Seccions d'aquesta pàgina">
@@ -893,6 +1032,7 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
   ${data.mayors && data.mayors.history.length > 0 ? '<a href="#alcaldies">Alcaldies</a>' : ""}
   ${data.revenue ? '<a href="#diners">Els diners</a>' : ""}
   ${data.services ? '<a href="#serveis">Serveis</a>' : ""}
+  ${data.finances ? '<a href="#com-queda">Com queda</a>' : ""}
   ${data.finances ? '<a href="#comptes">Comptes</a>' : ""}
   <a href="#dades">Què en sabem</a>
   <a href="#joc">El 23-M</a>
@@ -1010,6 +1150,11 @@ ${data.services ? `<section class="bloc" id="serveis">
   ${renderServices(data.services)}
 </section>` : ""}
 
+${data.finances && renderComQueda(data.finances.comparison, data.finances.group) ? `<section class="bloc" id="com-queda">
+  <h2>Com queda respecte dels seus</h2>
+  ${renderComQueda(data.finances.comparison, data.finances.group)}
+</section>` : ""}
+
 ${data.finances ? `<section class="bloc" id="comptes">
   <h2>Els comptes</h2>
   ${renderFinances(data.finances)}
@@ -1050,6 +1195,10 @@ ${data.parity ? `<section class="bloc">
   ${data.transparency && data.transparency.pct !== null
     ? `<p>El seu portal de transparència publica <b>${data.transparency.pct} %</b> dels
        ${data.transparency.items} apartats que li tocarien (${data.transparency.published} de ${data.transparency.items}).</p>`
+    : ""}
+  ${data.transparency?.detail && data.transparency.detail.length > 0
+    ? `<h3 class="subtitol">El que hi consta publicat</h3>
+       ${renderTransparencyDetail(data.transparency.detail)}`
     : ""}
   <p class="nota">Encara <b>no n'hem llegit cap</b>. Quan ho fem, aquí hi haurà el registre de mocions:
   què s'ha votat al ple i què hi ha votat cada grup. Fins llavors, tot el que hi ha en aquesta pàgina

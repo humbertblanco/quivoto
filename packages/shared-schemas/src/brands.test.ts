@@ -76,3 +76,21 @@ describe("sameForce amb coalicions locals", () => {
     expect(siglesFamily("Gent-i-Poble")).toBeNull();
   });
 });
+
+describe("les coalicions «en comú», que porten la marca al mig", () => {
+  it("reconeix la família encara que el nom comenci per la ciutat", () => {
+    expect(siglesFamily("Barcelona en Comú-C")).toBe("comuns");
+    expect(siglesFamily("BCN en Comú - C")).toBe("comuns");
+  });
+
+  it("no endevina les sigles que amaguen la marca dins d'un acrònim", () => {
+    // «LHECP» és l'Hospitalet En Comú Podem, i no hi ha manera de saber-ho
+    // sense una taula a mà. Val més no reconèixer-la que inventar-se una
+    // regla que un dia atribuirà un regidor al partit que no toca.
+    expect(siglesFamily("LHECP-C")).toBeNull();
+  });
+
+  it("i per tant les lliga entre elles", () => {
+    expect(sameForce("Barcelona en Comú-C", "BCN en Comú - C")).toBe(true);
+  });
+});

@@ -150,7 +150,10 @@ const SIGLES_FAMILIES: ReadonlyArray<readonly [RegExp, string]> = [
   [/(^|-)(junts|jxcat|jxc|cm)($|-)/, "junts"],
   [/^(erc|esquerra|am$)/, "erc"],
   [/^(pp|ppc|apap|alianzapopular)/, "pp"],
-  [/^(icv|iniciativa|euia|entesa|ecp|eacp|comuns|ecg|psuc|pcc)/, "comuns"],
+  // «en comú» surt enmig del nom i no al principi: «Barcelona en Comú-C»,
+  // «LHECP-C», «Sabadell en Comú Podem». Sense buscar-ho a dins, nou regidors
+  // de Barcelona es quedaven sense grup.
+  [/^(icv|iniciativa|euia|entesa|ecp|eacp|comuns|ecg|psuc|pcc)|encomu/, "comuns"],
   [/^(cup|amunt)/, "cup"],
   [/^(cs|ciutadans|ciudadanos)/, "cs"],
   [/^vox/, "vox"],

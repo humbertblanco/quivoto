@@ -1,9 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import {
   councilTerms, councillorMandates, municipalities, people, politicalGroups, type Db,
 } from "@quivoto/db";
 import { DATASETS, socrataAll } from "../adapters/socrata";
 import { normalizePersonName, titleCase, toInt } from "../lib/text";
+import { sameForce } from "@quivoto/shared-schemas/brands";
 import { withRun } from "../lib/run";
 
 type PleRow = {
@@ -48,13 +49,31 @@ export async function j3Councillors(db: Db): Promise<void> {
     for (const m of await db.select().from(municipalities)) byCodiEns.set(m.codiEns, m.id);
 
     const terms = new Map<number, number>();
+    const termIds = new Set<number>();
     for (const t of await db.select().from(councilTerms).where(eq(councilTerms.electionId, "M20231"))) {
       terms.set(t.municipalityId, t.id);
+      termIds.add(t.id);
     }
 
+    /**
+     * Clau de comparació de noms de grup: sense accents, sense signes i sense
+     * espais. Les dues fonts escriuen el mateix grup amb l'espaiat dels guions
+     * canviat —«ERC-EUiA - AM» contra «ERC-EUiA-AM», «BCN en Comú - C» contra
+     * «Barcelona en Comú-C»— i comparar-los amb els guions dins deixava sense
+     * grup nou dels quaranta-un regidors de Barcelona.
+     */
+    const clau = (nom: string): string => normalizePersonName(nom).replace(/[^a-z0-9]/g, "");
+
+    // Només els grups del mandat actual: la taula en té dels tres mandats i
+    // buscar-hi a cegues trobava dos candidats per a la mateixa força.
     const groups = new Map<string, number>();
+    const groupsPerMunicipi = new Map<number, { id: number; name: string }[]>();
     for (const g of await db.select().from(politicalGroups)) {
-      groups.set(`${g.municipalityId}|${normalizePersonName(g.name)}`, g.id);
+      if (g.termId !== null && !termIds.has(g.termId)) continue;
+      groups.set(`${g.municipalityId}|${clau(g.name)}`, g.id);
+      const list = groupsPerMunicipi.get(g.municipalityId) ?? [];
+      list.push({ id: g.id, name: g.name });
+      groupsPerMunicipi.set(g.municipalityId, list);
     }
 
     // Sexe des del segon dataset, aparellat per ens i nom normalitzat.
@@ -122,12 +141,38 @@ export async function j3Councillors(db: Db): Promise<void> {
       }
 
       const partyRaw = row.partit_politic ?? note ?? null;
-      const groupId = partyRaw ? groups.get(`${municipalityId}|${normalizePersonName(partyRaw)}`) ?? null : null;
+      // Primer per nom exacte i, si no lliga, per força.
+      //
+      // El registre de plens escriu el grup a la seva manera i sovint no
+      // coincideix amb el nom de la candidatura: a Barcelona hi diu «BCN en
+      // Comú - C» quan el grup és «Barcelona en Comú-C», i nou dels quaranta-un
+      // regidors es quedaven sense grup i sense color a la fitxa.
+      let groupId: number | null = null;
+      if (partyRaw) {
+        groupId = groups.get(`${municipalityId}|${clau(partyRaw)}`) ?? null;
+        if (groupId === null) {
+          const candidats = groupsPerMunicipi.get(municipalityId) ?? [];
+          const encaixen = candidats.filter((g) => sameForce(g.name, partyRaw));
+          // Només si no hi ha empat: dos grups de la mateixa força al mateix
+          // ple voldria dir que no en podem triar cap sense endevinar.
+          if (encaixen.length === 1) groupId = encaixen[0]!.id;
+        }
+      }
 
       const already = await db
         .select({ id: councillorMandates.id })
         .from(councillorMandates)
         .where(and(eq(councillorMandates.personId, personId), eq(councillorMandates.municipalityId, municipalityId)));
+
+      // Si el mandat ja hi és però es va desar sense grup, ara que sabem
+      // resoldre'l per força l'hi posem: reingerir no serveix de res si les
+      // files velles es queden com estaven.
+      if (already.length > 0 && groupId !== null) {
+        await db
+          .update(councillorMandates)
+          .set({ groupId })
+          .where(and(eq(councillorMandates.id, already[0]!.id), isNull(councillorMandates.groupId)));
+      }
 
       if (already.length === 0) {
         await db.insert(councillorMandates).values({

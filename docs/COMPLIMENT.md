@@ -299,3 +299,16 @@ governa, quatre no es poden respondre amb un document.**
   verificables» que no són culpa de cap partit.
 - **No hi ha conjunt d'or.** No tenim cap corpus de promeses ja classificades per mesurar la nostra concordança entre
   anotadors. Fins que no en fem un, tota xifra que surti d'aquí s'ha de llegir amb aquesta reserva al davant.
+
+
+## Una regla que hem après provant-ho
+
+La mostra citava una adjudicatària **persona física pel nom i cognoms**, amb l'import del
+contracte, com a evidència que una promesa s'havia complert. Era correcte com a prova i
+inacceptable com a publicació: aquella senyora no és un càrrec públic i no ha triat sortir
+enlloc.
+
+**Regla, doncs**: quan l'evidència sigui una adjudicació a una persona física, s'hi escriu
+«una persona física» i prou. L'objecte del contracte i l'import ja fan de prova, i el nom no
+hi afegeix res que valgui el que costa. Amb empreses no hi ha aquest problema: una societat
+que contracta amb una administració ho fa sabent que és públic.

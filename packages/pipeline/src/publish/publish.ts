@@ -9,6 +9,8 @@ import { loadComparador, renderComparador } from "./comparador";
 import { renderDadesIndex, writeDownloads } from "./dades";
 import { loadCandidatures, renderCandidatura } from "./candidatura";
 import { writeOgImages } from "./og";
+import type { PuntMapa } from "./mapa";
+import { carregaPreguntes, renderIndexPreguntes, renderPreguntes } from "./preguntes";
 import { slugify } from "../lib/text";
 import { withRun } from "../lib/run";
 
@@ -34,6 +36,19 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         ? slugs
         : DEFAULT_SLUGS;
     const generatedAt = new Date().toISOString().slice(0, 10);
+
+    // Els 947 punts del mapa es llegeixen un sol cop: fer-ho dins de cada fitxa
+    // voldria dir 947 consultes de 947 files.
+    const mapa: PuntMapa[] = (
+      await db
+        .select({
+          slug: municipalities.slug, nom: municipalities.name,
+          lat: municipalities.lat, lon: municipalities.lon, pes: municipalities.population,
+        })
+        .from(municipalities)
+    )
+      .filter((m) => m.lat !== null && m.lon !== null)
+      .map((m) => ({ slug: m.slug, nom: m.nom, lat: Number(m.lat), lon: Number(m.lon), pes: m.pes ?? 0 }));
     const done: string[] = [];
 
     for (const slug of wanted) {
@@ -42,7 +57,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         await run.issue({ kind: "unknown_slug", severity: "mitjana", entity: slug });
         continue;
       }
-      const html = renderRadiografia(data);
+      const html = renderRadiografia(data, mapa);
       await mkdir(`${OUT_DIR}${slug}`, { recursive: true });
       await writeFile(`${OUT_DIR}${slug}/index.html`, html, "utf8");
       if (!all) run.say(`${data.municipality.name} → observatori/m/${slug}/ (${Math.round(html.length / 1024)} kB)`);
@@ -113,6 +128,19 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     // comparteix diu de quin poble parla.
     const og = await writeOgImages(db, `${OUT_DIR}../og`, all ? undefined : done);
     run.say(`${og.images} imatges socials (${Math.round(og.bytes / 1024)} kB)`);
+
+    // Les preguntes de prova: esborrany, amb l'evidència i el veredicte del
+    // llindar a la vista. No és el test; és el material perquè qui conegui el
+    // poble el pugui jutjar.
+    const preguntes = carregaPreguntes();
+    if (preguntes.length > 0) {
+      for (const conjunt of preguntes) {
+        await mkdir(`${OUT_DIR}../preguntes/${conjunt.slug}`, { recursive: true });
+        await writeFile(`${OUT_DIR}../preguntes/${conjunt.slug}/index.html`, renderPreguntes(conjunt, generatedAt), "utf8");
+      }
+      await writeFile(`${OUT_DIR}../preguntes/index.html`, renderIndexPreguntes(preguntes, generatedAt), "utf8");
+      run.say(`${preguntes.length} conjunts de preguntes de prova`);
+    }
 
     // «Els 947»: l'índex de tot Catalunya, amb el que en sabem de cadascun.
     const index947 = await loadEls947(db);

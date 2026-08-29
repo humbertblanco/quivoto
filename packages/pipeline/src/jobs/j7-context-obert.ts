@@ -401,6 +401,32 @@ export async function j7Transparencia(db: Db): Promise<void> {
 
     run.rowsIn = globals.length + files.length;
 
+    // Els dies de segell massiu s'han de comptar sobre **tot** el portal, no
+    // sobre els dotze ítems que hem triat. El llindar de cinc ítems en un mateix
+    // dia està calibrat sobre els 151 que té el portal sencer; aplicat a dotze,
+    // gairebé cap data no arriba a massiva i la fitxa acabaria dient «publicat
+    // però sense tocar des del 2015» a partir d'una data de migració.
+    const massiusPerEns = new Map<number, Set<string>>();
+    {
+      const comptes = await ckanSql<{ CODIINE: number; dia: string; n: string }>(
+        // El camp és un `timestamp` i CKAN no deixa cridar `CAST` ni `to_char`:
+        // agrupem per la marca de temps sencera, que en aquest conjunt sempre va
+        // a mitjanit i per tant equival a agrupar per dia. El dia se'n treu
+        // després, retallant els deu primers caràcters.
+        `SELECT "CODIINE", "DARRERAACTUALITZACIO" AS dia, COUNT(*) AS n
+         FROM "${TRANSPARENCIA}" WHERE "DARRERAACTUALITZACIO" IS NOT NULL
+         GROUP BY "CODIINE", "DARRERAACTUALITZACIO" HAVING COUNT(*) >= ${DIA_MASSIU}`,
+      );
+      for (const fila of comptes) {
+        const municipalityId = resolve(fila.CODIINE);
+        if (!municipalityId || !fila.dia) continue;
+        const set = massiusPerEns.get(municipalityId) ?? new Set<string>();
+        set.add(String(fila.dia).slice(0, 10));
+        massiusPerEns.set(municipalityId, set);
+      }
+      run.say(`${massiusPerEns.size} ajuntaments amb algun dia de segell massiu al portal sencer`);
+    }
+
     const perItem = new Map<number, Map<string, ItemRow>>();
     const nomToItem = new Map(ITEMS_TRANSPARENCIA.map((it) => [it.nomItem, it]));
     for (const row of files) {
@@ -447,7 +473,9 @@ export async function j7Transparencia(db: Db): Promise<void> {
     for (const [municipalityId, dades] of perMunicipi) {
       const bucket = perItem.get(municipalityId) ?? new Map<string, ItemRow>();
 
-      const massius = diesMassius(bucket.values());
+      // Del portal sencer, i amb el recompte dels dotze ítems com a xarxa per
+      // si la consulta global no ha pogut resoldre aquest ens.
+      const massius = massiusPerEns.get(municipalityId) ?? diesMassius(bucket.values());
 
       const detail: EstatItem[] = ITEMS_TRANSPARENCIA.map((item) => {
         const row = bucket.get(item.key);
