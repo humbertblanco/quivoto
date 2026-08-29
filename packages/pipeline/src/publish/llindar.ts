@@ -23,6 +23,15 @@ export type Afirmacio = {
   /** On cau el govern actual: serveix per mesurar l'equilibri direccional. */
   posicio_govern: "acord" | "desacord" | "desconeguda" | string;
   discrimina?: string;
+  /**
+   * El districte que la decisió afecta, a les ciutats que en tenen.
+   *
+   * A Barcelona una superilla de l'Eixample o el tramvia per un tram de la
+   * Diagonal no toquen igual algú de Sants que algú de Nou Barris. Les
+   * afirmacions de ciutat no en porten, i les que en porten es poden ensenyar
+   * primer a qui hi visqui. No canvia el càlcul: canvia l'ordre i el context.
+   */
+  districte?: string;
 };
 
 export type Conjunt = {
@@ -32,7 +41,11 @@ export type Conjunt = {
 
 export type Incompliment = {
   regla: string;
-  gravetat: "bloqueja" | "avisa";
+  /**
+   * `bloqueja` atura tota publicació · `nomes-bruixola` només atura la brúixola
+   * electoral, que és la que compara programes · `avisa` no atura res.
+   */
+  gravetat: "bloqueja" | "nomes-bruixola" | "avisa";
   detall: string;
   /** Afirmacions concretes que el provoquen, si n'hi ha. */
   afectades?: string[];
@@ -40,7 +53,27 @@ export type Incompliment = {
 
 export type Veredicte = {
   municipi: string;
+  /**
+   * Es pot publicar com a **brúixola electoral**: comparar el que una
+   * candidatura diu al seu programa amb el que ha votat. Exigeix programes, i
+   * per això cap conjunt no ho compleix encara.
+   */
   publicable: boolean;
+  /**
+   * Es pot publicar com a **avaluació de mandat**: què s'ha votat aquests
+   * quatre anys i on cau cada grup.
+   *
+   * Són dues coses diferents i durant mesos les vam confondre. Un programa fa
+   * falta per dir «això és el que van prometre»; no en fa cap per dir «això és
+   * el que van votar», que surt de l'acta i prou. Amb un sol veredicte, deu
+   * conjunts sencers quedaven marcats de «no publicable» per una regla que no
+   * els tocava, i el que hi havia a dins —vint-i-cinc votacions reals amb el
+   * seu recompte— no es podia ensenyar.
+   *
+   * La brúixola de debò arriba quan les candidatures responguin, a partir de
+   * finals d'abril del 2027. Fins llavors, això és el que es pot fer, i és molt.
+   */
+  avaluable: boolean;
   total: number;
   incompliments: Incompliment[];
   resum: {
@@ -54,6 +87,26 @@ export type Veredicte = {
 };
 
 /** Mínims de la metodologia. Canviar-los aquí és canviar-los a tot arreu. */
+/**
+ * Dues condicions que el codi **no** pot comprovar i que qui escrigui un conjunt
+ * ha de complir igualment. Es deixen escrites aquí perquè és on es miren les
+ * regles, no en un document a part que no obre ningú.
+ *
+ * **1. La decisió ha de ser del ple.** Un tema pot ser divisiu i no ser
+ * municipal. Una moció sobre immigració val si el que es vota és una cosa que
+ * l'ajuntament pot fer —empadronament, ajuts, places d'acollida, un pla local—
+ * i no val si és un posicionament sobre política estatal disfressat de moció.
+ * El mateix amb la llengua: sí a la retolació, als cursos o als requisits d'un
+ * contracte; no a una declaració sobre una llei que no depèn d'ells. Ja ens ha
+ * passat: a l'Hospitalet se n'hi va colar una, i a més citada tallant-li la
+ * part que la caracteritzava políticament.
+ *
+ * **2. Les afirmacions han de partir el ple de maneres diferents.** Si totes
+ * separen el govern de tota l'oposició, el conjunt fa una sola pregunta escrita
+ * vint-i-cinc vegades i qui el respongui veurà l'oposició empatada —no perquè
+ * s'assemblin, sinó perquè no els hem preguntat res que els separi. La pàgina
+ * de la demostració ho detecta i ho diu en veu alta; val més arreglar-ho abans.
+ */
 export const LLINDARS = {
   total: 25,
   totalMinim: 20,
@@ -150,11 +203,14 @@ export function validaConjunt(conjunt: Conjunt): Veredicte {
     );
   }
 
+  // Aquesta regla **només** afecta la brúixola electoral, no l'avaluació de
+  // mandat: per dir què ha votat un grup no fa cap falta el seu programa.
   if (ambPrograma < LLINDARS.ambPrograma) {
-    bloqueja(
-      "afirmacions que citen un programa",
-      `${ambPrograma}, i el mínim són ${LLINDARS.ambPrograma}.`,
-    );
+    incompliments.push({
+      regla: "afirmacions que citen un programa",
+      detall: `${ambPrograma}, i el mínim són ${LLINDARS.ambPrograma}. Només fa falta per a la brúixola electoral: per avaluar el mandat n'hi ha prou amb les actes.`,
+      gravetat: "nomes-bruixola",
+    });
   }
 
   const massaLlargues = a.filter((x) => compta(x.text) > LLINDARS.paraulesMaxim);
@@ -206,7 +262,8 @@ export function validaConjunt(conjunt: Conjunt): Veredicte {
 
   return {
     municipi: conjunt.municipi,
-    publicable: incompliments.every((i) => i.gravetat !== "bloqueja"),
+    publicable: incompliments.every((i) => i.gravetat === "avisa"),
+    avaluable: incompliments.every((i) => i.gravetat !== "bloqueja"),
     total: a.length,
     incompliments,
     resum: { ambVotCitable, ambPrograma, acordAmbGovern, desconegudes, temes, paraulesMaxim },
@@ -215,7 +272,10 @@ export function validaConjunt(conjunt: Conjunt): Veredicte {
 
 /** Informe llegible d'un veredicte, per a la consola i per a la revisió editorial. */
 export function informe(v: Veredicte): string {
-  const cap = `${v.publicable ? "PUBLICABLE" : "NO PUBLICABLE"}  ${v.municipi} · ${v.total} afirmacions`;
+  const cap =
+    `${v.avaluable ? "AVALUACIÓ ✓" : "AVALUACIÓ ✗"}  ` +
+    `${v.publicable ? "BRÚIXOLA ✓" : "BRÚIXOLA ✗"}  ` +
+    `${v.municipi} · ${v.total} afirmacions`;
   const dades =
     `  vots citables ${v.resum.ambVotCitable} · programa ${v.resum.ambPrograma} · ` +
     `govern d'acord ${v.resum.acordAmbGovern} · màx. ${v.resum.paraulesMaxim} paraules`;
