@@ -109,3 +109,43 @@ export function toInt(value: unknown): number | null {
   const n = Number.parseInt(String(value), 10);
   return Number.isFinite(n) ? n : null;
 }
+
+/**
+ * Un nom de persona escrit per llegir-lo, no per creuar-lo.
+ *
+ * L'historial d'alcaldies ve de fonts diferents i es nota a la taula: «Jaume
+ * Collboni Cuadrado» al costat de «JORDI HEREU BOHER» i de «ADA COLAU
+ * BALLANO», que a la mateixa columna semblen dues coses diferents quan són la
+ * mateixa. Aquí només es toca el que ve tot en majúscules —si el nom ja porta
+ * cap minúscula és que algú l'ha escrit bé i no el volem tocar— i s'hi respecta
+ * la partícula catalana, que va en minúscula si no obre el nom: «Pasqual
+ * Maragall i Mira», «Xavier Trias de Bes».
+ */
+const PARTICULES = new Set([
+  "de", "del", "dels", "d", "i", "la", "les", "el", "els", "lo", "los", "y", "da", "das", "do", "dos",
+  "van", "von", "der", "den", "af", "el-", "bin", "ibn",
+]);
+
+export function nomLlegible(text: string): string {
+  const nom = text.trim().replace(/\s+/g, " ");
+  if (!nom || /\p{Ll}/u.test(nom)) return nom;
+  const capitalitza = (mot: string): string =>
+    mot.charAt(0).toLocaleUpperCase("ca") + mot.slice(1).toLocaleLowerCase("ca");
+  return nom
+    .toLocaleLowerCase("ca")
+    .split(" ")
+    .map((mot, i) => {
+      // Els guions i els apòstrofs parteixen el mot i cada tros mana el seu:
+      // «GARCIA-MORENO» és «Garcia-Moreno» i «D'URGELL» és «d'Urgell».
+      const trossos = mot.split(/([-'’])/);
+      return trossos
+        .map((tros, j) => {
+          if (/^[-'’]$/.test(tros) || tros === "") return tros;
+          const obreElNom = i === 0 && j === 0;
+          if (!obreElNom && PARTICULES.has(tros)) return tros;
+          return capitalitza(tros);
+        })
+        .join("");
+    })
+    .join(" ");
+}

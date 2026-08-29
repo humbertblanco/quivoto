@@ -1,5 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { electionParticipation, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
+import { tintaSobre } from "./contrast";
 import { carregaMetriques } from "./metriques";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
@@ -362,21 +363,6 @@ const MANDAT = { primer: 2019, ultim: 2023 } as const;
 function colorDeLesSigles(sigles: string | null): string {
   const familia = sigles ? siglesFamily(sigles) : null;
   return (familia ? BRANDS_BY_ID.get(familia)?.color : null) ?? "#8b8b8b";
-}
-
-/**
- * Tinta fosca o clara damunt del color d'un partit, segons quina es llegeixi.
- *
- * És la mateixa regla que a la radiografia: amb tinta fosca sempre, el contrast
- * cau a 1,40:1 sobre el blau de CiU i a 1,55 sobre el del PP, i les sigles hi
- * són però no es veuen. Els colors dels partits són els seus i no els podem
- * canviar; la tinta, sí.
- */
-function tintaSobre(color: string): string {
-  const hex = color.replace("#", "");
-  if (hex.length < 6) return "#1E1B2E";
-  const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
-  return 0.299 * (r ?? 0) + 0.587 * (g ?? 0) + 0.114 * (b ?? 0) > 150 ? "#1E1B2E" : "#FBF7EE";
 }
 
 const euros = (n: number): string => `${Math.round(n).toLocaleString("ca-ES")} €`;

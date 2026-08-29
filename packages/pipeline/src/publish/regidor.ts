@@ -1,3 +1,4 @@
+import { tintaSobre } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import { slugify } from "../lib/text";
@@ -142,13 +143,11 @@ const CSS = `
   font-variant-numeric:tabular-nums;margin-top:3px}
 `;
 
-/** Tinta llegible damunt del color del grup. */
+/** Tinta llegible damunt del color del grup. Ho decideix `contrast.ts`. */
 function tinta(color: string | null): string {
   if (!color) return "inherit";
-  const hex = color.replace("#", "");
-  if (hex.length < 6) return "inherit";
-  const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
-  return 0.299 * (r ?? 0) + 0.587 * (g ?? 0) + 0.114 * (b ?? 0) > 150 ? "#1E1B2E" : "#FBF7EE";
+  if (!/^#[0-9a-f]{3,8}$/i.test(color.trim())) return "inherit";
+  return tintaSobre(color);
 }
 
 export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: string): string {

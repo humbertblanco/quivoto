@@ -1,3 +1,4 @@
+import { tintaSobre } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import type { ConjuntAmbSlug } from "./preguntes";
@@ -119,13 +120,7 @@ const CSS = `
 const ESCALA = CARES.map((c) => ({ valor: c.valor, text: c.text, svg: c.svg }));
 
 /** Text negre o blanc segons què es llegeixi millor sobre el color del grup. */
-function sobre(color: string): string {
-  const hex = color.replace("#", "");
-  if (hex.length < 6) return "#1E1B2E";
-  const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
-  // Luminància relativa aproximada, prou per triar entre dos colors.
-  return 0.299 * r! + 0.587 * g! + 0.114 * b! > 150 ? "#1E1B2E" : "#FBF7EE";
-}
+const sobre = (color: string): string => tintaSobre(color);
 
 export function renderProva(
   conjunt: ConjuntAmbSlug,

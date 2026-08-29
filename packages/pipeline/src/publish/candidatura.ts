@@ -6,6 +6,7 @@ import {
 import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { INDEXABLE, SITE } from "./config";
+import { tintaSobre as tintaDeContrast } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { normalizePersonName, slugify } from "../lib/text";
 import { adrecesRegidors } from "./regidor";
@@ -169,17 +170,10 @@ const colorSegur = (color: string): string => (/^#[0-9a-f]{6}$/i.test(color) ? c
 /**
  * Sobre el color del partit, quina tinta es llegeix. Hi ha candidatures grogues
  * (#ffff00 de la CUP) i grises molt clares: posar-hi text blanc a sobre les fa
- * il·legibles, i el contrari passa amb les fosques.
+ * il·legibles, i el contrari passa amb les fosques. El càlcul és a `contrast.ts`
+ * i és el mateix a totes les pàgines de l'observatori.
  */
-export function tintaSobre(color: string): string {
-  const hex = colorSegur(color).replace("#", "");
-  const canal = (i: number): number => {
-    const v = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
-    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  };
-  const lluminositat = 0.2126 * canal(0) + 0.7152 * canal(2) + 0.0722 * canal(4);
-  return lluminositat > 0.36 ? "#1E1B2E" : "#FBF7EE";
-}
+export const tintaSobre = (color: string): string => tintaDeContrast(colorSegur(color));
 
 /**
  * «de» davant del nom d'un municipi. Els noms catalans porten l'article
