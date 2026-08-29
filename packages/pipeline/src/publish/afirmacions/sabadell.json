@@ -24,7 +24,7 @@
    "text": "L'Ajuntament ha d'abaixar el coeficient de situació de l'impost d'activitats econòmiques que paguen les empreses.",
    "context": "Sabadell cobra poc IBI i poques taxes en comparació amb Catalunya, però carrega l'activitat econòmica. És la contradicció fiscal del municipi i surt a cada debat d'ordenances.",
    "evidencia": "Coeficient màxim de l'IAE de 3,8 el 2025, més del doble de la mediana catalana (1,5); recaptació d'IAE de 38 € per habitant, un 63% per sobre de la mediana, mentre l'IBI (270 €/hab) queda un 22% per sota. Les esmenes de PIMEC i les cambres per crear bonificacions d'IAE es van desestimar el 22-12-2025.",
-   "url_evidencia": "https://quivoto.cat/observatori/m/sabadell/",
+   "url_evidencia": "https://dadesobertes.seu-e.cat/dataset/agn-npp-tipus-impositius",
    "posicio_govern": "desacord",
    "discrimina": "Hi ha qui hi veu una penalització a qui crea llocs de treball en una ciutat amb polígons per desenvolupar, i qui hi veu la manera de no carregar l'habitatge de les famílies."
   },
@@ -32,7 +32,7 @@
    "tema": "fiscalitat",
    "text": "L'Ajuntament ha de cobrar la taxa de residus segons la brossa que genera realment cada habitatge.",
    "context": "La nova taxa de residus del 2024 va ser la polèmica fiscal més sorollosa del mandat: hi va haver mocions en contra de la federació de veïns i d'associacions de barri. Avui es cobra per trams de renda, no per generació.",
-   "evidencia": "Moció per una taxa d'escombraries que tingui en compte els residus generats, ple del 25-06-2024: 8 vots a favor, 15 en contra, 3 abstencions. El seu punt tercer demanava \"un sistema que pugui calcular la brossa generada de forma individualitzada\". La delegació al Consell Comarcal (11-10-2023) recull que la Llei 7/2022 obliga a taxes que \"tendeixin cap al pagament per generació\".",
+   "evidencia": "Moció per una taxa d'escombraries que tingui en compte els residus generats, ple del 25-06-2024: 8 vots a favor, 15 en contra, 3 abstencions. El seu punt tercer demanava \"un sistema que pugui calcular la brossa generada de forma individualitzada\". L'expedient de delegació al Consell Comarcal (11-10-2023) recull que la Llei 7/2022 obliga els ajuntaments a establir taxes que haurien de tendir cap al pagament per generació.",
    "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2024/3ccc5edc-e529-4a67-af43-faf4d46fc797/8-2024%20Ple%20ordinari%202024-06-25.pdf",
    "posicio_govern": "desacord",
    "discrimina": "El pagament per generació premia qui recicla i acostaria Sabadell al 40,14% de recollida selectiva que la llei li exigeix superar; però obliga a identificar qui llença cada bossa, i això té cost, control i debat de privacitat."
