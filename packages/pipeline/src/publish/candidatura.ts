@@ -7,7 +7,8 @@ import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { INDEXABLE, SITE } from "./config";
 import { RADIOGRAFIA_CSS } from "./estil";
-import { slugify } from "../lib/text";
+import { normalizePersonName, slugify } from "../lib/text";
+import { adrecesRegidors } from "./regidor";
 
 /**
  * La pàgina d'**una candidatura a un municipi**.
@@ -54,6 +55,10 @@ export type RegidorPle = {
   role: string | null;
   /** Com hem lligat aquesta persona amb la candidatura. */
   match: "grup" | "sigles" | "agrupacio";
+  /** La fotografia que publica el mateix ajuntament, si en publica. */
+  foto: string | null;
+  /** L'adreça de la nostra fitxa d'aquesta persona. */
+  fitxa: string | null;
 };
 
 export type GermanaPle = { slug: string; sigles: string; seats: number; color: string };
@@ -249,19 +254,51 @@ function renderRegidors(data: CandidaturaData): string {
     La font escriu les sigles en text lliure i aquí no hi encaixen amb prou seguretat; abans que
     atribuir una persona a una llista que potser no és la seva, ho deixem en blanc.</p>`;
   }
+  const inicials = (nom: string): string =>
+    nom.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
+  const ambFoto = data.councillors.filter((r) => r.foto).length;
+  /**
+   * Les cares només si les té tothom.
+   *
+   * És la mateixa regla que a la fitxa del municipi: ensenyar la fotografia
+   * d'uns quants i les inicials de la resta fa que els que no en tenen quedin
+   * com a regidors de segona, i no és cosa seva sinó de què publica
+   * l'ajuntament. O totes o cap.
+   */
+  const totesAmbFoto = ambFoto === data.councillors.length && ambFoto > 0;
   const rows = data.councillors
     .map(
       (regidor) => `<tr>
-      <th scope="row">${escape(regidor.name)}</th>
+      <th scope="row">${
+        totesAmbFoto
+          ? `<img class="cara-cand" src="${escape(regidor.foto!)}" alt="" width="36" height="36" loading="lazy">`
+          : `<span class="cara-cand inicials" aria-hidden="true">${escape(inicials(regidor.name))}</span>`
+      }${
+        regidor.fitxa
+          ? `<a href="${escape(regidor.fitxa)}">${escape(regidor.name)}</a>`
+          : escape(regidor.name)
+      }</th>
       <td>${escape(regidor.role ?? "Regidoria")}</td>
     </tr>`,
     )
     .join("");
+
   return `<table class="cand-ple">
     <caption class="nomes-lectors">Regidors d'aquesta candidatura al ple 2023-2027</caption>
     <thead><tr><th>Nom</th><th>Càrrec</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
+  ${
+    totesAmbFoto
+      ? `<p class="nota">Les fotografies les publica el mateix ajuntament al seu portal de
+         transparència; les reproduïm en mida petita i les retirem a la primera petició de la
+         persona, sense demanar-ne el motiu.</p>`
+      : ambFoto > 0
+        ? `<p class="nota">L'ajuntament publica fotografia de ${ambFoto} d'aquests
+           ${data.councillors.length} regidors. Com que no les té tothom, no en mostrem cap:
+           ensenyar-ne només algunes seria un tracte desigual.</p>`
+        : ""
+  }
   <p class="nota">Grup municipal <b>${escape(data.sigles)}</b>. Publiquem el nom i el càrrec i res més:
   ni correu, ni telèfon, ni cap altra dada de contacte, tot i que la font oberta en porta.
   ${data.councillors.length !== data.seats
@@ -410,6 +447,16 @@ const CANDIDATURA_CSS = `
 
 .cand-fitxa{display:inline-block;background:var(--ink);color:var(--paper);text-decoration:none;
   border-radius:var(--r-max);padding:9px 20px;font-weight:800;font-size:.95rem;margin-top:var(--e2)}
+
+/* Les cares dels regidors a la taula del ple. Van dins de la mateixa cel·la que
+   el nom perquè la taula continuï tenint dues columnes i es plegui bé en un
+   mòbil de 320 px. */
+.cara-cand{width:36px;height:36px;border-radius:50%;border:2px solid var(--ink);
+  object-fit:cover;vertical-align:middle;margin-right:9px;background:var(--paper-2);
+  display:inline-block}
+.cara-cand.inicials{display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-weight:900;font-size:.78rem;color:var(--ink-suau)}
+.cand-ple th[scope="row"]{display:flex;align-items:center;gap:0;flex-wrap:wrap}
 `;
 
 /**
@@ -691,7 +738,7 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
       kind: municipalityMetrics.kind, data: municipalityMetrics.data,
     })
     .from(municipalityMetrics)
-    .where(inArray(municipalityMetrics.kind, ["electoralHistory", "government"]));
+    .where(inArray(municipalityMetrics.kind, ["electoralHistory", "government", "carrecs"]));
 
   // ---- índexs auxiliars, tots per municipi
 
@@ -715,9 +762,23 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
 
   const historyPerMunicipi = new Map<number, SerieMetrica>();
   const governPerMunicipi = new Map<number, GovernMetrica>();
+  const carrecsPerMunicipi = new Map<
+    number,
+    { carrecs: { nom: string; foto: string | null; fotoPetita: string | null }[] }
+  >();
+  // Amb un `else` genèric, qualsevol mètrica nova que s'afegís a la consulta
+  // entraria com si fos la del govern. Cada tipus, al seu lloc.
   for (const metric of metriques) {
-    if (metric.kind === "electoralHistory") historyPerMunicipi.set(metric.municipalityId, metric.data as SerieMetrica);
-    else governPerMunicipi.set(metric.municipalityId, metric.data as GovernMetrica);
+    if (metric.kind === "electoralHistory") {
+      historyPerMunicipi.set(metric.municipalityId, metric.data as SerieMetrica);
+    } else if (metric.kind === "government") {
+      governPerMunicipi.set(metric.municipalityId, metric.data as GovernMetrica);
+    } else if (metric.kind === "carrecs") {
+      carrecsPerMunicipi.set(
+        metric.municipalityId,
+        metric.data as { carrecs: { nom: string; foto: string | null; fotoPetita: string | null }[] },
+      );
+    }
   }
 
   const anteriorsPerMunicipi = new Map<number, typeof anteriors>();
@@ -771,6 +832,26 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
 
     const regidorsPerCandidatura = new Map<number, RegidorPle[]>();
     let unattached = 0;
+    /**
+     * La fitxa de la seu electrònica d'aquest municipi, per a les cares.
+     *
+     * S'aparella per nom de persona normalitzat, i **si un nom lliga amb més
+     * d'una fitxa no s'agafa cap foto**: posar la cara d'algú altre al costat
+     * d'un nom és el pitjor error que pot cometre aquesta pàgina.
+     */
+    const fitxaSeu = carrecsPerMunicipi.get(municipalityId) ?? null;
+    const fotoPerPersona = new Map<string, string | null>();
+    for (const carrec of fitxaSeu?.carrecs ?? []) {
+      const clauNom = normalizePersonName(carrec.nom);
+      if (fotoPerPersona.has(clauNom)) fotoPerPersona.set(clauNom, null);
+      else fotoPerPersona.set(clauNom, carrec.fotoPetita ?? carrec.foto ?? null);
+    }
+    const adreces = adrecesRegidors(fitxaSeu?.carrecs ?? []);
+    const fitxaPerPersona = new Map<string, string>();
+    for (const [carrec, adreca] of adreces) {
+      fitxaPerPersona.set(normalizePersonName((carrec as { nom: string }).nom), adreca);
+    }
+
     const mandatsMunicipi = [...(mandatsPerMunicipi.get(municipalityId) ?? [])].sort(
       (a, b) => (a.orderNum ?? 9999) - (b.orderNum ?? 9999),
     );
@@ -791,6 +872,11 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
         name: mandat.fullName,
         role: mandat.role,
         match: directe !== null ? "grup" : perSigles !== null ? "sigles" : "agrupacio",
+        foto: fotoPerPersona.get(normalizePersonName(mandat.fullName)) ?? null,
+        fitxa: (() => {
+          const a = fitxaPerPersona.get(normalizePersonName(mandat.fullName));
+          return a ? `../regidor/${a}/` : null;
+        })(),
       });
       regidorsPerCandidatura.set(candidatureId, llista);
     }

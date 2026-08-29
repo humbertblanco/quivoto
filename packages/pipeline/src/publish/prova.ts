@@ -414,10 +414,14 @@ function acaba() {
     return { ...g, pct: r ? r.pct : null, respostes: r ? r.n : 0 };
   }).filter((r) => r.pct !== null);
 
-  const prou = resultats.filter((r) => r.respostes >= MINIM);
-  prou.sort((a, b) => b.pct - a.pct);
-  const escassos = resultats.filter((r) => r.respostes < MINIM).sort((a, b) => b.pct - a.pct);
-  const ordenats = prou.concat(escassos);
+  /* De més a menys, i prou.
+     Abans els grups amb poques afirmacions situades anaven al final encara que
+     tinguessin el percentatge més alt. Era ben intencionat —una xifra feta amb
+     tres preguntes no es pot comparar amb una feta amb vint— però el resultat
+     semblava desordenat i ningú no llegia per què. Ara l'ordre és el que
+     s'espera i la poca cobertura es diu allà mateix, a cada fila. */
+  const ordenats = resultats.slice().sort((a, b) => b.pct - a.pct);
+  const escassos = ordenats.filter((r) => r.respostes < MINIM);
 
   if (ordenats.length === 0) {
     const gov = coincidencia(respostes, (d) => d.g);

@@ -31,8 +31,8 @@ function mostra(canvis: Partial<CandidaturaData> = {}): CandidaturaData {
     historyMismatch: false,
     recent: [{ year: 2019, sigles: "PSC-CP", votes: 9200, seats: 11 }],
     councillors: [
-      { name: "Eduard Sanz García", role: "Alcalde President", match: "grup" },
-      { name: "Montserrat Zamora Angulo", role: "1a Tinent d'Alcalde", match: "grup" },
+      { name: "Eduard Sanz García", role: "Alcalde President", match: "grup", foto: null, fitxa: null },
+      { name: "Montserrat Zamora Angulo", role: "1a Tinent d'Alcalde", match: "grup", foto: null, fitxa: null },
     ],
     unattached: 0,
     siblings: [{ slug: "erc-am", sigles: "ERC-AM", seats: 3, color: "#ffb232" }],
@@ -110,7 +110,7 @@ describe("renderCandidatura", () => {
 
   it("no publica cap dada de contacte", () => {
     const html = renderCandidatura(
-      mostra({ councillors: [{ name: "Eduard Sanz García", role: "Alcalde President", match: "grup" }] }),
+      mostra({ councillors: [{ name: "Eduard Sanz García", role: "Alcalde President", match: "grup", foto: null, fitxa: null }] }),
       "2026-08-29",
     );
     // La font oberta porta el correu de cada regidor. Aquí no hi ha de sortir mai.
