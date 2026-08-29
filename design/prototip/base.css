@@ -1,0 +1,562 @@
+/* ==========================================================================
+   quivoto — base del producte.  Direcció «el veïnat».
+
+   Aquest fitxer és autònom a propòsit: no fa cap @import ni depèn d'internet.
+   Els tokens d'identitat són els mateixos que web/public/assets/styles.css
+   (copiats, no re-inventats); la resta és el que una landing no necessitava i
+   un producte sí: moviment amb nom, escala tipogràfica, graella, colors de
+   dades i mode fosc.
+
+   Ordre:  1 tokens · 2 base · 3 marca · 4 graella · 5 primitives · 6 moviment
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1. TOKENS
+   ========================================================================== */
+:root{
+  color-scheme:light dark;
+
+  /* --- Identitat. NO es toquen: venen de la landing i han de coincidir. --- */
+  --paper:#FBF7EE; --paper-2:#FFFFFF; --ink:#1E1B2E; --ink-suau:#6B6680;
+  --coral:#E2735A; --menta:#BFE8D2; --lavanda:#C9C4F2; --presec:#FFD8B8;
+  --vora:rgba(30,27,46,.12);
+  --r-s:10px; --r-m:18px; --r-l:26px; --r-max:999px;
+  --e1:8px; --e2:16px; --e3:24px; --e4:40px; --e5:64px; --e6:104px;
+  --display:"Gabarito",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --text:"Nunito Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --ample:1180px;
+
+  /* --- Ombra dura ---------------------------------------------------------
+     Sempre desplaçada i sempre opaca: és una peça de paper damunt d'una altra,
+     no una ombra de llum. Es declara com a token perquè cap pantalla es pensi
+     mai una ombra difuminada pel seu compte. El gruix de vora també és token:
+     2.5px és el que fa que la vora es llegeixi com a traç dibuixat i no com a
+     línia de formulari. */
+  --ombra:3px 3px 0 var(--ink);
+  --ombra-premuda:0 0 0 var(--ink);
+  --ombra-gran:8px 8px 0 var(--ink);
+  --gruix-vora:2.5px;
+
+  /* --- Tinta i paper que NO giren amb el mode fosc ------------------------
+     Els pastels (menta, lavanda, presec) es queden clars als dos modes: són
+     la meitat de la identitat. Per tant tot el que seu DAMUNT d'un pastel
+     —lletra, vora, traç d'una icona— s'ha de quedar fosc als dos modes.
+     Un sol nom per a cada constant, declarat una sola vegada i fora del bloc
+     de mode fosc. Abans n'hi havia tres (--tinta-fixa, --sobre-pastel i el
+     #1E1B2E escrit a pèl) i dos valors diferents per a --paper-fix. */
+  --tinta-fixa:#1E1B2E;
+  --paper-fix:#FFFFFF;
+
+  /* Coral de SUPERFÍCIE i coral de TEXT no són el mateix color.
+     #E2735A sobre crema fa 2,87:1: serveix per a un fons o per a un traç
+     gruixut, i no arriba mai a AA com a lletra. --coral-text és el mateix
+     coral enfosquit fins a 5,6:1 sobre crema, i és el que va a .micro,
+     a a:hover, a .num-seccio i a qualsevol coral que sigui text. */
+  --coral-text:#B8442A;
+
+  /* El contorn de focus. Ha de contrastar amb TOT el que hi pot haver a sota
+     (crema, menta, lavanda, presec, tinta), i el coral no ho fa: 2,30:1 sobre
+     menta, 1,85:1 sobre lavanda. La tinta sí, i sobre superfície fosca es
+     canvia per crema amb aquest mateix nom. */
+  --focus:var(--ink);
+
+  /* --- Moviment: durades -------------------------------------------------
+     Tres i prou. Si una pantalla en necessita una quarta, el que passa és que
+     l'animació fa massa feina.
+       --t-rapid  120ms  resposta al dit: premuda de botó, canvi d'estat d'un
+                         control. Per sota d'aquest llindar el canvi no es veu;
+                         per sobre, el control sembla que va endarrerit.
+       --t-mig    240ms  el gruix del sistema: entrades, targetes que arriben,
+                         obertures. És el temps que triga l'ull a acceptar que
+                         una cosa ha canviat de lloc sense perdre-la de vista.
+       --t-lent   420ms  només per a recorreguts llargs de veritat (una barra
+                         que creix de 0 a 100, la mascota que travessa). Res
+                         que es repeteixi sovint pot durar tant.
+       --t-pas     60ms  el graó entre dos elements d'una mateixa tanda. */
+  --t-rapid:120ms;
+  --t-mig:240ms;
+  --t-lent:420ms;
+  --t-pas:60ms;
+
+  /* --- Moviment: corbes ---------------------------------------------------
+     Cap `ease` per defecte enlloc: `ease` és la corba de qui no n'ha triat cap.
+       --corba-seca     surt de pressa i frena en sec. Per als controls: el botó
+                        ha d'anar allà on el dit ja l'ha posat, sense inèrcia.
+       --corba-suau     arrenca lenta i frena lenta. Per a coses que entren o
+                        surten de la pantalla, on l'ull vol veure el trajecte.
+       --corba-salt     passa de llarg i torna. NOMÉS per a la mascota i per a
+                        la confirmació d'una resposta: és la corba que fa que
+                        una cosa sembli viva. Fora d'aquí, marejaria.
+       --corba-sortida  arrenca de cop i s'accelera. El que marxa no ha de
+                        demanar atenció mentre marxa. */
+  --corba-seca:cubic-bezier(.2,0,.2,1);
+  --corba-suau:cubic-bezier(.4,0,.2,1);
+  --corba-salt:cubic-bezier(.34,1.56,.64,1);
+  --corba-sortida:cubic-bezier(.5,0,1,1);
+
+  /* --- Escala tipogràfica -------------------------------------------------
+     Vuit graons amb clamp(): un mòbil de 390px i una pantalla de 1440px veuen
+     la mateixa jerarquia, no el mateix cos. Els graons de dalt creixen molt
+     (el titular és el cartell) i els de baix gairebé no (el text llarg s'ha de
+     poder llegir igual a tot arreu). */
+  --mida-micro:clamp(.68rem,.66rem + .10vw,.74rem);   /* etiquetes, versaletes  */
+  --mida-menut:clamp(.82rem,.79rem + .14vw,.90rem);   /* peus, metadades        */
+  --mida-cos:clamp(1rem,.97rem + .16vw,1.06rem);      /* text corrent           */
+  --mida-guia:clamp(1.12rem,1.04rem + .36vw,1.30rem); /* entradeta, afirmació   */
+  --mida-t3:clamp(1.20rem,1.10rem + .50vw,1.45rem);   /* títol de targeta       */
+  --mida-t2:clamp(1.70rem,1.35rem + 1.70vw,2.60rem);  /* títol de secció        */
+  --mida-t1:clamp(2.20rem,1.60rem + 3.00vw,3.40rem);  /* títol de pantalla      */
+  --mida-hero:clamp(2.90rem,1.90rem + 5.00vw,6.00rem);/* portada, resultat      */
+
+  /* --- Graella ------------------------------------------------------------
+     Dotze columnes, però l'última és estreta (.62fr). La cantonada asimètrica
+     és la decisió: hi ha una columna marginal permanent, a la dreta, on hi van
+     els números, els adhesius i les notes. Cap composició queda centrada per
+     inèrcia; sempre hi ha un costat que pesa més. */
+  --cols:4;                 /* mòbil */
+  --cantonada:.62fr;
+  --canal:var(--e2);
+
+  /* --- Paleta de dades ----------------------------------------------------
+     REGLA DE NEUTRALITAT, i no és decorativa:
+     1. Aquests colors NOMÉS es fan servir dins d'un gràfic o d'una fitxa de
+        partit, mai com a color d'interfície. Un botó no és mai vermell PSC.
+     2. Tots els partits tenen el mateix pes visual: mateixa saturació aparent,
+        mateixa vora, mateix radi. Cap partit té un color «de guanyador».
+     3. El color no diu mai res tot sol: sempre hi ha la sigla i la xifra al
+        costat. Un daltònic i una impressió en blanc i negre han d'entendre el
+        mateix gràfic.
+     4. L'ordre de dibuix el mana la dada (vots, escons), mai la simpatia. */
+  --dada-psc:#D00C3C;
+  --dada-junts:#00C3B2;
+  --dada-erc:#FFB232;
+  --dada-comuns:#662483;
+  --dada-pp:#234B90;
+  --dada-vox:#00C118;
+  --dada-cup:#FFFF00;
+  --dada-cs:#FF5824;
+  /* Crida per Sabadell (CpS-AMUNT) té token propi: no és la CUP i no és
+     «altres». Es queda a la família groga perquè el 2023 va concórrer amb la
+     CUP, però amb el seu valor, i el mateix a les tres pantalles. */
+  --dada-crida:#FFE14D;
+  --dada-altres:#8E8AA3;      /* agregat «altres», mai un partit concret */
+  --dada-vora:var(--ink);     /* tota barra i tot sector porten vora de tinta */
+
+  /* --- Superfícies i estats ---------------------------------------------- */
+  --fons:var(--paper);
+  --fons-peca:var(--paper-2);
+  --fons-fosca:var(--ink);
+  /* Crema fixa: «text sobre fosc» vol dir crema als dos modes. Quan era
+     var(--paper), al mode fosc es tornava fosc i deixava de servir per al que
+     diu el seu nom. */
+  --text-sobre-fosc:#FBF7EE;
+  --ull-blanc:#FFFFFF;        /* els ulls són blancs als dos modes */
+}
+
+/* --- Mode fosc ------------------------------------------------------------
+   No és un gris de tauler d'IA: és paper fosc. Manté el to violaci de la tinta
+   (#1E1B2E girat del revés), conserva el gra i conserva l'ombra dura, que ara
+   és clara. El coral s'aclareix perquè el coral de paper sobre fons fosc es
+   queda a 4.2:1 i no arriba a AA. Els pastels no es toquen: sobre fosc ja hi
+   contrasten i són la meitat de la identitat. */
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#171423; --paper-2:#221D33; --ink:#F4EFE3; --ink-suau:#A9A2C0;
+    --coral:#F08E75;
+    --vora:rgba(244,239,227,.16);
+    --ombra:3px 3px 0 var(--ink);
+    --ombra-gran:8px 8px 0 var(--ink);
+    /* Les versions fosques dels colors de partit existeixen només perquè el
+       PSC, els Comuns i el PP no es fonguin amb el paper fosc. Segueixen sent
+       reconeixibles i mantenen l'ordre relatiu. */
+    --dada-psc:#F0234F;
+    --dada-comuns:#A65FD1;
+    --dada-pp:#5B87D6;
+    --dada-vora:var(--ink);
+    --fons-fosca:#0F0C18;
+    /* El coral aclarit ja arriba a AA sobre paper fosc: aquí text i
+       superfície poden ser el mateix color. */
+    --coral-text:#F08E75;
+  }
+}
+
+
+/* ==========================================================================
+   2. BASE
+   ========================================================================== */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+
+body{
+  margin:0;background:var(--fons);color:var(--ink);
+  font-family:var(--text);font-size:var(--mida-cos);line-height:1.55;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;
+}
+/* Gra de paper. Idèntic al de la landing: `fixed` i `pointer-events:none`
+   perquè no participi mai del scroll ni del hit-testing. */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme:dark){ body::before{opacity:.07} }
+main,header,footer,.capa{position:relative;z-index:1}
+
+h1,h2,h3,h4{font-family:var(--display);font-weight:900;letter-spacing:-.025em;line-height:1.04;margin:0}
+h1{font-size:var(--mida-t1)}
+h2{font-size:var(--mida-t2)}
+h3{font-size:var(--mida-t3);font-weight:800;letter-spacing:-.015em}
+h4{font-size:var(--mida-cos);font-weight:800;letter-spacing:-.01em}
+p{margin:0 0 var(--e2)}
+a{color:inherit;text-underline-offset:3px;text-decoration-thickness:2px}
+a:hover{color:var(--coral-text)}
+img,svg{max-width:100%}
+small{font-size:var(--mida-menut)}
+
+/* Utilitats de text */
+.micro{font-size:var(--mida-micro);font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--coral-text)}
+.guia{font-size:var(--mida-guia);text-wrap:pretty}
+.suau{color:var(--ink-suau)}
+.peu-nota{font-size:var(--mida-menut);color:var(--ink-suau)}
+/* Xifres tabulars: sense això, un número que compta amunt fa ballar la línia
+   sencera a cada fotograma. */
+.xifra-num{font-variant-numeric:tabular-nums;font-family:var(--display);font-weight:900;letter-spacing:-.04em}
+
+/* Accessibilitat */
+/* Un sol contorn, sempre de --focus, i `outline` NO s'usa per a res més: cap
+   estat premut no li pot guanyar per especificitat perquè cap estat premut no
+   toca `outline`. */
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:4px}
+.salta{position:absolute;left:-9999px;background:var(--ink);color:var(--paper);padding:var(--e1) var(--e2);z-index:99}
+.salta:focus{left:0}
+.nomes-lectors{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+
+/* ==========================================================================
+   3. LA MARCA
+   Una sola construcció, i el mateix marcatge literal a totes les pantalles:
+   la «o» de quivoto és la cara de la papereta dins d'un cercle blanc, amb el
+   traç de presec a dalt a la dreta. És igual que la landing (tools/
+   build_landing.py → wordmark()) i és l'actiu més reconeixible que tenim: no
+   pot desaparèixer d'una pantalla ni canviar de color.
+   La cara va escrita al marcatge i no clonada del sprite a propòsit: la marca
+   ha de ser-hi al primer pintat, abans que cap JavaScript hi arribi.
+   ========================================================================== */
+.marca{
+  display:inline-flex;align-items:center;gap:1px;line-height:1;
+  font-family:var(--display);font-weight:900;letter-spacing:-.05em;
+  font-size:var(--marca-mida,1.7rem);text-decoration:none;color:inherit;flex:none;
+}
+a.marca:hover{color:inherit;text-decoration:none}
+.marca__o{display:inline-block;width:.86em;height:.86em;margin-bottom:-.09em;flex:none}
+
+
+/* ==========================================================================
+   4. GRAELLA
+   ========================================================================== */
+/* `width:100%` no és redundant: dins d'un contenidor flexible en columna,
+   `margin-inline:auto` fa que la caixa s'encongeixi fins al seu contingut en
+   comptes d'estirar-se, i l'amplada de lectura deixava de valer. */
+.embolcall{width:100%;max-width:var(--ample);margin-inline:auto;padding-inline:var(--e3)}
+
+/* Graella base. A mòbil són 4 columnes senceres; la cantonada estreta només
+   apareix quan hi ha amplada per notar-la. */
+.graella{display:grid;gap:var(--canal);grid-template-columns:repeat(var(--cols),minmax(0,1fr))}
+@media (min-width:720px){ :root{--cols:8} }
+@media (min-width:1040px){
+  :root{--cols:12}
+  .graella{grid-template-columns:repeat(11,minmax(0,1fr)) var(--cantonada)}
+}
+/* Trams. `span` i no posicions fixes: així una peça es pot moure de fila sense
+   tocar el CSS. */
+.t1{grid-column:span 1}   .t2{grid-column:span 2}   .t3{grid-column:span 3}
+.t4{grid-column:span 4}   .t5{grid-column:span 5}   .t6{grid-column:span 6}
+.t7{grid-column:span 7}   .t8{grid-column:span 8}   .t9{grid-column:span 9}
+.t10{grid-column:span 10} .t11{grid-column:span 11} .t12{grid-column:span 12}
+/* A mòbil tot ocupa l'amplada sencera: la graella hi és per ordenar-ho
+   verticalment, no per encabir-hi columnes que no hi caben. */
+@media (max-width:719px){
+  .t1,.t2,.t3,.t4,.t5,.t6,.t7,.t8,.t9,.t10,.t11,.t12{grid-column:span 4}
+  .t-mig{grid-column:span 2}
+}
+/* La columna marginal: números de secció, adhesius, notes al marge. Buida per
+   sota de 1040px, on el marge no existeix. */
+.marge{grid-column:12;justify-self:start;align-self:start}
+@media (max-width:1039px){ .marge{display:none} }
+/* Ruptura Bauhaus: una peça que se surt de la caixa cap a la cantonada. */
+.a-la-cantonada{grid-column:8 / -1}
+@media (max-width:719px){ .a-la-cantonada{grid-column:span 4} }
+
+
+/* --- Banda de color ------------------------------------------------------
+   Un full de paper de color que travessa la pàgina sencera. El to entra per
+   --banda; dins del subarbre es redefineixen --ink, --paper i companyia, i
+   així tot el que hi cau a dins (vores, ombres, botons, adhesius) hi encaixa
+   sense una sola excepció escrita a mà.
+   Els pastels NO giren amb el mode fosc: una banda de menta és paper clar als
+   dos modes, i per això la tinta de dins hi és fixa. La banda de tinta fa el
+   camí contrari: paper fosc als dos modes i lletra crema. */
+.banda{background:var(--banda,transparent);padding-block:var(--e5)}
+.banda--menta{--banda:var(--menta)}
+.banda--lavanda{--banda:var(--lavanda)}
+.banda--presec{--banda:var(--presec)}
+.banda--peca{--banda:var(--fons-peca);border-block:var(--gruix-vora) solid var(--vora)}
+.banda--menta,.banda--lavanda,.banda--presec{
+  --ink:#1E1B2E; --ink-suau:#4A455E;
+  --paper:#FBF7EE; --paper-2:#FFFFFF;
+  --fons:#FBF7EE; --fons-peca:#FFFFFF;
+  --vora:rgba(30,27,46,.14);
+  --coral-text:#B8442A;
+  --focus:#1E1B2E;
+  color:var(--ink);
+  border-block:var(--gruix-vora) solid var(--ink);
+}
+.banda--tinta{
+  --banda:var(--fons-fosca);
+  --ink-suau:#BDB6CE;
+  --coral:#F08E75; --coral-text:#F08E75;
+  --focus:#FBF7EE;
+  color:var(--text-sobre-fosc);
+}
+.banda--tinta a{color:inherit}
+.banda--tinta a:hover{color:var(--coral-text)}
+
+
+/* ==========================================================================
+   5. PRIMITIVES
+   Cinc peces i prou. Si una pantalla en necessita una altra, primer es mira si
+   no és una d'aquestes amb un modificador.
+   ========================================================================== */
+
+/* --- Botó ---------------------------------------------------------------
+   L'ombra dura no és decoració: és el recorregut. En repòs el botó està
+   3px enlaire; en passar-hi, baixa 1px; en prémer, toca terra i l'ombra
+   desapareix. Tot amb transform (no amb `top`), i amb la corba seca. */
+.boto{
+  display:inline-flex;align-items:center;gap:var(--e1);
+  /* Tinta damunt de coral, no crema: crema sobre #E2735A fa 2,87:1 i no
+     arriba a AA. La tinta fixa hi fa 5,5:1 en clar i 8,0:1 en fosc, i la
+     identitat és el coral, que hi continua sent el fons. */
+  background:var(--coral);color:var(--tinta-fixa);
+  border:var(--gruix-vora) solid var(--ink);border-radius:var(--r-max);
+  padding:13px 26px;font:inherit;font-weight:800;font-size:var(--mida-cos);
+  cursor:pointer;text-decoration:none;box-shadow:var(--ombra);
+  transition:transform var(--t-rapid) var(--corba-seca),
+             box-shadow var(--t-rapid) var(--corba-seca);
+}
+.boto:hover{color:var(--tinta-fixa);transform:translate(1px,1px);box-shadow:2px 2px 0 var(--ink)}
+.boto:active{transform:translate(3px,3px);box-shadow:var(--ombra-premuda)}
+.boto[disabled],.boto[aria-disabled="true"]{opacity:.55;cursor:not-allowed;transform:none;box-shadow:var(--ombra)}
+.boto--fantasma{background:var(--paper-2);color:var(--ink)}
+.boto--fantasma:hover{color:var(--ink)}
+.boto--tinta{background:var(--ink);color:var(--paper)}
+.boto--tinta:hover{color:var(--paper)}
+.boto--menut{padding:8px 16px;font-size:var(--mida-menut)}
+/* Botó seleccionat (escala de resposta, filtres): l'estat NO es diu només amb
+   el color de fons; també baixa a terra i guanya una vora doble.
+   La vora doble es diu amb `box-shadow` i NO amb `outline`: `outline` és,
+   a tot el sistema, el contorn de focus i només això. Quan l'estat premut
+   se'l quedava (especificitat 0-2-0 contra 0-1-0), tabular fins a un botó ja
+   premut no canviava res a la pantalla. */
+.boto[aria-pressed="true"],.boto[aria-checked="true"],.boto--triat{
+  background:var(--menta);color:var(--tinta-fixa);
+  transform:translate(3px,3px);
+  box-shadow:0 0 0 2.5px var(--ink);
+}
+
+/* --- Adhesiu ------------------------------------------------------------
+   Enganxat a mà: sempre girat. L'angle és una variable perquè cada instància
+   en tingui un de diferent i la pàgina no sembli feta amb un motlle. */
+.adhesiu{
+  display:inline-block;background:var(--presec);color:var(--ink);
+  border:var(--gruix-vora) solid var(--ink);border-radius:var(--r-max);
+  padding:6px 14px;font-weight:800;font-size:var(--mida-menut);line-height:1.2;
+  transform:rotate(var(--gir,-3deg));box-shadow:3px 3px 0 var(--tinta-fixa);
+  border-color:var(--tinta-fixa);color:var(--tinta-fixa);
+  transition:transform var(--t-rapid) var(--corba-seca);
+}
+a.adhesiu:hover,button.adhesiu:hover{transform:rotate(0deg) scale(1.04);color:var(--ink)}
+.adhesiu--menta{background:var(--menta)}
+.adhesiu--lavanda{background:var(--lavanda)}
+.adhesiu--coral{background:var(--coral);color:var(--tinta-fixa)}
+/* Un adhesiu és sempre un tros de paper de color clar, també en mode fosc:
+   per això no depèn de --ink. L'ombra, en canvi, sí que ha de ser clara sobre
+   paper fosc, o no es veu. */
+@media (prefers-color-scheme:dark){ .adhesiu{box-shadow:3px 3px 0 var(--ink)} }
+
+/* --- Targeta ------------------------------------------------------------
+   El color de l'ombra és una variable: quan la targeta és la peça principal,
+   l'ombra és de color (lavanda, menta) i creix; quan és una de moltes, és de
+   tinta i petita. Mai difuminada, mai centrada.
+
+   El radi diu el rang. --r-l (26px) és per a l'única peça que mana a cada
+   pantalla i prou; una targeta corrent va a --r-m, i les llistes i els
+   controls, a --r-s. Quan --r-l se'l repartien vuit contenidors de rang
+   diferent, el radi gran ja no volia dir res. */
+.targeta{
+  background:var(--fons-peca);color:var(--ink);
+  border:3px solid var(--ink);border-radius:var(--r-m);
+  padding:var(--e3);box-shadow:3px 3px 0 var(--ombra-color,var(--ink));
+  transition:transform var(--t-mig) var(--corba-seca),
+             box-shadow var(--t-mig) var(--corba-seca);
+}
+/* La peça que mana: més aire, ombra de color i el radi gran. */
+.targeta--gran{border-radius:var(--r-l);padding:var(--e4);box-shadow:8px 8px 0 var(--ombra-color,var(--lavanda))}
+.targeta--girada{transform:rotate(var(--gir,-2.5deg))}
+.targeta--clicable{cursor:pointer;text-align:left;width:100%;font:inherit}
+.targeta--clicable:hover{transform:rotate(0deg) translate(-2px,-2px);box-shadow:6px 6px 0 var(--ombra-color,var(--ink))}
+.targeta__cap{display:flex;align-items:center;gap:var(--e2);margin-bottom:var(--e2)}
+/* Modificadors. Existien de fet a tres pantalles, redeclarats a mà amb els
+   mateixos tres valors; ara existeixen de dret i una sola vegada.
+     --puntejada  el que encara no és una dada: vora de punts i sense ombra
+     --fosca      la peça que talla el ritme (el «què no et podem dir»)
+     --llista     la targeta que només conté una llista: la vora la posa ella,
+                  el buit el posen les files */
+.targeta--puntejada{background:transparent;border-style:dashed;box-shadow:none}
+.targeta--fosca{background:var(--fons-fosca);color:var(--text-sobre-fosc);--ink-suau:#BDB6CE;--focus:#FBF7EE}
+.targeta--fosca h2,.targeta--fosca h3,.targeta--fosca h4{color:var(--text-sobre-fosc)}
+.targeta--fosca a{color:var(--menta)}
+.targeta--llista{padding:0;overflow:hidden;border-radius:var(--r-s)}
+
+/* --- Número de secció ---------------------------------------------------
+   Una sola decisió per a les tres pantalles que numeren seccions: sempre dins
+   de .marge (la columna marginal de la dreta), sempre a la mateixa mida i
+   sempre recte. Abans n'hi havia tres tractaments, tres mides i dos girs. */
+.num-seccio{
+  font-family:var(--display);font-weight:900;font-size:var(--mida-t2);
+  line-height:1;margin:0;color:var(--coral-text);font-variant-numeric:tabular-nums;
+}
+
+/* --- Etiqueta -----------------------------------------------------------
+   Versaleta dins d'una píndola. És l'única peça que pot anar sense vora:
+   quan és plana serveix de marca de secció, no de control. */
+.etiqueta{
+  display:inline-block;background:var(--fons-etiqueta,var(--menta));color:var(--tinta-fixa);
+  border-radius:var(--r-max);padding:5px 13px;
+  font-size:var(--mida-micro);font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+}
+.etiqueta--vora{border:2px solid var(--ink);background:transparent;color:var(--ink)}
+.etiqueta--tinta{background:var(--ink);color:var(--fons)}
+/* Etiqueta de partit: el color de la dada hi entra per --dada, mai per una
+   classe per partit. El nom sempre hi és escrit. */
+.etiqueta--partit{background:transparent;border:2px solid var(--ink);color:var(--ink);padding-left:8px;display:inline-flex;align-items:center;gap:7px}
+.etiqueta--partit:empty{padding:0;border:0;gap:0}
+.etiqueta--partit::before{content:"";width:12px;height:12px;border-radius:3px;background:var(--dada,var(--dada-altres));border:1.5px solid var(--ink)}
+
+/* --- Barra de progrés ---------------------------------------------------
+   S'anima amb scaleX, no amb width: width provoca layout a cada fotograma i
+   width és exactament el que fa que una barra vagi a 30fps al mòbil.
+   El valor entra per --valor (0 a 1). Sempre acompanyada d'un número escrit:
+   una barra sola no és una dada llegible. */
+.barra{
+  position:relative;height:14px;border:2px solid var(--ink);border-radius:var(--r-max);
+  background:var(--paper-2);overflow:hidden;
+}
+.barra__omplert{
+  position:absolute;inset:0;transform-origin:left center;
+  transform:scaleX(var(--valor,0));background:var(--dada,var(--coral));
+  transition:transform var(--t-lent) var(--corba-suau);
+}
+.barra--prima{height:9px}
+.barra--dada{border-radius:var(--r-s)}
+.barra--dada .barra__omplert{border-radius:0}
+
+/* --- Punts de confiança -------------------------------------------------
+   Quants punts de cinc. El punt ple no es distingeix només pel color: també és
+   més gran i té vora plena, i el contenidor ha de portar aria-label amb el
+   valor escrit. */
+.punts{display:inline-flex;align-items:center;gap:6px;padding:0;margin:0;list-style:none}
+.punt{
+  width:9px;height:9px;border-radius:50%;
+  border:2px solid var(--ink);background:transparent;
+  transition:transform var(--t-mig) var(--corba-salt),background-color var(--t-rapid) var(--corba-seca);
+}
+.punt--ple{background:var(--ink);transform:scale(1.35)}
+.punts--coral .punt--ple{background:var(--coral);border-color:var(--coral)}
+
+/* --- Icones del sprite --------------------------------------------------
+   Mida per --mida; el bloc evita el descens de línia de baseline dels SVG.
+
+   La CAIXA es reserva al contenidor buit, no al <svg> que hi entrarà després:
+   moviment.js injecta les icones quan el JS arriba, i fins llavors un <span>
+   en línia fa 0 px d'ample. Quan s'omplia, la columna saltava de 34 a 132 px
+   i això és CLS a les quatre pantalles. Com que --mida és una propietat
+   personalitzada, s'hereta: n'hi ha prou de declarar-la al contenidor perquè
+   la caixa reservada i la icona final facin exactament la mateixa mida. */
+[data-icona]{display:inline-block;vertical-align:middle;width:var(--mida,32px);height:var(--mida,32px);flex:none}
+[data-icona][data-classe~="ico--vei"]{width:var(--mida,56px);height:var(--mida,56px)}
+[data-icona][data-base="mascota"]{width:var(--mida,120px);height:auto;aspect-ratio:120/140}
+
+.ico{display:block;width:var(--mida,32px);height:var(--mida,32px);flex:none}
+.ico--vei{width:var(--mida,56px);height:var(--mida,56px)}
+/* La fletxa és una sola icona: «↗» és la mateixa girada. */
+.ico--puja{transform:rotate(-45deg)}
+.mascota{display:block;width:var(--mida,120px);height:auto}
+
+/* Les cares no paren mai de parpellejar i de mirar: són dues animacions
+   infinites per icona i, a la portada, unes 44 alhora. Amb això, el navegador
+   se salta l'estil i el pintat de tot el subarbre mentre la icona és fora de
+   pantalla, i les animacions no corren per a ningú. La caixa ja està
+   reservada més amunt, o sigui que saltar-se'n el contingut no mou res. */
+.ico{content-visibility:auto;contain-intrinsic-size:var(--mida,32px)}
+
+
+/* ==========================================================================
+   6. MOVIMENT
+   Els keyframes de la identitat (parpelleig, mirar, flotar, dibuixar) són els
+   mateixos de la landing: aquí es copien, no se'n fan de nous que facin el
+   mateix. Els dos únics afegits són `entrar` (aparició escalonada) i `pujar`
+   (confirmació d'una resposta), que la landing no necessitava.
+   Regla dura: només s'anima transform i opacity.
+   ========================================================================== */
+
+/* Les parpelles tapen l'ull: en repòs, aixafades; en parpellejar, s'obren. */
+.parpelles{transform-box:fill-box;transform-origin:center;transform:scaleY(0);animation:parpelleig 6.5s var(--retard,0s) infinite}
+.pupilles{transform-box:fill-box;transform-origin:center;animation:mirar 9s var(--retard,0s) infinite}
+.papereta .cos,.mascota .cos{transform-box:fill-box;transform-origin:50% 90%;animation:flotar 5.5s ease-in-out infinite}
+.papereta .creu,.mascota .creu{stroke-dasharray:44;stroke-dashoffset:44;animation:dibuixar .7s .35s ease-out forwards}
+
+@keyframes parpelleig{0%,93%{transform:scaleY(0)}94.5%{transform:scaleY(1)}96%,100%{transform:scaleY(0)}}
+@keyframes mirar{0%,38%{transform:translate(0,0)}44%,56%{transform:translate(1.5px,0)}62%,74%{transform:translate(-1.5px,.4px)}80%,100%{transform:translate(0,0)}}
+@keyframes flotar{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-7px) rotate(1deg)}}
+@keyframes dibuixar{to{stroke-dashoffset:0}}
+
+/* Entrada a la vista. L'estat inicial el posa el CSS i no el JS: si el JS no
+   arriba a carregar-se, `.dins` no arriba mai i el contingut quedaria invisible
+   per sempre — per això `js-mou` només existeix si algú l'ha posada a <html>,
+   i sense ella tot es veu i prou.
+   Qui la posa és un script EN LÍNIA al <head>, tres línies i sense xarxa, i no
+   moviment.js: moviment.js va al final del document i, amb 90 kB de marcatge
+   pel mig, el navegador ja ha pintat. L'H1 es veia, s'amagava en arribar la
+   classe i tornava a entrar: tres pintats de la primera pantalla i un
+   parpelleig que es veia de debò. */
+.js-mou [data-entrada]{opacity:0}
+.js-mou [data-entrada].dins{
+  animation:entrar var(--t-mig) var(--corba-suau) var(--retard,0s) both;
+}
+@keyframes entrar{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* Confirmació: la peça salta una mica quan la resposta s'ha registrat. Aquesta
+   és l'única corba elàstica que toca un control, i només després d'un clic. */
+.pujada{animation:pujar var(--t-mig) var(--corba-salt) both}
+@keyframes pujar{0%{transform:scale(1)}45%{transform:scale(1.06)}100%{transform:scale(1)}}
+
+/* --- prefers-reduced-motion ---------------------------------------------
+   No n'hi ha prou d'apagar-ho tot: el que estava amagat esperant una animació
+   ha de quedar visible, la creu de la papereta ha d'aparèixer dibuixada i les
+   parpelles s'han de quedar obertes (aixafades) i no a mig camí. La interfície
+   ha de ser exactament igual de comprensible sense una sola animació. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important;
+  }
+  html{scroll-behavior:auto}
+  .js-mou [data-entrada],.js-mou [data-entrada].dins{opacity:1;transform:none;animation:none}
+  .parpelles{transform:scaleY(0)}
+  .papereta .creu,.mascota .creu{stroke-dashoffset:0}
+  .barra__omplert{transition:none}
+  /* Sense animacions no cal saltar-se el pintat de res: content-visibility
+     només hi era per aturar les cares. */
+  .ico{content-visibility:visible}
+}

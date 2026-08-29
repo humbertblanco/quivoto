@@ -10,3 +10,12 @@ web/private/data/
 node_modules/
 __pycache__/
 *.pyc
+
+# Dades locals de desenvolupament
+packages/db/.data/
+.turbo/
+
+# Sortida generada de l'Observatori: es refà amb `pnpm ingest`, no es versiona
+web/public/observatori/
+# Actes descarregades
+packages/db/.data/

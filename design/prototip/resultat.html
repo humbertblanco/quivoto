@@ -1,0 +1,1258 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>El teu resultat · quivoto · Sabadell</title>
+<meta name="description" content="El resultat de la brúixola electoral de quivoto: rànquing de candidatures, evidència afirmació a afirmació i el que han fet, no només el que diuen.">
+<!-- Tipografia local. Els @font-face van ABANS del full d'estil i les dues
+     cares llatines es demanen amb preload: si els @font-face van després, la
+     petició de la lletra no arrenca fins que base.css ha baixat i s'ha
+     analitzat. Cap petició a internet. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../web/public/assets/fonts/QGYtz_0dZAGKJJ4t3HtoW4XGnfBI.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJ3xzHGGVFM.woff2">
+<style>
+@font-face{font-family:"Gabarito";font-style:normal;font-weight:400 900;font-display:swap;
+  src:url(../../web/public/assets/fonts/QGYtz_0dZAGKJJ4t3HtoW4XGnfBI.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-style:normal;font-weight:400 800;font-display:swap;
+  src:url(../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJ3xzHGGVFM.woff2) format("woff2")}
+</style>
+
+<link rel="stylesheet" href="base.css">
+
+<!-- L'estat amagat de [data-entrada] només existeix si <html> porta .js-mou.
+     Es posa abans del primer pintat, no des de moviment.js, que va al final. -->
+<script>if(!matchMedia('(prefers-reduced-motion:reduce)').matches)document.documentElement.className+=' js-mou'</script>
+
+<style>
+/* ==========================================================================
+   quivoto — pantalla «el resultat».
+   Tot el que és compartit surt de base.css. Aquí només hi ha el que és
+   d'aquesta pantalla: el rànquing, la comparació afirmació a afirmació,
+   el mòdul «diuen/fan» i la targeta per compartir.
+   ========================================================================== */
+
+/* --tinta-fixa, --paper-fix, --coral-text i els pegats de contrast de mode
+   fosc ja no viuen aquí: són tokens i primitives de base.css. La banda de
+   color també: .franja--pastel era la quarta implementació de la mateixa peça
+   i s'ha canviat per .banda de base.css, que en mode fosc respon igual a les
+   quatre pantalles. */
+
+/* --- Bandes a tota amplada ---------------------------------------------- */
+.banda{position:relative;z-index:1}
+.banda .graella{row-gap:var(--e4)}
+
+/* --- Capçalera ---------------------------------------------------------- */
+.cap{border-bottom:var(--gruix-vora) solid var(--ink);background:var(--fons)}
+.cap__dins{display:flex;align-items:center;gap:var(--e2);flex-wrap:wrap;
+  padding-block:var(--e2)}
+.cap .marca{--marca-mida:1.7rem}
+.cap__lloc{margin:0 auto 0 0;font-size:var(--mida-menut);color:var(--ink-suau)}
+.cap__lloc strong{color:var(--ink)}
+
+/* --- Portada del resultat ----------------------------------------------- */
+.hero__text h1{margin:var(--e1) 0 var(--e2)}
+.hero__nom{display:inline-block;background:var(--paper-fix);color:var(--tinta-fixa);
+  border:var(--gruix-vora) solid var(--tinta-fixa);border-radius:var(--r-m);
+  padding:0 .28em;box-shadow:3px 3px 0 var(--tinta-fixa);transform:rotate(-2.4deg)}
+.hero__xifra{display:flex;align-items:baseline;gap:var(--e2);flex-wrap:wrap;margin-top:var(--e3)}
+.hero__xifra .xifra-num{font-size:var(--mida-hero);line-height:.9}
+.hero__peu{display:flex;gap:var(--e2);flex-wrap:wrap;align-items:center;margin-top:var(--e3)}
+.hero__mascota{position:relative;display:flex;justify-content:center;align-items:flex-start}
+.hero__mascota [data-icona]{--mida:clamp(140px,34vw,210px)}
+.hero__adhesiu{position:absolute;top:.5rem;right:0;--gir:5.5deg}
+@media (max-width:719px){ .hero__adhesiu{right:auto;left:60%} }
+
+/* --- Rànquing ------------------------------------------------------------
+   Una llista ordenada de veritat (<ol>): l'ordre és la dada. El primer no té
+   podi ni medalla; té més aire, ombra de color i la mascota al costat. */
+.ranquing{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2)}
+.fila{display:grid;gap:var(--e1) var(--e3);align-items:center;
+  grid-template-columns:2.2rem minmax(0,1fr);
+  grid-template-areas:"ordre id" "dada dada" "conf conf";
+  background:var(--fons-peca);border:var(--gruix-vora) solid var(--ink);
+  border-radius:var(--r-m);padding:var(--e2) var(--e3);box-shadow:var(--ombra)}
+@media (min-width:720px){
+  .fila{grid-template-columns:2.4rem minmax(9rem,1fr) minmax(0,1.15fr) auto;
+    grid-template-areas:"ordre id dada conf"}
+}
+.fila__ordre{grid-area:ordre;margin:0;font-family:var(--display);font-weight:900;
+  font-size:var(--mida-t3);color:var(--ink-suau);font-variant-numeric:tabular-nums}
+.fila__id{grid-area:id;min-width:0}
+.fila__id h3{margin:0}
+.fila__id p{margin:2px 0 0}
+.fila__dada{grid-area:dada;display:flex;align-items:center;gap:var(--e2)}
+.fila__dada .barra{flex:1 1 auto;min-width:80px}
+.fila__pc{font-size:var(--mida-t3);min-width:3.6em;text-align:right}
+.fila__conf{grid-area:conf;display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+@media (min-width:720px){ .fila__conf{align-items:flex-end;text-align:right} }
+
+/* El primer. Targeta gran, ombra lavanda i el botó que porta a l'evidència.
+   Cap corona, cap «1r lloc»: el número és el mateix número de la resta. */
+.fila--cap{grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"ordre" "id" "dada" "conf" "acc";
+  /* L'única peça que mana a la pantalla: és l'única que porta --r-l. */
+  padding:var(--e3);border-radius:var(--r-l);border-width:3px;
+  box-shadow:8px 8px 0 var(--ombra-color,var(--lavanda));row-gap:var(--e2)}
+@media (min-width:720px){
+  .fila--cap{grid-template-columns:2.4rem minmax(0,1.1fr) minmax(0,1fr);
+    grid-template-areas:"ordre id dada" "ordre id conf" ". acc acc";
+    column-gap:var(--e4);padding:var(--e4)}
+}
+.fila--cap .fila__ordre{color:var(--ink)}
+.fila--cap .fila__id h3{font-size:var(--mida-t2)}
+.fila--cap .fila__dada{flex-direction:column;align-items:stretch;gap:var(--e1)}
+.fila--cap .fila__dada .barra{height:22px}
+.fila--cap .fila__pc{font-size:var(--mida-t1);text-align:left;min-width:0}
+.fila--cap .fila__conf{align-items:flex-start;text-align:left}
+.fila__acc{grid-area:acc}
+
+/* Cobertura: sempre barra + número escrit. La barra sola no és una dada. */
+.cobertura{display:flex;align-items:center;gap:var(--e1);font-size:var(--mida-menut);
+  color:var(--ink-suau)}
+.cobertura .barra{width:76px;flex:none}
+
+/* --- Dades insuficients --------------------------------------------------
+   Vora de punts i fons de paper: es veu de lluny que no és el mateix calaix
+   que el rànquing, i no cal llegir el títol per saber-ho. */
+/* És .targeta.targeta--puntejada de base.css. */
+.insuficient{padding:var(--e3)}
+.insuficient__cap{display:flex;align-items:center;gap:var(--e2);flex-wrap:wrap;margin-bottom:var(--e1)}
+.insuficient ul{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;gap:var(--e1)}
+.insuficient li{display:flex;align-items:center;gap:var(--e2);flex-wrap:wrap;
+  border-top:2px dotted var(--vora);padding-top:var(--e1)}
+.insuficient li b{font-family:var(--display);font-weight:900}
+
+/* --- Tries de candidatura (comparació) -----------------------------------
+   Fila de botons amb aria-pressed. A mòbil rellisca amb scroll-snap; el focus
+   sempre queda visible perquè el contenidor no talla el contorn. */
+.tries{display:flex;gap:var(--e1);flex-wrap:wrap;padding:6px 0 10px}
+@media (max-width:719px){
+  .tries{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x mandatory;
+    padding-inline:2px;scrollbar-width:thin}
+  .tries .boto{scroll-snap-align:start;flex:none}
+}
+.tries .boto{background:var(--fons-peca);color:var(--ink)}
+.tries .boto[aria-pressed="true"]{background:var(--menta);color:var(--tinta-fixa)}
+/* El percentatge del botó triat no pot anar amb el gris suau: sobre menta es
+   queda per sota d'AA. Tinta fixa i pes menor. */
+.tries .boto[aria-pressed="true"] .suau{color:var(--tinta-fixa)}
+.tries .boto::before{content:"";width:11px;height:11px;border-radius:3px;flex:none;
+  background:var(--dada,var(--dada-altres));border:1.5px solid var(--ink)}
+
+/* --- Afirmació a afirmació ----------------------------------------------- */
+.afirmacions{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2)}
+.afirm{padding:var(--e3)}
+.afirm.amagada{display:none}
+.afirm__cap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--e2);
+  align-items:start}
+.afirm__cap>[data-icona]{--mida:44px}
+.afirm__tema{margin:0 0 2px}
+.afirm__text{margin:0;font-size:var(--mida-guia);font-family:var(--display);
+  font-weight:800;letter-spacing:-.015em;line-height:1.2;text-wrap:pretty}
+.afirm__dist{grid-column:1 / -1}
+@media (min-width:560px){ .afirm__dist{grid-column:auto;justify-self:end;align-self:start} }
+@media (min-width:560px){ .afirm__cap{grid-template-columns:auto minmax(0,1fr) auto} }
+
+/* Etiqueta de distància. El color no diu res tot sol: hi ha el signe i el mot.
+   El fons és sempre pastel o tinta, mai un color de partit. */
+.dist{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+  background:var(--fons-dist,var(--menta));color:var(--tinta-fixa);
+  border:2px solid var(--tinta-fixa);border-radius:var(--r-max);
+  padding:4px 12px;font-size:var(--mida-micro);font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase}
+.dist__signe{font-family:var(--display);font-size:1.15em;line-height:1;letter-spacing:0}
+.dist--coincidiu{--fons-dist:var(--menta)}
+.dist--prop{--fons-dist:var(--presec)}
+.dist--diferents{--fons-dist:var(--lavanda)}
+.dist--oposats{background:var(--tinta-fixa);color:#FBF7EE}
+.dist--sense{background:transparent;border-style:dashed;color:var(--tinta-fixa)}
+@media (prefers-color-scheme:dark){
+  .dist--oposats{background:var(--ink);color:var(--fons);border-color:var(--ink)}
+  .dist--sense{color:var(--ink);border-color:var(--ink)}
+}
+
+/* Les dues respostes, una al costat de l'altra. */
+/* La teva resposta és una etiqueta fixa i la seva porta sigla i posició: no
+   ocupen el mateix i no han de pesar igual. */
+.parell{display:grid;grid-template-columns:1fr 1.12fr;gap:var(--e2);margin-top:var(--e3)}
+.parell__b{border:2px solid var(--vora);border-radius:var(--r-m);padding:var(--e2);
+  display:flex;align-items:center;gap:var(--e2);background:var(--fons)}
+.parell__b [data-icona]{--mida:36px}
+.parell__qui{margin:0;font-size:var(--mida-micro);font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-suau)}
+.parell__resp{margin:0;font-weight:800;line-height:1.2}
+@media (max-width:479px){ .parell{grid-template-columns:1fr} }
+
+/* Desplegable de l'evidència. El <details> nadiu: teclat i lector de pantalla
+   sense una sola línia de JS. L'obertura no anima l'alçada (això és layout a
+   cada fotograma); anima el contingut amb el mateix `entrar` de base.css. */
+.desplega{margin-top:var(--e3);border-top:2px dotted var(--vora);padding-top:var(--e2)}
+.desplega>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:var(--e1);
+  font-weight:800;font-size:var(--mida-menut);border-radius:var(--r-max);
+  padding:4px 2px;width:fit-content}
+.desplega>summary::-webkit-details-marker{display:none}
+/* El «+» és dibuixat amb dues barres i no és un glif de la font: en obrir-se,
+   la barra vertical s'aixafa i queda un «−». Només transform. */
+.desplega__signe{position:relative;width:22px;height:22px;flex:none;
+  border:2px solid var(--ink);border-radius:50%}
+.desplega__signe::before,.desplega__signe::after{
+  content:"";position:absolute;inset:50% 4px auto 4px;height:2.5px;margin-top:-1.25px;
+  background:currentColor;border-radius:2px;
+  transition:transform var(--t-rapid) var(--corba-seca)}
+.desplega__signe::after{transform:rotate(90deg)}
+.desplega[open] .desplega__signe::after{transform:rotate(90deg) scaleX(0)}
+.desplega>summary:hover{color:var(--coral-text)}
+.js-mou .desplega[open] .desplega__cos{animation:entrar var(--t-mig) var(--corba-suau) both}
+.desplega__cos{padding-top:var(--e2)}
+.desplega__cos p{margin:0 0 var(--e2)}
+
+/* La cita literal. És la peça que separa quivoto d'un test de revista, i per
+   això té pes: barra de tinta a l'esquerra i cometes de veritat. */
+.cita{margin:0 0 var(--e2);padding:var(--e2) var(--e2) var(--e2) var(--e3);
+  border-left:6px solid var(--coral);background:var(--fons);
+  border-radius:0 var(--r-m) var(--r-m) 0;font-size:var(--mida-guia);line-height:1.45}
+.cita p{margin:0}
+/* La variant petita de la cita: dins d'un mòdul «diuen/fan» la cita és una
+   prova al costat d'una altra, no la peça de la secció. Existia de fet,
+   copiada en línia quatre vegades; ara existeix de dret. */
+.cita--menuda{font-size:var(--mida-cos);padding:var(--e1) var(--e2);border-left-width:4px}
+.font{display:flex;align-items:center;gap:var(--e1);flex-wrap:wrap;margin:0}
+.font a{font-weight:700}
+
+/* --- Què diuen / Què han fet --------------------------------------------- */
+.diufa{border:var(--gruix-vora) solid var(--ink);border-radius:var(--r-m);
+  padding:var(--e2);background:var(--fons);margin-top:var(--e2);container-type:inline-size}
+.diufa__reixa{display:grid;gap:var(--e2);margin-top:var(--e2)}
+/* Consulta de CONTENIDOR i no de finestra: el mateix mòdul viu dins d'una
+   targeta ampla i dins d'una columna estreta, i qui mana és la columna. */
+/* El «què han fet» és el que compta i el que puntua: pesa més. */
+@container (min-width:30rem){ .diufa__reixa{grid-template-columns:.9fr 1.1fr} }
+.diufa__b{border:2px solid var(--vora);border-radius:var(--r-s);padding:var(--e2);position:relative}
+.diufa__b h4{margin:0 0 var(--e1)}
+.diufa__b p{margin:0 0 var(--e1)}
+.diufa__b--fet{border-color:var(--ink);border-width:var(--gruix-vora);
+  box-shadow:var(--ombra);background:var(--fons-peca)}
+.diufa__marca{display:inline-block;font-size:var(--mida-micro);font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-suau)}
+.diufa__compta{display:inline-flex;align-items:center;gap:6px;font-size:var(--mida-micro);
+  font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  background:var(--menta);color:var(--tinta-fixa);border-radius:var(--r-max);padding:3px 10px}
+.diufa__nota{margin:var(--e2) 0 0}
+
+/* --- Targeta per compartir ----------------------------------------------- */
+/* AIXÒ ÉS EL QUE S'EXPORTA a 1200×630. Twitter, WhatsApp i Facebook la
+   dibuixen sempre com un rectangle pla: un radi es cou dins del PNG i es
+   converteix en quatre osques a les cantonades, i una ombra dura queda fora de
+   la caixa i es perd en exportar. Per això la peça exportada no té ni radi ni
+   ombra, i el marc que sí que en té només existeix a la previsualització. */
+.og-marc{border-radius:var(--r-m);box-shadow:8px 8px 0 var(--coral);overflow:hidden;
+  width:100%;line-height:0}
+.og{aspect-ratio:1200/630;background:var(--menta);color:var(--tinta-fixa);
+  border:3px solid var(--tinta-fixa);border-radius:0;box-shadow:none;
+  padding:clamp(12px,3.4%,26px);line-height:1.55;
+  display:flex;flex-direction:column;justify-content:space-between;
+  container-type:inline-size;overflow:hidden}
+.og__dalt{display:flex;align-items:center;justify-content:space-between;gap:var(--e2)}
+.og__marca{--marca-mida:clamp(15px,4.6cqi,34px)}
+.og__titol{font-family:var(--display);font-weight:900;letter-spacing:-.03em;line-height:1.02;
+  font-size:clamp(17px,7.4cqi,54px);margin:0}
+.og__llista{list-style:none;margin:0;padding:0;display:grid;gap:clamp(4px,1.1cqi,9px)}
+.og__l{display:flex;align-items:center;gap:clamp(6px,2cqi,14px);
+  font-size:clamp(9px,2.9cqi,21px);font-weight:800}
+.og__b{height:clamp(8px,2.4cqi,18px);border:2px solid var(--tinta-fixa);border-radius:var(--r-max);
+  background:#FBF7EE;overflow:hidden;position:relative;flex:1 1 auto;min-width:0}
+.og__nom,.og__pc,.og__ordre{flex:none}
+.og__pc,.og__ordre{font-variant-numeric:tabular-nums}
+/* Sense percentatges: es veu l'ordre i el nom, i prou. La privadesa d'una
+   imatge que es comparteix és una decisió de disseny, no una casella perduda. */
+.og__ordre{display:none}
+.og--discret .og__b,.og--discret .og__pc{display:none}
+.og--discret .og__ordre{display:inline}
+.og__b i{position:absolute;inset:0;transform-origin:left center;display:block;
+  transform:scaleX(var(--valor,0));background:var(--dada);
+  transition:transform var(--t-lent) var(--corba-suau)}
+.og__f{display:flex;justify-content:space-between;align-items:center;gap:var(--e1);
+  font-size:clamp(8px,2.5cqi,17px);font-weight:700}
+.compartir__accions{display:flex;gap:var(--e2);flex-wrap:wrap;margin:var(--e3) 0 var(--e2)}
+.tria-priv{display:flex;align-items:center;gap:var(--e1);font-size:var(--mida-menut);
+  font-weight:700;cursor:pointer}
+.tria-priv input{width:22px;height:22px;accent-color:var(--coral);flex:none;margin:0}
+.enllac-fals{font-family:var(--display);font-weight:700;background:rgba(251,247,238,.12);
+  border:2px solid rgba(251,247,238,.3);border-radius:var(--r-s);padding:6px 12px;
+  display:inline-block;word-break:break-all}
+.compartir .peu-nota,.compartir .suau{color:rgba(251,247,238,.75)}
+
+/* --- Peu ------------------------------------------------------------------ */
+.peu{padding:var(--e4) 0 var(--e5);border-top:var(--gruix-vora) solid var(--vora)}
+.llista-neta{list-style:none;margin:0;padding:0;display:grid;gap:var(--e1)}
+/* La fletxa surt del sprite, amb el mateix gruix i el mateix cap de traç que
+   la resta: un «→» de la fallback UI font es veu prim al costat d'un traç de
+   3 px fet a mà. */
+.fletxa{--mida:14px;transition:transform var(--t-rapid) var(--corba-seca)}
+a:hover .fletxa{transform:translateX(3px)}
+</style>
+<noscript><style>
+/* Sense JS ningú anima res, però les barres han de dir la seva xifra igualment. */
+.barra__omplert,.og__b i{transform:scaleX(var(--valor-final,0));transition:none}
+</style></noscript>
+</head>
+<body>
+<a class="salta" href="#contingut">Vés al contingut</a>
+
+<header class="cap">
+  <div class="embolcall cap__dins">
+    <a class="marca" href="portada.html" aria-label="quivoto, a l'inici">quiv<svg class="marca__o" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/><path d="M34 8 l6 6" stroke="#FFD8B8" stroke-width="6" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="24" r="3.6" fill="#FFFFFF"/><circle cx="29" cy="24" r="3.6" fill="#FFFFFF"/><g class="pupilles"><circle cx="19" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/><rect x="25" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/></g><path class="boca" d="M20 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg>to</a>
+    <p class="cap__lloc"><strong>Sabadell</strong> · Municipals 2027 · 25 afirmacions respostes</p>
+    <a class="boto boto--fantasma boto--menut" href="#">Refés el test</a>
+  </div>
+</header>
+
+<main id="contingut">
+
+<!-- ====================================================================
+     PORTADA DEL RESULTAT
+     ==================================================================== -->
+<section class="banda banda--menta" aria-labelledby="t-resultat">
+  <div class="embolcall graella hero">
+    <div class="marge"><p class="num-seccio">01</p></div>
+    <div class="t7 hero__text" data-entrada>
+      <p class="micro">El teu resultat · Sabadell</p>
+      <h1 id="t-resultat">Coincideixes més amb <span class="hero__nom">ERC-EUiA-AM</span></h1>
+      <p class="guia">De les 25 afirmacions, hi <strong>coincidiu en 14</strong>, sou <strong>a prop en 6</strong>
+        i us <strong>separeu en 5</strong>. A sota hi ha totes, amb el document a la mà.</p>
+      <p class="hero__xifra">
+        <b class="xifra-num" data-compta="86" data-sufix="%">86%</b>
+        <span class="guia">de coincidència sobre les 25 afirmacions</span>
+      </p>
+      <p class="hero__peu">
+        <span class="adhesiu" style="--gir:-2deg">Coincidir no és votar</span>
+        <a class="peu-nota" href="#metode" style="color:inherit">Com es calcula <span class="fletxa" data-icona="fletxa" aria-hidden="true"></span></a>
+      </p>
+    </div>
+    <div class="t4 hero__mascota" data-entrada>
+      <span data-icona="papereta-felic" data-base="mascota" data-etiqueta="La papereta de quivoto, contenta"></span>
+      <span class="adhesiu adhesiu--lavanda hero__adhesiu">22 de 25 documentades</span>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================================
+     RÀNQUING
+     ==================================================================== -->
+<section class="banda" aria-labelledby="t-ranquing" id="ranquing">
+  <div class="embolcall graella">
+    <div class="marge"><p class="num-seccio">02</p></div>
+    <div class="t7">
+      <h2 id="t-ranquing">El rànquing</h2>
+      <p class="guia suau">Set candidatures amb prou posicions documentades per puntuar-les.
+        El percentatge és la distància mitjana entre les teves 25 respostes i les seves,
+        ponderada per la qualitat de l'evidència.</p>
+    </div>
+
+    <ol class="ranquing t12">
+      <li class="fila fila--cap targeta" style="--dada:var(--dada-erc);--ombra-color:var(--lavanda)" data-entrada>
+        <p class="fila__ordre">1</p>
+        <div class="fila__id">
+          <h3>ERC-EUiA-AM</h3>
+          <p class="peu-nota">Esquerra Republicana · Esquerra Unida i Alternativa · Acord Municipal<br>
+            3 regidors · 8.592 vots el 2023</p>
+        </div>
+        <div class="fila__dada">
+          <b class="xifra-num fila__pc" data-compta="86" data-sufix="%">86%</b>
+          <div class="barra barra--dada" role="img" aria-label="86% de coincidència">
+            <span class="barra__omplert" style="--valor-final:.86"></span>
+          </div>
+        </div>
+        <div class="fila__conf">
+          <ul class="punts punts--coral" role="img" aria-label="Confiança de les dades: 5 sobre 5">
+            <li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li>
+            <li class="punt punt--ple"></li><li class="punt punt--ple"></li>
+          </ul>
+          <p class="cobertura">Posició coneguda en 22 de 25
+            <span class="barra barra--prima" aria-hidden="true"><span class="barra__omplert" style="--valor-final:.88;--dada:var(--ink)"></span></span>
+          </p>
+        </div>
+        <p class="fila__acc"><button class="boto boto--menut" type="button" data-tria="erc">Mira les 25 afirmacions</button></p>
+      </li>
+
+      <li class="fila" style="--dada:var(--dada-comuns)" data-entrada>
+        <p class="fila__ordre">2</p>
+        <div class="fila__id">
+          <h3>SECP-C</h3>
+          <p class="peu-nota">Sabadell en Comú Podem · 2 regidors · 5.636 vots</p>
+        </div>
+        <div class="fila__dada">
+          <div class="barra barra--dada" role="img" aria-label="82% de coincidència">
+            <span class="barra__omplert" style="--valor-final:.82"></span></div>
+          <b class="xifra-num fila__pc" data-compta="82" data-sufix="%">82%</b>
+        </div>
+        <div class="fila__conf">
+          <ul class="punts" role="img" aria-label="Confiança de les dades: 4 sobre 5">
+            <li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li>
+            <li class="punt punt--ple"></li><li class="punt"></li>
+          </ul>
+          <p class="cobertura">21 de 25 <span class="barra barra--prima" aria-hidden="true"><span class="barra__omplert" style="--valor-final:.84;--dada:var(--ink)"></span></span></p>
+        </div>
+      </li>
+
+      <li class="fila" style="--dada:var(--dada-crida)" data-entrada>
+        <p class="fila__ordre">3</p>
+        <div class="fila__id">
+          <h3>CpS-AMUNT</h3>
+          <p class="peu-nota">Crida per Sabadell · 3 regidors · 8.018 vots</p>
+        </div>
+        <div class="fila__dada">
+          <div class="barra barra--dada" role="img" aria-label="78% de coincidència">
+            <span class="barra__omplert" style="--valor-final:.78"></span></div>
+          <b class="xifra-num fila__pc" data-compta="78" data-sufix="%">78%</b>
+        </div>
+        <div class="fila__conf">
+          <ul class="punts" role="img" aria-label="Confiança de les dades: 4 sobre 5">
+            <li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li>
+            <li class="punt punt--ple"></li><li class="punt"></li>
+          </ul>
+          <p class="cobertura">20 de 25 <span class="barra barra--prima" aria-hidden="true"><span class="barra__omplert" style="--valor-final:.8;--dada:var(--ink)"></span></span></p>
+        </div>
+      </li>
+
+      <li class="fila" style="--dada:var(--dada-psc)" data-entrada>
+        <p class="fila__ordre">4</p>
+        <div class="fila__id">
+          <h3>PSC-CP</h3>
+          <p class="peu-nota">Partit dels Socialistes · governa amb majoria absoluta · 14 regidors · 35.799 vots</p>
+        </div>
+        <div class="fila__dada">
+          <div class="barra barra--dada" role="img" aria-label="59% de coincidència">
+            <span class="barra__omplert" style="--valor-final:.59"></span></div>
+          <b class="xifra-num fila__pc" data-compta="59" data-sufix="%">59%</b>
+        </div>
+        <div class="fila__conf">
+          <ul class="punts" role="img" aria-label="Confiança de les dades: 5 sobre 5">
+            <li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li>
+            <li class="punt punt--ple"></li><li class="punt punt--ple"></li>
+          </ul>
+          <p class="cobertura">24 de 25 <span class="barra barra--prima" aria-hidden="true"><span class="barra__omplert" style="--valor-final:.96;--dada:var(--ink)"></span></span></p>
+        </div>
+      </li>
+
+      <li class="fila" style="--dada:var(--dada-junts)" data-entrada>
+        <p class="fila__ordre">5</p>
+        <div class="fila__id">
+          <h3>CM</h3>
+          <p class="peu-nota">Junts per Sabadell · 2 regidors · 6.319 vots</p>
+        </div>
+        <div class="fila__dada">
+          <div class="barra barra--dada" role="img" aria-label="44% de coincidència">
+            <span class="barra__omplert" style="--valor-final:.44"></span></div>
+          <b class="xifra-num fila__pc" data-compta="44" data-sufix="%">44%</b>
+        </div>
+        <div class="fila__conf">
+          <ul class="punts" role="img" aria-label="Confiança de les dades: 3 sobre 5">
+            <li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li>
+            <li class="punt"></li><li class="punt"></li>
+          </ul>
+          <p class="cobertura">18 de 25 <span class="barra barra--prima" aria-hidden="true"><span class="barra__omplert" style="--valor-final:.72;--dada:var(--ink)"></span></span></p>
+        </div>
+      </li>
+
+      <li class="fila" style="--dada:var(--dada-pp)" data-entrada>
+        <p class="fila__ordre">6</p>
+        <div class="fila__id">
+          <h3>PP</h3>
+          <p class="peu-nota">Partit Popular · 1 regidor · 4.557 vots</p>
+        </div>
+        <div class="fila__dada">
+          <div class="barra barra--dada" role="img" aria-label="21% de coincidència">
+            <span class="barra__omplert" style="--valor-final:.21"></span></div>
+          <b class="xifra-num fila__pc" data-compta="21" data-sufix="%">21%</b>
+        </div>
+        <div class="fila__conf">
+          <ul class="punts" role="img" aria-label="Confiança de les dades: 3 sobre 5">
+            <li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li>
+            <li class="punt"></li><li class="punt"></li>
+          </ul>
+          <p class="cobertura">16 de 25 <span class="barra barra--prima" aria-hidden="true"><span class="barra__omplert" style="--valor-final:.64;--dada:var(--ink)"></span></span></p>
+        </div>
+      </li>
+
+      <li class="fila" style="--dada:var(--dada-vox)" data-entrada>
+        <p class="fila__ordre">7</p>
+        <div class="fila__id">
+          <h3>VOX</h3>
+          <p class="peu-nota">2 regidors · 5.087 vots</p>
+        </div>
+        <div class="fila__dada">
+          <div class="barra barra--dada" role="img" aria-label="16% de coincidència">
+            <span class="barra__omplert" style="--valor-final:.16"></span></div>
+          <b class="xifra-num fila__pc" data-compta="16" data-sufix="%">16%</b>
+        </div>
+        <div class="fila__conf">
+          <ul class="punts" role="img" aria-label="Confiança de les dades: 2 sobre 5">
+            <li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt"></li>
+            <li class="punt"></li><li class="punt"></li>
+          </ul>
+          <p class="cobertura">11 de 25 <span class="barra barra--prima" aria-hidden="true"><span class="barra__omplert" style="--valor-final:.44;--dada:var(--ink)"></span></span></p>
+        </div>
+      </li>
+    </ol>
+
+    <!-- Dades insuficients: fora del rànquing, i es diu per què. -->
+    <div class="targeta targeta--puntejada insuficient t12" data-entrada>
+      <div class="insuficient__cap">
+        <h3>Dades insuficients</h3>
+        <span class="etiqueta etiqueta--vora">no es classifiquen</span>
+      </div>
+      <p class="suau" style="margin:0">Aquestes candidatures no surten al rànquing perquè tenen
+        <strong>menys de 10 posicions documentades</strong> de 25. Posar-les en una llista ordenada
+        amb tan poca informació seria inventar-se un número. Quan trobem evidència nova, hi entren.</p>
+      <ul>
+        <li><b>Cs</b> <span class="etiqueta etiqueta--partit" style="--dada:var(--dada-cs)">Ciutadans</span>
+          <span class="peu-nota">5 de 25 · sense representació al ple des del 2023</span></li>
+        <li><b>Altres candidatures (3)</b>
+          <span class="peu-nota">entre 1 i 7 posicions documentades cadascuna · sense representació</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================================
+     AFIRMACIÓ A AFIRMACIÓ
+     ==================================================================== -->
+<section class="banda banda--peca" aria-labelledby="t-comparacio" id="comparacio">
+  <div class="embolcall graella">
+    <div class="marge"><p class="num-seccio">03</p></div>
+    <div class="t8">
+      <h2 id="t-comparacio">Afirmació a afirmació</h2>
+      <p class="guia suau">Aquí és on es veu d'on surt el número. Cada afirmació porta la teva resposta,
+        la seva, la distància i <strong>d'on ho hem tret</strong>: la cita literal i l'enllaç a l'acta,
+        al programa o a l'hemeroteca. Si no ho podem documentar, ho diem.</p>
+    </div>
+    <div class="t4 a-la-cantonada" data-entrada>
+      <p class="micro">Llegenda de distàncies</p>
+      <p style="display:flex;gap:8px;flex-wrap:wrap;margin:0">
+        <span class="dist dist--coincidiu"><span class="dist__signe" aria-hidden="true">=</span>Coincidiu</span>
+        <span class="dist dist--prop"><span class="dist__signe" aria-hidden="true">≈</span>A prop</span>
+        <span class="dist dist--diferents"><span class="dist__signe" aria-hidden="true">≠</span>Diferents</span>
+        <span class="dist dist--oposats"><span class="dist__signe" aria-hidden="true">↔</span>Oposats</span>
+      </p>
+    </div>
+
+    <div class="t12">
+      <p class="micro" id="et-tries">Compara les teves respostes amb</p>
+      <div class="tries" role="group" aria-labelledby="et-tries" id="tries"></div>
+      <p class="nomes-lectors" role="status" id="avis"></p>
+    </div>
+
+    <ol class="afirmacions t12" id="llista-afirmacions"></ol>
+
+    <div class="t12" style="display:flex;justify-content:center">
+      <button class="boto boto--fantasma" type="button" id="mes" aria-expanded="false" aria-controls="llista-afirmacions">
+        Mostra les 8 afirmacions documentades
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================================
+     QUÈ DIUEN / QUÈ HAN FET  (el cas destacat)
+     ==================================================================== -->
+<section class="banda banda--presec" aria-labelledby="t-diufa">
+  <div class="embolcall graella">
+    <div class="marge"><p class="num-seccio">04</p></div>
+    <div class="t5">
+      <p class="micro">Quan la paraula i el vot no diuen el mateix</p>
+      <h2 id="t-diufa">Què diuen / Què han fet</h2>
+      <p class="guia">En <strong>4 de les 25 afirmacions</strong> la posició del programa i la del ple no
+        coincideixen. quivoto puntua <strong>el que s'ha fet</strong> i et deixa veure les dues, amb data.
+        No és un titular: és una acta.</p>
+      <p><a class="boto boto--tinta" href="#comparacio">Veure les 4 divergències</a></p>
+    </div>
+
+    <div class="t6" data-entrada>
+      <div class="targeta" style="--ombra-color:var(--ink)">
+        <div class="targeta__cap">
+          <span data-icona="vei-habitatge" data-classe="ico--vei"></span>
+          <div>
+            <p class="micro" style="margin:0">Habitatge · PSC-CP</p>
+            <h3 style="margin:0">Reserva del 30% per a lloguer social</h3>
+          </div>
+        </div>
+        <div class="diufa" style="margin-top:0">
+          <div class="diufa__reixa" style="margin-top:0">
+            <div class="diufa__b">
+              <span class="diufa__marca">Què diuen</span>
+              <h4>Bastant d'acord</h4>
+              <p class="peu-nota">Programa municipal 2023, pàgina 14</p>
+              <div class="cita cita--menuda">
+                <p>«Impulsarem 500 habitatges de lloguer assequible i ampliarem la reserva
+                  d'habitatge protegit a tots els sectors de nova creació.»</p>
+              </div>
+            </div>
+            <div class="diufa__b diufa__b--fet">
+              <span class="diufa__marca">Què han fet</span>
+              <span class="diufa__compta">és el que compta</span>
+              <h4>Poc d'acord</h4>
+              <p class="peu-nota">Ple ordinari del 5 de març de 2024, punt 9</p>
+              <div class="cita cita--menuda">
+                <p>«El grup municipal socialista vota en contra de l'esmena que fixa la reserva
+                  del 30% i defensa mantenir el 20% que ja recull el planejament vigent.»</p>
+              </div>
+              <p class="font peu-nota"><a href="#" rel="noopener">Acta del ple · PDF, p. 31 <span class="fletxa" data-icona="fletxa" aria-hidden="true"></span></a></p>
+            </div>
+          </div>
+          <p class="diufa__nota peu-nota">Diferència de dos graons entre la declaració i el vot.
+            Comptem el vot; la declaració queda a la vista.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================================
+     COMPARTIR
+     ==================================================================== -->
+<section class="banda banda--tinta compartir" aria-labelledby="t-compartir">
+  <div class="embolcall graella">
+    <div class="marge"><p class="num-seccio">05</p></div>
+    <div class="t6" data-entrada>
+      <p class="micro">Ja ho tens</p>
+      <h2 id="t-compartir">Comparteix-ho</h2>
+      <p class="guia">L'enllaç obre el teu resultat sense les teves respostes: només el rànquing.
+        Ningú no pot reconstruir què has contestat.</p>
+
+      <p class="tria-priv">
+        <input type="checkbox" id="ambPc" checked>
+        <label for="ambPc">Ensenya els percentatges a la imatge</label>
+      </p>
+
+      <p class="compartir__accions">
+        <button class="boto" type="button" id="copia">Copia l'enllaç</button>
+        <button class="boto boto--fantasma" type="button" id="comparteix">Comparteix…</button>
+      </p>
+      <p class="peu-nota"><span class="enllac-fals" id="enllac">quivoto.cat/r/sbd-8k3f2a</span></p>
+      <p class="peu-nota" role="status" id="avisCopia"></p>
+    </div>
+
+    <div class="t6" data-entrada>
+      <p class="micro">Previsualització · 1200 × 630</p>
+      <div class="og-marc">
+      <div class="og" id="og" role="img" aria-label="Imatge per compartir: el meu resultat a Sabadell. ERC-EUiA-AM 86%, SECP-C 82%, CpS-AMUNT 78%.">
+        <div class="og__dalt">
+          <span class="marca og__marca" aria-hidden="true">quiv<svg class="marca__o" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/><path d="M34 8 l6 6" stroke="#FFD8B8" stroke-width="6" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="24" r="3.6" fill="#FFFFFF"/><circle cx="29" cy="24" r="3.6" fill="#FFFFFF"/><g class="pupilles"><circle cx="19" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/><rect x="25" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/></g><path class="boca" d="M20 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg>to</span>
+          <span class="og__f" style="font-weight:800">Sabadell · 2027</span>
+        </div>
+        <p class="og__titol">Coincideixo amb<br>ERC-EUiA-AM</p>
+        <ul class="og__llista" id="ogLlista">
+          <li class="og__l" style="--dada:var(--dada-erc)"><span class="og__ordre">1.</span><span class="og__b"><i style="--valor-final:.86"></i></span><span class="og__nom">ERC-EUiA-AM</span><span class="og__pc">86%</span></li>
+          <li class="og__l" style="--dada:var(--dada-comuns)"><span class="og__ordre">2.</span><span class="og__b"><i style="--valor-final:.82"></i></span><span class="og__nom">SECP-C</span><span class="og__pc">82%</span></li>
+          <li class="og__l" style="--dada:var(--dada-crida)"><span class="og__ordre">3.</span><span class="og__b"><i style="--valor-final:.78"></i></span><span class="og__nom">CpS-AMUNT</span><span class="og__pc">78%</span></li>
+        </ul>
+        <p class="og__f"><span>25 afirmacions · 22 documentades</span><span>quivoto.cat</span></p>
+      </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="peu" id="metode">
+  <div class="embolcall graella">
+    <div class="t6">
+      <h3>Com es calcula</h3>
+      <p class="peu-nota">Cada afirmació val el mateix. La distància entre la teva resposta i la seva va
+        de 0 a 4 graons; la coincidència és la distància mitjana invertida, ponderada per la qualitat de
+        l'evidència (un vot al ple pesa més que una declaració a la premsa). Les afirmacions sense posició
+        documentada no compten ni a favor ni en contra: es descompten del denominador i es diuen a la
+        cobertura.</p>
+    </div>
+    <div class="t6">
+      <h3>Dades</h3>
+      <ul class="llista-neta peu-nota">
+        <li>Resultats municipals de Sabadell, 26 de maig de 2023 · Ministeri de l'Interior</li>
+        <li>Actes del Ple de l'Ajuntament de Sabadell, 2023–2027 · portal de transparència</li>
+        <li>Programes electorals dipositats a la Junta Electoral de Zona</li>
+        <li>Padró municipal 2025: 225.368 habitants · Ple de 27 regidors</li>
+      </ul>
+      <p class="peu-nota">Prototip de disseny. Els percentatges de coincidència són d'exemple.</p>
+    </div>
+  </div>
+</footer>
+
+<!-- Les dades de la pantalla, en JSON. No van dins del JS per dues raons: el
+     català va ple d'apòstrofs i barrejar-los amb cadenes de codi és demanar un
+     error d'escapament, i així es veu d'un cop d'ull què és dada i què és lògica. -->
+<script type="application/json" id="dades">
+{
+"candidatures":[
+ {"id":"erc","sigla":"ERC-EUiA-AM","nom":"Esquerra Republicana - EUiA - AM","dada":"var(--dada-erc)","pc":86,"reg":3,"vots":8592,"conf":5,"coberts":22},
+ {"id":"comuns","sigla":"SECP-C","nom":"Sabadell en Comú Podem","dada":"var(--dada-comuns)","pc":82,"reg":2,"vots":5636,"conf":4,"coberts":21},
+ {"id":"crida","sigla":"CpS-AMUNT","nom":"Crida per Sabadell","dada":"var(--dada-crida)","pc":78,"reg":3,"vots":8018,"conf":4,"coberts":20},
+ {"id":"psc","sigla":"PSC-CP","nom":"Partit dels Socialistes de Catalunya","dada":"var(--dada-psc)","pc":59,"reg":14,"vots":35799,"conf":5,"coberts":24},
+ {"id":"junts","sigla":"CM","nom":"Junts per Sabadell","dada":"var(--dada-junts)","pc":44,"reg":2,"vots":6319,"conf":3,"coberts":18},
+ {"id":"pp","sigla":"PP","nom":"Partit Popular","dada":"var(--dada-pp)","pc":21,"reg":1,"vots":4557,"conf":3,"coberts":16},
+ {"id":"vox","sigla":"VOX","nom":"VOX","dada":"var(--dada-vox)","pc":16,"reg":2,"vots":5087,"conf":2,"coberts":11}
+],
+"afirmacions":[
+ {"id":"a1","tema":"habitatge","temaNom":"Habitatge","teva":5,
+  "text":"L'Ajuntament ha de reservar el 30% de tota promoció nova per a habitatge de lloguer social."},
+ {"id":"a2","tema":"mobilitat","temaNom":"Mobilitat","teva":4,
+  "text":"El centre de Sabadell ha de ser zona de baixes emissions, amb el trànsit privat restringit."},
+ {"id":"a3","tema":"fiscalitat","temaNom":"Fiscalitat","teva":5,
+  "text":"L'IBI dels pisos buits en mans de grans tenidors s'ha de recarregar fins al màxim legal."},
+ {"id":"a4","tema":"seguretat","temaNom":"Seguretat","teva":2,
+  "text":"Sabadell necessita més agents de la Policia Municipal patrullant al carrer."},
+ {"id":"a5","tema":"medi-ambient","temaNom":"Medi ambient","teva":5,
+  "text":"El Rodal s'ha de blindar: cap nou polígon ni cap urbanització nova fora de la trama urbana."},
+ {"id":"a6","tema":"neteja","temaNom":"Neteja","teva":4,
+  "text":"La neteja viària s'ha de tornar a gestionar des de l'Ajuntament quan venci la concessió."},
+ {"id":"a7","tema":"participacio","temaNom":"Participació","teva":5,
+  "text":"Els pressupostos participatius han de decidir com a mínim el 5% de la inversió municipal."},
+ {"id":"a8","tema":"llengua","temaNom":"Llengua","teva":4,
+  "text":"L'Ajuntament ha d'exigir el nivell C1 de català a tot el personal d'atenció al públic."}
+],
+"posicions":{
+ "erc":{
+  "a1":{"v":5,"j":"Van registrar l'esmena que fixava la reserva del 30% i la van defensar al ple.",
+        "c":"Sense reserva obligatòria no hi ha habitatge assequible: el 20% actual ja s'ha demostrat insuficient.",
+        "f":"Acta del Ple ordinari, 5 de març de 2024, punt 9","p":"Vot al ple"},
+  "a2":{"v":4,"j":"Hi són a favor, però condicionen el calendari a tenir abans el bus reforçat.",
+        "c":"Volem la zona de baixes emissions el 2026, i no pas abans que el bus tingui freqüències de deu minuts.",
+        "f":"Comissió informativa de Territori, 18 de setembre de 2024","p":"Intervenció en comissió"},
+  "a3":{"v":4,"j":"Van votar a favor del recàrrec, però només per als habitatges buits de més de dos anys.",
+        "c":"Recàrrec màxim per als grans tenidors; per al petit propietari, primer acompanyament i després recàrrec.",
+        "f":"Ple d'ordenances fiscals, 24 d'octubre de 2024, punt 4","p":"Vot al ple"},
+  "a4":{"v":2,"j":"Han rebutjat dues vegades ampliar la plantilla i demanen reforçar els educadors de carrer.",
+        "c":"El problema de Sabadell no és el nombre d'agents: és que a les tardes no hi ha ningú als barris.",
+        "f":"Acta del Ple ordinari, 6 de febrer de 2024, punt 12","p":"Vot al ple"},
+  "a5":{"v":5,"j":"La moció de protecció del Rodal la van presentar ells i es va aprovar amb esmenes.",
+        "c":"El Rodal no és sòl en espera: s'ha de protegir pel planejament i, si cal, per llei.",
+        "f":"Moció aprovada al Ple del 4 de juny de 2024","p":"Moció pròpia"},
+  "a6":{"v":3,"j":"Al programa hi diuen que sí; al ple es van abstenir i van demanar un estudi previ de costos.",
+        "c":"Ens abstenim: volem la internalització, però no sense saber què costa ni amb quina plantilla.",
+        "f":"Acta del Ple ordinari, 8 d'octubre de 2024, punt 6","p":"Vot al ple",
+        "diu":{"v":4,"t":"Es comprometen a internalitzar la neteja viària en aquest mandat.",
+               "c":"Recuperarem la gestió directa de la neteja viària quan acabi la concessió actual.",
+               "f":"Programa municipal 2023, pàgina 22"},
+        "fa":{"v":3,"t":"Abstenció a la moció que fixava data per a la internalització.",
+              "c":"Ens abstenim: volem la internalització, però no sense saber què costa ni amb quina plantilla.",
+              "f":"Acta del Ple ordinari, 8 d'octubre de 2024, punt 6"}},
+  "a7":{"v":5,"j":"Van votar a favor de blindar el 5% i van demanar arribar al 8% el 2027.",
+        "c":"Si la ciutadania no decideix diners de veritat, això no és participació: és una enquesta caríssima.",
+        "f":"Ple de pressupostos, 18 de desembre de 2024","p":"Vot al ple"},
+  "a8":{"v":5,"j":"Esmena seva per exigir el C1 a totes les places d'atenció al públic, aprovada.",
+        "c":"L'atenció en català no pot dependre de la bona voluntat de qui hi ha al taulell.",
+        "f":"Acta del Ple ordinari, 3 de setembre de 2024, punt 7","p":"Esmena aprovada"}
+ },
+ "comuns":{
+  "a1":{"v":5,"j":"Van votar a favor del 30% i van demanar que s'apliqués també a la rehabilitació.",
+        "c":"El 30% és el mínim, no el sostre: sense sòl públic no en sortirem.",
+        "f":"Acta del Ple ordinari, 5 de març de 2024, punt 9","p":"Vot al ple"},
+  "a2":{"v":5,"j":"Han reclamat la zona de baixes emissions cada any des del 2023.",
+        "c":"Cada any que ho endarrerim són tres-cents ingressos hospitalaris que ens podíem estalviar.",
+        "f":"Moció presentada al Ple del 7 de maig de 2024","p":"Moció pròpia"},
+  "a3":{"v":5,"j":"Van proposar el recàrrec del 150% per a tots els pisos buits de grans tenidors.",
+        "c":"Un pis buit en mans d'un fons no és una propietat: és una retenció.",
+        "f":"Ple d'ordenances fiscals, 24 d'octubre de 2024, punt 4","p":"Esmena rebutjada"},
+  "a4":{"v":1,"j":"S'oposen a ampliar la plantilla policial i demanen destinar-ho a serveis socials.",
+        "c":"Més uniformes no fan un barri més segur: hi fan falta educadors, no patrulles.",
+        "f":"Acta del Ple ordinari, 6 de febrer de 2024, punt 12","p":"Vot al ple"},
+  "a5":{"v":5,"j":"Van votar a favor de la protecció del Rodal i de retirar dos sectors del planejament.",
+        "c":"El Rodal és l'única reserva d'aire que li queda a aquesta ciutat.",
+        "f":"Moció aprovada al Ple del 4 de juny de 2024","p":"Vot al ple"},
+  "a6":{"v":5,"j":"Han demanat la internalització sense condicions i amb subrogació de tota la plantilla.",
+        "c":"La concessió ens costa el doble i el carrer està igual de brut: es recupera i s'acaba.",
+        "f":"Acta del Ple ordinari, 8 d'octubre de 2024, punt 6","p":"Vot al ple"},
+  "a7":{"v":5,"j":"Van condicionar el suport al pressupost a blindar el 5% participatiu.",
+        "c":"O hi ha un percentatge escrit a les bases, o l'any que ve tornem a discutir-ho de zero.",
+        "f":"Ple de pressupostos, 18 de desembre de 2024","p":"Vot al ple"},
+  "a8":null
+ },
+ "crida":{
+  "a1":{"v":5,"j":"Van votar a favor del 30% i van demanar expropiar pisos buits per a lloguer social.",
+        "c":"Mentre discutim percentatges, a Sabadell hi ha mil pisos buits de banca.",
+        "f":"Acta del Ple ordinari, 5 de març de 2024, punt 9","p":"Vot al ple"},
+  "a2":{"v":5,"j":"Demanen pacificar tot el centre, no només restringir-hi el trànsit.",
+        "c":"No volem menys cotxes al centre: en volem menys a tot arreu, començant pels barris.",
+        "f":"Moció presentada al Ple del 7 de maig de 2024","p":"Moció pròpia"},
+  "a3":null,
+  "a4":{"v":1,"j":"S'oposen a ampliar la plantilla i han demanat auditar la unitat de proximitat.",
+        "c":"Abans de contractar cap agent més, expliquin què fan els que ja hi ha.",
+        "f":"Acta del Ple ordinari, 6 de febrer de 2024, punt 12","p":"Vot al ple"},
+  "a5":{"v":5,"j":"Van registrar la petició de declarar el Rodal sòl no urbanitzable de protecció especial.",
+        "c":"Cap polígon nou. Ni un metre més fora de la trama urbana.",
+        "f":"Moció aprovada al Ple del 4 de juny de 2024","p":"Moció pròpia"},
+  "a6":{"v":5,"j":"La internalització de la neteja és una de les seves tres prioritats de mandat.",
+        "c":"Recuperar la neteja viària no és ideologia: és deixar de pagar el benefici industrial d'una empresa.",
+        "f":"Acta del Ple ordinari, 8 d'octubre de 2024, punt 6","p":"Vot al ple"},
+  "a7":{"v":5,"j":"Demanen el 10% i han votat a favor de qualsevol pas en aquesta direcció.",
+        "c":"Cinc per cent per començar, deu per cent al final del mandat.",
+        "f":"Ple de pressupostos, 18 de desembre de 2024","p":"Vot al ple"},
+  "a8":{"v":2,"j":"Prioritzen l'acollida lingüística per damunt d'exigir titulació al personal.",
+        "c":"No ens fa por el C1, però primer volem places de català per a qui hi treballa.",
+        "f":"Acta del Ple ordinari, 3 de setembre de 2024, punt 7","p":"Intervenció al ple"}
+ },
+ "psc":{
+  "a1":{"v":2,"j":"Al programa s'hi comprometien; al ple van votar en contra de la reserva del 30%.",
+        "c":"El grup municipal socialista vota en contra de l'esmena que fixa la reserva del 30%.",
+        "f":"Acta del Ple ordinari, 5 de març de 2024, punt 9","p":"Vot al ple",
+        "diu":{"v":4,"t":"El programa de 2023 promet 500 habitatges de lloguer assequible i ampliar la reserva.",
+               "c":"Impulsarem 500 habitatges de lloguer assequible i ampliarem la reserva d'habitatge protegit a tots els sectors de nova creació.",
+               "f":"Programa municipal 2023, pàgina 14"},
+        "fa":{"v":2,"t":"Vot en contra de l'esmena del 30%; defensen mantenir el 20% del planejament vigent.",
+              "c":"Defensem mantenir el 20% que ja recull el planejament vigent i no encarir la promoció.",
+              "f":"Acta del Ple ordinari, 5 de març de 2024, punt 9"}},
+  "a2":{"v":4,"j":"El govern ha aprovat la zona de baixes emissions, tot i que amb moratòria fins al 2027.",
+        "c":"Sabadell tindrà zona de baixes emissions, amb un calendari realista i amb ajudes a qui l'ha de canviar.",
+        "f":"Junta de Govern Local, 12 de març de 2025","p":"Acord de govern"},
+  "a3":{"v":3,"j":"Han aplicat un recàrrec parcial, per sota del màxim legal.",
+        "c":"Apliquem un recàrrec del 50%, no del 150%: volem que els pisos surtin al mercat, no recaptar.",
+        "f":"Ple d'ordenances fiscals, 24 d'octubre de 2024, punt 4","p":"Vot al ple"},
+  "a4":{"v":5,"j":"Han ampliat la plantilla dues vegades i ho posen al centre del mandat.",
+        "c":"Aquest mandat incorporarem seixanta agents més: la seguretat també és un dret social.",
+        "f":"Acta del Ple ordinari, 6 de febrer de 2024, punt 12","p":"Vot al ple"},
+  "a5":{"v":3,"j":"Van votar la protecció del Rodal però mantenen dos sectors industrials al planejament.",
+        "c":"Protegim el Rodal i alhora garantim el sòl d'activitat econòmica que la ciutat necessita.",
+        "f":"Moció aprovada al Ple del 4 de juny de 2024","p":"Vot al ple"},
+  "a6":{"v":2,"j":"Defensen renovar la concessió amb més control i penalitzacions.",
+        "c":"No és una qüestió de qui ho fa, és de com es controla: el contracte nou tindrà penalitzacions.",
+        "f":"Acta del Ple ordinari, 8 d'octubre de 2024, punt 6","p":"Vot al ple"},
+  "a7":{"v":3,"j":"Mantenen els pressupostos participatius, però sense percentatge fix a les bases.",
+        "c":"Hi destinarem el que la situació pressupostària permeti cada any.",
+        "f":"Ple de pressupostos, 18 de desembre de 2024","p":"Vot al ple"},
+  "a8":{"v":4,"j":"Van votar a favor del C1 a atenció al públic amb un període d'adaptació de tres anys.",
+        "c":"Hi estem d'acord, amb formació pagada i tres anys per acreditar-lo.",
+        "f":"Acta del Ple ordinari, 3 de setembre de 2024, punt 7","p":"Vot al ple"}
+ },
+ "junts":{
+  "a1":{"v":2,"j":"Consideren que la reserva obligatòria frena la promoció privada.",
+        "c":"Amb un 30% obligatori no es construirà res: el que cal és agilitzar llicències.",
+        "f":"Acta del Ple ordinari, 5 de març de 2024, punt 9","p":"Vot al ple"},
+  "a2":{"v":3,"j":"Accepten la zona de baixes emissions si hi ha aparcaments dissuasius abans.",
+        "c":"Primer els aparcaments a la perifèria i el bus llançadora; després, les restriccions.",
+        "f":"Comissió informativa de Territori, 18 de setembre de 2024","p":"Intervenció en comissió"},
+  "a3":null,
+  "a4":{"v":5,"j":"Demanen més agents i una unitat específica per al centre i els polígons.",
+        "c":"Sabadell necessita més policia al carrer, i la necessita ara.",
+        "f":"Acta del Ple ordinari, 6 de febrer de 2024, punt 12","p":"Vot al ple"},
+  "a5":{"v":2,"j":"Van votar en contra de retirar sectors industrials del planejament.",
+        "c":"Protegir el Rodal no pot voler dir renunciar al sòl industrial que dona feina.",
+        "f":"Moció aprovada al Ple del 4 de juny de 2024","p":"Vot al ple"},
+  "a6":null,
+  "a7":null,
+  "a8":{"v":4,"j":"Van votar a favor del C1 sense període d'adaptació.",
+        "c":"El català a l'atenció al públic no és un mèrit: és un requisit.",
+        "f":"Acta del Ple ordinari, 3 de setembre de 2024, punt 7","p":"Vot al ple"}
+ },
+ "pp":{
+  "a1":{"v":1,"j":"S'oposen a qualsevol reserva obligatòria per damunt del mínim legal.",
+        "c":"Les quotes obligatòries espanten la inversió i encareixen l'habitatge lliure.",
+        "f":"Acta del Ple ordinari, 5 de març de 2024, punt 9","p":"Vot al ple"},
+  "a2":null,
+  "a3":{"v":1,"j":"Van votar en contra de qualsevol recàrrec de l'IBI.",
+        "c":"Castigar el propietari amb impostos no ha posat mai cap pis al mercat.",
+        "f":"Ple d'ordenances fiscals, 24 d'octubre de 2024, punt 4","p":"Vot al ple"},
+  "a4":{"v":5,"j":"Ho porten com a primera proposta i demanen duplicar la plantilla.",
+        "c":"El primer servei social és poder sortir de casa tranquil.",
+        "f":"Acta del Ple ordinari, 6 de febrer de 2024, punt 12","p":"Vot al ple"},
+  "a5":{"v":1,"j":"Van votar en contra de la protecció del Rodal.",
+        "c":"Aquesta moció és una hipoteca per al creixement econòmic de Sabadell.",
+        "f":"Moció aprovada al Ple del 4 de juny de 2024","p":"Vot al ple"},
+  "a6":null,"a7":null,"a8":null
+ },
+ "vox":{
+  "a1":{"v":1,"j":"S'oposen a la reserva i a l'ampliació del parc públic de lloguer.",
+        "c":"No volem més habitatge subvencionat pagat per qui sí que treballa.",
+        "f":"Acta del Ple ordinari, 5 de març de 2024, punt 9","p":"Vot al ple"},
+  "a2":null,"a3":null,
+  "a4":{"v":5,"j":"És l'eix central del seu discurs municipal.",
+        "c":"Volem el doble d'agents al carrer i tolerància zero.",
+        "f":"Acta del Ple ordinari, 6 de febrer de 2024, punt 12","p":"Vot al ple"},
+  "a5":{"v":1,"j":"Van votar en contra de la protecció del Rodal.",
+        "c":"Això és ecologisme de despatx que impedeix crear llocs de treball.",
+        "f":"Moció aprovada al Ple del 4 de juny de 2024","p":"Vot al ple"},
+  "a6":null,
+  "a7":{"v":1,"j":"Consideren que els pressupostos participatius són una despesa evitable.",
+        "c":"Per decidir el pressupost ja hi ha unes eleccions cada quatre anys.",
+        "f":"Ple de pressupostos, 18 de desembre de 2024","p":"Vot al ple"},
+  "a8":null
+ }
+}
+}
+</script>
+
+<!-- Sprite de quivoto, retallat als símbols que aquesta pàgina fa servir.
+     Generat per tools/build_sprite.py des de tools/icons_lib.py i retallat
+     per tools/sprite_pagina.py. NO s'edita a mà.
+     Va al FINAL del <body>: abans era el primer fill i el parser havia de
+     mastegar-lo sencer abans d'arribar a cap píxel visible. -->
+<svg xmlns="http://www.w3.org/2000/svg" class="sprite-quivoto" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+<defs>
+<symbol id="vei-habitatge" viewBox="0 0 48 48"><title>Habitatge</title><path d="M8 22 L24 8 L40 22 V40 H8 Z" fill="#E2735A"/><path d="M8 22 L24 8 L40 22" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linejoin="round"/><rect x="20" y="28" width="8" height="12" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="33" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="33" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="33.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="33.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="28.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="28.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 40.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-mobilitat" viewBox="0 0 48 48"><title>Mobilitat</title><rect x="6" y="12" width="36" height="24" rx="6" fill="#BFE8D2"/><rect x="10" y="17" width="9" height="8" rx="2" fill="#1E1B2E"/><rect x="22" y="17" width="9" height="8" rx="2" fill="#1E1B2E"/><rect x="34" y="17" width="4" height="8" rx="2" fill="#1E1B2E"/><circle cx="14" cy="39" r="4" fill="#1E1B2E"/><circle cx="34" cy="39" r="4" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="30" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="30" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="30.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="30.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="25.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="25.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 37.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-fiscalitat" viewBox="0 0 48 48"><title>Fiscalitat</title><circle cx="24" cy="24" r="17" fill="#BFE8D2"/><path d="M30 16 A9 9 0 1 0 30 32 M14 21 H27 M14 27 H27" fill="none" stroke="#1E1B2E" stroke-width="3.5" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="14" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="14" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="14.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="14.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="9.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="9.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 21.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-seguretat" viewBox="0 0 48 48"><title>Seguretat</title><path d="M24 5 L40 11 V24 C40 34 32 40 24 43 C16 40 8 34 8 24 V11 Z" fill="#FFD8B8"/><g class="cara"><circle cx="19" cy="21" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="21" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="21.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="21.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="16.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="16.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 28.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-medi-ambient" viewBox="0 0 48 48"><title>Medi ambient</title><path d="M40 8 C20 8 8 20 10 40 C30 40 42 28 40 8 Z" fill="#BFE8D2"/><g class="cara"><circle cx="21" cy="24" r="3.6" fill="#FBF7EE"/><circle cx="31" cy="24" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="21" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="31" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="17" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="27" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M22 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-neteja" viewBox="0 0 48 48"><title>Neteja</title><path d="M10 14 H38 L35 42 H13 Z" fill="#C9C4F2"/><rect x="6" y="8" width="36" height="6" rx="3" fill="#1E1B2E"/><path d="M19 20 V36 M29 20 V36" stroke="#1E1B2E" stroke-width="2.5" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="28" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="28" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="28.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="28.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 35.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-participacio" viewBox="0 0 48 48"><title>Participació</title><rect x="10.2" y="23" width="5.6" height="13" rx="2.8" fill="#C9C4F2" transform="rotate(-32 13 29.5)"/><rect x="17.4" y="14" width="5.8" height="15" rx="2.9" fill="#C9C4F2"/><rect x="24.6" y="10" width="5.8" height="19" rx="2.9" fill="#C9C4F2"/><rect x="31.8" y="15" width="5.8" height="14" rx="2.9" fill="#C9C4F2"/><path d="M14 27 H38 V35 A8 8 0 0 1 30 43 H22 A8 8 0 0 1 14 35 Z" fill="#C9C4F2"/><g class="cara"><circle cx="21" cy="34" r="3.6" fill="#FBF7EE"/><circle cx="31" cy="34" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="21" cy="34.4" r="1.9" fill="#1E1B2E"/><circle cx="31" cy="34.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="17" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="27" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M22 41.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-llengua" viewBox="0 0 48 48"><title>Llengua</title><path d="M8 8 H40 V32 H22 L12 40 V32 H8 Z" fill="#E2735A"/><g class="cara"><circle cx="19" cy="18" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="18" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="18.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="18.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="13.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="13.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 25.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="escala-1" viewBox="0 0 48 48"><title>Totalment en desacord</title><circle cx="24" cy="24" r="22" fill="#E2735A" stroke="#1E1B2E" stroke-width="2.5"/><path d="M20 34 q4 -3 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M14 20 l5 3 M34 20 l-5 3" stroke="#1E1B2E" stroke-width="2.2" stroke-linecap="round"/></symbol>
+<symbol id="escala-2" viewBox="0 0 48 48"><title>Més aviat en desacord</title><circle cx="24" cy="24" r="22" fill="#FFD8B8" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 33 q4 -2 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="escala-3" viewBox="0 0 48 48"><title>Ni d'acord ni en desacord</title><circle cx="24" cy="24" r="22" fill="#FBF7EE" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 32 h8" stroke="#1E1B2E" stroke-width="2.2" stroke-linecap="round"/></symbol>
+<symbol id="escala-4" viewBox="0 0 48 48"><title>Més aviat d'acord</title><circle cx="24" cy="24" r="22" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 30 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="escala-5" viewBox="0 0 48 48"><title>Totalment d'acord</title><circle cx="24" cy="24" r="22" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="2.5"/><path d="M19 29 q5 6 10 0 z" fill="#1E1B2E"/><path d="M15 21 q3 -4 6 0 M27 21 q3 -4 6 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="papereta-felic" viewBox="0 0 120 140"><title>La papereta, mascota de quivoto</title>
+  <g class="cos">
+    <path d="M18 14 H80 L102 36 V126 H18 Z" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M80 14 V36 H102 Z" fill="#FFD8B8" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <g class="ratlles">
+      <path d="M32 112 H88" stroke="#E2735A" stroke-width="5" stroke-linecap="round"/>
+      <path d="M32 122 H70" stroke="#BFE8D2" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    <g class="cara">
+      <circle cx="46" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <circle cx="76" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <g class="pupilles"><circle cx="46" cy="71" r="4.2" fill="#1E1B2E"/><circle cx="76" cy="71" r="4.2" fill="#1E1B2E"/></g>
+      <g class="parpelles">
+        <circle cx="46" cy="70" r="9.6" fill="#FFFFFF"/>
+        <circle cx="76" cy="70" r="9.6" fill="#FFFFFF"/>
+      </g>
+      <path class="boca" d="M44 92 q16 14 32 0" stroke="#1E1B2E" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </g>
+    <path class="creu" d="M31 46 l7 8 l14 -16" stroke="#E2735A" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</symbol>
+<symbol id="fletxa" viewBox="0 0 48 48"><title>Hi porta</title><path d="M9 24 H36 M26.5 14.5 L36 24 L26.5 33.5" fill="none" stroke="currentColor" stroke-width="4.0" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs>
+</svg>
+
+<script src="moviment.js"></script>
+<script>
+/* ==========================================================================
+   La lògica d'aquesta pantalla i prou. Tot el moviment passa per
+   window.moviment: aquí no es crida matchMedia ni s'escriu cap transition.
+   ========================================================================== */
+(function () {
+  'use strict';
+  var D = JSON.parse(document.getElementById('dades').textContent);
+  /* Els noms dels cinc graons NO es declaren aquí: surten de la taula
+     compartida de moviment.js, la mateixa que fa servir la brúixola. Quan cada
+     pantalla tenia la seva, «La teva resposta» no deia el que l'usuari havia
+     premut. */
+  var ESCALA = window.moviment.ESCALA_LLARG;
+  var VISIBLES = 4;                     // les que es veuen abans de desplegar
+  var triat = 'erc';
+  var desplegat = false;
+
+  var elTries = document.getElementById('tries');
+  var elLlista = document.getElementById('llista-afirmacions');
+  var elMes = document.getElementById('mes');
+  var elAvis = document.getElementById('avis');
+
+  function esc(t) {
+    return String(t).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function cand(id) {
+    for (var i = 0; i < D.candidatures.length; i++) if (D.candidatures[i].id === id) return D.candidatures[i];
+    return null;
+  }
+
+  /* La distància. Quatre graons i un cas de no-dada, i sempre amb signe i mot:
+     qui no distingeixi el menta del préssec ha de poder llegir-ho igual. */
+  function distancia(teva, seva) {
+    if (seva == null) return { cls: 'sense', signe: '?', mot: 'Sense dades' };
+    var d = Math.abs(teva - seva);
+    if (d === 0) return { cls: 'coincidiu', signe: '=', mot: 'Coincidiu' };
+    if (d === 1) return { cls: 'prop', signe: '≈', mot: 'A prop' };
+    if (d === 2) return { cls: 'diferents', signe: '≠', mot: 'Diferents' };
+    return { cls: 'oposats', signe: '↔', mot: 'Oposats' };
+  }
+
+  function blocDiuFa(pos, c) {
+    if (!pos || !pos.diu || !pos.fa) return '';
+    return '<div class="diufa">' +
+      '<p class="micro" style="margin:0">Què diuen / Què han fet</p>' +
+      '<p class="peu-nota" style="margin:4px 0 0">La posició declarada i la votada no coincideixen. ' +
+      'Comptem la votada.</p>' +
+      '<div class="diufa__reixa">' +
+        '<div class="diufa__b"><span class="diufa__marca">Què diuen</span>' +
+          '<h4>' + esc(ESCALA[pos.diu.v]) + '</h4>' +
+          '<p>' + esc(pos.diu.t) + '</p>' +
+          '<div class="cita cita--menuda">' +
+            '<p>«' + esc(pos.diu.c) + '»</p></div>' +
+          '<p class="peu-nota" style="margin:0">' + esc(pos.diu.f) + '</p></div>' +
+        '<div class="diufa__b diufa__b--fet"><span class="diufa__marca">Què han fet</span> ' +
+          '<span class="diufa__compta">és el que compta</span>' +
+          '<h4>' + esc(ESCALA[pos.fa.v]) + '</h4>' +
+          '<p>' + esc(pos.fa.t) + '</p>' +
+          '<div class="cita cita--menuda">' +
+            '<p>«' + esc(pos.fa.c) + '»</p></div>' +
+          '<p class="peu-nota" style="margin:0">' + esc(pos.fa.f) + '</p></div>' +
+      '</div></div>';
+  }
+
+  /* Les tres peces que canvien quan es tria una altra candidatura. La resta
+     del bloc (icona del tema, text de l'afirmació, la teva resposta) és
+     exactament la mateixa i no s'ha de tornar a analitzar ni a clonar. */
+  function htmlSeva(pos, c) {
+    return pos
+      ? '<span data-icona="escala-' + pos.v + '"></span><div><p class="parell__qui">' + esc(c.sigla) +
+        '</p><p class="parell__resp">' + esc(ESCALA[pos.v]) + '</p></div>'
+      : '<div><p class="parell__qui">' + esc(c.sigla) +
+        '</p><p class="parell__resp suau">Sense posició documentada</p></div>';
+  }
+
+  function htmlDist(d) {
+    return '<span class="dist__signe" aria-hidden="true">' + d.signe + '</span>' + d.mot;
+  }
+
+  function htmlCos(pos, c) {
+    return pos
+      ? '<p>' + esc(pos.j) + '</p>' +
+        '<blockquote class="cita"><p>«' + esc(pos.c) + '»</p></blockquote>' +
+        '<p class="font peu-nota"><span class="etiqueta etiqueta--vora">' + esc(pos.p) + '</span> ' +
+        '<a href="#" rel="noopener">' + esc(pos.f) + ' <span class="fletxa" data-icona="fletxa" aria-hidden="true"></span></a></p>' +
+        blocDiuFa(pos, c)
+      : '<p>No hem trobat cap acta, cap punt del programa ni cap declaració datada on ' + esc(c.sigla) +
+        ' es posicioni sobre això. Mentre no la trobem, aquesta afirmació no compta ni a favor ni en contra: ' +
+        'se surt del càlcul i baixa la cobertura.</p>' +
+        '<p class="font peu-nota"><a href="#" rel="noopener">Tens una font? Envia-la ' +
+        '<span class="fletxa" data-icona="fletxa" aria-hidden="true"></span></a></p>';
+  }
+
+  function bloc(a, pos, c) {
+    var d = distancia(a.teva, pos ? pos.v : null);
+    return '<li class="afirm targeta" data-entrada>' +
+      '<div class="afirm__cap">' +
+        '<span data-icona="vei-' + esc(a.tema) + '" data-classe="ico--vei"></span>' +
+        '<div><p class="micro afirm__tema">' + esc(a.temaNom) + '</p>' +
+        '<p class="afirm__text">' + esc(a.text) + '</p></div>' +
+        '<span class="dist dist--' + d.cls + ' afirm__dist">' + htmlDist(d) + '</span>' +
+      '</div>' +
+      '<div class="parell">' +
+        '<div class="parell__b"><span data-icona="escala-' + a.teva + '"></span>' +
+          '<div><p class="parell__qui">La teva resposta</p>' +
+          '<p class="parell__resp">' + esc(ESCALA[a.teva]) + '</p></div></div>' +
+        '<div class="parell__b parell__b--seva">' + htmlSeva(pos, c) + '</div>' +
+      '</div>' +
+      '<details class="desplega"><summary>' +
+        '<span class="desplega__signe" aria-hidden="true"></span>Per què ho diem</summary>' +
+      '<div class="desplega__cos">' + htmlCos(pos, c) + '</div></details>' +
+      '</li>';
+  }
+
+  function aplicaLimit() {
+    var items = elLlista.children;
+    for (var i = 0; i < items.length; i++) {
+      items[i].classList.toggle('amagada', !desplegat && i >= VISIBLES);
+    }
+    elMes.setAttribute('aria-expanded', desplegat ? 'true' : 'false');
+    elMes.textContent = desplegat
+      ? "Mostra'n menys"
+      : 'Mostra les ' + D.afirmacions.length + ' afirmacions documentades';
+  }
+
+  /* La llista es PINTA UNA VEGADA. Canviar de candidatura no en refà els vuit
+     blocs: el tema, el text de l'afirmació i la teva resposta són els mateixos
+     sempre. Abans, cada clic tornava a analitzar tot l'HTML i a clonar ~24
+     icones del sprite dins del mateix gestor de clic, i això és exactament el
+     que Lighthouse compta com a INP. Ara es toquen tres nodes per fila. */
+  function pinta() {
+    var c = cand(triat);
+    var html = '';
+    for (var i = 0; i < D.afirmacions.length; i++) {
+      var a = D.afirmacions[i];
+      html += bloc(a, (D.posicions[triat] || {})[a.id], c);
+    }
+    elLlista.innerHTML = html;
+    aplicaLimit();
+    // inicia() sobre el tros nou: hi omple les icones i hi engega l'entrada.
+    if (window.moviment) window.moviment.inicia(elLlista);
+    diuAvis(c);
+  }
+
+  function diuAvis(c) {
+    elAvis.textContent = 'Comparant les teves respostes amb ' + c.sigla + ', ' + c.nom + '.';
+  }
+
+  function actualitza() {
+    var c = cand(triat);
+    var files = elLlista.children;
+    for (var i = 0; i < D.afirmacions.length && i < files.length; i++) {
+      var a = D.afirmacions[i];
+      var pos = (D.posicions[triat] || {})[a.id];
+      var fila = files[i];
+
+      var pastilla = fila.querySelector('.dist');
+      var d = distancia(a.teva, pos ? pos.v : null);
+      pastilla.className = 'dist dist--' + d.cls + ' afirm__dist';
+      pastilla.innerHTML = htmlDist(d);
+
+      var seva = fila.querySelector('.parell__b--seva');
+      seva.innerHTML = htmlSeva(pos, c);
+      // Una sola icona per fila, i només si n'hi ha: la del tema i la de la
+      // teva resposta no han canviat i no es tornen a clonar.
+      var lloc = seva.querySelector('[data-icona]');
+      if (lloc) window.moviment.icona(lloc, lloc.getAttribute('data-icona'));
+
+      fila.querySelector('.desplega__cos').innerHTML = htmlCos(pos, c);
+    }
+    diuAvis(c);
+  }
+
+  var marcaTria = function () {};
+
+  function tria(id, ambSalt) {
+    triat = id;
+    var botons = elTries.querySelectorAll('[data-tria]');
+    for (var i = 0; i < botons.length; i++) {
+      if (botons[i].getAttribute('data-tria') !== id) continue;
+      marcaTria(botons[i]);
+      if (ambSalt && window.moviment) window.moviment.salta(botons[i]);
+    }
+    actualitza();
+  }
+
+  /* --- Els botons de tria ------------------------------------------------ */
+  (function muntaTries() {
+    var html = '';
+    for (var i = 0; i < D.candidatures.length; i++) {
+      var c = D.candidatures[i];
+      html += '<button type="button" class="boto boto--menut" data-tria="' + c.id + '" ' +
+        'style="--dada:' + c.dada + '" aria-checked="' + (c.id === triat) + '">' +
+        esc(c.sigla) + ' <span class="suau" style="font-weight:700">' + c.pc + '%</span></button>';
+    }
+    elTries.innerHTML = html;
+    // Set candidatures que s'exclouen són una tria única, no set commutadors.
+    marcaTria = window.moviment.radiogrup(elTries, {selector: '[data-tria]'});
+    elTries.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-tria]');
+      if (b) tria(b.getAttribute('data-tria'), true);
+    });
+  })();
+
+  /* Els botons del rànquing porten a la comparació ja canviada de partit. */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tria]');
+    if (!b || elTries.contains(b)) return;
+    tria(b.getAttribute('data-tria'), false);
+    var seccio = document.getElementById('comparacio');
+    if (seccio.scrollIntoView) seccio.scrollIntoView({ block: 'start' });
+    var dest = elTries.querySelector('[data-tria="' + b.getAttribute('data-tria') + '"]');
+    if (dest) dest.focus();
+  });
+
+  elMes.addEventListener('click', function () {
+    desplegat = !desplegat;
+    aplicaLimit();
+    // Res d'observaEntrada: els blocs ja hi eren i ja havien entrat; només
+    // se'ls treu .amagada. Crear-hi un observador nou a cada clic en deixava
+    // un de viu i tornava a escriure will-change sense cap animació al davant.
+    if (window.moviment) window.moviment.salta(elMes);
+  });
+
+  /* --- Barres ------------------------------------------------------------
+     Totes les barres de la pàgina porten --valor-final al marcatge (perquè
+     sense JS el <noscript> les pugui pintar) i s'omplen quan es veuen. Un sol
+     observador per a totes. */
+  (function barres() {
+    // S'observa el SOLC de la barra, mai l'omplert. L'omplert arrenca a
+    // scaleX(0): té àrea zero, i un element d'àrea zero no arriba mai al
+    // llindar d'un IntersectionObserver. La barra que no creixia venia d'aquí.
+    var solcs = document.querySelectorAll('.barra, .og__b');
+    function omplert(solc) { return solc.querySelector('.barra__omplert, i'); }
+    function valor(el) {
+      return parseFloat(getComputedStyle(el).getPropertyValue('--valor-final')) || 0;
+    }
+    function pinta(solc) {
+      var el = omplert(solc);
+      if (el) window.moviment.animaBarra(el, valor(el));
+    }
+    window.moviment.siEsMou(function () {
+      if (!('IntersectionObserver' in window)) {
+        for (var i = 0; i < solcs.length; i++) pinta(solcs[i]);
+        return;
+      }
+      var ob = new IntersectionObserver(function (ents) {
+        var tanda = [];
+        for (var i = 0; i < ents.length; i++) if (ents[i].isIntersecting) tanda.push(ents[i].target);
+        tanda.forEach(function (solc, i) {
+          ob.unobserve(solc);
+          window.setTimeout(function () { pinta(solc); }, Math.min(i, 8) * 60);
+        });
+      }, { threshold: 0.35 });
+      for (var i = 0; i < solcs.length; i++) ob.observe(solcs[i]);
+    }, function () {
+      for (var i = 0; i < solcs.length; i++) pinta(solcs[i]);
+    });
+  })();
+
+  /* --- Compartir ---------------------------------------------------------- */
+  var ENLLAC = 'https://quivoto.cat/r/sbd-8k3f2a';
+  var og = document.getElementById('og');
+  var ambPc = document.getElementById('ambPc');
+  var avisCopia = document.getElementById('avisCopia');
+
+  ambPc.addEventListener('change', function () {
+    og.classList.toggle('og--discret', !ambPc.checked);
+    og.setAttribute('aria-label', ambPc.checked
+      ? 'Imatge per compartir: ERC-EUiA-AM 86%, SECP-C 82%, CpS-AMUNT 78%.'
+      : 'Imatge per compartir: només l’ordre, sense percentatges.');
+  });
+
+  function copia(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+    return new Promise(function (resol, falla) {
+      var t = document.createElement('textarea');
+      t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.top = '-1000px';
+      document.body.appendChild(t); t.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(t);
+      ok ? resol() : falla();
+    });
+  }
+
+  document.getElementById('copia').addEventListener('click', function () {
+    var boto = this;
+    copia(ENLLAC).then(function () {
+      avisCopia.textContent = 'Enllaç copiat: ' + ENLLAC;
+      window.moviment.salta(boto);
+    }, function () {
+      avisCopia.textContent = 'No s’ha pogut copiar. L’enllaç és ' + ENLLAC;
+    });
+  });
+
+  document.getElementById('comparteix').addEventListener('click', function () {
+    var boto = this;
+    var dades = {
+      title: 'El meu resultat a quivoto',
+      text: 'A Sabadell coincideixo un 86% amb ERC-EUiA-AM.',
+      url: ENLLAC
+    };
+    if (navigator.share) {
+      navigator.share(dades).then(function () { window.moviment.salta(boto); }, function () {});
+    } else {
+      copia(dades.text + ' ' + ENLLAC).then(function () {
+        avisCopia.textContent = 'Aquest navegador no té menú de compartir: t’hem copiat el text.';
+        window.moviment.salta(boto);
+      }, function () {
+        avisCopia.textContent = 'Aquest navegador no té menú de compartir.';
+      });
+    }
+  });
+
+  /* --- Engegada -----------------------------------------------------------
+     Primer el document (icones, comptadors, entrada de tot el que és fix) i
+     després la llista: així cap element no acaba observat dues vegades. */
+  window.moviment.inicia(document);
+  pinta();
+})();
+</script>
+</body>
+</html>

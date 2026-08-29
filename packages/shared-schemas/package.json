@@ -1,0 +1,17 @@
+{
+  "name": "@quivoto/shared-schemas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./matching": "./src/matching.ts",
+    "./seats": "./src/seats.ts",
+    "./brands": "./src/brands.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": { "zod": "^3.24.1" }
+}

@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Radiografia de Sabadell · quivoto</title>
+<meta name="description" content="Qui hi ha al ple de Sabadell, qui governa, què ha canviat des del 2015 i què s’hi ha votat. Amb la font de cada xifra i el que encara no podem dir.">
+<meta name="color-scheme" content="light dark">
+<!-- Tipografia local. Els @font-face van ABANS del full d'estil: si van
+     després, la petició de la lletra no arrenca fins que base.css ha baixat i
+     s'ha analitzat. Els dos preloads treuen un salt més. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../web/public/assets/fonts/QGYtz_0dZAGKJJ4t3HtoW4XGnfBI.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJ3xzHGGVFM.woff2">
+<style>
+@font-face{font-family:"Gabarito";font-style:normal;font-weight:400 900;font-display:swap;
+  src:url("../../web/public/assets/fonts/QGYtz_0dZAGKJJ4t3HtoW4XGnfBI.woff2") format("woff2")}
+@font-face{font-family:"Nunito Sans";font-style:normal;font-weight:400 800;font-display:swap;
+  src:url("../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJ3xzHGGVFM.woff2") format("woff2")}
+</style>
+
+<link rel="stylesheet" href="base.css">
+
+<!-- L'estat amagat de [data-entrada] només existeix si <html> porta .js-mou.
+     Es posa abans del primer pintat, no des de moviment.js, que va al final. -->
+<script>if(!matchMedia('(prefers-reduced-motion:reduce)').matches)document.documentElement.className+=' js-mou'</script>
+
+<style>
+/* ==========================================================================
+   Radiografia del municipi — CSS propi d’aquesta pantalla.
+   Tot el que és compartit surt de base.css: aquí només hi ha el que és
+   d’aquesta pàgina i encara no s’ha guanyat el dret a ser una primitiva.
+   ========================================================================== */
+
+/* Els pegats de contrast de mode fosc ja no són aquí: .adhesiu, .etiqueta i
+   el botó premut porten tinta fixa des de base.css, que és on toca. */
+
+/* --- Capçalera de marca -------------------------------------------------- */
+.top{border-bottom:var(--gruix-vora) solid var(--ink);background:var(--fons-peca)}
+.top__cos{display:flex;align-items:center;justify-content:space-between;gap:var(--e2);padding-block:14px}
+.top .marca{--marca-mida:26px}
+.top__on{margin:0;color:var(--ink-suau)}
+
+/* --- Ritme de secció -----------------------------------------------------
+   Cada secció seu sobre .graella: la capçalera pesa a l'esquerra (t7) i el
+   número de secció se'n va a la columna marginal. Res queda centrat per
+   inèrcia, que és per al que hi ha la cantonada asimètrica. */
+.seccio{margin-top:var(--e5)}
+@media (min-width:720px){ .seccio{margin-top:var(--e6)} }
+.seccio>.graella{row-gap:var(--e3)}
+.cap-seccio h2{margin-top:2px;text-wrap:balance}
+.cap-seccio .guia{margin-top:var(--e2);max-width:56ch}
+
+/* --- 00 Fitxa del municipi ---------------------------------------------- */
+.fitxa{padding-top:var(--e4)}
+.fitxa__cos{display:flex;gap:var(--e3);align-items:flex-start;justify-content:space-between}
+.fitxa h1{font-size:var(--mida-hero);margin-top:var(--e1)}
+.fitxa__mascota{flex:none;--mida:96px;display:none}
+@media (min-width:720px){ .fitxa__mascota{display:block;--mida:132px} }
+.fitxa__adhesius{display:flex;gap:var(--e2);flex-wrap:wrap;margin-top:var(--e3)}
+.dades{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--e3) var(--e2);margin:var(--e4) 0 0}
+@media (min-width:720px){ .dades{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.dada{border-top:var(--gruix-vora) solid var(--ink);padding-top:var(--e1)}
+.dada dt{font-size:var(--mida-micro);font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-suau)}
+.dada dd{margin:4px 0 0;font-family:var(--display);font-weight:900;font-size:var(--mida-t3);letter-spacing:-.02em;line-height:1.1}
+.dada dd .xifra-num{font-size:var(--mida-t2);display:inline-block}
+.dada small{display:block;font-family:var(--text);font-weight:400;color:var(--ink-suau);letter-spacing:0}
+
+/* --- 01 Hemicicle -------------------------------------------------------- */
+/* Ni `margin:0 auto` ni text-align:center al peu: l'hemicicle pesa a
+   l'esquerra de la seva columna, com tota la resta de la pàgina. */
+.hemicicle{display:block;width:100%;max-width:620px}
+.esco{stroke:var(--ink);stroke-width:1.5;transform-box:fill-box;transform-origin:center}
+.esco title{pointer-events:none}
+/* Vista govern/oposició: la diferència no és de color, és ple contra buit. */
+.hemicicle[data-vista="govern"] .esco{fill:var(--fons-peca)}
+.hemicicle[data-vista="govern"] .esco[data-govern="si"]{fill:var(--ink)}
+.d-psc{fill:var(--dada-psc)} .d-erc{fill:var(--dada-erc)} .d-crida{fill:var(--dada-crida)}
+.d-junts{fill:var(--dada-junts)} .d-comuns{fill:var(--dada-comuns)} .d-pp{fill:var(--dada-pp)}
+.d-vox{fill:var(--dada-vox)} .d-cs{fill:var(--dada-cs)}
+/* Els escons s’omplen un darrere l’altre quan l’hemicicle entra. El graó és
+   més curt que --t-pas a propòsit: no són 27 peces independents, és una sola
+   peça que s’omple; amb 60 ms l’últim escó arribaria a 1,6 s. */
+.js-mou .hemicicle-caixa:not(.dins) .esco{opacity:0;transform:scale(.3)}
+.js-mou .hemicicle-caixa.dins .esco{animation:esco var(--t-mig) var(--corba-salt) var(--retard,0s) both}
+@keyframes esco{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+.controls{display:flex;gap:var(--e1);flex-wrap:wrap;margin-bottom:var(--e3)}
+.llegenda-hemi{margin:var(--e2) 0 0;max-width:56ch}
+
+/* --- Llista de resultats ------------------------------------------------- */
+.resultats{list-style:none;margin:var(--e4) 0 0;padding:0;display:grid;gap:var(--e3)}
+.fila{display:grid;grid-template-columns:auto 1fr;gap:4px var(--e2);align-items:baseline}
+.fila__xifres{text-align:right;font-size:var(--mida-menut)}
+.fila__xifres .xifra-num{font-size:var(--mida-guia)}
+.fila__nom{grid-column:1/-1;font-size:var(--mida-menut);margin-top:-2px}
+.fila__barra{grid-column:1/-1;margin-top:2px}
+/* La barra no creix fins que la fila ha entrat. Sense JS o sense moviment, ja
+   hi és pintada al valor final. */
+.js-mou .fila:not(.dins) .barra__omplert{transform:scaleX(0)}
+
+/* --- 02 Govern contra urnes ----------------------------------------------
+   La banda és .banda.banda--menta de base.css. La tècnica que hi havia aquí
+   (redefinir --ink i --paper dins del subarbre) era la millor de les quatre
+   que hi havia al prototip i és la que s'ha pujat; aquí només queda el buit. */
+.banda{margin-top:var(--e6)}
+.veredicte{font-size:var(--mida-hero);line-height:.95;margin:var(--e2) 0 var(--e2);text-wrap:balance}
+.veredicte-cos{max-width:62ch}
+/* El veredicte de la secció és «Coincideix»: una de les dues targetes és la
+   RESPOSTA i l'altra la COMPROVACIÓ. No poden pesar igual ni ocupar el mateix,
+   i per això ni la proporció és 1fr 1fr ni el tractament és el mateix. */
+.cara-a-cara{display:grid;gap:var(--e3);margin-top:var(--e4)}
+@media (min-width:720px){ .cara-a-cara{grid-template-columns:1.15fr .85fr;gap:var(--e4);align-items:start} }
+.cara{background:var(--paper-2);border:3px solid var(--ink);padding:var(--e3)}
+.cara--resposta{border-radius:var(--r-l);padding:var(--e4);box-shadow:8px 8px 0 var(--ombra-color,var(--coral))}
+.cara--comprova{border-radius:var(--r-m);box-shadow:3px 3px 0 var(--ombra-color,var(--ink));margin-top:var(--e3)}
+.cara h3{margin-bottom:var(--e2)}
+.cara__xifra{font-family:var(--display);font-weight:900;font-size:var(--mida-t2);letter-spacing:-.04em;line-height:1;display:block;margin:var(--e1) 0}
+.cara--resposta .cara__xifra{font-size:var(--mida-t1)}
+.cara p{margin:0}
+
+/* La tira dels 27: on cau la majoria absoluta. */
+.tira{display:flex;align-items:stretch;gap:6px;margin-top:var(--e4)}
+.tira__grup{display:flex;gap:2px;flex-wrap:nowrap}
+.tira__grup--govern{flex:14 1 0}
+.tira__grup--oposicio{flex:13 1 0}
+.quadre{flex:1 1 0;aspect-ratio:1;border:2px solid var(--ink);border-radius:3px;background:var(--paper-2)}
+.quadre--gov{background:var(--ink)}
+.tira__llindar{flex:none;width:0;border-left:3px dashed var(--ink);margin-block:-6px}
+.tira-peu{display:flex;justify-content:space-between;gap:var(--e2);margin-top:var(--e1);font-size:var(--mida-micro);
+  font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+
+/* --- 03 La sèrie ------------------------------------------------------- */
+/* És una .targeta de base.css; local només hi queda el buit interior. */
+.cintes-caixa{padding:var(--e3) var(--e2)}
+.cintes{display:block;width:100%;height:auto}
+.cinta{fill-opacity:.30}
+.barra-any{stroke:var(--ink);stroke-width:1.4}
+.any-cinta{font-family:var(--display);font-weight:900;font-size:16px;fill:var(--ink);letter-spacing:-.02em}
+/* L'etiqueta de dins d'una barra no pot dependre del color de la barra: a
+   mòbil el SVG es dibuixa gairebé 1:1 i el cos queda a 10 px, i «Cs 4» sobre
+   #FF5824 feia 2,94:1 als dos modes. Ara la lletra és sempre tinta fixa amb
+   un halo blanc dibuixat amb paint-order: el contrast és el de la lletra
+   contra el seu propi halo i no contra la barra, i val igual en mode fosc,
+   on el PSC, els Comuns i el PP canvien de to. */
+.dins-barra{font-family:var(--text);font-weight:800;font-size:11px;
+  fill:#1E1B2E;paint-order:stroke;stroke:#FFFFFF;stroke-width:2.8px;stroke-linejoin:round}
+.fora-barra{font-family:var(--text);font-weight:800;font-size:9.5px;fill:var(--ink)}
+.guia-etiqueta{stroke:var(--ink);stroke-width:1;opacity:.5}
+.linia-majoria{stroke:var(--ink);stroke-width:1.4;stroke-dasharray:5 4;opacity:.55}
+.nota-svg{font-family:var(--text);font-weight:800;font-size:9px;fill:var(--ink);opacity:.7}
+.taula-serie{width:100%;border-collapse:collapse;margin-top:var(--e2);font-size:var(--mida-menut)}
+.taula-serie th,.taula-serie td{border-bottom:2px solid var(--vora);padding:8px 6px;text-align:right}
+.taula-serie th[scope="row"]{text-align:left;font-weight:400;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.taula-serie thead th{font-family:var(--display);font-weight:900}
+details.xifres{margin-top:var(--e3)}
+details.xifres > summary{cursor:pointer;font-weight:800;padding:6px 0;list-style:revert}
+details.xifres > summary:focus-visible{outline:3px solid var(--coral);outline-offset:3px}
+
+/* --- 04 Registre de mocions ---------------------------------------------- */
+.avis-exemple{background:var(--lavanda);color:var(--tinta-fixa);border:var(--gruix-vora) solid var(--tinta-fixa);
+  border-radius:var(--r-m);padding:var(--e2) var(--e3);margin-bottom:var(--e3);
+  box-shadow:3px 3px 0 var(--tinta-fixa)}
+.avis-exemple p{margin:0;font-size:var(--mida-menut)}
+.avis-exemple b{display:block;font-family:var(--display);font-size:var(--mida-t3)}
+.filtres{display:flex;gap:var(--e1);flex-wrap:wrap;align-items:center;margin-bottom:var(--e2)}
+.filtres__titol{font-size:var(--mida-micro);font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-suau);width:100%;margin:0 0 4px}
+#compte-mocions{display:inline-block}
+.mocions{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e3)}
+/* És una .targeta de base.css; local només hi queda la graella interna. */
+.mocio[hidden]{display:none}
+.mocio__cap{display:grid;grid-template-columns:auto 1fr;gap:var(--e1) var(--e2);align-items:start}
+.mocio__ico{--mida:34px;margin-top:2px}
+.mocio__text h3{font-size:var(--mida-t3);text-wrap:pretty}
+.mocio__text h3 a{text-decoration-color:var(--coral)}
+.mocio__text p{margin:6px 0 0}
+.acta{white-space:nowrap;font-weight:800;display:inline-flex;align-items:center;gap:4px}
+.acta [data-icona]{--mida:12px}
+.resultat{grid-column:1/-1;margin:var(--e2) 0 0;display:flex;align-items:baseline;gap:var(--e2);flex-wrap:wrap}
+.resultat b{font-family:var(--display);font-weight:900;font-size:var(--mida-t3);border-bottom:5px solid var(--menta);color:var(--ink)}
+.resultat--no b{border-bottom-color:var(--coral)}
+.resultat__xifres{font-size:var(--mida-menut);color:var(--ink-suau)}
+@media (min-width:720px){
+  .mocio__cap{grid-template-columns:auto 1fr auto}
+  .resultat{grid-column:3;margin:0;justify-content:flex-end;text-align:right;flex-direction:column;align-items:flex-end;gap:2px}
+}
+.vots{list-style:none;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:var(--e3) 0 0;padding:0}
+.vot{display:flex;flex-direction:column;align-items:center;gap:4px;transition:opacity var(--t-rapid) var(--corba-seca)}
+/* Seguir un grup no pot voler dir apagar els altres sis fins a fer-los
+   il·legibles: el seu vot és l'única manera de saber si la moció va passar.
+   El senyal va a la banda positiva —el grup seguit guanya un contorn— i els
+   altres no baixen de .55, que amb tinta plena encara fa ~4,8:1. */
+.vot.apagat{opacity:.55}
+.vot.destacat .vot__marca{box-shadow:0 0 0 2.5px var(--ink)}
+.vot.destacat .vot__sigla{font-weight:900;text-decoration:underline;text-underline-offset:3px}
+.vot__marca{display:grid;place-items:center;width:100%;max-width:40px;aspect-ratio:1;
+  border:2px solid var(--tinta-fixa);color:var(--tinta-fixa);line-height:0}
+.vot__marca [data-icona]{--mida:62%}
+.vot__sigla{font-size:var(--mida-micro);font-weight:800;letter-spacing:0;text-align:center}
+.vot[data-vot="si"] .vot__marca{background:var(--menta);border-radius:var(--r-s)}
+/* Tinta damunt de coral, no crema: la crema hi feia 2,87:1 en clar i 2,22:1
+   en fosc, i aquesta marca és la que distingeix «en contra» d'«a favor» a set
+   grups per sis mocions. La forma (cercle contra quadrat) es queda com a
+   segon senyal. */
+.vot[data-vot="no"] .vot__marca{background:var(--coral);border-radius:50%}
+.vot[data-vot="abst"] .vot__marca{background:var(--presec);border-radius:var(--r-max)}
+.vot[data-vot="absent"] .vot__marca{background:transparent;border-style:dashed;color:var(--ink-suau);border-radius:var(--r-s)}
+.clau-vots{list-style:none;display:flex;flex-wrap:wrap;gap:var(--e2);padding:0;margin:var(--e2) 0 0;font-size:var(--mida-menut)}
+.clau-vots li{display:flex;align-items:center;gap:8px}
+.clau-vots .vot__marca{width:26px;height:26px;max-width:26px}
+
+/* --- 05 Semàfor de cobertura -------------------------------------------- */
+.semafor{list-style:none;margin:0;padding:0;display:grid;gap:var(--e3)}
+@media (min-width:720px){ .semafor{grid-template-columns:1.12fr .88fr;gap:var(--e3) var(--e4)} }
+.cobertura{border-top:var(--gruix-vora) solid var(--ink);padding-top:var(--e2)}
+.cobertura h3{font-size:var(--mida-cos)}
+.nivell{display:flex;align-items:center;gap:var(--e2);margin:6px 0}
+.nivell b{font-size:var(--mida-menut);text-transform:uppercase;letter-spacing:.1em}
+.cobertura p.peu-nota{margin:0}
+.no-podem{list-style:none;margin:var(--e4) 0 0;padding:0;display:grid;gap:var(--e2)}
+/* L'aspa és una icona del sprite i no un «✕» de la font del sistema. */
+.no-podem li{display:grid;grid-template-columns:auto 1fr;gap:var(--e2);align-items:start}
+.no-podem li>[data-icona]{--mida:15px;margin-top:5px;color:var(--coral)}
+/* Dins de la caixa fosca el coral de paper es queda per sota d'AA. */
+.targeta--fosca .no-podem li>[data-icona]{color:#F08E75}
+/* És una .targeta.targeta--fosca de base.css; local només hi queda el buit. */
+.caixa-fosca{padding:var(--e4) var(--e3);margin-top:var(--e4);grid-column:span 4}
+/* Desplaçada cap a la cantonada sense encongir-la: comença a la tercera
+   columna i arriba fins al final. */
+@media (min-width:1040px){ .caixa-fosca{grid-column:3 / -1} }
+@media (min-width:720px) and (max-width:1039px){ .caixa-fosca{grid-column:span 8} }
+
+/* --- Peu ------------------------------------------------------------------ */
+.peu{margin-top:var(--e6);border-top:var(--gruix-vora) solid var(--ink);padding-block:var(--e4);background:var(--fons-peca)}
+.peu p{max-width:70ch}
+.fonts{list-style:none;padding:0;margin:var(--e2) 0 0;display:grid;gap:6px;font-size:var(--mida-menut)}
+</style>
+</head>
+<body>
+
+<a class="salta" href="#contingut">Vés al contingut</a>
+
+<header class="top">
+  <div class="embolcall top__cos">
+    <a class="marca" href="portada.html" aria-label="quivoto, a l'inici">quiv<svg class="marca__o" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/><path d="M34 8 l6 6" stroke="#FFD8B8" stroke-width="6" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="24" r="3.6" fill="#FFFFFF"/><circle cx="29" cy="24" r="3.6" fill="#FFFFFF"/><g class="pupilles"><circle cx="19" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/><rect x="25" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/></g><path class="boca" d="M20 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg>to</a>
+    <p class="micro top__on">Radiografia · Sabadell</p>
+  </div>
+</header>
+
+<main id="contingut">
+
+<!-- ====================================================================
+     00 · FITXA DEL MUNICIPI
+     ==================================================================== -->
+<section class="fitxa embolcall">
+  <div class="graella">
+    <div class="marge"><p class="num-seccio">00</p></div>
+    <div class="t8 fitxa__cos">
+    <div>
+      <p class="micro">Radiografia del municipi</p>
+      <h1>Sabadell</h1>
+      <p class="guia">Tot el que es pot dir de l’ajuntament amb dades comprovables:
+      qui hi ha al ple, qui mana, què ha canviat i què s’hi ha votat. I, a sota
+      de tot, què encara no podem dir.</p>
+      <p class="fitxa__adhesius">
+        <span class="adhesiu" style="--gir:-3deg">Mandat 2023–2027</span>
+        <span class="adhesiu adhesiu--menta" style="--gir:2.5deg">Vallès Occidental</span>
+        <span class="adhesiu adhesiu--lavanda" style="--gir:-1.5deg">Actualitzat el 28.08.2026</span>
+      </p>
+    </div>
+    <span class="fitxa__mascota" data-icona="papereta-felic" data-base="mascota"
+          data-etiqueta="La papereta de quivoto"></span>
+    </div>
+  </div>
+
+  <dl class="dades">
+    <div class="dada" data-entrada>
+      <dt>Padró 2025</dt>
+      <dd><b class="xifra-num" data-compta="225368">225.368</b><small>habitants</small></dd>
+    </div>
+    <div class="dada" data-entrada>
+      <dt>El ple</dt>
+      <dd>27 regidors<small>7 grups municipals</small></dd>
+    </div>
+    <div class="dada" data-entrada>
+      <dt>Alcaldia</dt>
+      <dd>Marta Farrés<small>PSC-CP · des del 2019</small></dd>
+    </div>
+    <div class="dada" data-entrada>
+      <dt>Vots comptats</dt>
+      <dd><b class="xifra-num" data-compta="74008">74.008</b><small>a candidatures amb escó</small></dd>
+    </div>
+  </dl>
+</section>
+
+<!-- ====================================================================
+     01 · L’HEMICICLE
+     ==================================================================== -->
+<section class="seccio embolcall" aria-labelledby="t-hemicicle">
+  <div class="graella">
+  <div class="marge"><p class="num-seccio">01</p></div>
+  <div class="t7 cap-seccio">
+    <p class="micro">Qui hi ha al ple</p>
+    <h2 id="t-hemicicle">Vint-i-set escons, set candidatures</h2>
+    <p class="guia">Així va quedar el ple el 17 de juny del 2023, el dia de la
+    constitució. Cada cercle és un regidor de veritat, amb nom i cognoms a l’acta.</p>
+  </div>
+
+  <div class="t8">
+  <div class="controls" id="controls-hemicicle" aria-label="Com es pinta l’hemicicle">
+    <button type="button" class="boto boto--fantasma boto--menut" data-vista="candidatura" aria-pressed="true">Per candidatura</button>
+    <button type="button" class="boto boto--fantasma boto--menut" data-vista="govern" aria-pressed="false">Govern i oposició</button>
+  </div>
+
+  <div class="hemicicle-caixa" data-entrada>
+    <svg class="hemicicle" id="hemicicle" viewBox="0 0 200 106" data-vista="candidatura" role="img"
+         aria-label="Hemicicle de Sabadell. Cada escó es pinta amb el color de la seva candidatura. CpS-AMUNT 3, SECP-C 2, ERC-EUiA 3, PSC-CP 14, CM 2, PP 1 i VOX 2.">
+<circle class="esco d-crida" cx="10.49" cy="88.59" r="6.2" style="--retard:0ms"><title>CpS-AMUNT</title></circle>
+<circle class="esco d-crida" cx="40.51" cy="90.17" r="6.2" style="--retard:16ms"><title>CpS-AMUNT</title></circle>
+<circle class="esco d-crida" cx="14.40" cy="70.19" r="6.2" style="--retard:32ms"><title>CpS-AMUNT</title></circle>
+<circle class="esco d-comuns" cx="44.57" cy="75.04" r="6.2" style="--retard:48ms"><title>SECP-C</title></circle>
+<circle class="esco d-comuns" cx="22.06" cy="53.00" r="6.2" style="--retard:64ms"><title>SECP-C</title></circle>
+<circle class="esco d-erc" cx="52.40" cy="61.47" r="6.2" style="--retard:80ms"><title>ERC-EUiA</title></circle>
+<circle class="esco d-erc" cx="33.12" cy="37.78" r="6.2" style="--retard:96ms"><title>ERC-EUiA</title></circle>
+<circle class="esco d-erc" cx="63.47" cy="50.40" r="6.2" style="--retard:112ms"><title>ERC-EUiA</title></circle>
+<circle class="esco d-psc" cx="47.10" cy="25.19" r="6.2" data-govern="si" style="--retard:128ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="63.39" cy="15.78" r="6.2" data-govern="si" style="--retard:144ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="77.04" cy="42.57" r="6.2" data-govern="si" style="--retard:160ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="81.29" cy="9.97" r="6.2" data-govern="si" style="--retard:176ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="92.17" cy="38.51" r="6.2" data-govern="si" style="--retard:192ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="100.00" cy="8.00" r="6.2" data-govern="si" style="--retard:208ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="107.83" cy="38.51" r="6.2" data-govern="si" style="--retard:224ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="118.71" cy="9.97" r="6.2" data-govern="si" style="--retard:240ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="122.96" cy="42.57" r="6.2" data-govern="si" style="--retard:256ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="136.61" cy="15.78" r="6.2" data-govern="si" style="--retard:272ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="152.90" cy="25.19" r="6.2" data-govern="si" style="--retard:288ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="136.53" cy="50.40" r="6.2" data-govern="si" style="--retard:304ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="166.88" cy="37.78" r="6.2" data-govern="si" style="--retard:320ms"><title>PSC-CP</title></circle>
+<circle class="esco d-psc" cx="147.60" cy="61.47" r="6.2" data-govern="si" style="--retard:336ms"><title>PSC-CP</title></circle>
+<circle class="esco d-junts" cx="177.94" cy="53.00" r="6.2" style="--retard:352ms"><title>CM (Junts)</title></circle>
+<circle class="esco d-junts" cx="155.43" cy="75.04" r="6.2" style="--retard:368ms"><title>CM (Junts)</title></circle>
+<circle class="esco d-pp" cx="185.60" cy="70.19" r="6.2" style="--retard:384ms"><title>PP</title></circle>
+<circle class="esco d-vox" cx="159.49" cy="90.17" r="6.2" style="--retard:400ms"><title>VOX</title></circle>
+<circle class="esco d-vox" cx="189.51" cy="88.59" r="6.2" style="--retard:416ms"><title>VOX</title></circle>
+    </svg>
+  </div>
+  <p class="llegenda-hemi peu-nota" id="estat-hemicicle" role="status">Cada escó es pinta amb el color de la seva candidatura.</p>
+  </div>
+
+  <ol class="resultats t9">
+        <li class="fila" data-entrada style="--dada:var(--dada-psc);--valor:0.4837">
+          <span class="etiqueta etiqueta--partit">PSC-CP</span>
+          <span class="fila__xifres"><b class="xifra-num" data-compta="35799">35.799</b> vots · 48,4 % · <b>14</b> regidors</span>
+          <span class="fila__nom suau">Partit dels Socialistes</span>
+          <span class="barra barra--dada fila__barra"><span class="barra__omplert"></span></span>
+        </li>
+        <li class="fila" data-entrada style="--dada:var(--dada-erc);--valor:0.1161">
+          <span class="etiqueta etiqueta--partit">ERC-EUiA-AM</span>
+          <span class="fila__xifres"><b class="xifra-num" data-compta="8592">8.592</b> vots · 11,6 % · <b>3</b> regidors</span>
+          <span class="fila__nom suau">Esquerra Republicana</span>
+          <span class="barra barra--dada fila__barra"><span class="barra__omplert"></span></span>
+        </li>
+        <li class="fila" data-entrada style="--dada:var(--dada-crida);--valor:0.1083">
+          <span class="etiqueta etiqueta--partit">CpS-AMUNT</span>
+          <span class="fila__xifres"><b class="xifra-num" data-compta="8018">8.018</b> vots · 10,8 % · <b>3</b> regidors</span>
+          <span class="fila__nom suau">Crida per Sabadell</span>
+          <span class="barra barra--dada fila__barra"><span class="barra__omplert"></span></span>
+        </li>
+        <li class="fila" data-entrada style="--dada:var(--dada-junts);--valor:0.0854">
+          <span class="etiqueta etiqueta--partit">CM</span>
+          <span class="fila__xifres"><b class="xifra-num" data-compta="6319">6.319</b> vots · 8,5 % · <b>2</b> regidors</span>
+          <span class="fila__nom suau">Junts (Convergents per Sabadell)</span>
+          <span class="barra barra--dada fila__barra"><span class="barra__omplert"></span></span>
+        </li>
+        <li class="fila" data-entrada style="--dada:var(--dada-comuns);--valor:0.0762">
+          <span class="etiqueta etiqueta--partit">SECP-C</span>
+          <span class="fila__xifres"><b class="xifra-num" data-compta="5636">5.636</b> vots · 7,6 % · <b>2</b> regidors</span>
+          <span class="fila__nom suau">Sabadell en Comú Podem</span>
+          <span class="barra barra--dada fila__barra"><span class="barra__omplert"></span></span>
+        </li>
+        <li class="fila" data-entrada style="--dada:var(--dada-vox);--valor:0.0687">
+          <span class="etiqueta etiqueta--partit">VOX</span>
+          <span class="fila__xifres"><b class="xifra-num" data-compta="5087">5.087</b> vots · 6,9 % · <b>2</b> regidors</span>
+          <span class="fila__nom suau">VOX</span>
+          <span class="barra barra--dada fila__barra"><span class="barra__omplert"></span></span>
+        </li>
+        <li class="fila" data-entrada style="--dada:var(--dada-pp);--valor:0.0616">
+          <span class="etiqueta etiqueta--partit">PP</span>
+          <span class="fila__xifres"><b class="xifra-num" data-compta="4557">4.557</b> vots · 6,2 % · <b>1</b> regidor</span>
+          <span class="fila__nom suau">Partit Popular</span>
+          <span class="barra barra--dada fila__barra"><span class="barra__omplert"></span></span>
+        </li>
+  </ol>
+  <p class="peu-nota t7" style="margin-top:var(--e3)">Els percentatges es calculen sobre 74.008 vots
+  a candidatures que van obtenir representació. No hi comptem els vots en blanc, els nuls
+  ni les candidatures sense escó: encara no els tenim carregats.</p>
+  </div>
+</section>
+
+<!-- ====================================================================
+     02 · QUI GOVERNA CONTRA QUI VA GUANYAR
+     ==================================================================== -->
+<section class="banda banda--menta" aria-labelledby="t-govern">
+  <div class="embolcall graella">
+    <div class="marge"><p class="num-seccio">02</p></div>
+    <div class="t8">
+    <p><span class="adhesiu adhesiu--coral" style="--gir:-2.5deg">La pregunta de sempre</span></p>
+    <p class="micro">Qui governa contra qui va guanyar</p>
+    <h2 class="veredicte" id="t-govern">Coincideix.</h2>
+    <p class="guia veredicte-cos">A Sabadell, la llista més votada governa. I ho fa sola:
+    el PSC-CP va treure 14 dels 27 regidors, que és exactament la majoria absoluta.
+    Aquí no hi ha hagut cap pacte a decidir.</p>
+
+    <!-- No són dues targetes bessones: la primera és la RESPOSTA a la
+         pregunta de la secció i la segona és la COMPROVACIÓ. Per això pesen
+         diferent, i per això la xifra gran de cadascuna és una xifra de debò i
+         no una sigla amb tractament de xifra. Sense icones manllevades d'un
+         tema que no és el d'aquesta secció. -->
+    <div class="cara-a-cara">
+      <div class="cara cara--resposta" style="--ombra-color:var(--coral)">
+        <p class="micro" style="margin:0">Qui va guanyar les urnes</p>
+        <h3>PSC-CP</h3>
+        <b class="cara__xifra xifra-num" data-compta="35799">35.799</b>
+        <p>vots, el 48,4&nbsp;% dels comptats. El segon, ERC-EUiA-AM, en va
+        treure 8.592.</p>
+      </div>
+      <div class="cara cara--comprova">
+        <p class="micro" style="margin:0">Qui governa</p>
+        <h3>PSC-CP, en solitari</h3>
+        <b class="cara__xifra xifra-num">14 de 27</b>
+        <p>regidors. Marta Farrés va ser investida alcaldessa amb els vots del
+        seu grup i de ningú més.</p>
+      </div>
+    </div>
+
+    <div class="tira" role="img" aria-label="Dels 27 regidors, 14 són del govern i 13 de l’oposició. La majoria absoluta és de 14.">
+      <div class="tira__grup tira__grup--govern">
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+        <span class="quadre quadre--gov"></span>
+      </div>
+      <span class="tira__llindar" aria-hidden="true"></span>
+      <div class="tira__grup tira__grup--oposicio">
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+        <span class="quadre"></span>
+      </div>
+    </div>
+    <p class="tira-peu" aria-hidden="true"><span>14 govern</span><span>majoria absoluta</span><span>13 oposició</span></p>
+
+    <p style="margin-top:var(--e3);max-width:62ch"><strong>Què vol dir tenir-ne 14 justos.</strong>
+    El govern pot aprovar el pressupost i tombar qualsevol moció sense parlar amb ningú.
+    Però no li sobra ni un vot: si un regidor del govern falta a una votació, el ple queda
+    13 a 13, es repeteix la votació i, si l’empat persisteix, decideix el vot de qualitat de
+    l’alcaldia.</p>
+    <p class="peu-nota" style="max-width:62ch">No sempre passa. A molts municipis la llista més
+    votada no governa, perquè la resta suma més. Quan això passi, aquesta fitxa ho dirà
+    igual de clar.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================================
+     03 · LA SÈRIE 2015 · 2019 · 2023
+     ==================================================================== -->
+<section class="seccio embolcall" aria-labelledby="t-serie">
+  <div class="graella">
+  <div class="marge"><p class="num-seccio">03</p></div>
+  <div class="t7 cap-seccio">
+    <p class="micro">Què ha canviat des del 2015</p>
+    <h2 id="t-serie">Tres eleccions, els mateixos 27 escons</h2>
+    <p class="guia">Cada cinta és una marca que travessa els tres mandats. L’alçada
+    és el nombre de regidors; la línia de punts és la majoria absoluta.</p>
+  </div>
+
+  <div class="targeta cintes-caixa t9 a-la-cantonada" data-entrada>
+    <svg class="cintes" viewBox="0 0 300 262" role="img"
+         aria-label="Evolució de regidors a Sabadell. PSC: 6 el 2015, 10 el 2019 i 14 el 2023. Crida per Sabadell: 7, 4 i 3. ERC: 3, 4 i 3. Junts o CiU: 3, 3 i 2. Comuns: 2, 2 i 2. Ciutadans: 4, 3 i cap. PP: 2, 1 i 1. VOX: cap, cap i 2.">
+<text class="any-cinta" x="39.00" y="32" text-anchor="middle">2015</text>
+<text class="any-cinta" x="150.00" y="32" text-anchor="middle">2019</text>
+<text class="any-cinta" x="261.00" y="32" text-anchor="middle">2023</text>
+<path class="cinta d-psc" d="M62.00 44.00 L127.00 44.00 L127.00 119.56 L62.00 89.33 Z"/>
+<path class="cinta d-psc" d="M173.00 44.00 L238.00 44.00 L238.00 149.78 L173.00 119.56 Z"/>
+<path class="cinta d-comuns" d="M62.00 89.33 L127.00 119.56 L127.00 134.67 L62.00 104.44 Z"/>
+<path class="cinta d-comuns" d="M173.00 119.56 L238.00 149.78 L238.00 164.89 L173.00 134.67 Z"/>
+<path class="cinta d-erc" d="M62.00 104.44 L127.00 134.67 L127.00 164.89 L62.00 127.11 Z"/>
+<path class="cinta d-erc" d="M173.00 134.67 L238.00 164.89 L238.00 187.56 L173.00 164.89 Z"/>
+<path class="cinta d-crida" d="M62.00 127.11 L127.00 164.89 L127.00 195.11 L62.00 180.00 Z"/>
+<path class="cinta d-crida" d="M173.00 164.89 L238.00 187.56 L238.00 210.22 L173.00 195.11 Z"/>
+<path class="cinta d-junts" d="M62.00 180.00 L127.00 195.11 L127.00 217.78 L62.00 202.67 Z"/>
+<path class="cinta d-junts" d="M173.00 195.11 L238.00 210.22 L238.00 225.33 L173.00 217.78 Z"/>
+<path class="cinta d-cs" d="M62.00 202.67 L127.00 217.78 L127.00 240.44 L62.00 232.89 Z"/>
+<path class="cinta d-cs" d="M173.00 217.78 L238.00 225.33 L238.00 225.33 L173.00 240.44 Z"/>
+<path class="cinta d-pp" d="M62.00 232.89 L127.00 240.44 L127.00 248.00 L62.00 248.00 Z"/>
+<path class="cinta d-pp" d="M173.00 240.44 L238.00 225.33 L238.00 232.89 L173.00 248.00 Z"/>
+<path class="cinta d-vox" d="M173.00 248.00 L238.00 232.89 L238.00 248.00 L173.00 248.00 Z"/>
+<rect class="barra-any d-psc" x="16.00" y="44.00" width="46.00" height="45.33"/>
+<rect class="barra-any d-psc" x="127.00" y="44.00" width="46.00" height="75.56"/>
+<rect class="barra-any d-psc" x="238.00" y="44.00" width="46.00" height="105.78"/>
+<rect class="barra-any d-comuns" x="16.00" y="89.33" width="46.00" height="15.11"/>
+<rect class="barra-any d-comuns" x="127.00" y="119.56" width="46.00" height="15.11"/>
+<rect class="barra-any d-comuns" x="238.00" y="149.78" width="46.00" height="15.11"/>
+<rect class="barra-any d-erc" x="16.00" y="104.44" width="46.00" height="22.67"/>
+<rect class="barra-any d-erc" x="127.00" y="134.67" width="46.00" height="30.22"/>
+<rect class="barra-any d-erc" x="238.00" y="164.89" width="46.00" height="22.67"/>
+<rect class="barra-any d-crida" x="16.00" y="127.11" width="46.00" height="52.89"/>
+<rect class="barra-any d-crida" x="127.00" y="164.89" width="46.00" height="30.22"/>
+<rect class="barra-any d-crida" x="238.00" y="187.56" width="46.00" height="22.67"/>
+<rect class="barra-any d-junts" x="16.00" y="180.00" width="46.00" height="22.67"/>
+<rect class="barra-any d-junts" x="127.00" y="195.11" width="46.00" height="22.67"/>
+<rect class="barra-any d-junts" x="238.00" y="210.22" width="46.00" height="15.11"/>
+<rect class="barra-any d-cs" x="16.00" y="202.67" width="46.00" height="30.22"/>
+<rect class="barra-any d-cs" x="127.00" y="217.78" width="46.00" height="22.67"/>
+<rect class="barra-any d-pp" x="16.00" y="232.89" width="46.00" height="15.11"/>
+<rect class="barra-any d-pp" x="127.00" y="240.44" width="46.00" height="7.56"/>
+<rect class="barra-any d-pp" x="238.00" y="225.33" width="46.00" height="7.56"/>
+<rect class="barra-any d-vox" x="238.00" y="232.89" width="46.00" height="15.11"/>
+<path class="linia-majoria" d="M10 149.78 H292"/>
+<path class="linia-majoria" d="M10 254 H30"/>
+<text class="nota-svg" x="34" y="257">la línia de punts és la majoria absoluta: 14 regidors</text>
+<text class="dins-barra" x="39.00" y="70.17" text-anchor="middle">PSC 6</text>
+<text class="dins-barra" x="150.00" y="85.28" text-anchor="middle">PSC 10</text>
+<text class="dins-barra" x="261.00" y="100.39" text-anchor="middle">PSC 14</text>
+<text class="dins-barra" style="font-size:9px" x="39.00" y="100.39" text-anchor="middle">Comuns 2</text>
+<text class="dins-barra" style="font-size:9px" x="150.00" y="130.61" text-anchor="middle">Comuns 2</text>
+<text class="dins-barra" style="font-size:9px" x="261.00" y="160.83" text-anchor="middle">Comuns 2</text>
+<text class="dins-barra" x="39.00" y="119.28" text-anchor="middle">ERC 3</text>
+<text class="dins-barra" x="150.00" y="153.28" text-anchor="middle">ERC 4</text>
+<text class="dins-barra" x="261.00" y="179.72" text-anchor="middle">ERC 3</text>
+<text class="dins-barra" x="39.00" y="157.06" text-anchor="middle">Crida 7</text>
+<text class="dins-barra" x="150.00" y="183.50" text-anchor="middle">Crida 4</text>
+<text class="dins-barra" x="261.00" y="202.39" text-anchor="middle">Crida 3</text>
+<text class="dins-barra" x="39.00" y="194.83" text-anchor="middle">Junts 3</text>
+<text class="dins-barra" x="150.00" y="209.94" text-anchor="middle">Junts 3</text>
+<text class="dins-barra" x="261.00" y="221.28" text-anchor="middle">Junts 2</text>
+<text class="dins-barra" x="39.00" y="221.28" text-anchor="middle">Cs 4</text>
+<text class="dins-barra" x="150.00" y="232.61" text-anchor="middle">Cs 3</text>
+<text class="dins-barra" x="39.00" y="243.94" text-anchor="middle">PP 2</text>
+<path class="guia-etiqueta" d="M174.00 244.22 H178.00"/>
+<text class="fora-barra" x="180.00" y="247.52">PP 1</text>
+<path class="guia-etiqueta" d="M233.00 229.11 H237.00"/>
+<text class="fora-barra" x="231.00" y="232.41" text-anchor="end">PP 1</text>
+<text class="dins-barra" x="261.00" y="243.94" text-anchor="middle">VOX 2</text>
+    </svg>
+    <details class="xifres">
+      <summary>Veure les xifres en una taula</summary>
+      <table class="taula-serie">
+        <thead><tr><th scope="col">Marca</th><th scope="col">2015</th><th scope="col">2019</th><th scope="col">2023</th></tr></thead>
+        <tbody>
+<tr><th scope="row"><span class="etiqueta etiqueta--partit" aria-hidden="true" style="--dada:var(--dada-psc)"></span> PSC</th><td>6</td><td>10</td><td>14</td></tr>
+<tr><th scope="row"><span class="etiqueta etiqueta--partit" aria-hidden="true" style="--dada:var(--dada-comuns)"></span> Comuns (2015: Unitat pel Canvi)</th><td>2</td><td>2</td><td>2</td></tr>
+<tr><th scope="row"><span class="etiqueta etiqueta--partit" aria-hidden="true" style="--dada:var(--dada-erc)"></span> ERC</th><td>3</td><td>4</td><td>3</td></tr>
+<tr><th scope="row"><span class="etiqueta etiqueta--partit" aria-hidden="true" style="--dada:var(--dada-crida)"></span> Crida per Sabadell</th><td>7</td><td>4</td><td>3</td></tr>
+<tr><th scope="row"><span class="etiqueta etiqueta--partit" aria-hidden="true" style="--dada:var(--dada-junts)"></span> Junts (2015: CiU)</th><td>3</td><td>3</td><td>2</td></tr>
+<tr><th scope="row"><span class="etiqueta etiqueta--partit" aria-hidden="true" style="--dada:var(--dada-cs)"></span> Ciutadans</th><td>4</td><td>3</td><td>—</td></tr>
+<tr><th scope="row"><span class="etiqueta etiqueta--partit" aria-hidden="true" style="--dada:var(--dada-pp)"></span> PP</th><td>2</td><td>1</td><td>1</td></tr>
+<tr><th scope="row"><span class="etiqueta etiqueta--partit" aria-hidden="true" style="--dada:var(--dada-vox)"></span> VOX</th><td>—</td><td>—</td><td>2</td></tr>
+        </tbody>
+      </table>
+      <p class="peu-nota">Les marques no són candidatures idèntiques: el 2015 els Comuns es
+      presentaven com a Unitat pel Canvi i Junts com a CiU. Agrupar-les és una decisió nostra
+      i és discutible; per això la deixem escrita.</p>
+    </details>
+  </div>
+  <p class="peu-nota t7" style="margin-top:var(--e3)"><strong>Compte:</strong> les xifres del 2015 i
+  del 2019 encara no estan contrastades amb les actes de constitució del ple. Les del 2023 sí.
+  Mentre no ho estiguin, aquesta peça no es publica.</p>
+  </div>
+</section>
+
+<!-- ====================================================================
+     04 · EL REGISTRE DE MOCIONS
+     ==================================================================== -->
+<section class="seccio embolcall" aria-labelledby="t-mocions">
+  <div class="graella">
+  <div class="marge"><p class="num-seccio">04</p></div>
+  <div class="t7 cap-seccio">
+    <p class="micro">Què s’ha votat al ple</p>
+    <h2 id="t-mocions">El registre de mocions</h2>
+    <p class="guia">Qui ha votat què, i quan. Cada fila porta l’enllaç a l’acta original:
+    si no ens creus, mira-t’ho.</p>
+  </div>
+
+  <!-- ==================================================================
+       ATENCIÓ: LES SIS MOCIONS D’AQUESTA SECCIÓ SÓN INVENTADES.
+       Són dades d’exemple per a provar la pantalla. Els títols, les dates,
+       els sentits de vot i els enllaços a les actes NO corresponen a cap
+       sessió real del ple de Sabadell. Els grups i el nombre de regidors de
+       cada grup sí que són reals (mandat 2023-2027). Abans de publicar,
+       aquestes sis entrades s’han de substituir per mocions codificades a
+       partir de les actes del portal de transparència.
+       ================================================================== -->
+  <div class="avis-exemple t9">
+    <b>Dades d’exemple</b>
+    <p>Les sis mocions d’aquesta secció són inventades per provar la pantalla. Els grups
+    i els seus regidors sí que són els reals del mandat 2023–2027. Res d’això no es
+    publica fins que estigui codificat des de les actes.</p>
+  </div>
+
+  <div class="filtres t9" id="controls-filtre" aria-label="Filtra les mocions pel resultat">
+    <p class="filtres__titol">Mostra</p>
+    <button type="button" class="boto boto--fantasma boto--menut" data-filtre="totes" aria-pressed="true">Totes (6)</button>
+    <button type="button" class="boto boto--fantasma boto--menut" data-filtre="aprovada" aria-pressed="false">Aprovades (4)</button>
+    <button type="button" class="boto boto--fantasma boto--menut" data-filtre="rebutjada" aria-pressed="false">Rebutjades (2)</button>
+  </div>
+
+  <div class="filtres t9" id="controls-grups" role="group" aria-label="Ressalta el vot d’un grup">
+    <p class="filtres__titol">Segueix un grup</p>
+    <button type="button" class="boto boto--fantasma boto--menut" data-ressalta="psc" aria-pressed="false">PSC</button>
+    <button type="button" class="boto boto--fantasma boto--menut" data-ressalta="erc" aria-pressed="false">ERC</button>
+    <button type="button" class="boto boto--fantasma boto--menut" data-ressalta="cup" aria-pressed="false">CpS</button>
+    <button type="button" class="boto boto--fantasma boto--menut" data-ressalta="junts" aria-pressed="false">Junts</button>
+    <button type="button" class="boto boto--fantasma boto--menut" data-ressalta="comuns" aria-pressed="false">Comuns</button>
+    <button type="button" class="boto boto--fantasma boto--menut" data-ressalta="vox" aria-pressed="false">VOX</button>
+    <button type="button" class="boto boto--fantasma boto--menut" data-ressalta="pp" aria-pressed="false">PP</button>
+  </div>
+
+  <p class="peu-nota t9"><b id="compte-mocions" class="xifra-num">6</b> mocions a la vista.
+  <span class="nomes-lectors" id="estat-mocions" role="status"></span></p>
+
+  <ul class="clau-vots t9" aria-label="Què vol dir cada marca">
+    <li><span class="vot" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span></span> A favor</li>
+    <li><span class="vot" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span></span> En contra</li>
+    <li><span class="vot" data-vot="abst"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-abst"></span></span></span> Abstenció</li>
+    <li><span class="vot" data-vot="absent"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-absent"></span></span></span> No hi era</li>
+  </ul>
+
+  <ol class="mocions t11" id="llista-mocions">
+      <li class="targeta mocio" data-resultat="aprovada" data-entrada>
+        <div class="mocio__cap">
+          <span class="mocio__ico" data-icona="ic-habitatge" data-classe="ico--tema"></span>
+          <div class="mocio__text">
+            <h3><a href="https://seuelectronica.sabadell.cat/actes/ple-2024-06-25" rel="nofollow noopener" target="_blank">Ampliar el parc públic de lloguer a Can Puiggener i Torre-romeu</a></h3>
+            <p class="peu-nota">Ple ordinari · 25 de juny de 2024 · <span class="acta">acta 2024/06<span data-icona="fletxa" data-classe="ico--puja" aria-hidden="true"></span></span></p>
+          </div>
+          <p class="resultat resultat--si"><b>Aprovada</b><span class="resultat__xifres">22 a favor · 3 en contra · 2 abstencions</span></p>
+        </div>
+        <ul class="vots">
+            <li class="vot" data-grup="psc" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">PSC</span><span class="nomes-lectors">PSC: a favor</span></li>
+            <li class="vot" data-grup="erc" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">ERC</span><span class="nomes-lectors">ERC: a favor</span></li>
+            <li class="vot" data-grup="cup" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">CpS</span><span class="nomes-lectors">CpS: a favor</span></li>
+            <li class="vot" data-grup="junts" data-vot="abst"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-abst"></span></span><span class="vot__sigla" aria-hidden="true">Junts</span><span class="nomes-lectors">Junts: s'absté</span></li>
+            <li class="vot" data-grup="comuns" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">Comuns</span><span class="nomes-lectors">Comuns: a favor</span></li>
+            <li class="vot" data-grup="vox" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">VOX</span><span class="nomes-lectors">VOX: en contra</span></li>
+            <li class="vot" data-grup="pp" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">PP</span><span class="nomes-lectors">PP: en contra</span></li>
+        </ul>
+      </li>
+      <li class="targeta mocio" data-resultat="rebutjada" data-entrada>
+        <div class="mocio__cap">
+          <span class="mocio__ico" data-icona="ic-mobilitat" data-classe="ico--tema"></span>
+          <div class="mocio__text">
+            <h3><a href="https://seuelectronica.sabadell.cat/actes/ple-2024-09-24" rel="nofollow noopener" target="_blank">Retirar el carril bus de la Gran Via i tornar-hi els cotxes</a></h3>
+            <p class="peu-nota">Ple ordinari · 24 de setembre de 2024 · <span class="acta">acta 2024/09<span data-icona="fletxa" data-classe="ico--puja" aria-hidden="true"></span></span></p>
+          </div>
+          <p class="resultat resultat--no"><b>Rebutjada</b><span class="resultat__xifres">8 a favor · 19 en contra</span></p>
+        </div>
+        <ul class="vots">
+            <li class="vot" data-grup="psc" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">PSC</span><span class="nomes-lectors">PSC: en contra</span></li>
+            <li class="vot" data-grup="erc" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">ERC</span><span class="nomes-lectors">ERC: a favor</span></li>
+            <li class="vot" data-grup="cup" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">CpS</span><span class="nomes-lectors">CpS: a favor</span></li>
+            <li class="vot" data-grup="junts" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">Junts</span><span class="nomes-lectors">Junts: en contra</span></li>
+            <li class="vot" data-grup="comuns" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">Comuns</span><span class="nomes-lectors">Comuns: a favor</span></li>
+            <li class="vot" data-grup="vox" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">VOX</span><span class="nomes-lectors">VOX: en contra</span></li>
+            <li class="vot" data-grup="pp" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">PP</span><span class="nomes-lectors">PP: en contra</span></li>
+        </ul>
+      </li>
+      <li class="targeta mocio" data-resultat="aprovada" data-entrada>
+        <div class="mocio__cap">
+          <span class="mocio__ico" data-icona="ic-comerc" data-classe="ico--tema"></span>
+          <div class="mocio__text">
+            <h3><a href="https://seuelectronica.sabadell.cat/actes/ple-2024-11-26" rel="nofollow noopener" target="_blank">Revisar les llicències de grans superfícies i protegir el comerç de barri</a></h3>
+            <p class="peu-nota">Ple ordinari · 26 de novembre de 2024 · <span class="acta">acta 2024/11<span data-icona="fletxa" data-classe="ico--puja" aria-hidden="true"></span></span></p>
+          </div>
+          <p class="resultat resultat--si"><b>Aprovada</b><span class="resultat__xifres">22 a favor · 2 en contra · 3 abstencions</span></p>
+        </div>
+        <ul class="vots">
+            <li class="vot" data-grup="psc" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">PSC</span><span class="nomes-lectors">PSC: a favor</span></li>
+            <li class="vot" data-grup="erc" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">ERC</span><span class="nomes-lectors">ERC: a favor</span></li>
+            <li class="vot" data-grup="cup" data-vot="abst"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-abst"></span></span><span class="vot__sigla" aria-hidden="true">CpS</span><span class="nomes-lectors">CpS: s'absté</span></li>
+            <li class="vot" data-grup="junts" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">Junts</span><span class="nomes-lectors">Junts: a favor</span></li>
+            <li class="vot" data-grup="comuns" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">Comuns</span><span class="nomes-lectors">Comuns: a favor</span></li>
+            <li class="vot" data-grup="vox" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">VOX</span><span class="nomes-lectors">VOX: en contra</span></li>
+            <li class="vot" data-grup="pp" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">PP</span><span class="nomes-lectors">PP: a favor</span></li>
+        </ul>
+      </li>
+      <li class="targeta mocio" data-resultat="aprovada" data-entrada>
+        <div class="mocio__cap">
+          <span class="mocio__ico" data-icona="ic-medi-ambient" data-classe="ico--tema"></span>
+          <div class="mocio__text">
+            <h3><a href="https://seuelectronica.sabadell.cat/actes/ple-2025-01-28" rel="nofollow noopener" target="_blank">Calendari tancat per a la recuperació del riu Ripoll</a></h3>
+            <p class="peu-nota">Ple ordinari · 28 de gener de 2025 · <span class="acta">acta 2025/01<span data-icona="fletxa" data-classe="ico--puja" aria-hidden="true"></span></span></p>
+          </div>
+          <p class="resultat resultat--si"><b>Aprovada</b><span class="resultat__xifres">24 a favor · 2 en contra · 1 abstenció</span></p>
+        </div>
+        <ul class="vots">
+            <li class="vot" data-grup="psc" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">PSC</span><span class="nomes-lectors">PSC: a favor</span></li>
+            <li class="vot" data-grup="erc" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">ERC</span><span class="nomes-lectors">ERC: a favor</span></li>
+            <li class="vot" data-grup="cup" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">CpS</span><span class="nomes-lectors">CpS: a favor</span></li>
+            <li class="vot" data-grup="junts" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">Junts</span><span class="nomes-lectors">Junts: a favor</span></li>
+            <li class="vot" data-grup="comuns" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">Comuns</span><span class="nomes-lectors">Comuns: a favor</span></li>
+            <li class="vot" data-grup="vox" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">VOX</span><span class="nomes-lectors">VOX: en contra</span></li>
+            <li class="vot" data-grup="pp" data-vot="abst"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-abst"></span></span><span class="vot__sigla" aria-hidden="true">PP</span><span class="nomes-lectors">PP: s'absté</span></li>
+        </ul>
+      </li>
+      <li class="targeta mocio" data-resultat="rebutjada" data-entrada>
+        <div class="mocio__cap">
+          <span class="mocio__ico" data-icona="ic-seguretat" data-classe="ico--tema"></span>
+          <div class="mocio__text">
+            <h3><a href="https://seuelectronica.sabadell.cat/actes/ple-2025-03-25" rel="nofollow noopener" target="_blank">Ampliar la plantilla de la Policia Municipal en 40 agents</a></h3>
+            <p class="peu-nota">Ple ordinari · 25 de març de 2025 · <span class="acta">acta 2025/03<span data-icona="fletxa" data-classe="ico--puja" aria-hidden="true"></span></span></p>
+          </div>
+          <p class="resultat resultat--no"><b>Rebutjada</b><span class="resultat__xifres">5 a favor · 20 en contra · 2 absents</span></p>
+        </div>
+        <ul class="vots">
+            <li class="vot" data-grup="psc" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">PSC</span><span class="nomes-lectors">PSC: en contra</span></li>
+            <li class="vot" data-grup="erc" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">ERC</span><span class="nomes-lectors">ERC: en contra</span></li>
+            <li class="vot" data-grup="cup" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">CpS</span><span class="nomes-lectors">CpS: en contra</span></li>
+            <li class="vot" data-grup="junts" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">Junts</span><span class="nomes-lectors">Junts: a favor</span></li>
+            <li class="vot" data-grup="comuns" data-vot="absent"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-absent"></span></span><span class="vot__sigla" aria-hidden="true">Comuns</span><span class="nomes-lectors">Comuns: no hi era</span></li>
+            <li class="vot" data-grup="vox" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">VOX</span><span class="nomes-lectors">VOX: a favor</span></li>
+            <li class="vot" data-grup="pp" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">PP</span><span class="nomes-lectors">PP: a favor</span></li>
+        </ul>
+      </li>
+      <li class="targeta mocio" data-resultat="aprovada" data-entrada>
+        <div class="mocio__cap">
+          <span class="mocio__ico" data-icona="ic-serveis-socials" data-classe="ico--tema"></span>
+          <div class="mocio__text">
+            <h3><a href="https://seuelectronica.sabadell.cat/actes/ple-2025-05-27" rel="nofollow noopener" target="_blank">Crear una oficina municipal contra els desnonaments</a></h3>
+            <p class="peu-nota">Ple ordinari · 27 de maig de 2025 · <span class="acta">acta 2025/05<span data-icona="fletxa" data-classe="ico--puja" aria-hidden="true"></span></span></p>
+          </div>
+          <p class="resultat resultat--si"><b>Aprovada</b><span class="resultat__xifres">22 a favor · 5 en contra</span></p>
+        </div>
+        <ul class="vots">
+            <li class="vot" data-grup="psc" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">PSC</span><span class="nomes-lectors">PSC: a favor</span></li>
+            <li class="vot" data-grup="erc" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">ERC</span><span class="nomes-lectors">ERC: a favor</span></li>
+            <li class="vot" data-grup="cup" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">CpS</span><span class="nomes-lectors">CpS: a favor</span></li>
+            <li class="vot" data-grup="junts" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">Junts</span><span class="nomes-lectors">Junts: en contra</span></li>
+            <li class="vot" data-grup="comuns" data-vot="si"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-si"></span></span><span class="vot__sigla" aria-hidden="true">Comuns</span><span class="nomes-lectors">Comuns: a favor</span></li>
+            <li class="vot" data-grup="vox" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">VOX</span><span class="nomes-lectors">VOX: en contra</span></li>
+            <li class="vot" data-grup="pp" data-vot="no"><span class="vot__marca" aria-hidden="true"><span data-icona="marca-no"></span></span><span class="vot__sigla" aria-hidden="true">PP</span><span class="nomes-lectors">PP: en contra</span></li>
+        </ul>
+      </li>
+  </ol>
+
+  <p class="peu-nota t7" style="margin-top:var(--e3)">Les actes recullen el vot del <strong>grup</strong>,
+  no el de cada regidor: quan un regidor vota diferent del seu grup, l’acta ho fa constar i nosaltres
+  encara no ho desglossem. I una moció aprovada no vol dir executada: això no ho seguim.</p>
+  </div>
+</section>
+
+<!-- ====================================================================
+     05 · SEMÀFOR DE COBERTURA
+     ==================================================================== -->
+<section class="seccio embolcall" aria-labelledby="t-cobertura">
+  <div class="graella">
+  <div class="marge"><p class="num-seccio">05</p></div>
+  <div class="t7 cap-seccio">
+    <p class="micro">Què sabem i què no</p>
+    <h2 id="t-cobertura">La cobertura de dades de Sabadell</h2>
+    <p class="guia">Una radiografia és tan bona com les seves fonts. Aquestes són les nostres,
+    amb els forats inclosos.</p>
+  </div>
+
+  <ul class="semafor t10">
+        <li class="cobertura" data-entrada>
+          <h3>Resultats electorals 2003-2023</h3>
+          <div class="nivell"><ul class="punts punts--coral" role="img" aria-label="5 de 5"><li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li></ul> <b>Complet</b></div>
+          <p class="peu-nota">Vots i regidors de les sis darreres municipals, presos del portal de resultats del Ministeri de l'Interior i contrastats amb l'acta de constitució del ple.</p>
+        </li>
+        <li class="cobertura" data-entrada>
+          <h3>Composició del ple i govern</h3>
+          <div class="nivell"><ul class="punts punts--coral" role="img" aria-label="5 de 5"><li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li></ul> <b>Complet</b></div>
+          <p class="peu-nota">Els 27 regidors del mandat 2023-2027, el grup de cadascun i el cartipàs publicat al BOP.</p>
+        </li>
+        <li class="cobertura" data-entrada>
+          <h3>Actes del ple 2019-2025</h3>
+          <div class="nivell"><ul class="punts punts--coral" role="img" aria-label="3 de 5"><li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt"></li><li class="punt"></li></ul> <b>Parcial</b></div>
+          <p class="peu-nota">Tenim 71 de les 78 sessions publicades. Falten quatre extraordinàries del 2021 i tres del 2023, que no són al portal de transparència.</p>
+        </li>
+        <li class="cobertura" data-entrada>
+          <h3>Mocions codificades</h3>
+          <div class="nivell"><ul class="punts punts--coral" role="img" aria-label="2 de 5"><li class="punt punt--ple"></li><li class="punt punt--ple"></li><li class="punt"></li><li class="punt"></li><li class="punt"></li></ul> <b>Inicial</b></div>
+          <p class="peu-nota">De les 71 actes n'hem codificat 24 a mà. Encara no desglossem les esmenes ni les votacions per punts separats.</p>
+        </li>
+        <li class="cobertura" data-entrada>
+          <h3>Pressupostos i execució</h3>
+          <div class="nivell"><ul class="punts punts--coral" role="img" aria-label="1 de 5"><li class="punt punt--ple"></li><li class="punt"></li><li class="punt"></li><li class="punt"></li><li class="punt"></li></ul> <b>Gairebé res</b></div>
+          <p class="peu-nota">Tenim el pressupost aprovat de cada any en PDF, però no en tenim les xifres obertes ni el grau d'execució. No en fem cap afirmació.</p>
+        </li>
+        <li class="cobertura" data-entrada>
+          <h3>Compliment del programa</h3>
+          <div class="nivell"><ul class="punts punts--coral" role="img" aria-label="0 de 5"><li class="punt"></li><li class="punt"></li><li class="punt"></li><li class="punt"></li><li class="punt"></li></ul> <b>No ho tenim</b></div>
+          <p class="peu-nota">És el que més ens demanen i el que menys podem afirmar. No hi ha cap font pública que digui si una promesa electoral s'ha complert.</p>
+        </li>
+  </ul>
+
+  <div class="targeta targeta--fosca caixa-fosca" data-entrada>
+    <div class="targeta__cap">
+      <span data-icona="papereta-pregunta" data-base="mascota" style="--mida:64px"></span>
+      <h3>Què no et podem dir</h3>
+    </div>
+    <ul class="no-podem">
+      <li><span data-icona="marca-no" aria-hidden="true"></span><span>No et podem dir si una promesa del programa s’ha complert. No hi ha cap font pública que ho digui i no ens ho inventarem.</span></li>
+      <li><span data-icona="marca-no" aria-hidden="true"></span><span>No et podem dir com ha votat un regidor concret: les actes recullen el vot del grup.</span></li>
+      <li><span data-icona="marca-no" aria-hidden="true"></span><span>No et podem dir el percentatge sobre el cens: encara no tenim els vots en blanc, els nuls ni les candidatures sense escó.</span></li>
+      <li><span data-icona="marca-no" aria-hidden="true"></span><span>No et podem dir què va passar a set sessions del ple entre el 2021 i el 2023: no en tenim l’acta publicada.</span></li>
+      <li><span data-icona="marca-no" aria-hidden="true"></span><span>No et podem dir si una moció aprovada s’ha executat. És una altra feina i encara no la fem.</span></li>
+    </ul>
+    <p class="peu-nota" style="margin-top:var(--e3)">Si trobes un error, escriu-nos i el corregim
+    amb la font a la mà. Aquesta pàgina val exactament el que valen les seves fonts.</p>
+  </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="peu">
+  <div class="embolcall">
+    <p class="micro">Fonts</p>
+    <ul class="fonts">
+      <li>Resultats de les municipals del 28 de maig de 2023 · Ministeri de l’Interior i Generalitat de Catalunya.</li>
+      <li>Composició del ple i alcaldia · acta de constitució del 17 de juny de 2023, Ajuntament de Sabadell.</li>
+      <li>Padró municipal d’habitants 2025 · Idescat.</li>
+      <li>Mocions · <strong>dades d’exemple, no publicables</strong>.</li>
+    </ul>
+    <p class="peu-nota" style="margin-top:var(--e3)">quivoto · prototip de la radiografia municipal.
+    Pantalla de disseny, no de producció.</p>
+  </div>
+</footer>
+
+<!-- Sprite de quivoto, retallat als símbols que aquesta pàgina fa servir.
+     Generat per tools/build_sprite.py des de tools/icons_lib.py i retallat
+     per tools/sprite_pagina.py. NO s'edita a mà.
+     Va al FINAL del <body>: abans era el primer fill i el parser havia de
+     mastegar-lo sencer abans d'arribar a cap píxel visible. -->
+<svg xmlns="http://www.w3.org/2000/svg" class="sprite-quivoto" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+<defs>
+<symbol id="ic-habitatge" viewBox="0 0 48 48"><title>Habitatge</title><path d="M8 22 L24 8 L40 22 V40 H8 Z" fill="#E2735A"/><path d="M8 22 L24 8 L40 22" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linejoin="round"/><rect x="20" y="28" width="8" height="12" fill="#1E1B2E"/></symbol>
+<symbol id="ic-mobilitat" viewBox="0 0 48 48"><title>Mobilitat</title><rect x="6" y="12" width="36" height="24" rx="6" fill="#BFE8D2"/><rect x="10" y="17" width="9" height="8" rx="2" fill="#1E1B2E"/><rect x="22" y="17" width="9" height="8" rx="2" fill="#1E1B2E"/><rect x="34" y="17" width="4" height="8" rx="2" fill="#1E1B2E"/><circle cx="14" cy="39" r="4" fill="#1E1B2E"/><circle cx="34" cy="39" r="4" fill="#1E1B2E"/></symbol>
+<symbol id="ic-comerc" viewBox="0 0 48 48"><title>Comerç</title><rect x="8" y="20" width="32" height="22" fill="#FFD8B8"/><path d="M6 12 H42 L44 20 H4 Z" fill="#FFD8B8"/><path d="M4 20 H44" stroke="#1E1B2E" stroke-width="3"/><path d="M12 12 V20 M20 12 V20 M28 12 V20 M36 12 V20" stroke="#1E1B2E" stroke-width="2.5"/><rect x="20" y="30" width="8" height="12" fill="#1E1B2E"/></symbol>
+<symbol id="ic-medi-ambient" viewBox="0 0 48 48"><title>Medi ambient</title><path d="M40 8 C20 8 8 20 10 40 C30 40 42 28 40 8 Z" fill="#BFE8D2"/><path d="M12 38 C18 30 26 22 34 14" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round"/></symbol>
+<symbol id="ic-seguretat" viewBox="0 0 48 48"><title>Seguretat</title><path d="M24 5 L40 11 V24 C40 34 32 40 24 43 C16 40 8 34 8 24 V11 Z" fill="#FFD8B8"/><path d="M17 24 L22 29 L31 18" fill="none" stroke="#1E1B2E" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-serveis-socials" viewBox="0 0 48 48"><title>Serveis socials</title><path d="M24 42 C10 32 4 24 6 16 C8 8 18 8 24 16 C30 8 40 8 42 16 C44 24 38 32 24 42 Z" fill="#E2735A"/><path d="M14 22 C18 18 22 20 24 24 C26 20 30 18 34 22" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round"/><path d="M19 24 L24 31 L29 24" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="papereta-felic" viewBox="0 0 120 140"><title>La papereta, mascota de quivoto</title>
+  <g class="cos">
+    <path d="M18 14 H80 L102 36 V126 H18 Z" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M80 14 V36 H102 Z" fill="#FFD8B8" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <g class="ratlles">
+      <path d="M32 112 H88" stroke="#E2735A" stroke-width="5" stroke-linecap="round"/>
+      <path d="M32 122 H70" stroke="#BFE8D2" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    <g class="cara">
+      <circle cx="46" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <circle cx="76" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <g class="pupilles"><circle cx="46" cy="71" r="4.2" fill="#1E1B2E"/><circle cx="76" cy="71" r="4.2" fill="#1E1B2E"/></g>
+      <g class="parpelles">
+        <circle cx="46" cy="70" r="9.6" fill="#FFFFFF"/>
+        <circle cx="76" cy="70" r="9.6" fill="#FFFFFF"/>
+      </g>
+      <path class="boca" d="M44 92 q16 14 32 0" stroke="#1E1B2E" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </g>
+    <path class="creu" d="M31 46 l7 8 l14 -16" stroke="#E2735A" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</symbol>
+<symbol id="papereta-pregunta" viewBox="0 0 120 140"><title>La papereta, mascota de quivoto</title>
+  <g class="cos">
+    <path d="M18 14 H80 L102 36 V126 H18 Z" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M80 14 V36 H102 Z" fill="#FFD8B8" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <g class="ratlles">
+      <path d="M32 112 H88" stroke="#E2735A" stroke-width="5" stroke-linecap="round"/>
+      <path d="M32 122 H70" stroke="#BFE8D2" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    <g class="cara">
+      <circle cx="46" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <circle cx="76" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <g class="pupilles"><circle cx="46" cy="71" r="4.2" fill="#1E1B2E"/><circle cx="76" cy="71" r="4.2" fill="#1E1B2E"/></g>
+      <g class="parpelles">
+        <circle cx="46" cy="70" r="9.6" fill="#FFFFFF"/>
+        <circle cx="76" cy="70" r="9.6" fill="#FFFFFF"/>
+      </g>
+      <path class="boca" d="M50 94 q10 -6 20 0" stroke="#1E1B2E" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </g>
+    <path class="creu" d="M31 46 l7 8 l14 -16" stroke="#E2735A" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</symbol>
+<symbol id="marca-si" viewBox="0 0 48 48"><title>A favor</title><path d="M11 25 l8.5 9.5 l17.5 -21" fill="none" stroke="currentColor" stroke-width="4.0" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="marca-no" viewBox="0 0 48 48"><title>En contra</title><path d="M14 14 L34 34 M34 14 L14 34" fill="none" stroke="currentColor" stroke-width="4.0" stroke-linecap="round"/></symbol>
+<symbol id="marca-abst" viewBox="0 0 48 48"><title>Abstenció</title><path d="M13 24 H35" fill="none" stroke="currentColor" stroke-width="4.0" stroke-linecap="round"/></symbol>
+<symbol id="marca-absent" viewBox="0 0 48 48"><title>No hi era</title><circle cx="24" cy="24" r="3.4" fill="currentColor"/></symbol>
+<symbol id="fletxa" viewBox="0 0 48 48"><title>Hi porta</title><path d="M9 24 H36 M26.5 14.5 L36 24 L26.5 33.5" fill="none" stroke="currentColor" stroke-width="4.0" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs>
+</svg>
+
+<script src="moviment.js"></script>
+<script>
+(function () {
+  'use strict';
+  var slice = function (n) { return Array.prototype.slice.call(n); };
+
+  /* Una sola engegada per pantalla: icones, entrades i comptadors. */
+  moviment.inicia();
+
+  /* --- Hemicicle: dues maneres de mirar el mateix ple ------------------- */
+  var hemi = document.getElementById('hemicicle');
+  var estatHemi = document.getElementById('estat-hemicicle');
+  var vistes = slice(document.querySelectorAll('#controls-hemicicle [data-vista]'));
+  var textVista = {
+    candidatura: 'Cada esc\u00f3 es pinta amb el color de la seva candidatura.',
+    govern: 'Els 14 escons plens s\u00f3n el govern (PSC-CP). Els 13 buits s\u00f3n l\u2019oposici\u00f3, repartida entre sis grups.'
+  };
+  /* Dues vistes que s'exclouen no són dos commutadors: role=radio,
+     aria-checked i un sol tabulador, amb les fletxes que hi toquen. */
+  moviment.radiogrup(document.getElementById('controls-hemicicle'), {selector:'.boto'});
+  vistes.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var v = b.getAttribute('data-vista');
+      hemi.setAttribute('data-vista', v);
+      hemi.setAttribute('aria-label', 'Hemicicle de Sabadell. ' + textVista[v]);
+      estatHemi.textContent = textVista[v];
+    });
+  });
+
+  /* --- Mocions: filtrar pel resultat i seguir un grup -------------------- */
+  var llista = document.getElementById('llista-mocions');
+  var mocions = slice(llista.querySelectorAll('.mocio'));
+  var xips = slice(llista.querySelectorAll('.vot'));
+  var compte = document.getElementById('compte-mocions');
+  var estatMoc = document.getElementById('estat-mocions');
+  var filtres = slice(document.querySelectorAll('[data-filtre]'));
+  var grups = slice(document.querySelectorAll('#controls-grups [data-ressalta]'));
+
+  function filtra(quin) {
+    var visibles = 0;
+    mocions.forEach(function (m) {
+      var mostra = quin === 'totes' || m.getAttribute('data-resultat') === quin;
+      m.hidden = !mostra;
+      if (mostra) visibles++;
+    });
+    compte.textContent = visibles;
+    estatMoc.textContent = 'Es mostren ' + visibles + (visibles === 1 ? ' moci\u00f3' : ' mocions') + ' de ' + mocions.length + '.';
+    moviment.salta(compte);
+  }
+  moviment.radiogrup(document.getElementById('controls-filtre'), {selector:'.boto'});
+  filtres.forEach(function (b) {
+    b.addEventListener('click', function () { filtra(b.getAttribute('data-filtre')); });
+  });
+
+  function ressalta(grup) {
+    xips.forEach(function (x) {
+      var seu = x.getAttribute('data-grup') === grup;
+      x.classList.toggle('apagat', !!grup && !seu);
+      x.classList.toggle('destacat', !!grup && seu);
+    });
+  }
+  grups.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var jaHiEra = b.getAttribute('aria-pressed') === 'true';
+      grups.forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
+      if (jaHiEra) {
+        ressalta(null);
+        estatMoc.textContent = 'Es veuen tots els grups.';
+        return;
+      }
+      b.setAttribute('aria-pressed', 'true');
+      ressalta(b.getAttribute('data-ressalta'));
+      estatMoc.textContent = 'Es ressalta el vot de ' + b.textContent.trim() + '.';
+    });
+  });
+})();
+</script>
+</body>
+</html>

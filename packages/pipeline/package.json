@@ -1,0 +1,15 @@
+{
+  "name": "@quivoto/pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "start": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@quivoto/db": "workspace:*",
+    "@quivoto/shared-schemas": "workspace:*",
+    "drizzle-orm": "^0.38.4"
+  }
+}

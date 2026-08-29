@@ -1,0 +1,108 @@
+import { openDb } from "@quivoto/db";
+import { j1Territory } from "./jobs/j1-territory";
+import { j2Results } from "./jobs/j2-results";
+import { j3Councillors } from "./jobs/j3-councillors";
+import { j4Candidates } from "./jobs/j4-candidates";
+import { j5Context } from "./jobs/j5-context";
+import { j6Finances } from "./jobs/j6-finances";
+import { j7ContextObert } from "./jobs/j7-context-obert";
+import { j8Diners } from "./jobs/j8-diners";
+import { j9HabitatgeResidus } from "./jobs/j9-habitatge-residus";
+import { j10Activitat } from "./jobs/j10-activitat";
+import { deriveMetrics } from "./derive/metrics";
+import { deriveMayorChanges } from "./derive/mayor-changes";
+import { deriveFinances } from "./derive/finances";
+import { deriveCouncilChanges } from "./derive/council-changes";
+import { report } from "./report";
+import { publish } from "./publish/publish";
+
+const COMMANDS = {
+  j1: j1Territory,
+  j2: j2Results,
+  j3: j3Councillors,
+  j4: (db: Parameters<typeof j4Candidates>[0]) => j4Candidates(db),
+  j5: j5Context,
+  j6: j6Finances,
+  j7: j7ContextObert,
+  j8: j8Diners,
+  j9: j9HabitatgeResidus,
+  j10: j10Activitat,
+  derive: deriveMetrics,
+  alcaldies: deriveMayorChanges,
+  comptes: deriveFinances,
+  ple: deriveCouncilChanges,
+  report,
+  publica: publish,
+} as const;
+
+type Command = keyof typeof COMMANDS;
+
+// J5 va abans que J2: la participació i el sistema electoral condicionen el recompte.
+const ORDER: Command[] = [
+  "j1", "j5", "j2", "j3", "j4", "j6", "j7", "j8", "j9", "j10",
+  "derive", "alcaldies", "comptes", "ple", "report", "publica",
+];
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  // «publica» accepta municipis darrere: `publica esplugues-de-llobregat girona`.
+  const publishAt = args.indexOf("publica");
+  const publishSlugs = publishAt === -1 ? [] : args.slice(publishAt + 1);
+  const isAll = args.length === 0 || args[0] === "all";
+  const requested = isAll
+    ? ORDER
+    : ((publishAt === -1 ? args : args.slice(0, publishAt + 1)) as Command[]);
+  // Amb `all` es publiquen els 947: ingerir-ho tot i després generar-ne només
+  // sis fitxes seria una trampa fàcil de no adonar-se'n.
+  const slugs = isAll ? ["tots"] : publishSlugs;
+
+  for (const command of requested) {
+    if (!(command in COMMANDS)) {
+      process.stderr.write(`ordre desconeguda: ${command}\nDisponibles: ${ORDER.join(", ")}, all\n`);
+      process.exit(1);
+    }
+  }
+
+  const { db, close, kind } = await openDb();
+  process.stdout.write(`base de dades: ${kind}\n`);
+  const started = Date.now();
+  try {
+    for (const command of requested) {
+      if (command === "publica") await publish(db, slugs);
+      else await COMMANDS[command](db);
+    }
+    process.stdout.write(`\nfet en ${Math.round((Date.now() - started) / 1000)} s\n`);
+    // La feina ja és feta i desada: el que passi tancant la base de dades ja no
+    // ha de fer fallar l'ordre.
+    finished = true;
+  } finally {
+    await close();
+  }
+}
+
+/**
+ * PGlite atura el motor de WebAssembly de manera bruta després d'una sessió
+ * llarga i llança l'error fora de qualsevol `try`. Quan això passa la feina ja
+ * és feta i desada, així que ens interessa sortir bé: si no, una ingesta
+ * correcta acaba amb codi 1 i trenca qualsevol `&&` que la faci servir.
+ */
+let finished = false;
+for (const event of ["uncaughtException", "unhandledRejection"] as const) {
+  process.on(event, (error: unknown) => {
+    if (finished) process.exit(0);
+    process.stderr.write(`\n${String((error as Error)?.stack ?? error)}\n`);
+    process.exit(1);
+  });
+}
+
+main()
+  .then(() => {
+    // Sortida explícita: PGlite deixa el motor de WebAssembly en un estat que a
+    // vegades peta en aturar-se, i sense això una ingesta acabada i desada
+    // sortiria amb codi d'error i semblaria que ha fallat.
+    process.exit(0);
+  })
+  .catch((error) => {
+    process.stderr.write(`\n${String(error?.stack ?? error)}\n`);
+    process.exit(1);
+  });

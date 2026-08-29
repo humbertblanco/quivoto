@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>La brúixola · quivoto</title>
+<meta name="description" content="Una afirmació a la vegada. El prototip de la brúixola de quivoto, amb dades reals de Sabadell.">
+
+<!-- Tipografia local. Cap petició a internet: els fitxers són els mateixos que
+     serveix la landing, referenciats amb camí relatiu perquè la pàgina també
+     funcioni oberta des del disc (file://). Els @font-face van ABANS del full
+     d'estil i les dues cares llatines es demanen amb preload: així la petició
+     de la lletra no espera que base.css hagi baixat i s'hagi analitzat. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../web/public/assets/fonts/QGYtz_0dZAGKJJ4t3HtoW4XGnfBI.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJ3xzHGGVFM.woff2">
+<style>
+@font-face{font-family:'Gabarito';font-style:normal;font-weight:900;font-display:swap;
+  src:url(../../web/public/assets/fonts/QGYtz_0dZAGKJJ4t3HtoW4XGnfBI.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Gabarito';font-style:normal;font-weight:900;font-display:swap;
+  src:url(../../web/public/assets/fonts/QGYtz_0dZAGKJJ4t3HtmW4XGnfBI2fk.woff2) format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
+@font-face{font-family:'Nunito Sans';font-style:normal;font-weight:400;font-stretch:100%;font-display:swap;
+  src:url(../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJ3xzHGGVFM.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Nunito Sans';font-style:normal;font-weight:700;font-stretch:100%;font-display:swap;
+  src:url(../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJ3xzHGGVFM.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Nunito Sans';font-style:normal;font-weight:700;font-stretch:100%;font-display:swap;
+  src:url(../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJPxzHGGVFMV2w.woff2) format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
+</style>
+
+<link rel="stylesheet" href="base.css">
+
+<!-- L'estat amagat de [data-entrada] només existeix si <html> porta .js-mou.
+     Es posa abans del primer pintat, no des de moviment.js, que va al final. -->
+<script>if(!matchMedia('(prefers-reduced-motion:reduce)').matches)document.documentElement.className+=' js-mou'</script>
+
+<style>
+/* ==========================================================================
+   LA BRÚIXOLA — CSS només d'aquesta pantalla.
+   Tot el que és compartit (tokens, ombres, botons, adhesius, targetes,
+   barres, moviment) surt de base.css i aquí no es redefineix.
+   ========================================================================== */
+
+/* `hidden` ha de guanyar sempre: .joc és flex i un atribut hidden no pot
+   perdre contra un display de la fulla d'estil. */
+[hidden]{display:none!important}
+
+/* --- Estructura de pantalla ---------------------------------------------
+   La brúixola no és un document que es llegeix: és una pantalla que s'ocupa.
+   100svh (i no 100vh) perquè la barra del navegador del mòbil no en talli el
+   peu. Columna flexible: capçalera, escena, resposta, peu. */
+/* La tinta que seu damunt d'un pastel i el full blanc de sota les icones són
+   --tinta-fixa i --paper-fix, declarats una sola vegada a base.css. Aquí ja no
+   se'n declara cap: abans es deien --sobre-pastel i --paper-fix, i --paper-fix
+   valia #FFFFFF aquí i #FBF7EE al resultat. */
+
+/* La brúixola no és la landing: aquí no s'hi mira una composició de 1180px,
+   s'hi llegeix una frase i es respon. L'amplada de lectura es queda a 820 i
+   les bandes de color continuen anant a tota amplada. */
+.pantalla .embolcall{max-width:820px}
+.pantalla{min-height:100svh;display:flex;flex-direction:column}
+.pantalla>main{display:flex;flex-direction:column;flex:1;min-width:0}
+.joc{display:flex;flex-direction:column;flex:1}
+
+/* --- Capçalera -----------------------------------------------------------
+   Mínima a propòsit: marca, on ets, i com se surt. Res més. */
+.cap{
+  display:flex;align-items:center;gap:var(--e2);
+  padding:var(--e2) var(--e3);
+  border-bottom:var(--gruix-vora) solid var(--ink);
+  background:var(--fons);
+}
+.cap .marca{--marca-mida:1.28rem}
+
+/* Progrés: barra compartida + xifra escrita. La barra sola no diu res. */
+.progres{flex:1;display:flex;align-items:center;gap:var(--e2);min-width:0}
+.progres .barra{flex:1;min-width:52px}
+.progres__text{font-size:var(--mida-menut);font-weight:800;white-space:nowrap}
+.progres__text b{font-family:var(--display);font-size:1.15em;font-variant-numeric:tabular-nums}
+/* Res de retallar el «de»: «1 5» no vol dir res. Si no hi cap, qui s'estreny
+   és la barra, que ja porta el número escrit al costat. */
+
+/* --- La banda i la mascota ----------------------------------------------
+   La banda és .banda.banda--menta de base.css: el paper de color, la tinta
+   fixa de dins i la vora ja hi són. Aquí només se'n canvia el buit, perquè la
+   targeta d'afirmació hi ha de pujar per sobre. */
+.banda{padding:var(--e3) 0 var(--e5);border-top:0}
+.banda__dins{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--e2)}
+.tema{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e2);padding-bottom:var(--e1)}
+.tema .etiqueta{background:var(--paper-2);border:2px solid var(--ink)}
+/* Sense el full blanc, un autobús de menta damunt d'una banda de menta
+   desapareix. No va girat: el gir és el gest dels adhesius i de la targeta
+   d'afirmació, i quan tot està tort deixa de ser un gest. */
+.tema__ico{
+  --mida:52px;display:block;background:var(--paper-fix);
+  border:var(--gruix-vora) solid var(--tinta-fixa);border-radius:var(--r-m);
+  padding:9px;box-shadow:3px 3px 0 var(--tinta-fixa);
+}
+.mascota-lloc{flex:none;width:104px;--mida:104px}
+@media (min-width:720px){
+  .mascota-lloc{width:140px;--mida:140px}
+  .tema__ico{--mida:64px}
+}
+
+/* --- La targeta d'afirmació ---------------------------------------------- */
+.lloc-carta{margin-top:calc(var(--e4) * -1);position:relative;z-index:2}
+.afirmacio{--ombra-color:var(--lavanda);padding:var(--e3)}
+@media (min-width:720px){ .afirmacio{padding:var(--e4)} }
+/* Reserva d'alçada: sense això, canviar d'afirmació fa botar tota la pantalla
+   perquè un text de tres línies no ocupa el mateix que un de quatre. */
+.afirmacio__text{
+  font-family:var(--display);font-weight:900;line-height:1.06;letter-spacing:-.03em;
+  /* El sostre de la mida no és estètic: és el punt on l'afirmació més llarga
+     encara cap en dues línies dins de l'amplada de lectura. Si creixia més,
+     calia reservar una tercera línia buida a totes les altres. */
+  font-size:clamp(1.55rem,1.15rem + 1.9vw,2.05rem);
+  margin:0 0 var(--e3);text-wrap:balance;
+  /* Alçada reservada = la de l'afirmació més llarga, mesurada. Sense això,
+     canviar d'afirmació fa botar l'escala de resposta mig centímetre. */
+  min-height:4.6em;
+}
+/* Els graons són on l'afirmació més llarga passa de quatre línies a tres i de
+   tres a dues, mesurat, no estimat. */
+@media (min-width:440px){ .afirmacio__text{min-height:3.7em} }
+@media (min-width:720px){ .afirmacio__text{min-height:2.7em} }
+
+/* «Per què ho preguntem»: enllaç, no botó. És una nota al peu que s'obre, no
+   una acció principal, i no ha de competir amb l'escala. */
+.perque{
+  display:inline-flex;align-items:center;gap:var(--e1);
+  background:none;border:0;padding:0;margin:0;font:inherit;color:var(--ink-suau);
+  font-size:var(--mida-menut);font-weight:800;cursor:pointer;
+  text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px;
+}
+.perque:hover{color:var(--coral-text)}
+.perque__fletxa{
+  display:block;width:10px;height:10px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;
+  transform:rotate(45deg) translate(-1px,-1px);
+  transition:transform var(--t-rapid) var(--corba-seca);
+}
+.perque[aria-expanded="true"] .perque__fletxa{transform:rotate(-135deg) translate(-2px,-2px)}
+
+/* El context. L'obertura és instantània (canviar l'alçada a cada fotograma és
+   exactament el que no fem); el que s'anima és el contingut, que entra. */
+.context{
+  margin-top:var(--e3);padding-top:var(--e3);
+  border-top:2px dashed var(--vora);
+}
+.js-mou .context:not([hidden]){animation:entrar var(--t-mig) var(--corba-suau) both}
+.context p{font-size:var(--mida-menut);margin-bottom:var(--e2)}
+.cites{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--e1)}
+.cites li{
+  display:flex;gap:var(--e1);align-items:baseline;
+  font-size:var(--mida-micro);color:var(--ink-suau);line-height:1.45;
+  letter-spacing:0;text-transform:none;font-weight:400;
+}
+.cites li::before{
+  content:"";flex:none;width:9px;height:9px;margin-top:2px;
+  background:var(--coral);border:2px solid var(--ink);border-radius:3px;
+}
+.cites b{font-weight:800;color:var(--ink)}
+
+/* --- Transició entre afirmacions ----------------------------------------
+   Una targeta que marxa cap on vas i una que arriba del costat contrari.
+   Només transform i opacity. La que marxa fa servir --corba-sortida i el
+   temps curt: no ha de demanar atenció mentre se'n va. */
+.carta--surt[data-sentit="endavant"]{animation:carta-surt-endavant var(--t-rapid) var(--corba-sortida) both}
+.carta--entra[data-sentit="endavant"]{animation:carta-entra-endavant var(--t-mig) var(--corba-suau) both}
+.carta--surt[data-sentit="enrere"]{animation:carta-surt-enrere var(--t-rapid) var(--corba-sortida) both}
+.carta--entra[data-sentit="enrere"]{animation:carta-entra-enrere var(--t-mig) var(--corba-suau) both}
+@keyframes carta-surt-endavant{to{opacity:0;transform:rotate(-7deg) translate(-26%,3%) scale(.93)}}
+@keyframes carta-entra-endavant{
+  from{opacity:0;transform:rotate(6deg) translate(26%,3%) scale(.93)}
+  to{opacity:1;transform:rotate(var(--gir,-1.6deg))}
+}
+@keyframes carta-surt-enrere{to{opacity:0;transform:rotate(7deg) translate(26%,3%) scale(.93)}}
+@keyframes carta-entra-enrere{
+  from{opacity:0;transform:rotate(-6deg) translate(-26%,3%) scale(.93)}
+  to{opacity:1;transform:rotate(var(--gir,-1.6deg))}
+}
+
+/* --- Zona de resposta ---------------------------------------------------- */
+/* A 390x844 la pantalla sencera hi cap sense desplaçar-se, i aquest peu és
+   l'últim que es va retallar per aconseguir-ho. A partir de tauleta hi torna
+   a haver aire. */
+.resposta{padding:var(--e3) 0 var(--e3);display:flex;flex-direction:column;gap:var(--e3)}
+@media (min-width:720px){ .resposta{padding-bottom:var(--e5)} }
+
+/* L'interruptor de pes. Adhesiu compartit; el que hi afegeix aquesta pantalla
+   és que en prémer-lo s'ENGANXA: baixa, perd l'ombra, es gira a l'altre
+   costat i apareix la marca de verificat. */
+.pes{
+  --gir:-4deg;
+  align-self:flex-start;display:inline-flex;align-items:center;gap:9px;
+  cursor:pointer;
+}
+.pes__marca{
+  display:block;width:16px;height:16px;flex:none;
+  opacity:0;transform:scale(.4) rotate(-20deg);
+  transition:opacity var(--t-rapid) var(--corba-seca),transform var(--t-mig) var(--corba-salt);
+}
+.pes[aria-pressed="true"]{
+  --gir:3deg;
+  background:var(--menta);
+  transform:rotate(var(--gir)) translate(2px,2px);
+  /* La vora doble va amb box-shadow: `outline` és, a tot el sistema, el
+     contorn de focus i res més. */
+  box-shadow:0 0 0 2.5px var(--tinta-fixa);
+}
+.pes[aria-pressed="true"] .pes__marca{opacity:1;transform:scale(1) rotate(0)}
+/* Un adhesiu enganxat no es desenganxa en passar-hi el ratoli: cal guanyar
+   el :hover genèric de .adhesiu, que el tornaria a posar recte. */
+.pes[aria-pressed="true"]:hover{transform:rotate(var(--gir)) translate(2px,2px)}
+.pes-nota{font-size:var(--mida-micro);font-weight:800;color:var(--ink-suau);margin-left:var(--e2)}
+
+/* --- L'escala de cinc cares ---------------------------------------------- */
+.escala-cap{display:flex;justify-content:space-between;align-items:baseline;gap:var(--e2);margin-bottom:var(--e1)}
+.escala-cap span{font-size:var(--mida-micro);font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-suau)}
+.escala{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+@media (min-width:720px){ .escala{gap:var(--e2)} }
+
+.opcio{
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  background:var(--fons-peca);color:var(--ink);font:inherit;
+  border:var(--gruix-vora) solid var(--ink);border-radius:var(--r-m);
+  padding:12px 3px 9px;cursor:pointer;box-shadow:var(--ombra);
+  transition:transform var(--t-rapid) var(--corba-seca),
+             box-shadow var(--t-rapid) var(--corba-seca);
+}
+.opcio .ico{
+  --mida:clamp(38px,11vw,52px);
+  transition:transform var(--t-mig) var(--corba-salt);
+}
+.opcio__nom{
+  font-size:var(--mida-micro);font-weight:800;line-height:1.15;text-align:center;
+  letter-spacing:0;text-transform:none;min-height:2.3em;
+}
+/* La cara reacciona en passar-hi per sobre o en enfocar-la amb el teclat.
+   Té ulls: pot saltar. */
+.opcio:hover .ico,.opcio:focus-visible .ico{transform:scale(1.18) rotate(-7deg)}
+.opcio:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--ink)}
+.opcio:active{transform:translate(3px,3px);box-shadow:var(--ombra-premuda)}
+
+/* Triada. L'estat NO es diu només amb el color: la peça també baixa a terra,
+   guanya vora doble, i sota el nom hi apareix una ratlla de tinta. */
+.opcio[aria-checked="true"]{
+  background:var(--lavanda);color:var(--tinta-fixa);
+  border-color:var(--tinta-fixa);
+  transform:translate(3px,3px);box-shadow:0 0 0 2.5px var(--tinta-fixa);
+}
+.opcio[aria-checked="true"] .ico{transform:scale(1.1)}
+.opcio[aria-checked="true"] .opcio__nom{font-weight:900}
+.opcio__ratlla{
+  display:block;width:20px;height:3px;background:currentColor;border-radius:2px;
+  opacity:0;transform:scaleX(.2);transform-origin:center;
+  transition:opacity var(--t-rapid) var(--corba-seca),transform var(--t-mig) var(--corba-seca);
+}
+.opcio[aria-checked="true"] .opcio__ratlla{opacity:1;transform:scaleX(1)}
+
+/* --- Navegació i llegenda ------------------------------------------------ */
+.navega{display:flex;justify-content:space-between;align-items:center;gap:var(--e2)}
+.peu{
+  border-top:var(--gruix-vora) solid var(--ink);
+  padding:var(--e2) var(--e3);
+  display:flex;justify-content:space-between;align-items:center;gap:var(--e2);flex-wrap:wrap;
+}
+.tecles{display:flex;align-items:center;gap:var(--e2);flex-wrap:wrap;font-size:var(--mida-micro);color:var(--ink-suau)}
+.tecles span{display:inline-flex;align-items:center;gap:5px;letter-spacing:.02em;text-transform:none;font-weight:400}
+kbd{
+  font-family:var(--display);font-weight:900;font-size:.8rem;line-height:1;
+  background:var(--fons-peca);border:2px solid var(--ink);border-radius:var(--r-s);
+  padding:3px 6px;box-shadow:2px 2px 0 var(--ink);color:var(--ink);
+}
+@media (max-width:719px){ .tecles{display:none} }
+
+/* --- Final --------------------------------------------------------------- */
+.final{--ombra-color:var(--menta);margin:var(--e4) 0}
+.repas{list-style:none;margin:0 0 var(--e3);padding:0;display:flex;flex-direction:column;gap:var(--e2)}
+.repas li{display:flex;align-items:flex-start;gap:var(--e2);border-bottom:2px dashed var(--vora);padding-bottom:var(--e2)}
+.repas li:last-child{border-bottom:0;padding-bottom:0}
+.repas .ico{--mida:34px;flex:none;margin-top:2px}
+.repas li>[data-icona]{--mida:34px;margin-top:2px}
+.repas__buit{
+  --mida:34px;width:var(--mida);height:var(--mida);flex:none;margin-top:2px;
+  border:2.5px dashed var(--ink);border-radius:50%;opacity:.45;
+}
+.repas p{margin:0;font-size:var(--mida-menut);line-height:1.4}
+.repas b{display:block;font-family:var(--display);font-weight:900;font-size:var(--mida-micro);
+  letter-spacing:.1em;text-transform:uppercase;color:var(--coral-text)}
+
+/* --- Moviment reduït -----------------------------------------------------
+   base.css ja apaga durades i deixa la interfície llegible. Aquí només cal
+   una cosa més: que la targeta no es desplaci gens. Un canvi net, sense
+   trajecte, i el contingut hi és tot des del primer fotograma. */
+@media (prefers-reduced-motion:reduce){
+  .carta--surt,.carta--entra{animation:none!important;opacity:1;transform:rotate(var(--gir,-1.6deg))}
+  .js-mou .context:not([hidden]){animation:none}
+  .opcio .ico,.opcio:hover .ico,.opcio:focus-visible .ico{transform:none}
+  .opcio[aria-checked="true"] .ico{transform:none}
+  .pes__marca{transition:none}
+}
+</style>
+</head>
+
+<body>
+<a class="salta" href="#contingut">Vés al contingut</a>
+
+<div class="pantalla">
+
+  <header class="cap">
+    <a class="marca" href="portada.html" aria-label="quivoto, a l'inici">quiv<svg class="marca__o" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/><path d="M34 8 l6 6" stroke="#FFD8B8" stroke-width="6" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="24" r="3.6" fill="#FFFFFF"/><circle cx="29" cy="24" r="3.6" fill="#FFFFFF"/><g class="pupilles"><circle cx="19" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/><rect x="25" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/></g><path class="boca" d="M20 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg>to</a>
+
+    <div class="progres">
+      <div class="barra barra--prima" role="progressbar" id="barra-progres"
+           aria-valuemin="0" aria-valuemax="5" aria-valuenow="1"
+           aria-label="Progrés de la brúixola">
+        <span class="barra__omplert" style="--dada:var(--coral)"></span>
+      </div>
+      <p class="progres__text" id="progres-text"><b>1</b> <span class="de">de</span> 5</p>
+    </div>
+
+    <a class="boto boto--fantasma boto--menut" href="../../web/public/index.html">Surt</a>
+  </header>
+
+  <main id="contingut">
+  <div class="joc" id="joc">
+
+    <div class="banda banda--menta">
+      <div class="embolcall banda__dins">
+        <div class="tema">
+          <span class="etiqueta" id="tema-nom">Mobilitat</span>
+          <span class="tema__ico" id="tema-ico" aria-hidden="true"></span>
+        </div>
+        <div class="mascota-lloc" id="mascota-lloc" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="embolcall lloc-carta">
+      <article class="targeta targeta--gran targeta--girada afirmacio" id="carta" tabindex="-1"
+               style="--gir:-2.6deg">
+        <h1 class="afirmacio__text" id="afirmacio-text">
+          El centre de la ciutat es tancarà al trànsit privat els caps de setmana.
+        </h1>
+
+        <button type="button" class="perque" id="perque" aria-expanded="false" aria-controls="context">
+          <span class="perque__fletxa" aria-hidden="true"></span>
+          Per què ho preguntem
+        </button>
+
+        <div class="context" id="context" hidden>
+          <p id="context-text"></p>
+          <p class="micro" style="margin-bottom:var(--e1)">D'on surt</p>
+          <ul class="cites" id="context-cites"></ul>
+        </div>
+      </article>
+    </div>
+
+    <section class="embolcall resposta" id="resposta" aria-labelledby="resposta-titol">
+      <h2 id="resposta-titol" class="nomes-lectors">La teva resposta</h2>
+
+      <div data-entrada>
+        <button type="button" class="adhesiu adhesiu--lavanda pes" id="pes" aria-pressed="false"
+                aria-describedby="pes-nota">
+          <svg class="pes__marca" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M2.5 8.5 L6 12 L13.5 3.5" fill="none" stroke="#1E1B2E"
+                  stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Això m'importa molt
+        </button>
+        <span class="pes-nota" id="pes-nota">compta el doble</span>
+      </div>
+
+      <div data-entrada>
+        <div class="escala-cap" aria-hidden="true">
+          <span>Totalment en desacord</span>
+          <span>Totalment d'acord</span>
+        </div>
+        <!-- role i tabulació els posa moviment.radiogrup(): cinc botons de
+             commutació no són una tria única. -->
+        <div class="escala" id="escala" aria-labelledby="resposta-titol"></div>
+      </div>
+
+      <div class="navega" data-entrada>
+        <button type="button" class="boto boto--fantasma boto--menut" id="enrere">Enrere</button>
+        <button type="button" class="boto boto--fantasma boto--menut" id="ometre">Ometre aquesta</button>
+      </div>
+    </section>
+
+  </div><!-- /joc -->
+
+  <div class="embolcall" id="lloc-final" hidden></div>
+  </main>
+
+  <footer class="peu">
+    <p class="tecles">
+      <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><kbd>5</kbd> respon</span>
+      <span><kbd>S</kbd> ometre</span>
+      <span><kbd>E</kbd> enrere</span>
+    </p>
+    <p class="peu-nota" style="margin:0">Prototip. Cinc afirmacions d'exemple sobre Sabadell.</p>
+  </footer>
+
+</div>
+
+<!-- Sprite de quivoto, retallat als símbols que aquesta pàgina fa servir.
+     Generat per tools/build_sprite.py des de tools/icons_lib.py i retallat
+     per tools/sprite_pagina.py. NO s'edita a mà.
+     Va al FINAL del <body>: abans era el primer fill i el parser havia de
+     mastegar-lo sencer abans d'arribar a cap píxel visible. -->
+<svg xmlns="http://www.w3.org/2000/svg" class="sprite-quivoto" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+<defs>
+<symbol id="vei-mobilitat" viewBox="0 0 48 48"><title>Mobilitat</title><rect x="6" y="12" width="36" height="24" rx="6" fill="#BFE8D2"/><rect x="10" y="17" width="9" height="8" rx="2" fill="#1E1B2E"/><rect x="22" y="17" width="9" height="8" rx="2" fill="#1E1B2E"/><rect x="34" y="17" width="4" height="8" rx="2" fill="#1E1B2E"/><circle cx="14" cy="39" r="4" fill="#1E1B2E"/><circle cx="34" cy="39" r="4" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="30" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="30" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="30.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="30.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="25.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="25.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 37.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-habitatge" viewBox="0 0 48 48"><title>Habitatge</title><path d="M8 22 L24 8 L40 22 V40 H8 Z" fill="#E2735A"/><path d="M8 22 L24 8 L40 22" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linejoin="round"/><rect x="20" y="28" width="8" height="12" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="33" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="33" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="33.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="33.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="28.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="28.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 40.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-fiscalitat" viewBox="0 0 48 48"><title>Fiscalitat</title><circle cx="24" cy="24" r="17" fill="#BFE8D2"/><path d="M30 16 A9 9 0 1 0 30 32 M14 21 H27 M14 27 H27" fill="none" stroke="#1E1B2E" stroke-width="3.5" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="14" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="14" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="14.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="14.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="9.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="9.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 21.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-medi-ambient" viewBox="0 0 48 48"><title>Medi ambient</title><path d="M40 8 C20 8 8 20 10 40 C30 40 42 28 40 8 Z" fill="#BFE8D2"/><g class="cara"><circle cx="21" cy="24" r="3.6" fill="#FBF7EE"/><circle cx="31" cy="24" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="21" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="31" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="17" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="27" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M22 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-participacio" viewBox="0 0 48 48"><title>Participació</title><rect x="10.2" y="23" width="5.6" height="13" rx="2.8" fill="#C9C4F2" transform="rotate(-32 13 29.5)"/><rect x="17.4" y="14" width="5.8" height="15" rx="2.9" fill="#C9C4F2"/><rect x="24.6" y="10" width="5.8" height="19" rx="2.9" fill="#C9C4F2"/><rect x="31.8" y="15" width="5.8" height="14" rx="2.9" fill="#C9C4F2"/><path d="M14 27 H38 V35 A8 8 0 0 1 30 43 H22 A8 8 0 0 1 14 35 Z" fill="#C9C4F2"/><g class="cara"><circle cx="21" cy="34" r="3.6" fill="#FBF7EE"/><circle cx="31" cy="34" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="21" cy="34.4" r="1.9" fill="#1E1B2E"/><circle cx="31" cy="34.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="17" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="27" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M22 41.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="papereta-neutre" viewBox="0 0 120 140"><title>La papereta, mascota de quivoto</title>
+  <g class="cos">
+    <path d="M18 14 H80 L102 36 V126 H18 Z" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M80 14 V36 H102 Z" fill="#FFD8B8" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <g class="ratlles">
+      <path d="M32 112 H88" stroke="#E2735A" stroke-width="5" stroke-linecap="round"/>
+      <path d="M32 122 H70" stroke="#BFE8D2" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    <g class="cara">
+      <circle cx="46" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <circle cx="76" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <g class="pupilles"><circle cx="46" cy="71" r="4.2" fill="#1E1B2E"/><circle cx="76" cy="71" r="4.2" fill="#1E1B2E"/></g>
+      <g class="parpelles">
+        <circle cx="46" cy="70" r="9.6" fill="#FFFFFF"/>
+        <circle cx="76" cy="70" r="9.6" fill="#FFFFFF"/>
+      </g>
+      <path class="boca" d="M46 94 h28" stroke="#1E1B2E" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </g>
+    <path class="creu" d="M31 46 l7 8 l14 -16" stroke="#E2735A" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</symbol>
+<symbol id="escala-1" viewBox="0 0 48 48"><title>Totalment en desacord</title><circle cx="24" cy="24" r="22" fill="#E2735A" stroke="#1E1B2E" stroke-width="2.5"/><path d="M20 34 q4 -3 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M14 20 l5 3 M34 20 l-5 3" stroke="#1E1B2E" stroke-width="2.2" stroke-linecap="round"/></symbol>
+<symbol id="escala-2" viewBox="0 0 48 48"><title>Més aviat en desacord</title><circle cx="24" cy="24" r="22" fill="#FFD8B8" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 33 q4 -2 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="escala-3" viewBox="0 0 48 48"><title>Ni d'acord ni en desacord</title><circle cx="24" cy="24" r="22" fill="#FBF7EE" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 32 h8" stroke="#1E1B2E" stroke-width="2.2" stroke-linecap="round"/></symbol>
+<symbol id="escala-4" viewBox="0 0 48 48"><title>Més aviat d'acord</title><circle cx="24" cy="24" r="22" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 30 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="escala-5" viewBox="0 0 48 48"><title>Totalment d'acord</title><circle cx="24" cy="24" r="22" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="2.5"/><path d="M19 29 q5 6 10 0 z" fill="#1E1B2E"/><path d="M15 21 q3 -4 6 0 M27 21 q3 -4 6 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></symbol>
+</defs>
+</svg>
+
+<script src="moviment.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  /* =======================================================================
+     1. LES AFIRMACIONS
+     Regles de redacció: una sola proposició, en futur, sense noms propis,
+     25 paraules com a màxim. El context i les cites són d'exemple: expliquen
+     qui ho decideix i amb quina majoria, que és el que fa que una afirmació
+     municipal es pugui respondre amb criteri.
+     ======================================================================= */
+  var AFIRMACIONS = [
+    {
+      tema:'Mobilitat', icona:'vei-mobilitat', gir:'-2.6deg',
+      text:'El centre de la ciutat es tancarà al trànsit privat els caps de setmana.',
+      context:'Les zones de vianants les aprova el ple, que té 27 regidors. El grup amb més regidors n’hi té 14, just la majoria absoluta: pot tirar-ho endavant sol o pactar-ho.',
+      cites:[
+        ['Eleccions municipals de 2023','el grup més votat va obtenir 35.799 vots i 14 dels 27 regidors.'],
+        ['Ple municipal','la majoria absoluta d’un ple de 27 regidors són 14 vots.']
+      ]
+    },
+    {
+      tema:'Habitatge', icona:'vei-habitatge', gir:'4.2deg',
+      text:'L’ajuntament comprarà cada any pisos buits per llogar-los per sota del preu de mercat.',
+      context:'Comprar habitatge és despesa d’inversió: compromet pressupostos de diversos anys i competeix amb la resta d’obra pública. La ciutat té 225.368 habitants empadronats.',
+      cites:[
+        ['Padró municipal de 2025','225.368 persones empadronades.'],
+        ['Pressupost municipal','les compres d’immobles van al capítol d’inversions, no a la despesa corrent.']
+      ]
+    },
+    {
+      tema:'Fiscalitat', icona:'vei-fiscalitat', gir:'-5.4deg',
+      text:'L’impost sobre els habitatges pujarà per pagar més neteja i manteniment als barris.',
+      context:'L’impost sobre béns immobles és el principal ingrés propi d’un ajuntament. El tipus es fixa a l’ordenança fiscal, que s’aprova al ple cada tardor per a l’any següent.',
+      cites:[
+        ['Ordenances fiscals','el tipus de l’IBI s’aprova al ple cada any.'],
+        ['Ple municipal','27 regidors; les ordenances necessiten majoria simple.']
+      ]
+    },
+    {
+      tema:'Medi ambient', icona:'vei-medi-ambient', gir:'2.2deg',
+      text:'Es traurà asfalt i es plantaran arbres a totes les places dures de la ciutat.',
+      context:'Desasfaltar una plaça en canvia la temperatura a l’estiu, però també les places d’aparcament i els usos que hi caben. Es decideix obra per obra, no d’un sol cop.',
+      cites:[
+        ['Pla d’acció per l’energia sostenible i el clima','instrument municipal que fixa els objectius de reverdiment.'],
+        ['Pressupost d’inversions','cada plaça és un projecte d’obra amb partida pròpia.']
+      ]
+    },
+    {
+      tema:'Participació', icona:'vei-participacio', gir:'-3.6deg',
+      text:'Cada barri decidirà per votació vinculant una part del pressupost d’inversions.',
+      context:'Un pressupost participatiu vinculant treu decisió d’inversió al ple i la posa a votació directa. El ple continua aprovant el pressupost sencer cada any.',
+      cites:[
+        ['Reglament de participació ciutadana','regula les consultes i els pressupostos participatius.'],
+        ['Ple municipal','aprova el pressupost anual amb 27 regidors.']
+      ]
+    }
+  ];
+
+  var TOTAL = AFIRMACIONS.length;
+
+  /* Els cinc graons. Els noms NO es declaren aquí: surten de la taula
+     compartida de moviment.js, que és la mateixa que llegeix el resultat.
+     Quan cada pantalla tenia la seva, qui responia «Totalment d'acord» a la
+     brúixola es trobava «Molt d'acord» al resultat per al mateix valor 5. */
+  var GRAONS = [1,2,3,4,5].map(function(v){
+    return {v:v, id:'escala-'+v,
+            nom:moviment.ESCALA_CURT[v], llarg:moviment.ESCALA_LLARG[v]};
+  });
+
+  /* =======================================================================
+     2. LES CINC CARES DE LA PAPERETA
+     El sprite en porta tres (feliç, neutre, pregunta) i l’escala en demana
+     cinc. En comptes de generar cinc paperetes senceres, es clona la neutra
+     un sol cop i se li reescriuen la boca i les celles: és el mateix full de
+     paper, i canviar un atribut `d` no costa res.
+     La boca NO fa cap transició: interpolar un `path` és pintar a cada
+     fotograma, i això no es fa. El canvi és sec i el que es mou és tota la
+     mascota, amb `.pujada` (transform).
+     ======================================================================= */
+  var CARES = {
+    1:{boca:'M44 101 q16 -15 32 0', ple:false, celles:['M36 51 l13 8','M86 51 l-13 8'], ceOp:1},
+    2:{boca:'M46 97 q14 -8 28 0',   ple:false, celles:['M37 53 l12 4','M85 53 l-12 4'], ceOp:1},
+    3:{boca:'M46 94 h28',           ple:false, celles:['M37 55 h12','M73 55 h12'],      ceOp:0},
+    4:{boca:'M45 90 q15 10 30 0',   ple:false, celles:['M37 56 l12 -3','M85 56 l-12 -3'],ceOp:1},
+    5:{boca:'M44 88 q16 19 32 0 z', ple:true,  celles:['M36 55 q6.5 -8 13 0','M86 55 q-6.5 -8 -13 0'], ceOp:1}
+  };
+
+  /* =======================================================================
+     3. Estat
+     ======================================================================= */
+  var estat = AFIRMACIONS.map(function(){ return {resposta:null, pes:false, omesa:false}; });
+  var actual = 0;
+  /* `sortint` només és cert mentre la targeta VELLA encara marxa (120 ms): és
+     l'únic moment en què acceptar una tecla voldria dir respondre a un text
+     que ja no és el que hi ha escrit. Quan la nova ja hi és, encara que estigui
+     acabant d'entrar, es pot respondre: qui va de pressa amb el teclat no pot
+     perdre respostes esperant que una animació s'acabi.
+     `gen` numera les transicions perquè una devolució de crida endarrerida no
+     pugui tocar una targeta que ja és d'una altra afirmació. */
+  var sortint = false;
+  var gen = 0;
+  var acabat = false;
+  var pendent = null;
+
+  var $ = function(id){ return document.getElementById(id); };
+  var carta = $('carta'), escala = $('escala'), mascotaLloc = $('mascota-lloc');
+  var botoPes = $('pes'), notaPes = $('pes-nota');
+  var barra = $('barra-progres'), textProgres = $('progres-text');
+  var perque = $('perque'), context = $('context');
+  var joc = $('joc'), llocFinal = $('lloc-final');
+
+  /* =======================================================================
+     4. La mascota
+     ======================================================================= */
+  var boca = null, celles = null, moodActual = 3;
+
+  function muntaMascota(){
+    moviment.icona(mascotaLloc, 'papereta-neutre', {base:'mascota'});
+    var svg = mascotaLloc.querySelector('svg');
+    if(!svg) return;
+    boca = svg.querySelector('.boca');
+    var cara = svg.querySelector('.cara');
+    if(cara){
+      celles = document.createElementNS('http://www.w3.org/2000/svg','g');
+      celles.setAttribute('class','celles');
+      for(var i=0;i<2;i++){
+        var p = document.createElementNS('http://www.w3.org/2000/svg','path');
+        p.setAttribute('stroke','#1E1B2E');
+        p.setAttribute('stroke-width','4');
+        p.setAttribute('stroke-linecap','round');
+        p.setAttribute('fill','none');
+        celles.appendChild(p);
+      }
+      cara.appendChild(celles);
+    }
+    posaCara(3);
+  }
+
+  function posaCara(n){
+    var c = CARES[n] || CARES[3];
+    moodActual = n;
+    if(boca){
+      boca.setAttribute('d', c.boca);
+      boca.setAttribute('fill', c.ple ? '#1E1B2E' : 'none');
+    }
+    if(celles){
+      celles.style.opacity = c.ceOp;
+      celles.childNodes[0].setAttribute('d', c.celles[0]);
+      celles.childNodes[1].setAttribute('d', c.celles[1]);
+    }
+  }
+
+  /* =======================================================================
+     5. L'escala
+     ======================================================================= */
+  function muntaEscala(){
+    GRAONS.forEach(function(g){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'opcio';
+      // El nom accessible ha de CONTENIR el text visible: qui fa servir
+      // control per veu ha de poder dir «clica Gens».
+      b.setAttribute('aria-label', g.nom + ': ' + g.llarg.toLowerCase());
+      b.dataset.valor = g.v;
+
+      var lloc = document.createElement('span');
+      lloc.style.display = 'block';
+      b.appendChild(lloc);
+      moviment.icona(lloc, g.id);
+      // El <svg> ha de quedar penjat del botó, no d'un embolcall extra que
+      // afegiria una caixa entremig del flex.
+      var svg = lloc.querySelector('svg');
+      if(svg){ b.replaceChild(svg, lloc); }
+
+      var nom = document.createElement('span');
+      nom.className = 'opcio__nom';
+      nom.textContent = g.nom;
+      b.appendChild(nom);
+
+      var ratlla = document.createElement('span');
+      ratlla.className = 'opcio__ratlla';
+      ratlla.setAttribute('aria-hidden','true');
+      b.appendChild(ratlla);
+
+      b.addEventListener('click', function(){ respon(g.v); });
+      // La papereta ensenya la cara abans de triar: passar-hi el dit o
+      // enfocar-la amb el teclat ja n'hi ha prou. En marxar, torna al que hi
+      // havia triat.
+      b.addEventListener('pointerenter', function(){ if(!sortint) posaCara(g.v); });
+      b.addEventListener('focus', function(){ if(!sortint) posaCara(g.v); });
+      b.addEventListener('pointerleave', tornaCara);
+      b.addEventListener('blur', tornaCara);
+      escala.appendChild(b);
+    });
+    marcaGrao = moviment.radiogrup(escala, {selector:'.opcio', mouTria:false});
+  }
+  var marcaGrao = function(){};
+
+  function tornaCara(){
+    if(sortint) return;
+    posaCara(estat[actual] && estat[actual].resposta ? estat[actual].resposta : 3);
+  }
+
+  /* =======================================================================
+     6. Pintar
+     ======================================================================= */
+  function pinta(){
+    var a = AFIRMACIONS[actual], e = estat[actual];
+
+    carta.style.setProperty('--gir', a.gir);
+    $('afirmacio-text').textContent = a.text;
+    $('tema-nom').textContent = a.tema;
+
+    var lloc = $('tema-ico');
+    lloc.textContent = '';
+    moviment.icona(lloc, a.icona, {classe:'ico--vei'});
+
+    $('context-text').textContent = a.context;
+    var ul = $('context-cites');
+    ul.textContent = '';
+    a.cites.forEach(function(c){
+      var li = document.createElement('li');
+      // Tot el text va dins d'UN sol fill: dins d'un flex, cada tros de text
+      // solt seria un ítem seu i el rètol quedaria en una columna a part.
+      var txt = document.createElement('span');
+      var b = document.createElement('b');
+      b.textContent = c[0] + ': ';
+      txt.appendChild(b);
+      txt.appendChild(document.createTextNode(c[1]));
+      li.appendChild(txt);
+      ul.appendChild(li);
+    });
+    tancaContext();
+
+    marcaGrao(Array.prototype.filter.call(escala.children, function(b){
+      return Number(b.dataset.valor) === e.resposta;
+    })[0] || escala.children[2]);
+    if(!e.resposta){
+      Array.prototype.forEach.call(escala.children, function(b){
+        b.setAttribute('aria-checked','false');
+      });
+    }
+
+    botoPes.setAttribute('aria-pressed', e.pes ? 'true' : 'false');
+    notaPes.hidden = !e.pes;
+
+    posaCara(e.resposta || 3);
+
+    var fet = actual + 1;
+    textProgres.innerHTML = '<b>' + fet + '</b> <span class="de">de</span> ' + TOTAL;
+    barra.setAttribute('aria-valuenow', fet);
+    barra.setAttribute('aria-valuetext', fet + ' de ' + TOTAL);
+    moviment.animaBarra(barra.querySelector('.barra__omplert'), fet / TOTAL);
+
+    $('enrere').disabled = (actual === 0);
+  }
+
+  function tancaContext(){
+    context.hidden = true;
+    perque.setAttribute('aria-expanded','false');
+  }
+
+  /* =======================================================================
+     7. Navegació entre afirmacions
+     La targeta surt cap on vas i n'entra una de nova pel costat contrari.
+     Amb moviment reduït no hi ha desplaçament: el contingut es reescriu i
+     prou, i la pantalla continua dient exactament el mateix.
+     ======================================================================= */
+  function vesA(i, sentit){
+    if(sortint || i < 0) return;
+    var meu = ++gen;
+
+    moviment.siEsMou(function(){
+      sortint = true;
+      carta.classList.remove('carta--entra');
+      carta.dataset.sentit = sentit;
+      carta.classList.add('carta--surt');
+      esperaFi(carta, function(){
+        if(meu !== gen) return;
+        sortint = false;
+        carta.classList.remove('carta--surt');
+        if(i >= TOTAL){ carta.removeAttribute('data-sentit'); acaba(); return; }
+        actual = i;
+        pinta();
+        carta.classList.add('carta--entra');
+        // El focus va a la targeta quan el text nou ja hi és escrit, no quan
+        // s'acaba d'animar: qui llegeix amb lector de pantalla no ha d'esperar.
+        carta.focus({preventScroll:true});
+        esperaFi(carta, function(){
+          if(meu !== gen) return;
+          carta.classList.remove('carta--entra');
+          carta.removeAttribute('data-sentit');
+        });
+      });
+    }, function(){
+      if(i >= TOTAL){ acaba(); return; }
+      actual = i;
+      pinta();
+      carta.focus({preventScroll:true});
+    });
+  }
+
+  /* animationend amb xarxa de seguretat: si per qualsevol motiu l'esdeveniment
+     no arriba (pestanya amagada, animació interrompuda), la seqüència no es pot
+     quedar encallada amb la targeta fora de pantalla. */
+  function esperaFi(el, fes){
+    var fet = false;
+    function acaba(ev){
+      if(ev && ev.target !== el) return;
+      if(fet) return;
+      fet = true;
+      el.removeEventListener('animationend', acaba);
+      window.clearTimeout(t);
+      fes();
+    }
+    var t = window.setTimeout(acaba, 700);
+    el.addEventListener('animationend', acaba);
+  }
+
+  /* =======================================================================
+     8. Accions
+     ======================================================================= */
+  function respon(n){
+    if(sortint || acabat) return;
+    estat[actual].resposta = n;
+    estat[actual].omesa = false;
+
+    marcaGrao(Array.prototype.filter.call(escala.children, function(b){
+      return Number(b.dataset.valor) === n;
+    })[0]);
+
+    posaCara(n);
+    moviment.salta(mascotaLloc);
+
+    window.clearTimeout(pendent);
+    // La pausa és perquè es vegi la papereta reaccionar. Amb moviment reduït
+    // no hi ha res a veure, però igualment cal un instant perquè es noti que
+    // la resposta s'ha registrat abans de canviar de pantalla.
+    pendent = window.setTimeout(function(){
+      vesA(actual + 1, 'endavant');
+    }, moviment.movimentReduit() ? 260 : 580);
+  }
+
+  function ometre(){
+    if(sortint || acabat) return;
+    estat[actual].omesa = true;
+    estat[actual].resposta = null;
+    vesA(actual + 1, 'endavant');
+  }
+
+  function enrere(){
+    if(acabat){ tornaAlJoc(TOTAL - 1); return; }
+    if(sortint || actual === 0) return;
+    vesA(actual - 1, 'enrere');
+  }
+
+  botoPes.addEventListener('click', function(){
+    var nou = botoPes.getAttribute('aria-pressed') !== 'true';
+    estat[actual].pes = nou;
+    botoPes.setAttribute('aria-pressed', nou ? 'true' : 'false');
+    notaPes.hidden = !nou;
+  });
+
+  perque.addEventListener('click', function(){
+    var obert = perque.getAttribute('aria-expanded') === 'true';
+    perque.setAttribute('aria-expanded', obert ? 'false' : 'true');
+    context.hidden = obert;
+  });
+
+  $('ometre').addEventListener('click', ometre);
+  $('enrere').addEventListener('click', enrere);
+
+  /* =======================================================================
+     9. Teclat
+     1-5 responen, S omet, E fa enrere. Les fletxes mouen el focus dins de
+     l'escala sense triar res: triar en moure el focus faria avançar
+     d'afirmació sense voler.
+     ======================================================================= */
+  /* Les dreceres d'una sola tecla només valen amb el focus DINS del joc. Amb
+     el focus a «Surt» o a «Ometre», prémer «e» feia enrere; i qui navega amb
+     un lector de pantalla en mode virtual, on les tecles soltes són ordres de
+     navegació, canviava d'afirmació sense voler-ho. */
+  joc.addEventListener('keydown', function(ev){
+    if(ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var t = ev.target;
+    if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+
+    var k = ev.key;
+    if(k >= '1' && k <= '5'){ ev.preventDefault(); respon(Number(k)); return; }
+    if(k === 's' || k === 'S'){ ev.preventDefault(); ometre(); return; }
+    if(k === 'e' || k === 'E'){ ev.preventDefault(); enrere(); return; }
+
+    // Les fletxes dins de l'escala les porta moviment.radiogrup().
+  });
+
+  /* =======================================================================
+     10. Final
+     ======================================================================= */
+  function acaba(){
+    acabat = true;
+    joc.hidden = true;
+    llocFinal.hidden = false;
+    llocFinal.textContent = '';
+
+    var t = document.createElement('article');
+    t.className = 'targeta targeta--gran final';
+
+    var h = document.createElement('h2');
+    h.textContent = 'Ja està.';
+    t.appendChild(h);
+
+    var contades = estat.filter(function(e){ return e.resposta; }).length;
+    var pesades = estat.filter(function(e){ return e.pes; }).length;
+    var p = document.createElement('p');
+    p.className = 'guia';
+    p.style.marginTop = 'var(--e2)';
+    p.textContent = 'Has respost ' + contades + ' de ' + TOTAL +
+      ' afirmacions i n’has marcat ' + pesades +
+      (pesades === 1 ? ' com a molt important.' : ' com a molt importants.');
+    t.appendChild(p);
+
+    var ul = document.createElement('ul');
+    ul.className = 'repas';
+    AFIRMACIONS.forEach(function(a, i){
+      var e = estat[i];
+      var li = document.createElement('li');
+      if(e.resposta){
+        moviment.icona(li, 'escala-' + e.resposta, {etiqueta: moviment.ESCALA_LLARG[e.resposta]});
+      }else{
+        var buit = document.createElement('span');
+        buit.className = 'repas__buit';
+        li.appendChild(buit);
+      }
+      var txt = document.createElement('p');
+      var cap = document.createElement('b');
+      cap.textContent = a.tema + (e.pes ? ' · importa molt' : '');
+      txt.appendChild(cap);
+      txt.appendChild(document.createTextNode(
+        e.resposta ? moviment.ESCALA_LLARG[e.resposta] + '. ' + a.text : 'Omesa. ' + a.text
+      ));
+      li.appendChild(txt);
+      ul.appendChild(li);
+    });
+    t.appendChild(ul);
+
+    var fila = document.createElement('div');
+    fila.className = 'navega';
+    var tornar = document.createElement('button');
+    tornar.type = 'button';
+    tornar.className = 'boto boto--fantasma boto--menut';
+    tornar.textContent = 'Enrere';
+    tornar.addEventListener('click', function(){ tornaAlJoc(TOTAL - 1); });
+    var reinicia = document.createElement('button');
+    reinicia.type = 'button';
+    reinicia.className = 'boto';
+    reinicia.textContent = 'Torna a començar';
+    reinicia.addEventListener('click', function(){
+      estat = AFIRMACIONS.map(function(){ return {resposta:null, pes:false, omesa:false}; });
+      tornaAlJoc(0);
+    });
+    fila.appendChild(tornar);
+    fila.appendChild(reinicia);
+    t.appendChild(fila);
+
+    llocFinal.appendChild(t);
+    h.tabIndex = -1;
+    h.focus({preventScroll:true});
+  }
+
+  function tornaAlJoc(i){
+    acabat = false;
+    sortint = false;
+    gen++;
+    carta.classList.remove('carta--surt','carta--entra');
+    carta.removeAttribute('data-sentit');
+    llocFinal.hidden = true;
+    llocFinal.textContent = '';
+    joc.hidden = false;
+    actual = i;
+    pinta();
+    carta.focus({preventScroll:true});
+  }
+
+  /* =======================================================================
+     11. Engegada
+     ======================================================================= */
+  muntaEscala();
+  muntaMascota();
+  pinta();
+  moviment.inicia();
+})();
+</script>
+</body>
+</html>

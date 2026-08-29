@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>quivoto — comença pel teu municipi</title>
+<meta name="description" content="Brúixola electoral per a les municipals del 23 de maig de 2027. Tria el teu municipi i respon 25 afirmacions.">
+<meta name="color-scheme" content="light dark">
+
+<!-- Tipografia local. Els @font-face van ABANS del full d'estil: si van
+     després, la petició de la lletra no arrenca fins que base.css ha baixat i
+     s'ha analitzat, i això és una cadena de dependències de tres salts. Els
+     dos preloads treuen un salt més. Cap petició a internet. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../web/public/assets/fonts/QGYtz_0dZAGKJJ4t3HtoW4XGnfBI.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJ3xzHGGVFM.woff2">
+<style>
+@font-face{font-family:'Gabarito';font-style:normal;font-weight:400 900;font-display:swap;
+  src:url(../../web/public/assets/fonts/QGYtz_0dZAGKJJ4t3HtoW4XGnfBI.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Gabarito';font-style:normal;font-weight:400 900;font-display:swap;
+  src:url(../../web/public/assets/fonts/QGYtz_0dZAGKJJ4t3HtmW4XGnfBI2fk.woff2) format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Nunito Sans';font-style:normal;font-weight:400 800;font-display:swap;
+  src:url(../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJ3xzHGGVFM.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Nunito Sans';font-style:normal;font-weight:400 800;font-display:swap;
+  src:url(../../web/public/assets/fonts/pe0AMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfUVwoNnq4CLz0_kJPxzHGGVFMV2w.woff2) format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+</style>
+
+<!-- Tot el que és compartit surt d'aquí. Aquesta pàgina no en redefineix cap token. -->
+<link rel="stylesheet" href="base.css">
+
+<!-- L'estat amagat de [data-entrada] només existeix si <html> porta .js-mou.
+     Es posa AQUÍ, abans del primer pintat: si esperava moviment.js (final del
+     document, 90 kB de marcatge pel mig) el titular es pintava, s'amagava i
+     tornava a entrar. Tres línies, cap petició. -->
+<script>if(!matchMedia('(prefers-reduced-motion:reduce)').matches)document.documentElement.className+=' js-mou'</script>
+
+<style>
+/* ==========================================================================
+   quivoto — portada i selector de municipi.
+   Només CSS d'aquesta pantalla. Els tokens, les primitives i els keyframes
+   d'identitat són a base.css i no es tornen a declarar aquí.
+   ========================================================================== */
+
+/* ==========================================================================
+   CAPÇALERA
+   La banda de color, la marca i el número de secció ja no viuen aquí: són
+   primitives de base.css i valen igual a les quatre pantalles.
+   ========================================================================== */
+.capcalera{
+  display:flex;align-items:center;justify-content:space-between;gap:var(--e2);
+  max-width:var(--ample);margin:0 auto;padding:var(--e3) var(--e3) 0;flex-wrap:wrap;
+}
+.capcalera .marca{--marca-mida:30px}
+.peu .marca{--marca-mida:22px}
+.nav-cap{display:flex;align-items:center;gap:var(--e2);font-size:var(--mida-menut);font-weight:800}
+.nav-cap a{text-decoration:none}
+.nav-cap a:hover{text-decoration:underline}
+.idiomes{display:inline-flex;align-items:center;gap:4px;font-weight:800}
+.idiomes [aria-current]{background:var(--ink);color:var(--paper);border-radius:var(--r-max);padding:2px 9px}
+
+/* ==========================================================================
+   PORTADA
+   Composició asimètrica: el text pesa a l'esquerra i ocupa 7 de 12; la
+   papereta se'n va cap a la cantonada dreta i sobresurt per sota de la banda.
+   ========================================================================== */
+.portada{padding-block:var(--e5) var(--e6)}
+.portada .graella{align-items:center;row-gap:var(--e4)}
+.portada__titol{font-size:var(--mida-hero);margin:var(--e2) 0 var(--e3)}
+.portada__titol em{font-style:normal;position:relative;white-space:nowrap}
+/* Subratllat dibuixat a mà: una banda de coral darrere la darrera línia. No és
+   un degradat ni un ::after difuminat, és un traç gruixut. */
+.portada__titol em::after{
+  content:"";position:absolute;left:-.04em;right:-.04em;bottom:.06em;height:.16em;
+  background:var(--coral);z-index:-1;border-radius:var(--r-max);
+}
+.portada__titol em{z-index:0}
+.portada__entradeta{max-width:46ch;margin-bottom:var(--e3)}
+.portada__firma{display:flex;align-items:center;gap:var(--e2);flex-wrap:wrap}
+
+/* --mida s'hereta: declarant-la al contenidor, la caixa reservada abans que
+   arribi el JS i la papereta que hi entra fan exactament la mateixa mida. */
+.portada__mascota{justify-self:end;width:min(260px,62vw);--mida:100%}
+.portada__mascota .mascota{width:100%}
+@media (max-width:719px){
+  .portada{padding-block:var(--e4) var(--e5)}
+  .portada__mascota{justify-self:center;width:min(190px,52vw)}
+}
+/* Entrada de la mascota: cau del cel i s'atura amb la corba de salt. Només la
+   primera vegada de la sessió (ho decideix el JS amb sessionStorage): a la
+   segona visita la papereta ja hi és i només respira. */
+.js-mou .primera-visita .portada__mascota{animation:cau var(--t-lent) var(--corba-salt) both}
+@keyframes cau{from{opacity:0;transform:translateY(-34px) rotate(-9deg)}to{opacity:1;transform:none}}
+/* A la segona visita la creu tampoc no es torna a dibuixar. */
+.ja-vista .mascota .creu{animation:none;stroke-dashoffset:0}
+
+/* ==========================================================================
+   CERCADOR
+   La targeta puja per damunt de la banda i la trenca: és la peça que mana.
+   No va girada — un camp de text girat es llegeix pitjor, i la llegibilitat
+   guanya. La inclinació la posa l'adhesiu que hi ha enganxat a sobre.
+   ========================================================================== */
+.zona-cercador{margin-top:calc(var(--e5) * -1);position:relative;z-index:2}
+.cercador{position:relative;max-width:760px}
+.cercador__adhesiu{position:absolute;top:calc(var(--e3) * -1);right:var(--e3);z-index:3}
+.cercador__etiqueta{display:block;margin-bottom:var(--e1)}
+
+/* --- El camp -------------------------------------------------------------
+   Primitiva candidata a compartida: qualsevol pantalla amb un camp de text
+   voldrà exactament aquesta (vora de traç, ombra dura, sense ombra interior). */
+.camp-embolcall{position:relative;display:flex;align-items:center}
+.camp{
+  width:100%;font:inherit;font-family:var(--display);font-weight:800;
+  font-size:var(--mida-guia);line-height:1.2;
+  padding:15px 54px 15px 52px;
+  border:var(--gruix-vora) solid var(--ink);border-radius:var(--r-max);
+  background:var(--fons-peca);color:var(--ink);box-shadow:var(--ombra);
+  -webkit-appearance:none;appearance:none;
+}
+.camp::placeholder{color:var(--ink-suau);font-weight:700}
+.lupa{
+  position:absolute;left:17px;width:22px;height:22px;pointer-events:none;
+  color:var(--ink-suau);
+}
+.camp:focus + .lupa,.camp-embolcall:focus-within .lupa{color:var(--coral-text)}
+/* L'aspa és una icona del sprite, no un «✕» de la font del sistema: al costat
+   d'un traç de 3 px fet a mà, el glif de la fallback UI font es veu prim i
+   d'una altra família. */
+.neteja{
+  position:absolute;right:11px;width:32px;height:32px;padding:0;
+  display:grid;place-items:center;cursor:pointer;
+  background:var(--paper);color:var(--ink);border:2px solid var(--ink);
+  border-radius:var(--r-max);line-height:0;
+  transition:transform var(--t-rapid) var(--corba-seca);
+}
+.neteja:hover{transform:rotate(90deg)}
+.neteja[hidden]{display:none}
+
+.cercador__ajuda{margin:var(--e1) 0 0;padding-left:var(--e2)}
+
+/* --- Els resultats -------------------------------------------------------
+   És una .targeta --llista de base.css: la caixa, la vora i l'ombra no es
+   tornen a declarar aquí. Local només hi queda on se situa. */
+.resultats{margin-top:var(--e2)}
+.municipis{
+  list-style:none;margin:0;padding:0;max-height:min(52vh,420px);overflow-y:auto;
+  scroll-behavior:auto;overscroll-behavior:contain;
+}
+.mun{
+  display:grid;grid-template-columns:1fr auto;align-items:center;gap:var(--e1) var(--e2);
+  padding:12px var(--e3) 12px calc(var(--e3) - 6px);
+  border-left:6px solid transparent;
+  border-bottom:2px solid var(--vora);cursor:pointer;
+  transition:transform var(--t-rapid) var(--corba-seca);
+}
+.mun:last-child{border-bottom:0}
+.mun[hidden]{display:none}
+.mun__nom{font-family:var(--display);font-weight:800;font-size:var(--mida-t3);letter-spacing:-.015em;line-height:1.15}
+.mun__meta{grid-column:1;font-size:var(--mida-menut);color:var(--ink-suau)}
+.mun__estat{grid-column:2;grid-row:1 / span 2;justify-self:end}
+/* El presec no gira amb el mode fosc (és intencionat) i `color:inherit` sí:
+   el tros del nom que coincideix amb el que has escrit era justament el que
+   no es llegia. Tinta fixa, com la resta del que seu damunt d'un pastel. */
+.mun mark{background:var(--presec);color:var(--tinta-fixa);border-radius:3px;padding:0 1px;
+  box-decoration-break:clone;-webkit-box-decoration-break:clone;
+  box-shadow:inset 0 -2px 0 var(--tinta-fixa)}
+/* L'opció activa del teclat: no es diu només amb el color de fons. També
+   guanya la barra de tinta a l'esquerra i es desplaça. */
+.mun:hover{background:var(--paper)}
+.mun[aria-selected="true"]{
+  background:var(--paper);border-left-color:var(--ink);transform:translateX(3px);
+}
+
+/* --- Estats d'un municipi ------------------------------------------------
+   Forma + text, sempre. El color és el tercer senyal, mai el primer:
+   · publicat      cercle ple amb un vist
+   · en preparació cercle mig omplert
+   · radiografia   cercle buit de traç discontinu
+   Primitiva candidata a compartida: la fitxa de municipi la faran servir
+   totes les pantalles. */
+.estat{
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+  font-size:var(--mida-micro);font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  border:2px solid var(--ink);border-radius:var(--r-max);padding:4px 11px 4px 7px;
+  background:var(--fons-etiqueta,transparent);
+}
+.estat svg{width:15px;height:15px;flex:none}
+.estat--obert{--fons-etiqueta:var(--menta)}
+.estat--preparacio{--fons-etiqueta:var(--presec)}
+.estat--radiografia{--fons-etiqueta:transparent}
+/* Una píndola de pastel és paper clar als dos modes: la seva tinta és fixa.
+   (.adhesiu i .etiqueta ja ho fan des de base.css; aquí només .estat.) */
+.estat--obert,.estat--preparacio{color:var(--tinta-fixa);border-color:var(--tinta-fixa)}
+@media (max-width:479px){
+  .mun{grid-template-columns:1fr}
+  .mun__estat{grid-column:1;grid-row:auto;justify-self:start}
+}
+
+/* --- Estat buit i estat sense resultats ----------------------------------- */
+.panell{padding:var(--e3);border-top:2px solid var(--vora)}
+.panell[hidden]{display:none}
+.suggeriments{display:flex;flex-wrap:wrap;gap:var(--e1);margin:var(--e2) 0 0;padding:0;list-style:none}
+.res__cos{display:flex;gap:var(--e2);align-items:flex-start}
+.res__cos [data-icona]{--mida:74px}
+.res__sortides{display:flex;flex-wrap:wrap;gap:var(--e2);margin-top:var(--e2)}
+
+/* --- La porta: què passa quan tries un municipi --------------------------- */
+.porta{margin-top:var(--e3)}
+.porta[hidden]{display:none}
+.porta__cap{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin-bottom:var(--e1)}
+.porta__nom{font-size:var(--mida-t2)}
+.porta__accions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin-top:var(--e3)}
+
+/* --- Llegenda dels estats ------------------------------------------------- */
+.llegenda{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e2)}
+@media (min-width:720px){.llegenda{grid-template-columns:repeat(3,1fr)}}
+.llegenda p{margin:6px 0 0;font-size:var(--mida-menut);color:var(--ink-suau);max-width:34ch}
+
+/* ==========================================================================
+   TIRA DELS 16 TEMES
+   Els ulls segueixen el cursor. Discret: 1,8 unitats de SVG sobre 48, i només
+   quan el punter és a menys de 260 px. Ho mou el JS amb una interpolació que
+   s'atura sola; el CSS només llegeix --ullx / --ully.
+   ========================================================================== */
+.tira{
+  list-style:none;margin:var(--e4) 0 0;padding:0;
+  display:grid;gap:var(--e3) var(--e2);
+  /* Setze temes: quatre files de quatre al mòbil, dues de vuit a partir de
+     tauleta. Amb auto-fit la segona fila quedava esquerdada, i una graella
+     desquadrada aquí no diu res: són setze i es veu que són setze. */
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+@media (min-width:720px){ .tira{grid-template-columns:repeat(8,minmax(0,1fr))} }
+.vei{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.vei__nom{font-size:var(--mida-micro);font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+/* Quan el JS pren el control de les pupil·les, l'animació `mirar` de base.css
+   s'apaga: si no, les dues es barallarien pel mateix transform. */
+.tira--mira .pupilles{animation:none;transform:translate(var(--ullx,0px),var(--ully,0px))}
+
+/* ==========================================================================
+   COM FUNCIONA
+   ========================================================================== */
+.passos{display:grid;gap:var(--e3);margin-top:var(--e4)}
+@media (min-width:720px){.passos{grid-template-columns:repeat(3,1fr)}}
+.pas__num{font-size:var(--mida-t1);line-height:1;display:block;color:var(--coral-text)}
+.pas h3{margin:var(--e1) 0 6px}
+.pas p{margin:0;color:var(--ink-suau)}
+
+/* ==========================================================================
+   RADIOGRAFIA D'EXEMPLE (Sabadell, municipals 2023)
+   Els colors de partit només viuen aquí dins, mai a la interfície.
+   ========================================================================== */
+.ple{display:grid;gap:var(--e3);margin-top:var(--e3)}
+@media (min-width:720px){.ple{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);align-items:start}}
+/* 27 regidors en tres files de nou: la forma del ple s'ha de poder comptar
+   d'una ullada, no endevinar. */
+.escons{display:grid;grid-template-columns:repeat(9,19px);gap:5px;margin:0;padding:0;list-style:none;width:max-content}
+.esco{
+  width:19px;height:19px;border:2px solid var(--dada-vora);border-radius:4px;
+  background:var(--dada,var(--dada-altres));
+}
+.partits{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2)}
+.partit{display:grid;grid-template-columns:1fr auto;gap:4px var(--e2);align-items:baseline}
+.partit .etiqueta{justify-self:start}
+.partit .barra{grid-column:1 / -1}
+/* L'escalonament de les barres el fa moviment.escalona() escrivint --retard;
+   aqui nomes es llegeix. Cap transition-delay escrit a ma. */
+.partit .barra__omplert{transition-delay:var(--retard,0s)}
+.partit__xifra{font-size:var(--mida-menut);font-variant-numeric:tabular-nums;color:var(--ink-suau);white-space:nowrap}
+
+/* ==========================================================================
+   PEU
+   ========================================================================== */
+.peu{border-top:var(--gruix-vora) solid var(--ink);margin-top:var(--e6);padding-block:var(--e4)}
+.peu__graella{display:grid;gap:var(--e3)}
+@media (min-width:720px){.peu__graella{grid-template-columns:1.3fr 1fr 1fr}}
+.peu nav ul{list-style:none;margin:var(--e1) 0 0;padding:0;display:grid;gap:7px;font-size:var(--mida-menut);font-weight:700}
+.peu h4{text-transform:uppercase;letter-spacing:.12em;font-size:var(--mida-micro);color:var(--ink-suau)}
+
+/* ==========================================================================
+   MOVIMENT REDUÏT
+   base.css ja apaga les animacions. Aquí només hi ha el que és d'aquesta
+   pantalla: la mirada al cursor queda centrada i la mascota no cau.
+   ========================================================================== */
+@media (prefers-reduced-motion:reduce){
+  .tira--mira .pupilles{transform:none}
+  .portada__mascota{animation:none!important;opacity:1}
+  .neteja:hover{transform:none}
+  .mun[aria-selected="true"]{transform:none;outline:2px solid var(--ink);outline-offset:-2px}
+}
+</style>
+</head>
+<body>
+
+<a class="salta" href="#contingut">Vés al contingut</a>
+
+<header class="capcalera">
+  <a class="marca" href="portada.html" aria-label="quivoto, a l'inici">quiv<svg class="marca__o" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/><path d="M34 8 l6 6" stroke="#FFD8B8" stroke-width="6" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="24" r="3.6" fill="#FFFFFF"/><circle cx="29" cy="24" r="3.6" fill="#FFFFFF"/><g class="pupilles"><circle cx="19" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/><rect x="25" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/></g><path class="boca" d="M20 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg>to</a>
+  <nav class="nav-cap" aria-label="Principal">
+    <a href="#com-funciona">Com funciona</a>
+    <a href="metodologia.html">Metodologia</a>
+    <span class="idiomes">
+      <span aria-current="true" lang="ca">CA</span>
+      <a href="https://quienvoto.es" hreflang="es" lang="es">ES</a>
+    </span>
+  </nav>
+</header>
+
+<main id="contingut">
+
+  <!-- ====================================================================
+       1. PORTADA
+       ==================================================================== -->
+  <section class="banda banda--menta portada">
+    <div class="embolcall">
+      <div class="graella">
+        <div class="marge"><p class="num-seccio">01</p></div>
+        <div class="t7">
+          <p class="micro" data-entrada>Municipals · 23 de maig de 2027</p>
+          <h1 class="portada__titol" data-entrada>Qui pensa<br>com tu <em>al teu poble</em>?</h1>
+          <p class="guia portada__entradeta" data-entrada>
+            Vint-i-cinc afirmacions sobre el teu municipi. Al final saps quins partits
+            i quins candidats coincideixen amb tu — i per què ho diem: què han votat al
+            ple, què deia el programa, què han dit a la premsa.
+          </p>
+          <p class="portada__firma" data-entrada>
+            <span class="adhesiu adhesiu--lavanda" style="--gir:-2.5deg">947 municipis, un per un</span>
+            <span class="adhesiu" style="--gir:2deg">Sense cap partit al darrere</span>
+          </p>
+        </div>
+        <span class="portada__mascota t4" data-icona="papereta-felic" data-base="mascota"
+              data-etiqueta="La papereta, la mascota de quivoto"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       2. EL CERCADOR
+       La llista de municipis és HTML, no JavaScript: sense JS es veu sencera
+       i es pot recórrer; amb JS, el mateix HTML es filtra.
+       ==================================================================== -->
+  <section class="zona-cercador" aria-labelledby="tit-cercador">
+    <div class="embolcall">
+      <div class="graella">
+        <div class="marge"><p class="num-seccio">02</p></div>
+        <div class="t8">
+          <div class="cercador">
+            <span class="adhesiu adhesiu--coral cercador__adhesiu" style="--gir:4deg">Comença aquí</span>
+
+            <h2 id="tit-cercador" class="nomes-lectors">Tria el teu municipi</h2>
+            <label class="micro cercador__etiqueta" for="camp-municipi">Escriu el teu municipi</label>
+
+            <div class="camp-embolcall">
+              <input class="camp" id="camp-municipi" type="text" name="municipi"
+                     placeholder="Sabadell, l'Hospitalet, Móra d'Ebre…"
+                     autocomplete="off" autocapitalize="off" spellcheck="false"
+                     role="combobox" aria-expanded="true" aria-controls="llista-municipis"
+                     aria-autocomplete="list" aria-describedby="ajuda-cercador">
+              <svg class="lupa" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+                   stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+                <circle cx="10.5" cy="10.5" r="7"/><path d="M15.8 15.8 L21 21"/>
+              </svg>
+              <button class="neteja" id="neteja" type="button" hidden aria-label="Esborra el que has escrit"><span data-icona="marca-no" style="--mida:15px"></span></button>
+            </div>
+
+            <p class="peu-nota cercador__ajuda" id="ajuda-cercador">
+              947 municipis. Els accents i els articles tant se val: «lhospitalet» o «mora debre» també hi arriben.
+              Fletxes per moure’t, Enter per entrar.
+            </p>
+
+            <div class="targeta targeta--llista resultats">
+              <ul class="municipis" id="llista-municipis" role="listbox" aria-label="Municipis">
+<!-- MUNICIPIS. Mostra de 49 dels 947, per al prototip. Població del padró
+     (arrodonida als municipis petits). L'estat és inventat: encara no hi ha
+     cap municipi obert de debò. -->
+<li class="mun" role="option" id="mun-0" aria-selected="false" data-nom="Barcelona" data-comarca="el Barcelonès" data-hab="1660122" data-estat="obert"><span class="mun__nom">Barcelona</span><span class="mun__meta">el Barcelonès · 1.660.122 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-1" aria-selected="false" data-nom="l’Hospitalet de Llobregat" data-comarca="el Barcelonès" data-hab="265444" data-estat="preparacio"><span class="mun__nom">l’Hospitalet de Llobregat</span><span class="mun__meta">el Barcelonès · 265.444 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-2" aria-selected="false" data-nom="Terrassa" data-comarca="el Vallès Occidental" data-hab="231905" data-estat="obert"><span class="mun__nom">Terrassa</span><span class="mun__meta">el Vallès Occidental · 231.905 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-3" aria-selected="false" data-nom="Badalona" data-comarca="el Barcelonès" data-hab="229780" data-estat="preparacio"><span class="mun__nom">Badalona</span><span class="mun__meta">el Barcelonès · 229.780 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-4" aria-selected="false" data-nom="Sabadell" data-comarca="el Vallès Occidental" data-hab="225368" data-estat="obert"><span class="mun__nom">Sabadell</span><span class="mun__meta">el Vallès Occidental · 225.368 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-5" aria-selected="false" data-nom="Lleida" data-comarca="el Segrià" data-hab="141400" data-estat="obert"><span class="mun__nom">Lleida</span><span class="mun__meta">el Segrià · 141.400 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-6" aria-selected="false" data-nom="Tarragona" data-comarca="el Tarragonès" data-hab="137489" data-estat="obert"><span class="mun__nom">Tarragona</span><span class="mun__meta">el Tarragonès · 137.489 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-7" aria-selected="false" data-nom="Mataró" data-comarca="el Maresme" data-hab="130075" data-estat="obert"><span class="mun__nom">Mataró</span><span class="mun__meta">el Maresme · 130.075 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-8" aria-selected="false" data-nom="Santa Coloma de Gramenet" data-comarca="el Barcelonès" data-hab="119215" data-estat="preparacio"><span class="mun__nom">Santa Coloma de Gramenet</span><span class="mun__meta">el Barcelonès · 119.215 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-9" aria-selected="false" data-nom="Reus" data-comarca="el Baix Camp" data-hab="108212" data-estat="obert"><span class="mun__nom">Reus</span><span class="mun__meta">el Baix Camp · 108.212 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-10" aria-selected="false" data-nom="Girona" data-comarca="el Gironès" data-hab="104519" data-estat="obert"><span class="mun__nom">Girona</span><span class="mun__meta">el Gironès · 104.519 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-11" aria-selected="false" data-nom="Sant Cugat del Vallès" data-comarca="el Vallès Occidental" data-hab="96405" data-estat="preparacio"><span class="mun__nom">Sant Cugat del Vallès</span><span class="mun__meta">el Vallès Occidental · 96.405 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-12" aria-selected="false" data-nom="Cornellà de Llobregat" data-comarca="el Baix Llobregat" data-hab="89936" data-estat="preparacio"><span class="mun__nom">Cornellà de Llobregat</span><span class="mun__meta">el Baix Llobregat · 89.936 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-13" aria-selected="false" data-nom="Sant Boi de Llobregat" data-comarca="el Baix Llobregat" data-hab="83408" data-estat="preparacio"><span class="mun__nom">Sant Boi de Llobregat</span><span class="mun__meta">el Baix Llobregat · 83.408 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-14" aria-selected="false" data-nom="Rubí" data-comarca="el Vallès Occidental" data-hab="79674" data-estat="preparacio"><span class="mun__nom">Rubí</span><span class="mun__meta">el Vallès Occidental · 79.674 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-15" aria-selected="false" data-nom="Manresa" data-comarca="el Bages" data-hab="78878" data-estat="obert"><span class="mun__nom">Manresa</span><span class="mun__meta">el Bages · 78.878 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-16" aria-selected="false" data-nom="Vilanova i la Geltrú" data-comarca="el Garraf" data-hab="68140" data-estat="preparacio"><span class="mun__nom">Vilanova i la Geltrú</span><span class="mun__meta">el Garraf · 68.140 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-17" aria-selected="false" data-nom="Castelldefels" data-comarca="el Baix Llobregat" data-hab="68019" data-estat="preparacio"><span class="mun__nom">Castelldefels</span><span class="mun__meta">el Baix Llobregat · 68.019 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-18" aria-selected="false" data-nom="Viladecans" data-comarca="el Baix Llobregat" data-hab="67605" data-estat="preparacio"><span class="mun__nom">Viladecans</span><span class="mun__meta">el Baix Llobregat · 67.605 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-19" aria-selected="false" data-nom="el Prat de Llobregat" data-comarca="el Baix Llobregat" data-hab="65470" data-estat="preparacio"><span class="mun__nom">el Prat de Llobregat</span><span class="mun__meta">el Baix Llobregat · 65.470 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-20" aria-selected="false" data-nom="Granollers" data-comarca="el Vallès Oriental" data-hab="63700" data-estat="obert"><span class="mun__nom">Granollers</span><span class="mun__meta">el Vallès Oriental · 63.700 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-21" aria-selected="false" data-nom="Cerdanyola del Vallès" data-comarca="el Vallès Occidental" data-hab="58747" data-estat="preparacio"><span class="mun__nom">Cerdanyola del Vallès</span><span class="mun__meta">el Vallès Occidental · 58.747 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-22" aria-selected="false" data-nom="Mollet del Vallès" data-comarca="el Vallès Oriental" data-hab="51750" data-estat="preparacio"><span class="mun__nom">Mollet del Vallès</span><span class="mun__meta">el Vallès Oriental · 51.750 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-23" aria-selected="false" data-nom="Vic" data-comarca="Osona" data-hab="48500" data-estat="obert"><span class="mun__nom">Vic</span><span class="mun__meta">Osona · 48.500 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-24" aria-selected="false" data-nom="Figueres" data-comarca="l’Alt Empordà" data-hab="48400" data-estat="preparacio"><span class="mun__nom">Figueres</span><span class="mun__meta">l’Alt Empordà · 48.400 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-25" aria-selected="false" data-nom="Gavà" data-comarca="el Baix Llobregat" data-hab="47200" data-estat="preparacio"><span class="mun__nom">Gavà</span><span class="mun__meta">el Baix Llobregat · 47.200 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-26" aria-selected="false" data-nom="Esplugues de Llobregat" data-comarca="el Baix Llobregat" data-hab="47000" data-estat="preparacio"><span class="mun__nom">Esplugues de Llobregat</span><span class="mun__meta">el Baix Llobregat · 47.000 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-27" aria-selected="false" data-nom="Sant Feliu de Llobregat" data-comarca="el Baix Llobregat" data-hab="45000" data-estat="radiografia"><span class="mun__nom">Sant Feliu de Llobregat</span><span class="mun__meta">el Baix Llobregat · 45.000 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-28" aria-selected="false" data-nom="Igualada" data-comarca="l’Anoia" data-hab="41500" data-estat="radiografia"><span class="mun__nom">Igualada</span><span class="mun__meta">l’Anoia · 41.500 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-29" aria-selected="false" data-nom="Vilafranca del Penedès" data-comarca="l’Alt Penedès" data-hab="41200" data-estat="radiografia"><span class="mun__nom">Vilafranca del Penedès</span><span class="mun__meta">l’Alt Penedès · 41.200 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-30" aria-selected="false" data-nom="Lloret de Mar" data-comarca="la Selva" data-hab="41000" data-estat="radiografia"><span class="mun__nom">Lloret de Mar</span><span class="mun__meta">la Selva · 41.000 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-31" aria-selected="false" data-nom="Blanes" data-comarca="la Selva" data-hab="40100" data-estat="radiografia"><span class="mun__nom">Blanes</span><span class="mun__meta">la Selva · 40.100 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-32" aria-selected="false" data-nom="Ripollet" data-comarca="el Vallès Occidental" data-hab="39000" data-estat="radiografia"><span class="mun__nom">Ripollet</span><span class="mun__meta">el Vallès Occidental · 39.000 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-33" aria-selected="false" data-nom="Sant Adrià de Besòs" data-comarca="el Barcelonès" data-hab="37000" data-estat="radiografia"><span class="mun__nom">Sant Adrià de Besòs</span><span class="mun__meta">el Barcelonès · 37.000 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-34" aria-selected="false" data-nom="Olot" data-comarca="la Garrotxa" data-hab="36500" data-estat="radiografia"><span class="mun__nom">Olot</span><span class="mun__meta">la Garrotxa · 36.500 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-35" aria-selected="false" data-nom="Salt" data-comarca="el Gironès" data-hab="33000" data-estat="radiografia"><span class="mun__nom">Salt</span><span class="mun__meta">el Gironès · 33.000 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-36" aria-selected="false" data-nom="Sant Pere de Ribes" data-comarca="el Garraf" data-hab="31000" data-estat="radiografia"><span class="mun__nom">Sant Pere de Ribes</span><span class="mun__meta">el Garraf · 31.000 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-37" aria-selected="false" data-nom="Sitges" data-comarca="el Garraf" data-hab="30000" data-estat="radiografia"><span class="mun__nom">Sitges</span><span class="mun__meta">el Garraf · 30.000 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-38" aria-selected="false" data-nom="Valls" data-comarca="l’Alt Camp" data-hab="25500" data-estat="radiografia"><span class="mun__nom">Valls</span><span class="mun__meta">l’Alt Camp · 25.500 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-39" aria-selected="false" data-nom="Amposta" data-comarca="el Montsià" data-hab="21000" data-estat="radiografia"><span class="mun__nom">Amposta</span><span class="mun__meta">el Montsià · 21.000 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-40" aria-selected="false" data-nom="Manlleu" data-comarca="Osona" data-hab="21000" data-estat="radiografia"><span class="mun__nom">Manlleu</span><span class="mun__meta">Osona · 21.000 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-41" aria-selected="false" data-nom="Roses" data-comarca="l’Alt Empordà" data-hab="20500" data-estat="radiografia"><span class="mun__nom">Roses</span><span class="mun__meta">l’Alt Empordà · 20.500 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-42" aria-selected="false" data-nom="Berga" data-comarca="el Berguedà" data-hab="16700" data-estat="radiografia"><span class="mun__nom">Berga</span><span class="mun__meta">el Berguedà · 16.700 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-43" aria-selected="false" data-nom="la Seu d’Urgell" data-comarca="l’Alt Urgell" data-hab="12400" data-estat="radiografia"><span class="mun__nom">la Seu d’Urgell</span><span class="mun__meta">l’Alt Urgell · 12.400 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-44" aria-selected="false" data-nom="Puigcerdà" data-comarca="la Cerdanya" data-hab="9700" data-estat="radiografia"><span class="mun__nom">Puigcerdà</span><span class="mun__meta">la Cerdanya · 9.700 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-45" aria-selected="false" data-nom="Solsona" data-comarca="el Solsonès" data-hab="9200" data-estat="radiografia"><span class="mun__nom">Solsona</span><span class="mun__meta">el Solsonès · 9.200 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-46" aria-selected="false" data-nom="l’Ametlla de Mar" data-comarca="el Baix Ebre" data-hab="7700" data-estat="radiografia"><span class="mun__nom">l’Ametlla de Mar</span><span class="mun__meta">el Baix Ebre · 7.700 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-47" aria-selected="false" data-nom="Tremp" data-comarca="el Pallars Jussà" data-hab="6300" data-estat="radiografia"><span class="mun__nom">Tremp</span><span class="mun__meta">el Pallars Jussà · 6.300 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-48" aria-selected="false" data-nom="les Borges Blanques" data-comarca="les Garrigues" data-hab="6100" data-estat="radiografia"><span class="mun__nom">les Borges Blanques</span><span class="mun__meta">les Garrigues · 6.100 habitants</span><span class="mun__estat"></span></li>
+<li class="mun" role="option" id="mun-49" aria-selected="false" data-nom="Móra d’Ebre" data-comarca="la Ribera d’Ebre" data-hab="5700" data-estat="radiografia"><span class="mun__nom">Móra d’Ebre</span><span class="mun__meta">la Ribera d’Ebre · 5.700 habitants</span><span class="mun__estat"></span></li>
+              </ul>
+
+              <!-- Estat buit: no és una llista buida, és una porta oberta. -->
+              <div class="panell" id="panell-buit">
+                <p class="micro" style="margin:0">Els més buscats</p>
+                <ul class="suggeriments">
+                  <li><button class="boto boto--fantasma boto--menut" type="button" data-suggeriment="Barcelona">Barcelona</button></li>
+                  <li><button class="boto boto--fantasma boto--menut" type="button" data-suggeriment="Sabadell">Sabadell</button></li>
+                  <li><button class="boto boto--fantasma boto--menut" type="button" data-suggeriment="Terrassa">Terrassa</button></li>
+                  <li><button class="boto boto--fantasma boto--menut" type="button" data-suggeriment="Girona">Girona</button></li>
+                  <li><button class="boto boto--fantasma boto--menut" type="button" data-suggeriment="Lleida">Lleida</button></li>
+                  <li><button class="boto boto--fantasma boto--menut" type="button" data-suggeriment="Tarragona">Tarragona</button></li>
+                </ul>
+                <p class="peu-nota" style="margin:var(--e2) 0 0">
+                  També pots buscar per comarca: escriu «Bages» i surten tots els del Bages.
+                </p>
+              </div>
+
+              <!-- Estat sense resultats: sempre amb una sortida. -->
+              <div class="panell" id="panell-buida" hidden>
+                <div class="res__cos">
+                  <span data-icona="papereta-pregunta" data-base="mascota"></span>
+                  <div>
+                    <h3>Aquí no hi tenim res amb aquest nom.</h3>
+                    <p class="suau" style="margin:6px 0 0">
+                      Al prototip només hi ha 50 municipis d’exemple. Comprova com s’escriu,
+                      prova per comarca, o digue’ns quin et falta i el posem a la cua.
+                    </p>
+                    <div class="res__sortides">
+                      <button class="boto boto--fantasma boto--menut" id="torna" type="button">Esborra i torna a començar</button>
+                      <a class="boto boto--menut" href="mailto:hola@quivoto.cat?subject=Em%20falta%20un%20municipi">Demana el teu municipi</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="nomes-lectors" role="status" aria-live="polite" id="recompte"></p>
+
+            <!-- La porta: què pots fer amb el municipi que has triat. -->
+            <div class="targeta porta" id="porta" hidden tabindex="-1" style="--ombra-color:var(--lavanda)">
+              <div class="porta__cap">
+                <h3 class="porta__nom" id="porta-nom">—</h3>
+                <span id="porta-estat"></span>
+              </div>
+              <p class="suau" id="porta-meta" style="margin:0"></p>
+              <p id="porta-text" style="margin:var(--e2) 0 0"></p>
+              <div class="porta__accions" id="porta-accions"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Llegenda dels tres estats: forma, text i, en últim lloc, color. -->
+        <div class="t4">
+          <h2 style="font-size:var(--mida-t3)">Què vol dir cada estat</h2>
+          <ul class="llegenda">
+            <li>
+              <span class="estat estat--obert" data-glif="obert">Brúixola oberta</span>
+              <p>Les 25 afirmacions són a punt i el ple està buidat. Pots respondre ara.</p>
+            </li>
+            <li>
+              <span class="estat estat--preparacio" data-glif="preparacio">En preparació</span>
+              <p>Estem buidant les actes i els programes. Et podem avisar quan s’obri.</p>
+            </li>
+            <li>
+              <span class="estat estat--radiografia" data-glif="radiografia">Només radiografia</span>
+              <p>Qui hi ha al ple i què hi ha votat. Encara sense brúixola.</p>
+            </li>
+          </ul>
+          <p class="peu-nota">
+            Mostra de 50 municipis dels 947 per al prototip. La població és la del padró;
+            els estats són d’exemple.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       3. ELS 16 TEMES — la tira que et mira
+       ==================================================================== -->
+  <section class="banda banda--tinta" style="margin-top:var(--e6)" aria-labelledby="tit-temes">
+    <div class="embolcall">
+      <div class="graella">
+        <div class="marge"><p class="num-seccio">03</p></div>
+        <div class="t8">
+          <p class="micro" data-entrada>Del que es decideix a l’ajuntament</p>
+          <h2 id="tit-temes" data-entrada>Setze temes, i tots són del carrer de sota casa.</h2>
+        </div>
+        <p class="t3 guia" data-entrada style="margin:0">
+          Habitatge, autobusos, contenidors, terrasses, escoles bressol. No hi ha
+          política exterior: hi ha el teu barri.
+        </p>
+      </div>
+      <ul class="tira" id="tira">
+        <li class="vei"><span data-icona="vei-habitatge" data-classe="ico--vei"></span><span class="vei__nom">Habitatge</span></li>
+        <li class="vei"><span data-icona="vei-mobilitat" data-classe="ico--vei"></span><span class="vei__nom">Mobilitat</span></li>
+        <li class="vei"><span data-icona="vei-urbanisme" data-classe="ico--vei"></span><span class="vei__nom">Urbanisme</span></li>
+        <li class="vei"><span data-icona="vei-seguretat" data-classe="ico--vei"></span><span class="vei__nom">Seguretat</span></li>
+        <li class="vei"><span data-icona="vei-fiscalitat" data-classe="ico--vei"></span><span class="vei__nom">Fiscalitat</span></li>
+        <li class="vei"><span data-icona="vei-medi-ambient" data-classe="ico--vei"></span><span class="vei__nom">Medi ambient</span></li>
+        <li class="vei"><span data-icona="vei-cultura" data-classe="ico--vei"></span><span class="vei__nom">Cultura</span></li>
+        <li class="vei"><span data-icona="vei-educacio" data-classe="ico--vei"></span><span class="vei__nom">Educació</span></li>
+        <li class="vei"><span data-icona="vei-serveis-socials" data-classe="ico--vei"></span><span class="vei__nom">Serveis socials</span></li>
+        <li class="vei"><span data-icona="vei-comerc" data-classe="ico--vei"></span><span class="vei__nom">Comerç</span></li>
+        <li class="vei"><span data-icona="vei-participacio" data-classe="ico--vei"></span><span class="vei__nom">Participació</span></li>
+        <li class="vei"><span data-icona="vei-llengua" data-classe="ico--vei"></span><span class="vei__nom">Llengua</span></li>
+        <li class="vei"><span data-icona="vei-esports" data-classe="ico--vei"></span><span class="vei__nom">Esports</span></li>
+        <li class="vei"><span data-icona="vei-turisme" data-classe="ico--vei"></span><span class="vei__nom">Turisme</span></li>
+        <li class="vei"><span data-icona="vei-neteja" data-classe="ico--vei"></span><span class="vei__nom">Neteja</span></li>
+        <li class="vei"><span data-icona="vei-el-ple" data-classe="ico--vei"></span><span class="vei__nom">El ple</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       4. COM FUNCIONA
+       ==================================================================== -->
+  <section id="com-funciona" style="padding-block:var(--e6)" aria-labelledby="tit-com">
+    <div class="embolcall">
+      <div class="graella">
+        <div class="marge"><p class="num-seccio">04</p></div>
+        <div class="t8">
+          <p class="micro" data-entrada>Com funciona</p>
+          <h2 id="tit-com" data-entrada>Tres passos i no et demanem el nom.</h2>
+        </div>
+      </div>
+      <div class="passos">
+        <div class="targeta" data-entrada>
+          <span class="pas__num xifra-num">1</span>
+          <h3>Tries el municipi</h3>
+          <p>Les afirmacions són les del teu ajuntament, no les del Congrés.</p>
+        </div>
+        <div class="targeta" data-entrada style="--ombra-color:var(--menta)">
+          <span class="pas__num xifra-num">2</span>
+          <h3>Respons 25 afirmacions</h3>
+          <p>Cinc graons, de gens a molt. Pots marcar el que t’importa més i saltar el que no.</p>
+        </div>
+        <div class="targeta" data-entrada style="--ombra-color:var(--lavanda)">
+          <span class="pas__num xifra-num">3</span>
+          <h3>Veus qui coincideix</h3>
+          <p>I d’on ho hem tret: el vot al ple, la pàgina del programa, la declaració.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       5. UN TAST: la radiografia de Sabadell (dades reals de 2023)
+       ==================================================================== -->
+  <section class="banda banda--lavanda" aria-labelledby="tit-tast">
+    <div class="embolcall">
+      <div class="graella">
+        <div class="marge"><p class="num-seccio">05</p></div>
+        <div class="t8">
+          <p class="micro" data-entrada>Un tast de radiografia</p>
+          <h2 id="tit-tast" data-entrada>Sabadell, tal com va quedar el ple.</h2>
+          <p class="guia" data-entrada style="margin-top:var(--e2)">
+            Municipals del 28 de maig de 2023. Ple de 27 regidors; alcaldessa,
+            Marta Farrés (PSC). Padró de <b class="xifra-num" data-compta="225368">225.368</b> habitants.
+          </p>
+        </div>
+      </div>
+
+      <div class="targeta targeta--gran ple" data-entrada>
+        <div>
+          <h3 style="margin-bottom:var(--e2)">27 regidors</h3>
+          <ul class="escons" id="escons" aria-hidden="true"></ul>
+          <p class="peu-nota" style="margin-top:var(--e2)">
+            Un quadre per regidor, en ordre de vots. El color és la marca de la dada;
+            la sigla i la xifra sempre van escrites al costat.
+          </p>
+        </div>
+        <ul class="partits" id="partits"></ul>
+      </div>
+
+      <p class="peu-nota" style="margin-top:var(--e3)">
+        Font: resultats oficials de les eleccions municipals de 2023 i padró municipal.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="peu">
+  <div class="embolcall peu__graella">
+    <div>
+      <span class="marca" role="img" aria-label="quivoto">quiv<svg class="marca__o" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/><path d="M34 8 l6 6" stroke="#FFD8B8" stroke-width="6" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="24" r="3.6" fill="#FFFFFF"/><circle cx="29" cy="24" r="3.6" fill="#FFFFFF"/><g class="pupilles"><circle cx="19" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/><rect x="25" y="19.8" width="8" height="8.4" rx="3.4" fill="#FFFFFF"/></g><path class="boca" d="M20 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg>to</span>
+      <p class="peu-nota" style="margin-top:var(--e1);max-width:34ch">
+        Brúixola electoral per a les municipals del 23 de maig de 2027.
+        Projecte independent: no estem vinculats a cap partit ni a cap administració.
+      </p>
+    </div>
+    <nav aria-label="Documentació">
+      <h4>Com ho fem</h4>
+      <ul>
+        <li><a href="metodologia.html">Metodologia</a></li>
+        <li><a href="metodologia.html#dades">D’on surten les dades</a></li>
+        <li><a href="metodologia.html#calcul">Com es calcula la coincidència</a></li>
+      </ul>
+    </nav>
+    <nav aria-label="Legal">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="../../web/public/privadesa.html">Privadesa</a></li>
+        <li><a href="../../web/public/avis-legal.html">Avís legal</a></li>
+        <li><a href="mailto:hola@quivoto.cat">hola@quivoto.cat</a></li>
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+<!-- Sprite de quivoto, retallat als símbols que aquesta pàgina fa servir.
+     Generat per tools/build_sprite.py des de tools/icons_lib.py i retallat
+     per tools/sprite_pagina.py. NO s'edita a mà.
+     Va al FINAL del <body>: abans era el primer fill i el parser havia de
+     mastegar-lo sencer abans d'arribar a cap píxel visible. -->
+<svg xmlns="http://www.w3.org/2000/svg" class="sprite-quivoto" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+<defs>
+<symbol id="vei-habitatge" viewBox="0 0 48 48"><title>Habitatge</title><path d="M8 22 L24 8 L40 22 V40 H8 Z" fill="#E2735A"/><path d="M8 22 L24 8 L40 22" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linejoin="round"/><rect x="20" y="28" width="8" height="12" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="33" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="33" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="33.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="33.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="28.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="28.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 40.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-mobilitat" viewBox="0 0 48 48"><title>Mobilitat</title><rect x="6" y="12" width="36" height="24" rx="6" fill="#BFE8D2"/><rect x="10" y="17" width="9" height="8" rx="2" fill="#1E1B2E"/><rect x="22" y="17" width="9" height="8" rx="2" fill="#1E1B2E"/><rect x="34" y="17" width="4" height="8" rx="2" fill="#1E1B2E"/><circle cx="14" cy="39" r="4" fill="#1E1B2E"/><circle cx="34" cy="39" r="4" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="30" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="30" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="30.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="30.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="25.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="25.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 37.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-urbanisme" viewBox="0 0 48 48"><title>Urbanisme</title><rect x="6" y="26" width="16" height="16" fill="#C9C4F2"/><path d="M36 42 V8 M36 8 H10 M10 8 V16 M40 8 H44" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 16 L10 22 L22 22 Z" fill="#1E1B2E"/><g class="cara"><circle cx="10" cy="34" r="3.6" fill="#FBF7EE"/><circle cx="18" cy="34" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="10" cy="34.4" r="1.9" fill="#1E1B2E"/><circle cx="18" cy="34.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="6" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="14" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M10 41.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-seguretat" viewBox="0 0 48 48"><title>Seguretat</title><path d="M24 5 L40 11 V24 C40 34 32 40 24 43 C16 40 8 34 8 24 V11 Z" fill="#FFD8B8"/><g class="cara"><circle cx="19" cy="21" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="21" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="21.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="21.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="16.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="16.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 28.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-fiscalitat" viewBox="0 0 48 48"><title>Fiscalitat</title><circle cx="24" cy="24" r="17" fill="#BFE8D2"/><path d="M30 16 A9 9 0 1 0 30 32 M14 21 H27 M14 27 H27" fill="none" stroke="#1E1B2E" stroke-width="3.5" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="14" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="14" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="14.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="14.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="9.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="9.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 21.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-medi-ambient" viewBox="0 0 48 48"><title>Medi ambient</title><path d="M40 8 C20 8 8 20 10 40 C30 40 42 28 40 8 Z" fill="#BFE8D2"/><g class="cara"><circle cx="21" cy="24" r="3.6" fill="#FBF7EE"/><circle cx="31" cy="24" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="21" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="31" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="17" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="27" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M22 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-cultura" viewBox="0 0 48 48"><title>Cultura</title><path d="M6 14 H42 V22 A4 4 0 0 0 42 30 V38 H6 V30 A4 4 0 0 0 6 22 Z" fill="#C9C4F2"/><path d="M30 19 L32.2 24 L37.5 24.4 L33.4 27.8 L34.7 33 L30 30.2 L25.3 33 L26.6 27.8 L22.5 24.4 L27.8 24 Z" fill="#1E1B2E"/><g class="cara"><circle cx="13" cy="26" r="3.6" fill="#FBF7EE"/><circle cx="23" cy="26" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="13" cy="26.4" r="1.9" fill="#1E1B2E"/><circle cx="23" cy="26.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="9" y="21.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="19" y="21.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M14 33.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-educacio" viewBox="0 0 48 48"><title>Educació</title><path d="M6 12 H22 A4 4 0 0 1 24 14 A4 4 0 0 1 26 12 H42 V36 H26 A4 4 0 0 0 24 38 A4 4 0 0 0 22 36 H6 Z" fill="#FFD8B8"/><path d="M24 14 V38 M11 19 H19 M11 25 H19 M29 19 H37 M29 25 H37" fill="none" stroke="#1E1B2E" stroke-width="2.5" stroke-linecap="round"/><g class="cara"><circle cx="18" cy="31" r="3.6" fill="#FBF7EE"/><circle cx="30" cy="31" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="18" cy="31.4" r="1.9" fill="#1E1B2E"/><circle cx="30" cy="31.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="14" y="26.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="26" y="26.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 38.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-serveis-socials" viewBox="0 0 48 48"><title>Serveis socials</title><path d="M24 42 C10 32 4 24 6 16 C8 8 18 8 24 16 C30 8 40 8 42 16 C44 24 38 32 24 42 Z" fill="#E2735A"/><g class="cara"><circle cx="19" cy="17" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="17" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="17.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="17.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="12.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="12.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 24.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-comerc" viewBox="0 0 48 48"><title>Comerç</title><rect x="8" y="20" width="32" height="22" fill="#FFD8B8"/><path d="M6 12 H42 L44 20 H4 Z" fill="#FFD8B8"/><path d="M4 20 H44" stroke="#1E1B2E" stroke-width="3"/><path d="M12 12 V20 M20 12 V20 M28 12 V20 M36 12 V20" stroke="#1E1B2E" stroke-width="2.5"/><rect x="20" y="30" width="8" height="12" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="27" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="27" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="27.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="27.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="22.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="22.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 34.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-participacio" viewBox="0 0 48 48"><title>Participació</title><rect x="10.2" y="23" width="5.6" height="13" rx="2.8" fill="#C9C4F2" transform="rotate(-32 13 29.5)"/><rect x="17.4" y="14" width="5.8" height="15" rx="2.9" fill="#C9C4F2"/><rect x="24.6" y="10" width="5.8" height="19" rx="2.9" fill="#C9C4F2"/><rect x="31.8" y="15" width="5.8" height="14" rx="2.9" fill="#C9C4F2"/><path d="M14 27 H38 V35 A8 8 0 0 1 30 43 H22 A8 8 0 0 1 14 35 Z" fill="#C9C4F2"/><g class="cara"><circle cx="21" cy="34" r="3.6" fill="#FBF7EE"/><circle cx="31" cy="34" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="21" cy="34.4" r="1.9" fill="#1E1B2E"/><circle cx="31" cy="34.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="17" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="27" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M22 41.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-llengua" viewBox="0 0 48 48"><title>Llengua</title><path d="M8 8 H40 V32 H22 L12 40 V32 H8 Z" fill="#E2735A"/><g class="cara"><circle cx="19" cy="18" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="18" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="18.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="18.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="13.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="13.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 25.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-esports" viewBox="0 0 48 48"><title>Esports</title><circle cx="24" cy="24" r="17" fill="#BFE8D2"/><g class="cara"><circle cx="19" cy="22" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="22" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="22.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="22.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="17.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="17.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 29.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-turisme" viewBox="0 0 48 48"><title>Turisme</title><path d="M24 44 C14 32 8 25 8 18 A16 16 0 0 1 40 18 C40 25 34 32 24 44 Z" fill="#FFD8B8"/><path d="M24 7 V4 M35 18 H38 M10 18 H13 M31.8 10.2 L34 8 M16.2 10.2 L14 8" stroke="#1E1B2E" stroke-width="2.2" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="18" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="18" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="18.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="18.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="13.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="13.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 25.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-neteja" viewBox="0 0 48 48"><title>Neteja</title><path d="M10 14 H38 L35 42 H13 Z" fill="#C9C4F2"/><rect x="6" y="8" width="36" height="6" rx="3" fill="#1E1B2E"/><path d="M19 20 V36 M29 20 V36" stroke="#1E1B2E" stroke-width="2.5" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="28" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="28" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="28.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="28.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 35.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="vei-el-ple" viewBox="0 0 48 48"><title>El ple</title><path d="M6 30 A18 18 0 0 1 42 30 Z" fill="#E2735A"/><path d="M6 30 A18 18 0 0 1 42 30" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round"/><rect x="18" y="34" width="12" height="8" rx="2" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="24" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="24" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></symbol>
+<symbol id="papereta-felic" viewBox="0 0 120 140"><title>La papereta, mascota de quivoto</title>
+  <g class="cos">
+    <path d="M18 14 H80 L102 36 V126 H18 Z" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M80 14 V36 H102 Z" fill="#FFD8B8" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <g class="ratlles">
+      <path d="M32 112 H88" stroke="#E2735A" stroke-width="5" stroke-linecap="round"/>
+      <path d="M32 122 H70" stroke="#BFE8D2" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    <g class="cara">
+      <circle cx="46" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <circle cx="76" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <g class="pupilles"><circle cx="46" cy="71" r="4.2" fill="#1E1B2E"/><circle cx="76" cy="71" r="4.2" fill="#1E1B2E"/></g>
+      <g class="parpelles">
+        <circle cx="46" cy="70" r="9.6" fill="#FFFFFF"/>
+        <circle cx="76" cy="70" r="9.6" fill="#FFFFFF"/>
+      </g>
+      <path class="boca" d="M44 92 q16 14 32 0" stroke="#1E1B2E" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </g>
+    <path class="creu" d="M31 46 l7 8 l14 -16" stroke="#E2735A" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</symbol>
+<symbol id="papereta-pregunta" viewBox="0 0 120 140"><title>La papereta, mascota de quivoto</title>
+  <g class="cos">
+    <path d="M18 14 H80 L102 36 V126 H18 Z" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M80 14 V36 H102 Z" fill="#FFD8B8" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+    <g class="ratlles">
+      <path d="M32 112 H88" stroke="#E2735A" stroke-width="5" stroke-linecap="round"/>
+      <path d="M32 122 H70" stroke="#BFE8D2" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    <g class="cara">
+      <circle cx="46" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <circle cx="76" cy="70" r="9" fill="#FFFFFF" stroke="#1E1B2E" stroke-width="3"/>
+      <g class="pupilles"><circle cx="46" cy="71" r="4.2" fill="#1E1B2E"/><circle cx="76" cy="71" r="4.2" fill="#1E1B2E"/></g>
+      <g class="parpelles">
+        <circle cx="46" cy="70" r="9.6" fill="#FFFFFF"/>
+        <circle cx="76" cy="70" r="9.6" fill="#FFFFFF"/>
+      </g>
+      <path class="boca" d="M50 94 q10 -6 20 0" stroke="#1E1B2E" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </g>
+    <path class="creu" d="M31 46 l7 8 l14 -16" stroke="#E2735A" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</symbol>
+<symbol id="marca-no" viewBox="0 0 48 48"><title>En contra</title><path d="M14 14 L34 34 M34 14 L14 34" fill="none" stroke="currentColor" stroke-width="4.0" stroke-linecap="round"/></symbol>
+</defs>
+</svg>
+
+<script src="moviment.js"></script>
+<script>
+/* ==========================================================================
+   portada.html — comportament.
+   Res de dependències: moviment.js ja hi és i és l'única font de veritat del
+   moviment. Aquí només hi ha el que és d'aquesta pantalla.
+   ========================================================================== */
+(function (doc) {
+  'use strict';
+  var M = window.moviment;
+
+  /* ------------------------------------------------------------------ */
+  /* 0. Glifs dels tres estats. Forma abans que color: un cercle ple amb  */
+  /*    vist, un cercle mig omplert i un cercle buit de traç discontinu.  */
+  /* ------------------------------------------------------------------ */
+  var GLIFS = {
+    obert: '<circle cx="12" cy="12" r="9.5" fill="currentColor"/>' +
+           '<path d="M7.6 12.2 l3 3 l5.8 -6.4" fill="none" stroke="#FBF7EE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+    preparacio: '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.4"/>' +
+           '<path d="M12 2.5 A9.5 9.5 0 0 1 12 21.5 Z" fill="currentColor"/>',
+    radiografia: '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="3.4 3.4"/>'
+  };
+  var NOMS_ESTAT = {
+    obert: 'Brúixola oberta',
+    preparacio: 'En preparació',
+    radiografia: 'Només radiografia'
+  };
+
+  function glif(estat) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (GLIFS[estat] || '') + '</svg>';
+  }
+
+  /* Un node patró per estat, muntat UN sol cop, i després només clonacions.
+     La llista real són 947 municipis: 947 anàlisis d'HTML amb un <svg> a dins
+     durant el camí crític és TBT pur. Ara són tres anàlisis i N clonacions. */
+  var PATRO = {};
+  Object.keys(GLIFS).forEach(function (k) {
+    var d = doc.createElement('span');
+    d.innerHTML = glif(k) + '<span>' + NOMS_ESTAT[k] + '</span>';
+    PATRO[k] = d;
+  });
+  function pintaEstat(node, estat, base) {
+    node.className = (base ? base + ' ' : '') + 'estat estat--' + estat;
+    var copia = PATRO[estat].cloneNode(true);
+    node.replaceChildren.apply(node, Array.prototype.slice.call(copia.childNodes));
+    return node;
+  }
+  // Els glifs de la llegenda.
+  Array.prototype.forEach.call(doc.querySelectorAll('[data-glif]'), function (n) {
+    n.insertAdjacentHTML('afterbegin', glif(n.getAttribute('data-glif')));
+  });
+
+  /* ------------------------------------------------------------------ */
+  /* 1. Normalització de noms                                            */
+  /*    Es desacecentua caràcter a caràcter i es guarda el mapa cap al    */
+  /*    text original: així la marca del tros trobat cau al lloc exacte   */
+  /*    encara que «à» i «a» no ocupin el mateix a la cadena normalitzada.*/
+  /* ------------------------------------------------------------------ */
+  var COMBINANTS = /[\u0300-\u036f]/g;
+  function desaccentua(s) {
+    var t = '', mapa = [], i, j, c;
+    for (i = 0; i < s.length; i++) {
+      c = s.charAt(i);
+      if (c.normalize) c = c.normalize('NFD').replace(COMBINANTS, '');
+      c = c.toLowerCase();
+      c = c.replace(/[’‘`´]/g, "'");  // apòstrofs de tota mena
+      c = c.replace(/·/g, '');                        // punt volat (l·l)
+      for (j = 0; j < c.length; j++) { t += c.charAt(j); mapa.push(i); }
+    }
+    return { t: t, mapa: mapa };
+  }
+  function norm(s) { return desaccentua(s).t.replace(/\s+/g, ' ').trim(); }
+
+  var ARTICLE = /^(l'|d'|s'|n'|el |la |els |les |es |sa |ses )/;
+  function senseArticle(t) { return t.replace(ARTICLE, ''); }
+
+  /* Claus de cerca d'un nom. Quatre formes de la mateixa cosa, perquè
+     l'apòstrof és el que més falla quan algú escriu de pressa:
+       la seu d'urgell · seu d'urgell · seu durgell · seu d urgell
+     Amb això, «lhospitalet», «seu durgell» i «seu d urgell» hi arriben tots. */
+  function claus(nom) {
+    var n = norm(nom), s = senseArticle(n);
+    var k = [n, s,
+             n.replace(/'/g, ''), s.replace(/'/g, ''),
+             n.replace(/'/g, ' '), s.replace(/'/g, ' ')];
+    var vist = {}, fora = [];
+    k.forEach(function (x) { if (x && !vist[x]) { vist[x] = 1; fora.push(x); } });
+    return fora;
+  }
+  /* Les mateixes tres formes, però de la consulta. */
+  function agulles(q) {
+    var a = [q, q.replace(/'/g, ''), q.replace(/'/g, ' ').replace(/\s+/g, ' ').trim()];
+    var vist = {}, fora = [];
+    a.forEach(function (x) { if (x && !vist[x]) { vist[x] = 1; fora.push(x); } });
+    return fora;
+  }
+  /* Coincidència a principi de paraula: «llobregat» troba «Sant Boi de
+     Llobregat», però «obregat» no troba res. Buscar pel mig retorna soroll. */
+  function comencaParaula(clau, agulla) {
+    return (' ' + clau).indexOf(' ' + agulla) !== -1;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 2. L'índex                                                          */
+  /* ------------------------------------------------------------------ */
+  var camp = doc.getElementById('camp-municipi');
+  var llista = doc.getElementById('llista-municipis');
+  var panellBuit = doc.getElementById('panell-buit');
+  var panellBuida = doc.getElementById('panell-buida');
+  var recompte = doc.getElementById('recompte');
+  var botoNeteja = doc.getElementById('neteja');
+  var porta = doc.getElementById('porta');
+  var MAX_BUIT = 8;     // amb el camp buit no s'aboquen 947 files a sobre de ningú
+  var MAX_TROBATS = 40; // ningú no llegeix 900 files: el que sobra es diu, no es pinta
+
+  var items = Array.prototype.slice.call(llista.querySelectorAll('.mun')).map(function (el) {
+    var nom = el.getAttribute('data-nom');
+    var d = desaccentua(nom);
+    return {
+      el: el,
+      nom: nom,
+      comarca: el.getAttribute('data-comarca'),
+      hab: parseInt(el.getAttribute('data-hab'), 10),
+      estat: el.getAttribute('data-estat'),
+      normNom: d.t, mapaNom: d.mapa,
+      claus: claus(nom),
+      clausComarca: claus(el.getAttribute('data-comarca')),
+      nomEl: el.querySelector('.mun__nom')
+    };
+  });
+  // Els estats, pintats des d'una sola font (GLIFS): així cap fila no pot
+  // acabar amb un glif que no correspongui al seu text.
+  items.forEach(function (it) { pintaEstat(it.el.querySelector('.mun__estat'), it.estat, 'mun__estat'); });
+
+  /* ------------------------------------------------------------------ */
+  /* 3. Filtre                                                           */
+  /* ------------------------------------------------------------------ */
+  var visibles = [], actiu = -1, triat = null;
+
+  function provaTotes(claus, agulles, prova) {
+    for (var i = 0; i < claus.length; i++) {
+      for (var j = 0; j < agulles.length; j++) {
+        if (prova(claus[i], agulles[j])) return true;
+      }
+    }
+    return false;
+  }
+  function prefix(clau, agulla) { return clau.indexOf(agulla) === 0; }
+
+  /* Tres graons i no més. Buscar pel mig d'una paraula retornaria soroll:
+     «obregat» no ha de trobar Sant Boi de Llobregat. */
+  function puntua(it, ag) {
+    if (provaTotes(it.claus, ag, prefix)) return 0;          // el nom comença així
+    if (provaTotes(it.claus, ag, comencaParaula)) return 1;  // hi comença una paraula
+    if (provaTotes(it.clausComarca, ag, comencaParaula)) return 2; // és la comarca
+    return -1;
+  }
+
+  function marca(it, q) {
+    var nomEl = it.nomEl;
+    while (nomEl.firstChild) nomEl.removeChild(nomEl.firstChild);
+    var idx = q ? it.normNom.indexOf(q) : -1;
+    if (idx < 0) { nomEl.appendChild(doc.createTextNode(it.nom)); return; }
+    var a = it.mapaNom[idx];
+    var b = it.mapaNom[Math.min(idx + q.length, it.mapaNom.length) - 1] + 1;
+    if (a > 0) nomEl.appendChild(doc.createTextNode(it.nom.slice(0, a)));
+    var m = doc.createElement('mark');
+    m.appendChild(doc.createTextNode(it.nom.slice(a, b)));
+    nomEl.appendChild(m);
+    if (b < it.nom.length) nomEl.appendChild(doc.createTextNode(it.nom.slice(b)));
+  }
+
+  function filtra() {
+    var brut = camp.value;
+    var q = norm(brut);
+    var buit = q === '';
+    var ag = buit ? [] : agulles(q);
+    var trobats = [];
+
+    items.forEach(function (it) {
+      var p = buit ? 3 : puntua(it, ag);
+      // Res de `hidden`: el que no hi és, no és al document. Deixar-hi
+      // l'atribut faria que un municipi tornés a sortir invisible.
+      if (p < 0) { it.el.setAttribute('aria-selected', 'false'); return; }
+      it.rang = p;
+      trobats.push(it);
+    });
+
+    // Ordre: primer la qualitat de la coincidència, després la població.
+    trobats.sort(function (a, b) { return a.rang - b.rang || b.hab - a.hab; });
+
+    var tall = Math.min(buit ? MAX_BUIT : MAX_TROBATS, trobats.length);
+    visibles = [];
+    // Es munta la tanda visible en un fragment i s'entrega d'un sol cop. Moure
+    // nodes que ja són al document, un per un, són centenars d'operacions de
+    // DOM reals a cada pulsació: això és INP directament.
+    var frag = doc.createDocumentFragment();
+    trobats.forEach(function (it, i) {
+      it.el.setAttribute('aria-selected', 'false');
+      if (i >= tall) return;
+      marca(it, buit ? '' : q);
+      frag.appendChild(it.el);
+      visibles.push(it);
+    });
+    llista.replaceChildren(frag);
+
+    // Si el camp ja no diu el que deia quan es va triar, la porta es tanca:
+    // deixar-hi el municipi anterior mentre se'n busca un altre és mentir.
+    if (triat && norm(brut) !== norm(triat.nom)) { porta.hidden = true; triat = null; }
+
+    panellBuit.hidden = !buit;
+    panellBuida.hidden = !(!buit && visibles.length === 0);
+    botoNeteja.hidden = buit;
+    camp.setAttribute('aria-expanded', visibles.length ? 'true' : 'false');
+    actiu = -1;
+    camp.removeAttribute('aria-activedescendant');
+
+    recompte.textContent = buit
+      ? 'Escriu per filtrar. Se’n mostren ' + visibles.length + ' de 947.'
+      : (trobats.length === 0
+          ? 'Cap municipi amb aquest nom.'
+          : trobats.length + (trobats.length === 1 ? ' municipi trobat.' : ' municipis trobats.') +
+            (trobats.length > tall ? ' Se’n mostren els ' + tall + ' primers: afina la cerca.' : ''));
+  }
+
+  /* Una passada per fotograma i no una per tecla. Amb 947 municipis, cada
+     pulsació són ~17.000 indexOf i fins a 947 moviments de node; coalescir-ho
+     amb requestAnimationFrame ho deixa en una passada per fotograma pintat. */
+  var demanat = 0;
+  function filtraAviat() {
+    if (demanat) return;
+    demanat = window.requestAnimationFrame(function () { demanat = 0; filtra(); });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 4. Teclat                                                           */
+  /* ------------------------------------------------------------------ */
+  function activa(i) {
+    if (actiu >= 0 && visibles[actiu]) visibles[actiu].el.setAttribute('aria-selected', 'false');
+    actiu = i;
+    if (actiu < 0 || !visibles[actiu]) { camp.removeAttribute('aria-activedescendant'); return; }
+    var el = visibles[actiu].el;
+    el.setAttribute('aria-selected', 'true');
+    camp.setAttribute('aria-activedescendant', el.id);
+    if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  }
+
+  camp.addEventListener('keydown', function (e) {
+    var n = visibles.length;
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (n) activa((actiu + 1) % n); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (n) activa((actiu <= 0 ? n : actiu) - 1); }
+    else if (e.key === 'Home' && n && actiu >= 0) { e.preventDefault(); activa(0); }
+    else if (e.key === 'End' && n && actiu >= 0) { e.preventDefault(); activa(n - 1); }
+    else if (e.key === 'Enter') {
+      if (actiu >= 0 && visibles[actiu]) { e.preventDefault(); tria(visibles[actiu]); }
+      else if (n === 1) { e.preventDefault(); tria(visibles[0]); }
+    } else if (e.key === 'Escape') {
+      if (camp.value) { e.preventDefault(); camp.value = ''; filtra(); }
+    }
+  });
+
+  camp.addEventListener('input', filtraAviat);
+
+  llista.addEventListener('click', function (e) {
+    var fila = e.target.closest ? e.target.closest('.mun') : null;
+    if (!fila) return;
+    var it = items.filter(function (x) { return x.el === fila; })[0];
+    if (it) tria(it);
+  });
+
+  function reinicia() {
+    camp.value = ''; triat = null; porta.hidden = true; filtra(); camp.focus();
+  }
+  botoNeteja.addEventListener('click', reinicia);
+  doc.getElementById('torna').addEventListener('click', reinicia);
+  Array.prototype.forEach.call(doc.querySelectorAll('[data-suggeriment]'), function (b) {
+    b.addEventListener('click', function () {
+      camp.value = b.getAttribute('data-suggeriment');
+      filtra();
+      camp.focus();
+      if (visibles.length) { activa(0); tria(visibles[0]); }
+    });
+  });
+
+  /* ------------------------------------------------------------------ */
+  /* 5. La porta: triar un municipi ha de portar a algun lloc            */
+  /* ------------------------------------------------------------------ */
+  var TEXTOS = {
+    obert: 'La brúixola és oberta: 25 afirmacions escrites a partir del que s’ha votat en aquest ple.',
+    preparacio: 'Encara no. Estem buidant les actes del ple i els programes; quan estigui, t’avisem.',
+    radiografia: 'Encara no hi ha brúixola, però sí la radiografia: qui hi ha al ple, què hi ha votat i com va quedar repartit.'
+  };
+  var ACCIONS = {
+    obert: [
+      { text: 'Comença les 25 afirmacions', href: 'bruixola.html', classe: 'boto' },
+      { text: 'O mira primer la radiografia', href: 'radiografia.html', classe: 'boto boto--fantasma' }
+    ],
+    preparacio: [
+      { text: 'Avisa’m quan s’obri', href: '../../web/public/index.html#avisam', classe: 'boto' }
+    ],
+    radiografia: [
+      { text: 'Mira la radiografia del ple', href: 'radiografia.html', classe: 'boto' },
+      { text: 'Avisa’m quan hi hagi brúixola', href: '../../web/public/index.html#avisam', classe: 'boto boto--fantasma' }
+    ]
+  };
+
+  var format = window.Intl ? new Intl.NumberFormat('ca-ES') : { format: String };
+
+  function tria(it) {
+    camp.value = it.nom;
+    triat = it;
+    filtra();
+    doc.getElementById('porta-nom').textContent = it.nom;
+    pintaEstat(doc.getElementById('porta-estat'), it.estat);
+    doc.getElementById('porta-meta').textContent =
+      it.comarca + ' · ' + format.format(it.hab) + ' habitants';
+    doc.getElementById('porta-text').textContent = TEXTOS[it.estat];
+
+    var caixa = doc.getElementById('porta-accions');
+    while (caixa.firstChild) caixa.removeChild(caixa.firstChild);
+    ACCIONS[it.estat].forEach(function (a) {
+      var l = doc.createElement('a');
+      l.className = a.classe; l.href = a.href; l.textContent = a.text;
+      caixa.appendChild(l);
+    });
+
+    porta.hidden = false;
+    M.salta(porta);                       // confirmació: la porta fa un bot
+    recompte.textContent = 'Has triat ' + it.nom + '. ' + NOMS_ESTAT[it.estat] + '.';
+    porta.focus();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 6. Els ulls que segueixen el cursor                                 */
+  /*    Discret de debò: 1,8 unitats de SVG sobre 48, i només a prop.     */
+  /*    Un sol rAF per a les 16 icones, que s'atura quan tot ha arribat.  */
+  /* ------------------------------------------------------------------ */
+  function ullsQueMiren() {
+    var tira = doc.getElementById('tira');
+    if (!tira) return;
+    var fi = window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)');
+    if (fi && !fi.matches) return;        // dit: no hi ha cursor a qui mirar
+
+    var MAX = 1.8, RADI = 260, SUAU = 0.18;
+    var nodes = Array.prototype.slice.call(tira.querySelectorAll('.pupilles'))
+      .map(function (p) { return { p: p, svg: p.closest('svg'), x: 0, y: 0, ox: 0, oy: 0 }; });
+    if (!nodes.length) return;
+    tira.classList.add('tira--mira');
+
+    var punter = { x: -9999, y: -9999 }, centres = null, calMesurar = true;
+    var viu = false, escoltant = false;
+
+    /* Els centres es guarden en coordenades de DOCUMENT i es mesuren un sol
+       cop. Abans es tornaven a mesurar a cada esdeveniment de scroll: 16
+       getBoundingClientRect() just després d'haver escrit 32 propietats
+       personalitzades, o sigui 16 recàlculs de disposició forçats per
+       fotograma mentre l'usuari feia scroll. El scroll no mou res en
+       coordenades de document; només el resize. */
+    function mesura() {
+      var sx = window.scrollX || window.pageXOffset || 0;
+      var sy = window.scrollY || window.pageYOffset || 0;
+      centres = nodes.map(function (n) {
+        var r = n.svg.getBoundingClientRect();
+        return { x: r.left + r.width / 2 + sx, y: r.top + r.height / 2 + sy };
+      });
+      calMesurar = false;
+    }
+
+    function bucle() {
+      if (M.movimentReduit()) {           // canviat en calent: tot al centre
+        nodes.forEach(function (n) { n.p.style.removeProperty('--ullx'); n.p.style.removeProperty('--ully'); });
+        tira.classList.remove('tira--mira');
+        viu = false; return;
+      }
+      if (calMesurar) mesura();
+      var mou = false;
+      var sx = window.scrollX || window.pageXOffset || 0;
+      var sy = window.scrollY || window.pageYOffset || 0;
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i], c = centres[i];
+        var dx = punter.x - (c.x - sx), dy = punter.y - (c.y - sy);
+        var d = Math.sqrt(dx * dx + dy * dy);
+        var f = d > 0 ? Math.max(0, 1 - d / RADI) : 0;
+        n.ox = d > 0 ? (dx / d) * MAX * f : 0;
+        n.oy = d > 0 ? (dy / d) * MAX * f : 0;
+        n.x += (n.ox - n.x) * SUAU;
+        n.y += (n.oy - n.y) * SUAU;
+        if (Math.abs(n.ox - n.x) > 0.01 || Math.abs(n.oy - n.y) > 0.01) mou = true;
+        n.p.style.setProperty('--ullx', n.x.toFixed(2) + 'px');
+        n.p.style.setProperty('--ully', n.y.toFixed(2) + 'px');
+      }
+      if (mou) window.requestAnimationFrame(bucle);
+      else viu = false;
+    }
+    function desperta() { if (!viu) { viu = true; window.requestAnimationFrame(bucle); } }
+    // El scroll també ha de despertar el bucle (el punter no s'ha mogut, però
+    // les icones sí), i això no costa cap mesura nova.
+    function alScroll() { desperta(); }
+    function alMoure(e) { punter.x = e.clientX; punter.y = e.clientY; desperta(); }
+    function alSortir() { punter.x = -9999; punter.y = -9999; desperta(); }
+    function remesura() { calMesurar = true; desperta(); }
+
+    // Només s'escolta el punter mentre la tira es veu: fora de pantalla no hi
+    // ha res a mirar i no s'hi gasta ni un fotograma.
+    function escolta(si) {
+      if (si === escoltant) return;
+      escoltant = si;
+      var m = si ? 'addEventListener' : 'removeEventListener';
+      window[m]('pointermove', alMoure, { passive: true });
+      window[m]('pointerleave', alSortir, { passive: true });
+      window[m]('scroll', alScroll, { passive: true });
+      window[m]('resize', remesura, { passive: true });
+      if (!si) { punter.x = -9999; punter.y = -9999; desperta(); }
+    }
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (ents) {
+        ents.forEach(function (e) { escolta(e.isIntersecting); });
+      }, { threshold: 0 }).observe(tira);
+    } else { escolta(true); }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 7. El tast: Sabadell, municipals de 2023                            */
+  /*    Dades oficials. L'ordre el mana el nombre de vots, no la simpatia.*/
+  /* ------------------------------------------------------------------ */
+  var SABADELL = [
+    { sigla: 'PSC-CP',    nom: 'Partit dels Socialistes',   vots: 35799, regidors: 14, dada: 'var(--dada-psc)' },
+    { sigla: 'ERC-EUiA',  nom: 'Esquerra Republicana',      vots: 8592,  regidors: 3,  dada: 'var(--dada-erc)' },
+    { sigla: 'CpS-AMUNT', nom: 'Crida per Sabadell',        vots: 8018,  regidors: 3,  dada: 'var(--dada-crida)' },
+    { sigla: 'CM',        nom: 'Junts',                     vots: 6319,  regidors: 2,  dada: 'var(--dada-junts)' },
+    { sigla: 'SECP-C',    nom: 'Comuns',                    vots: 5636,  regidors: 2,  dada: 'var(--dada-comuns)' },
+    { sigla: 'VOX',       nom: 'VOX',                       vots: 5087,  regidors: 2,  dada: 'var(--dada-vox)' },
+    { sigla: 'PP',        nom: 'Partit Popular',            vots: 4557,  regidors: 1,  dada: 'var(--dada-pp)' }
+  ];
+
+  function pintaSabadell() {
+    var escons = doc.getElementById('escons');
+    var partits = doc.getElementById('partits');
+    if (!escons || !partits) return;
+    var maxim = SABADELL[0].vots;
+
+    SABADELL.forEach(function (p) {
+      for (var i = 0; i < p.regidors; i++) {
+        var li = doc.createElement('li');
+        li.className = 'esco';
+        li.style.setProperty('--dada', p.dada);
+        escons.appendChild(li);
+      }
+
+      var fila = doc.createElement('li');
+      fila.className = 'partit';
+
+      var et = doc.createElement('span');
+      et.className = 'etiqueta etiqueta--partit';
+      et.style.setProperty('--dada', p.dada);
+      et.appendChild(doc.createTextNode(p.sigla));
+      fila.appendChild(et);
+
+      var xifra = doc.createElement('span');
+      xifra.className = 'partit__xifra';
+      xifra.textContent = format.format(p.vots) + ' vots · ' +
+        p.regidors + (p.regidors === 1 ? ' regidor' : ' regidors');
+      fila.appendChild(xifra);
+
+      var barra = doc.createElement('div');
+      barra.className = 'barra barra--dada';
+      barra.setAttribute('role', 'img');
+      barra.setAttribute('aria-label', p.nom + ': ' + format.format(p.vots) + ' vots, ' + p.regidors + ' regidors');
+      var omplert = doc.createElement('span');
+      omplert.className = 'barra__omplert';
+      omplert.style.setProperty('--dada', p.dada);
+      // El valor final s'escriu ara: si el JS del creixement no arriba a
+      // executar-se, la barra ja és correcta.
+      omplert.style.setProperty('--valor', (p.vots / maxim).toFixed(4));
+      barra.appendChild(omplert);
+      fila.appendChild(barra);
+
+      partits.appendChild(fila);
+      p.node = omplert;
+    });
+
+    // El creixement, només si hi ha moviment i quan es veu.
+    M.siEsMou(function () {
+      if (!('IntersectionObserver' in window)) return;
+      SABADELL.forEach(function (p) { p.node.style.setProperty('--valor', 0); });
+      var ob = new IntersectionObserver(function (ents) {
+        ents.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          ob.unobserve(e.target);
+          M.escalona(SABADELL.map(function (p) { return p.node; }));
+          SABADELL.forEach(function (p) { M.animaBarra(p.node, p.vots / maxim); });
+        });
+      }, { threshold: 0.3 });
+      ob.observe(partits);
+    }, function () { /* ja hi és, escrit al DOM */ });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 8. Engegada                                                         */
+  /* ------------------------------------------------------------------ */
+  var portada = doc.querySelector('.portada');
+  try {
+    var CLAU = 'quivoto:portada-vista';
+    if (window.sessionStorage && sessionStorage.getItem(CLAU)) {
+      portada.classList.add('ja-vista');            // segona visita: sense caiguda
+    } else {
+      portada.classList.add('primera-visita');
+      if (window.sessionStorage) sessionStorage.setItem(CLAU, '1');
+    }
+  } catch (e) {
+    portada.classList.add('primera-visita');        // sense magatzem, res es trenca
+  }
+
+  M.inicia();          // icones, entrades i comptadors: una sola crida
+  filtra();
+  pintaSabadell();
+  ullsQueMiren();
+})(document);
+</script>
+</body>
+</html>
