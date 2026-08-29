@@ -336,7 +336,7 @@ describe("errors que publicarien un vot fals", () => {
     const zona =
       "Sotmesa la proposta a votació, s'aprova amb el resultat següent:\n" +
       "Vots a favor: 12\nVots en contra: 9\nAbstencions: 0";
-    const votacio = extreuVotacio(zona);
+    const votacio = extreuVotacio(zona)!;
     expect(votacio.recompte.favor).toBe(12);
     expect(votacio.recompte.contra).toBe(9);
     expect(votacio.recompte.abstencio).toBe(0);
@@ -366,7 +366,7 @@ describe("errors que publicarien un vot fals", () => {
       "S'aprova per unanimitat el punt anterior.\n" +
       "Sotmesa la proposta a votació, s'aprova amb el resultat següent:\n" +
       "Vots a favor: 12\nVots en contra: 9";
-    expect(extreuVotacio(zona).unanimitat).toBe(false);
+    expect(extreuVotacio(zona)!.unanimitat).toBe(false);
   });
 
   it("sí que diu unanimitat quan no hi ha cap vot contrari", () => {

@@ -88,6 +88,35 @@ Això confirma l'ordre de treball i el fa més estricte:
    publicar cap brúixola: mínim de vots citables, mínim de programa, equilibri i cobertura.
    Set agents amb la metodologia al davant no l'han complert; un comprovador sí que ho farà.
 
+## El comprovador, i què diu
+
+De tot això n'ha sortit `packages/pipeline/src/publish/llindar.ts`: un validador que passa
+un conjunt d'afirmacions pels mínims de la metodologia i diu si es pot publicar. Executat
+sobre els set conjunts, **troba el mateix que van trobar sis crítics llegint-los un per un**:
+
+| Municipi | Afirmacions amb vot citable | Què el bloqueja |
+|---|---|---|
+| **Esplugues de Llobregat** | **25 de 25** | només el mínim de cita de programa |
+| Sabadell | 22 | només el mínim de cita de programa |
+| Sant Just Desvern | 18 | programa, i 3 posicions del govern desconegudes |
+| Barcelona | 9 | programa, i 1 posició desconeguda |
+| l'Hospitalet de Llobregat | 7 | per sota del mínim de 8 vots citables |
+| Badalona | 24 | només el mínim de cita de programa |
+| Terrassa | **2** | molt per sota del mínim: tot venia de premsa |
+
+**Cap dels set passa, i sempre pel mateix**: no hi ha cita de programa electoral enlloc. Això
+no és un problema de redacció sinó de fonts —els programes del 2023 sovint ja no es poden
+trobar— i confirma que **els programes del 2027 s'han de recollir el dia que surtin**.
+
+Fora d'això, el comprovador separa clarament els conjunts que tenen matèria dels que no.
+Esplugues, amb les 25 afirmacions lligades a una votació nominal que un verificador va obrir
+i confirmar acta per acta, és a una passa de ser publicable. Terrassa, amb dues, és lluny, i
+la raó no és l'esforç de qui les va escriure: és que l'ajuntament no publica les actes.
+
+El comprovador també avisa —sense bloquejar— dels paranys de redacció que es poden detectar
+sols: verbs que premien l'statu quo, verbs buits, la finalitat dins de l'enunciat i els
+quantificadors absoluts.
+
 ## Els fitxers
 
 `packages/pipeline/src/publish/afirmacions/<municipi>.json` — les 25 de cada municipi amb el
