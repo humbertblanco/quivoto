@@ -2,7 +2,7 @@ import { eq, sql, type SQLWrapper } from "drizzle-orm";
 import { electionParticipation, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
-import { slugify } from "../lib/text";
+import { dataCurta, slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
@@ -88,16 +88,8 @@ const escape = (text: string): string =>
 const number = (n: number): string => n.toLocaleString("ca-ES");
 const decimal = (n: number, digits = 1): string => n.toFixed(digits).replace(".", ",");
 
-const MONTHS = ["gener", "febrer", "març", "abril", "maig", "juny", "juliol", "agost", "setembre", "octubre", "novembre", "desembre"];
-
-/** «27 d'agost», no «27 de agost»: abril, agost i octubre demanen apòstrof. */
-function formatDate(iso: string | null): string {
-  if (!iso) return "";
-  const [year, month, day] = iso.slice(0, 10).split("-");
-  const name = MONTHS[Number(month) - 1] ?? month ?? "";
-  const de = /^[aeiou]/i.test(name) ? "d'" : "de ";
-  return `${Number(day)} ${de}${name} del ${year}`;
-}
+/** «27 d'agost», no «27 de agost». Una sola còpia, a `lib/text.ts`. */
+const formatDate = dataCurta;
 
 /** «des de l'1 de juliol», no «des del 1 de juliol». */
 function sinceDate(iso: string | null): string {

@@ -1,7 +1,10 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import { desc, isNotNull } from "drizzle-orm";
 import { municipalities, type Db } from "@quivoto/db";
 import { loadRadiografia, renderRadiografia } from "./radiografia";
+import { carregaMedianes } from "./medianes";
+import { escriuCerca } from "./cerca";
+import { carregaSeriesGrup } from "./series-grup";
 import { loadEls947, renderEls947 } from "./els947";
 import { INDEXABLE, SITE } from "./config";
 import { loadComarques, renderComarca } from "./comarques";
@@ -17,7 +20,7 @@ import { verifica } from "./verificacio";
 import { renderPortada } from "./portada";
 import { renderMapaCatalunya } from "./mapa-catalunya";
 import { encaixa, type Grup } from "./posicions";
-import { adrecesRegidors, renderRegidor, type Regidor } from "./regidor";
+import { adrecesRegidors, renderRegidor, type ContextRegidor, type Regidor } from "./regidor";
 import { sameForce } from "@quivoto/shared-schemas/brands";
 import { normalizePersonName, slugify } from "../lib/text";
 import { withRun } from "../lib/run";
@@ -32,6 +35,39 @@ const OUT_DIR = new URL("../../../../web/public/observatori/m/", import.meta.url
 
 /** Municipis del primer lot, si no se'n demana cap en concret. */
 const DEFAULT_SLUGS = ["esplugues-de-llobregat", "sabadell", "girona", "reus", "barcelona", "rubi"];
+
+/**
+ * Els municipis que tenen fitxa **a disc**, no els que s'acaben de generar.
+ *
+ * Les pàgines globals —la portada, el sitemap, els 947 i la pàgina de dades—
+ * parlen de tot l'Observatori, i publicar-ne sis en fa sis d'aquelles quatre.
+ * Va passar: la portada deia «Els 6 municipis», `dades/` deia «6 municipis · 0
+ * camps», el sitemap tenia 54 adreces i `els947.html` només enllaçava sis
+ * fitxes, mentre a `m/` n'hi havia 947 i el CSV en portava 947 amb 53 columnes.
+ * I era pitjor que un error visible, perquè les pàgines existien i feien bona
+ * cara.
+ *
+ * Mirar el directori, i no la llista del que s'acaba d'escriure, fa que
+ * `publica girona` deixi la resta del web dient la veritat.
+ */
+async function fitxesADisc(dir: string): Promise<Set<string>> {
+  const slugs = new Set<string>();
+  let entrades: string[];
+  try {
+    entrades = await readdir(dir);
+  } catch {
+    return slugs;
+  }
+  for (const entrada of entrades) {
+    if (entrada.startsWith(".")) continue;
+    try {
+      if ((await stat(`${dir}${entrada}/index.html`)).isFile()) slugs.add(entrada);
+    } catch {
+      // Sense fitxa no compta: un directori a mitges no és un municipi publicat.
+    }
+  }
+  return slugs;
+}
 
 export async function publish(db: Db, slugs: readonly string[] = []): Promise<void> {
   await withRun(db, "publica radiografies", async (run) => {
@@ -76,9 +112,27 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
      * acabat d'obrir.
      */
     const carregats = await loadEls947(db);
+    /**
+     * Les medianes del grup, calculades un sol cop per a les 947 fitxes.
+     *
+     * Van aquí i no dins de `loadRadiografia` perquè per saber la mediana d'un
+     * municipi cal llegir-los tots: fer-ho fitxa per fitxa serien 947 lectures
+     * de la taula sencera i la publicació no s'acabaria mai.
+     */
+    const medianes = await carregaMedianes(db);
+    /**
+     * I les sèries del grup, pel mateix motiu: la banda que va darrere del
+     * deute de cada fitxa és la meitat central dels municipis de la seva mida
+     * any per any, i per saber-la cal haver llegit els 947.
+     */
+    const seriesGrup = await carregaSeriesGrup(db);
     await mkdir(`${OUT_DIR}../mapa`, { recursive: true });
     await writeFile(`${OUT_DIR}../mapa/index.html`, renderMapaCatalunya(carregats, generatedAt), "utf8");
     run.say(`mapa de Catalunya amb ${carregats.length} municipis`);
+    // L'índex del cercador, al costat del mapa i pel mateix motiu: es fa amb
+    // la consulta dels 947 acabada de llegir i no la torna a demanar.
+    const quants = await escriuCerca(carregats, `${OUT_DIR}../cerca.json`);
+    run.say(`índex de cerca amb ${quants} municipis`);
 
     let regidorsEscrits = 0;
     for (const slug of wanted) {
@@ -87,7 +141,13 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         await run.issue({ kind: "unknown_slug", severity: "mitjana", entity: slug });
         continue;
       }
-      const html = renderRadiografia(data, mapa, preguntesPerSlug);
+      const html = renderRadiografia(
+        data,
+        mapa,
+        preguntesPerSlug,
+        medianes.get(data.municipality.id),
+        seriesGrup.get(data.municipality.id),
+      );
       await mkdir(`${OUT_DIR}${slug}`, { recursive: true });
       await writeFile(`${OUT_DIR}${slug}/index.html`, html, "utf8");
       regidorsEscrits += await escriuRegidors(data, slug, generatedAt);
@@ -98,6 +158,14 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
 
     if (all) run.say(`${done.length} radiografies generades`);
     run.say(`${regidorsEscrits} fitxes de regidor`);
+
+    // Tot el que les pàgines globals han de comptar: el que hi ha publicat, no
+    // el que s'acaba d'escriure. En ordre de població, com els 947.
+    const aDisc = await fitxesADisc(OUT_DIR);
+    const publicades = carregats.map((fila) => fila.s).filter((slug) => aDisc.has(slug));
+    if (publicades.length !== done.length) {
+      run.say(`${done.length} fitxes escrites ara · ${publicades.length} publicades en total`);
+    }
 
 
     // Una pàgina per candidatura amb representació: és el subjecte que la
@@ -145,7 +213,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     const downloads = await writeDownloads(db, `${OUT_DIR}../dades`);
     await writeFile(
       `${OUT_DIR}../dades/index.html`,
-      renderDadesIndex(generatedAt, { municipis: done.length, camps: 0 }),
+      renderDadesIndex(generatedAt, { municipis: downloads.municipis, camps: downloads.camps }),
       "utf8",
     );
     run.say(`${downloads.files} fitxers de dades (${Math.round(downloads.bytes / 1024)} kB)`);
@@ -201,7 +269,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       `${SITE}/observatori/comparador/`,
       ...(amb ? [`${SITE}/observatori/amb/`] : []),
       ...comarques.map((c) => `${SITE}/observatori/c/${slugify((c as { name?: string; nom?: string }).name ?? (c as { nom?: string }).nom ?? "")}/`),
-      ...done.map((slug) => `${SITE}/observatori/m/${slug}/`),
+      ...publicades.map((slug) => `${SITE}/observatori/m/${slug}/`),
     ];
     await writeFile(
       `${OUT_DIR}../sitemap.xml`,
@@ -223,7 +291,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       `${OUT_DIR}../index.html`,
       renderPortada(
         {
-          municipis: done.length,
+          municipis: publicades.length,
           comarques: comarques.length,
           candidatures: totes.length,
           fitxersDades: downloads.files,
@@ -244,7 +312,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
 
     // «Els 947»: l'índex de tot Catalunya, amb el que en sabem de cadascun.
     const index947 = await carregats;
-    await writeFile(`${OUT_DIR}../els947.html`, renderEls947(index947, generatedAt, new Set(done)), "utf8");
+    await writeFile(`${OUT_DIR}../els947.html`, renderEls947(index947, generatedAt, aDisc), "utf8");
     run.say(`els947.html amb ${index947.length} municipis`);
 
     /*
@@ -444,6 +512,8 @@ async function escriuRegidors(
           votsDelGrup: carrec.grup ? votsPerGrup.get(carrec.grup) ?? [] : [],
           actesLlegides: dades.mocions?.actes.llegides ?? 0,
           assistencia: assistenciaDe(dades, carrec.nom),
+          adreca: adreces.get(carrec)!,
+          ...retribucionsDe(dades, carrec.nom),
         },
         generatedAt,
       ),
@@ -454,6 +524,39 @@ async function escriuRegidors(
   return escrites;
 }
 
+
+/**
+ * Els càrrecs d'aquesta persona en un altre ens, i què en cobra.
+ *
+ * La dada la desa J14 per municipi i fins ara només sortia a la fitxa del
+ * poble, en una llista de tots els que en tenen. És de la persona, i per això
+ * també va a la seva pàgina. L'aparellament és pel nom normalitzat, i si no
+ * lliga amb ningú no s'hi posa res: atribuir a algú el segon sou d'un altre
+ * seria el pitjor error possible en una pàgina que porta el seu nom al títol.
+ */
+function retribucionsDe(
+  dades: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>,
+  nom: string,
+): { altresCarrecs: ContextRegidor["altresCarrecs"]; avisRetribucions: string | null } {
+  const acumulats = dades.carrecsAcumulats;
+  if (!acumulats) return { altresCarrecs: [], avisRetribucions: null };
+  const clau = normalizePersonName(nom);
+  const igual = acumulats.persones.filter((p) => normalizePersonName(p.nom) === clau);
+  if (igual.length !== 1) return { altresCarrecs: [], avisRetribucions: null };
+  const altres = igual[0]!.altres.map((a) => ({
+    ens: a.ens,
+    carrec: a.carrec,
+    anualBrut: a.retribucio?.anualBrut ?? null,
+    concepte: a.retribucio?.concepte ?? null,
+    dedicacio: a.retribucio?.dedicacio ?? null,
+    motiuSenseImport: a.senseRetribucioPublicada?.motiu ?? null,
+    font: a.retribucio?.font ?? a.senseRetribucioPublicada?.font ?? null,
+  }));
+  return {
+    altresCarrecs: altres,
+    avisRetribucions: altres.length > 0 ? acumulats.advertiment : null,
+  };
+}
 
 /**
  * A quants plens ha anat una persona, si les actes ho diuen.

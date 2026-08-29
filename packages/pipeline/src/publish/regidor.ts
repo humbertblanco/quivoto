@@ -26,6 +26,9 @@ import { slugify } from "../lib/text";
  * cap fotografia de qui no sigui electe en actiu.
  */
 
+/** Un import en euros sencers, amb els milers a la catalana. */
+const euros = (n: number): string => `${Math.round(n).toLocaleString("ca-ES")} €`;
+
 const escape = (t: string): string =>
   t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -76,6 +79,39 @@ export type ContextRegidor = {
    * i no en cap altre lloc.
    */
   assistencia: { hi: number; de: number } | null;
+  /**
+   * L'adreça d'aquesta pàgina, la mateixa que ha fet servir qui l'ha escrita.
+   *
+   * El canònic la tornava a calcular amb `slugRegidor(r.nom)`, que no
+   * desambigua: el dia que dues persones del mateix ple es diguin igual, la
+   * pàgina «-2» es declararia canònica a l'adreça de l'altra i el cercador es
+   * quedaria amb una de les dues. Avui no passa a cap dels 947, però el que ho
+   * evita no ha de ser la sort: l'adreça la mana `adrecesRegidors()` i s'ha de
+   * passar, no recalcular.
+   */
+  adreca: string;
+  /**
+   * Els càrrecs que aquesta persona ocupa en un altre ens, amb el que en cobra
+   * quan qui la paga ho publica.
+   *
+   * Fins ara això només sortia a la fitxa del municipi, en una llista de nou
+   * noms. És una dada **de la persona**, com l'assistència, i el lloc on la
+   * busca qui la busca és la pàgina que porta el seu nom al títol. Les regles
+   * són les mateixes d'allà i no es relaxen aquí: només hi va l'import que
+   * publica l'ens que el paga, mai una suma dels dos càrrecs, i quan no el
+   * publica es diu per què en comptes de deixar-ho en blanc.
+   */
+  altresCarrecs: {
+    ens: string;
+    carrec: string;
+    anualBrut: number | null;
+    concepte: string | null;
+    dedicacio: string | null;
+    motiuSenseImport: string | null;
+    font: { nom: string; url: string } | null;
+  }[];
+  /** L'avís de la font sobre què és i què no és cadascun d'aquests imports. */
+  avisRetribucions: string | null;
 };
 
 export const slugRegidor = (nom: string): string => slugify(nom);
@@ -141,6 +177,24 @@ const CSS = `
 .vots li.renyida{background:var(--paper-2);border-left:6px solid var(--coral);padding-left:var(--e2)}
 .vots .recompte{display:block;font-size:.76rem;color:var(--ink-suau);font-weight:700;
   font-variant-numeric:tabular-nums;margin-top:3px}
+
+/* --- què cobra d'un altre ens -------------------------------------------
+   La mateixa peça que a la fitxa del municipi, però aquí és d'una sola
+   persona: l'import gran, el concepte a sota i la font sempre a la vista.
+   Sense import no hi va un buit sinó el motiu, que és el que distingeix «no
+   en cobra» de «qui el paga no ho publica». */
+.altres-carrecs{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;gap:var(--e2)}
+.altres-carrecs li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
+  box-shadow:var(--ombra);padding:var(--e2) var(--e3);display:flex;flex-direction:column;gap:3px}
+.altres-carrecs .ens{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.01em}
+.altres-carrecs .quin{display:block;font-family:var(--text);font-weight:700;font-size:.8rem;
+  color:var(--ink-suau);letter-spacing:0;margin-top:2px}
+.altres-carrecs .import{font-family:var(--display);font-weight:900;font-size:1.6rem;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:6px}
+.altres-carrecs .concepte{font-size:.82rem;color:var(--ink-suau);font-weight:700}
+.altres-carrecs .buit{font-size:.9rem;color:var(--ink-suau);font-weight:700;margin-top:6px}
+.altres-carrecs .font{margin-top:8px;font-size:.74rem;font-weight:800;color:var(--ink-suau);
+  text-decoration:underline;text-decoration-color:var(--vora);text-underline-offset:2px;align-self:flex-start}
 `;
 
 /** Tinta llegible damunt del color del grup. Ho decideix `contrast.ts`. */
@@ -190,7 +244,7 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
 <meta name="description" content="${escape(r.carrec)} de ${escape(ctx.municipi)}${
     r.grup ? ` pel grup ${escape(r.grup)}` : ""
   }: de quina llista va sortir, si és a l'equip de govern i què ha votat el seu grup al ple.">
-<link rel="canonical" href="${SITE}/observatori/m/${escape(ctx.slug)}/regidor/${escape(slugRegidor(r.nom))}/">
+<link rel="canonical" href="${SITE}/observatori/m/${escape(ctx.slug)}/regidor/${escape(ctx.adreca)}/">
 <style>${RADIOGRAFIA_CSS}${CSS}</style>
 </head>
 <body>
@@ -241,6 +295,39 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
     l'acta no explica, i nosaltres tampoc.</p>
   </section>`
       : ""
+  }
+
+  ${
+    ctx.altresCarrecs.length === 0
+      ? ""
+      : `<section class="bloc">
+    <h2>Què cobra d'un altre ens</h2>
+    <p class="entrada-bloc">${
+      ctx.altresCarrecs.length === 1 ? "Ocupa també un càrrec" : `Ocupa també ${ctx.altresCarrecs.length} càrrecs`
+    } fora de l'ajuntament. Aquí hi ha el que en publica qui el paga.</p>
+    <ul class="altres-carrecs">${ctx.altresCarrecs
+      .map(
+        (a) => `<li>
+        <span class="ens">${escape(a.ens)}${a.carrec ? `<span class="quin">${escape(a.carrec)}</span>` : ""}</span>
+        ${
+          a.anualBrut === null
+            ? `<span class="buit">${escape(a.motiuSenseImport ?? "l'ens que el paga no en publica cap import")}</span>`
+            : `<span class="import"><b>${euros(a.anualBrut)}</b> l'any bruts</span>
+               <span class="concepte">${escape(a.concepte ?? "")}${
+                 a.dedicacio ? ` (${escape(a.dedicacio)})` : ""
+               }</span>`
+        }
+        ${a.font ? `<a class="font" href="${escape(a.font.url)}" rel="noopener nofollow">${escape(a.font.nom)}</a>` : ""}
+      </li>`,
+      )
+      .join("")}</ul>
+    ${
+      // L'avís de la font ja diu que no s'hi suma cap total i per què el sou
+      // municipal no hi surt: escriure-ho una segona vegada amb altres paraules
+      // era dir dues vegades el mateix a dos paràgrafs seguits.
+      ctx.avisRetribucions ? `<p class="nota oberta">${escape(ctx.avisRetribucions)}</p>` : ""
+    }
+  </section>`
   }
 
   <section class="bloc">

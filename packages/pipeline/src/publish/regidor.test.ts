@@ -53,6 +53,9 @@ const CONTEXT = {
     },
   ],
   actesLlegides: 12,
+  adreca: "marta-alarcon-pujol",
+    altresCarrecs: [],
+    avisRetribucions: null,
   assistencia: { hi: 11, de: 12 },
 };
 
@@ -139,5 +142,22 @@ describe("renderRegidor", () => {
 
   it("el slug no arrossega accents ni signes", () => {
     expect(slugRegidor("Marta Alarcón i Puerto")).toBe("marta-alarcon-i-puerto");
+  });
+});
+
+/**
+ * Dues persones del mateix ple amb el mateix nom. `adrecesRegidors()` en
+ * desambigua una amb un sufix, i el canònic de cadascuna ha de ser el seu:
+ * si es tornés a calcular a partir del nom, la segona es declararia canònica
+ * a l'adreça de la primera i el cercador es quedaria amb una de les dues.
+ */
+describe("el canònic no es recalcula: és l'adreça amb què s'ha escrit", () => {
+  it("dues persones amb el mateix nom no comparteixen canònic", () => {
+    const base = { ...CONTEXT };
+    const una = renderRegidor(REGIDORA, { ...base, adreca: "marta-alarcon-pujol" }, "2026-08-29");
+    const altra = renderRegidor(REGIDORA, { ...base, adreca: "marta-alarcon-pujol-2" }, "2026-08-29");
+    expect(una).toContain('regidor/marta-alarcon-pujol/"');
+    expect(altra).toContain('regidor/marta-alarcon-pujol-2/"');
+    expect(altra).not.toContain('regidor/marta-alarcon-pujol/"');
   });
 });

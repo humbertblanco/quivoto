@@ -336,7 +336,7 @@ type FinancesMetric = {
   bands?: { id: string; party: string | null }[];
 };
 type TaxesMetric = { taxes: Record<string, { value: number }> };
-type ParityMetric = { womenElectedPct: number | null };
+type ParityMetric = { womenElectedPct: number | null; complet?: boolean };
 type TransparencyMetric = { pct: number | null };
 type HistoryMetric = { alternances: number | null; elections: number | null };
 
@@ -395,10 +395,10 @@ export function variacioDelMandat(
 }
 
 /**
- * La recollida selectiva encara no està ingerida (és la feina J9 del pla). La
- * lectura és tolerant a propòsit: el dia que hi sigui, la fila apareix sola
- * sense tornar a tocar aquest fitxer, i mentrestant no surt una columna de
- * guions que faci pensar que ho hem mirat i no hi ha res.
+ * La recollida selectiva la desa J9, i la lectura continua sent tolerant a
+ * propòsit: no tots els municipis hi són cada any, i quan un any hi falta val
+ * més que la fila no surti que no pas una columna de guions que faci pensar que
+ * ho hem mirat i no hi ha res.
  */
 function recollidaSelectiva(data: unknown): number | null {
   if (!data || typeof data !== "object") return null;
@@ -491,7 +491,7 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
         pmp: indicator("pmp"),
         ibi: taxes?.taxes?.ibi?.value ?? null,
         selectiva: recollidaSelectiva(own?.get("residus")),
-        dones: parity?.womenElectedPct ?? null,
+        dones: parity?.complet === false ? null : parity?.womenElectedPct ?? null,
         transparencia: transparency?.pct ?? null,
       },
       percentils: {},

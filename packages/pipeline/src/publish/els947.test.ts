@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   clauCerca,
   filtresDisponibles,
+  lectorDe,
   llindarsDe,
   marques,
   mediana,
@@ -18,6 +19,8 @@ const fila = (s: string, extra: Partial<Els947Row> = {}): Els947Row => ({
   p: 1000,
   r: 11,
   a: null,
+  ar: null,
+  ac: null,
   g: null,
   w: 1,
   m: 0,
@@ -119,13 +122,16 @@ describe("marques", () => {
 describe("pastilles", () => {
   const l = llindarsDe(conjunt);
 
-  it("separa el nom de l'alcaldia de les sigles: junts feien 453 px en una sola línia", () => {
+  it("no repeteix qui mana: l'alcaldia té la seva pròpia línia i no és cap pastilla", () => {
+    // Van ser una pastilla sola de 453px, després dues, i ara cap: el nom i les
+    // sigles surten a la línia de dalt amb la cara i el color del partit. Si
+    // algú els torna a posar aquí, sortiran dues vegades a cada fila.
     const p = pastilles(
       ambX(fila("x", { a: "Josep Maria Gras Charles", g: "AGRUPACIÓ D'ELECTORS-PROGRÉS MUNICIPAL" })),
       l,
-    );
-    expect(p.some((s) => s.includes("Josep Maria Gras Charles") && !s.includes("AGRUPACIÓ"))).toBe(true);
-    expect(p.some((s) => s.includes("AGRUPACIÓ") && !s.includes("Josep"))).toBe(true);
+    ).join(" ");
+    expect(p).not.toContain("Josep Maria Gras Charles");
+    expect(p).not.toContain("AGRUPACIÓ");
   });
 
   it("no diu res que sigui un judici de gestió", () => {
@@ -134,9 +140,7 @@ describe("pastilles", () => {
   });
 
   it("escapa el que ve de la base de dades", () => {
-    expect(pastilles(ambX(fila("x", { a: "<script>alert(1)</script>" })), l).join("")).not.toContain(
-      "<script>",
-    );
+    expect(pastilles(ambX(fila("x", { d: 9999 })), l).join("")).not.toContain("<script>");
   });
 });
 
@@ -144,6 +148,27 @@ describe("renderEls947", () => {
   const amb = (files: readonly Els947Row[], fitxes: string[] = files.map((f) => f.s)): string =>
     renderEls947(files, "2026-08-29", new Set(fitxes));
   const html = amb(conjunt);
+
+  it("ensenya qui mana amb la seva cara i el color del seu partit", () => {
+    const p = amb([
+      ambX(fila("x", { a: "Ada Colau Ballano", g: "B EN COMÚ", ar: "/observatori/fotos/160/1.webp", ac: "#662483" })),
+    ]);
+    expect(p).toContain('src="/observatori/fotos/160/1.webp"');
+    expect(p).toContain("Ada Colau Ballano");
+    expect(p).toContain("#662483");
+  });
+
+  it("sense fotografia hi van les inicials amb el color del partit, mai un buit", () => {
+    const p = amb([ambX(fila("x", { a: "Ada Colau Ballano", g: "B EN COMÚ", ar: null, ac: "#662483" }))]);
+    expect(p).toContain('class="cara inicials"');
+    expect(p).toContain(">AC<");
+    expect(p).not.toContain("<img");
+  });
+
+  it("escapa el nom de l'alcaldia, que ve de la base de dades", () => {
+    const p = amb([ambX(fila("x", { a: "<script>alert(1)</script>", g: null }))]);
+    expect(p).not.toContain("<script>alert(1)</script>");
+  });
 
   it("fa servir el CSS compartit i no una còpia pròpia", () => {
     // El to de text del coral només existeix a `estil.ts`: si hi és, la pàgina
@@ -240,5 +265,35 @@ describe("renderEls947", () => {
 
   it("no es queda sense pàgina amb un conjunt buit", () => {
     expect(() => amb([])).not.toThrow();
+  });
+
+  it("compta els plens amb una sola candidatura, que és el que deia 0 tenint-ne 185", () => {
+    const cap = amb([fila("a"), fila("b")]);
+    expect(cap).toContain("<b>0</b><span>amb una sola candidatura al ple</span>");
+    const dos = amb([fila("a", { o: 1 }), fila("b", { o: 1 }), fila("c")]);
+    expect(dos).toContain("<b>2</b><span>amb una sola candidatura al ple</span>");
+    // I el filtre ha de trobar-los: sense la marca a la fila, la casella no serveix.
+    expect(dos.match(/data-f="[^"]*\bunica\b[^"]*"/g) ?? []).toHaveLength(2);
+  });
+});
+
+describe("lectorDe", () => {
+  it("torna la mètrica quan s'ha demanat a la consulta", () => {
+    const { llegeix, te } = lectorDe(new Map([["singleList", { campaign: 2023 }]]));
+    expect(llegeix("singleList")).toEqual({ campaign: 2023 });
+    expect(te("singleList")).toBe(true);
+  });
+
+  it("distingeix «no la té» de «no s'ha demanat»", () => {
+    const { te } = lectorDe(new Map());
+    expect(te("singleList")).toBe(false);
+  });
+
+  it("peta si es llegeix una mètrica que no és a KINDS_ELS947", () => {
+    const { llegeix, te } = lectorDe(new Map());
+    // «actes» va estar-hi anys sense que cap job l'escrigués: una lectura buida
+    // i silenciosa. Ara la que no s'ha demanat és la que peta.
+    expect(() => llegeix("costGovern")).toThrow(/KINDS_ELS947/);
+    expect(() => te("mocions")).toThrow(/KINDS_ELS947/);
   });
 });

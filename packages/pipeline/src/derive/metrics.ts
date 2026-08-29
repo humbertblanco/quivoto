@@ -172,13 +172,45 @@ export async function deriveMetrics(db: Db): Promise<void> {
         ),
       });
 
-      // ---- paritat de les llistes i del ple ----
+      /*
+       * ---- paritat de les llistes i del ple ----
+       *
+       * Amb una trampa que ha estat publicant xifres falses i que es va veure
+       * el dia que se'n va dibuixar la distribució del grup: a la meitat
+       * central dels municipis de 101 a 250 habitants hi sortia un **0 % de
+       * dones al ple** i, al costat, pobles amb un **100 %**. Cap de les dues
+       * xifres no és la del seu ple.
+       *
+       * La causa és que el conjunt de candidatures de la Generalitat no porta
+       * la llista sencera dels municipis petits: a Abella de la Conca, que té
+       * cinc regidories, hi consten **tres** persones i **dues** com a electes.
+       * Un 50 % calculat sobre dues persones s'estava publicant com «la meitat
+       * del ple són dones». Mesurat sobre els 947: **213 municipis** no tenen
+       * la llista d'electes completa, i entre ells **els 152 plens de cinc
+       * regidories, tots**.
+       *
+       * Aquí no s'hi toca cap càlcul —les xifres continuen sent les que la font
+       * permet— sinó que s'hi afegeix de quantes regidories parlem i si la
+       * llista quadra. Qui les publiqui ha de mirar `complet` primer: un
+       * percentatge sobre dues persones de cinc no és el ple, i publicar-lo és
+       * pitjor que no publicar-ne cap.
+       */
       const lists = (listsByMunicipality.get(m.id) ?? []).filter((r) => r.electionId === "M20231");
       if (lists.length > 0) {
         const titulars = lists.filter((r) => r.kind === "Titular");
         const women = (rows: typeof lists) => rows.filter((r) => r.sex === "D").length;
         const elected = lists.filter((r) => r.elected);
         const heads = lists.filter((r) => r.isHead);
+        const escons = m.councilSeats ?? 0;
+        const complet = escons > 0 && elected.length === escons;
+        if (!complet) {
+          await run.issue({
+            kind: "llista_electes_incompleta",
+            severity: "mitjana",
+            municipalityId: m.id,
+            detail: { escons, electesAlConjunt: elected.length, filesAlConjunt: lists.length },
+          });
+        }
         await upsert(db, m.id, "parity", {
           candidates: titulars.length,
           womenCandidates: women(titulars),
@@ -188,6 +220,10 @@ export async function deriveMetrics(db: Db): Promise<void> {
           womenElectedPct: elected.length === 0 ? null : Math.round((100 * women(elected)) / elected.length),
           heads: heads.length,
           womenHeads: women(heads),
+          /** Regidories que hauria de tenir el ple, per poder jutjar el denominador. */
+          expectedElected: escons,
+          /** Cert només quan la font en dona tants d'electes com regidories té el ple. */
+          complet,
         });
       }
 

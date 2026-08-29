@@ -377,9 +377,41 @@ describe("cap a 320 px", () => {
     // amb `overflow-x:auto`; la resta de la pàgina, no. Es busquen amplades
     // absolutes al CSS que no siguin d'un objectiu de toc.
     const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    // La condició d'un `@media` no és cap amplada de res: és el llindar a
+    // partir del qual s'aplica un bloc, i un `@media (min-width:1180px)` deia
+    // aquí que la pàgina desbordava quan el que fa és exactament el contrari.
+    // Es treu la condició i es deixa el bloc, que sí que s'ha de mirar.
+    const declaracions = css.replace(/@media[^{]*\{/g, "{");
+
+    /*
+     * Els contenidors que es desplacen ells sols no compten, i no és cap
+     * excepció escrita a mà: es dedueixen del mateix full. Una taula de comptes
+     * i un gràfic amb eix no poden cabre a 320 px sense fer-los il·legibles, i
+     * la casa ja té la solució —`.marc`, `.taula-envolta`, `.grafic`—: el
+     * contingut ample viu dins d'una caixa amb `overflow-x:auto` i és la caixa,
+     * no la pàgina, la que s'arrossega. El que aquesta prova ha d'impedir és
+     * una amplada fixa **fora** d'una caixa així, que és el que desplaça el
+     * document sencer.
+     */
+    // Cap dels dos costats de la regla no pot dur claus: així el que es llegeix
+    // com a selector és un selector i no la capçalera d'un `@media`, que és el
+    // que passava quan el cos podia contenir-ne.
+    const REGLA = /([^{}]*)\{([^{}]*)\}/g;
+    const desplacables = [...css.matchAll(REGLA)]
+      .filter((m) => /overflow-x:\s*auto/.test(m[2]!))
+      .flatMap((m) => [...m[1]!.matchAll(/\.[A-Za-z0-9_-]+/g)].map((c) => c[0]!));
+    expect(desplacables).toContain(".taula-envolta");
+
     // `max-width` és un sostre i no desborda mai; el que empeny la pàgina és
     // una amplada mínima o fixa. Són aquestes les que no poden passar de 320.
-    const amples = [...css.matchAll(/(?:^|[;{\s(])((?:min-)?width):\s*(\d+)px/g)].map((m) => Number(m[2]));
+    const amples: number[] = [];
+    for (const regla of declaracions.matchAll(REGLA)) {
+      const selector = regla[1]!;
+      if (desplacables.some((classe) => selector.includes(classe))) continue;
+      for (const decl of regla[2]!.matchAll(/(?:^|[;{\s(])((?:min-)?width):\s*(\d+)px/g)) {
+        amples.push(Number(decl[2]));
+      }
+    }
     expect(amples.length).toBeGreaterThan(0);
     for (const ample of amples) expect(ample).toBeLessThanOrEqual(320);
   });

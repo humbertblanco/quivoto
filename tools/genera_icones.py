@@ -14,9 +14,19 @@ import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import icons_lib as L
 
+# `with_face=True` és tota la diferència: sense això sortien els mateixos
+# dibuixos sense cara, i la fitxa municipal era l'única pantalla de quivoto amb
+# les icones mudes mentre la portada les tenia mirant i parpellejant. La posició
+# dels ulls de cada icona i quin detall s'ha de treure perquè no els trepitgi ja
+# ho porta `icons_lib` mesurat (EYES i DETALL_AMB_CARA); aquí només s'hi demana.
+#
+# El retard escalona el parpelleig. Sense ell, les setze icones d'una pàgina
+# parpellegen alhora i el que hauria de passar desapercebut es converteix en un
+# esdeveniment. El pas és 0,9 s i torna a començar cada vuit, que és el sostre
+# que fixa `design/MOVIMENT.md` per a una tanda.
 sortida = {}
 for i, (etiqueta, _, _, _) in enumerate(L.ICONS):
-    sortida[etiqueta] = L.icon(i, 48)
+    sortida[etiqueta] = L.icon(i, 48, with_face=True, delay=(i % 8) * 0.9)
 
 cami = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                     '..', 'packages', 'pipeline', 'src', 'publish', 'icones.ts')

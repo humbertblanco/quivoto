@@ -21,19 +21,80 @@
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/styles.css">
 <style>
+/* ---------- Observatori: el que ja es pot obrir avui ---------- */
 .observatori{background:var(--menta);border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);padding:var(--e5) var(--e3)}
 .obs-cos{max-width:var(--ample);margin:0 auto}
 .observatori .micro{color:var(--ink)}
 .observatori h2{max-width:20ch;margin-bottom:var(--e2)}
-.obs-entrada{font-size:1.12rem;max-width:54ch}
-.obs-xifres{list-style:none;margin:var(--e3) 0;padding:0;max-width:52rem;
-  display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.obs-entrada{font-size:1.12rem;max-width:56ch}
+.obs-xifres{list-style:none;margin:var(--e3) 0 0;padding:0;
+  display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}
 .obs-xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:3px 3px 0 var(--ink);padding:var(--e2)}
 .obs-xifres b{display:block;font-family:var(--display);font-weight:900;line-height:.95;
-  letter-spacing:-.04em;font-size:clamp(2rem,4.5vw,2.7rem)}
-.obs-xifres span{font-size:.88rem;color:var(--ink-suau)}
-.obs-nota{margin:var(--e2) 0 0;font-size:.9rem;color:var(--ink-suau);max-width:48ch}
+  letter-spacing:-.04em;font-size:clamp(1.8rem,4.5vw,2.7rem)}
+.obs-xifres span{font-size:.85rem;color:var(--ink-suau)}
+
+.obs-reixa{list-style:none;margin:var(--e3) 0 0;padding:0;
+  display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.obs-reixa a{display:block;height:100%;padding:var(--e2);text-decoration:none;
+  background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
+  box-shadow:4px 4px 0 var(--ink);transition:transform .14s ease,box-shadow .14s ease}
+.obs-reixa a:hover,.obs-reixa a:focus-visible{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+.obs-etiqueta{display:inline-block;background:var(--presec);border-radius:var(--r-max);
+  padding:4px 11px;font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.obs-reixa b{display:block;font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:1.3rem;line-height:1.05;margin:10px 0 5px}
+.obs-txt{display:block;font-size:.9rem;line-height:1.45;color:var(--ink-suau)}
+@media(min-width:820px){.obs-reixa{grid-template-columns:repeat(3,1fr)}}
+.obs-accions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin:var(--e3) 0 0}
+.obs-nota{margin:var(--e2) 0 0;font-size:.9rem;color:var(--ink-suau);max-width:52ch}
+
+/* ---------- la demostració jugable ----------------------------------------
+   Les afirmacions són reals i encara no estan validades. L'avís va a dalt de
+   tot i amb el mateix pes visual que la resta: no és lletra petita. */
+.exemple{align-items:start}
+.prova-avis{margin:0 0 var(--e2);font-size:.84rem;line-height:1.45;
+  background:var(--presec);color:var(--ink);border:2.5px solid var(--ink);border-radius:var(--r-m);
+  padding:11px 15px;box-shadow:3px 3px 0 var(--ink)}
+.prova-barra{height:12px;border:2.5px solid var(--ink);border-radius:var(--r-max);
+  background:var(--paper-2);overflow:hidden;margin:0 0 var(--e3)}
+.prova-barra i{display:block;height:100%;background:var(--ink);transition:width .25s ease}
+#prova-text{min-height:3.5em}
+.cara-boto{flex:1 1 0;min-width:0;background:none;border:0;padding:2px;margin:0;
+  cursor:pointer;line-height:0;border-radius:var(--r-max);transition:transform .12s ease}
+.cara-boto .cara-escala{width:100%;height:auto;max-width:80px;display:block;margin:0 auto}
+.cara-boto:hover{transform:translateY(-5px)}
+.cara-boto:active{transform:translateY(0)}
+
+.prova-fet{background:var(--paper-2);border:3px solid var(--ink);border-radius:var(--r-l);
+  padding:var(--e3);box-shadow:8px 8px 0 var(--menta);transform:rotate(.7deg)}
+.prova-titol{font-size:1.35rem;margin:0 0 var(--e3)}
+.prova-grups{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:14px}
+.prova-grups li{display:grid;gap:3px}
+.prova-cap{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:10px;
+  font-size:.9rem;font-weight:800;line-height:1.2}
+.prova-sub{font-size:.72rem;font-weight:700;color:var(--ink-suau);margin-bottom:3px}
+.prova-pct{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.03em}
+.prova-bar{display:block;height:14px;border:2.5px solid var(--ink);border-radius:var(--r-max);
+  background:var(--paper);overflow:hidden}
+.prova-bar i{display:block;height:100%;background:var(--lavanda)}
+.prova-grups li.cap .prova-bar i{background:var(--coral)}
+.prova-nota,.prova-mes{font-size:.84rem;line-height:1.5;color:var(--ink-suau);margin:0 0 var(--e2)}
+.prova-detall{border-top:2px dashed var(--vora);border-bottom:2px dashed var(--vora);
+  padding:var(--e2) 0;margin:0 0 var(--e2)}
+.prova-detall summary{cursor:pointer;font-weight:800;font-size:.88rem}
+.prova-detall ol{margin:var(--e2) 0 0;padding-left:1.15rem;display:grid;gap:var(--e2)}
+.prova-detall li{font-size:.82rem;line-height:1.45}
+.prova-detall b{display:block;font-weight:800;margin-bottom:4px}
+.prova-teva,.prova-ple{display:block;color:var(--ink-suau)}
+.prova-accions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin:0}
+.prova-altres{font-weight:800;font-size:.88rem}
+.prova-torna{background:none;border:0;padding:0;font:inherit;font-size:.88rem;font-weight:800;
+  color:var(--ink-suau);text-decoration:underline;cursor:pointer}
+@media(prefers-reduced-motion:reduce){
+  .obs-reixa a,.cara-boto,.prova-barra i{transition:none}
+}
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebSite","name":"quienvoto","url":"https://quienvoto.es/","inLanguage":"es","description":"La brújula electoral de las municipales del 23 de mayo de 2027. Responde 25 afirmaciones sobre tu municipio y descubre qué partidos y candidatos piensan como tú.","publisher":{"@type":"Organization","name":"Damos en el Blanco, S.L."}}
@@ -108,16 +169,166 @@
 
 <section class="observatori">
   <div class="obs-cos">
-    <p class="micro">Ya se puede consultar</p>
-    <h2>Mientras llega la brújula, está el Observatorio</h2>
-    <p class="obs-entrada">Quién manda en tu pueblo, qué se ha votado desde 1979 y cómo están las cuentas, de los 947 municipios de Cataluña. Todo hecho con datos abiertos y cálculos que cualquiera puede repetir: ningún modelo de lenguaje de por medio, y cada cifra con su fuente.</p>
+    <p class="micro">Esto ya lo puedes abrir hoy</p>
+    <h2>La brújula es en 2027. El Observatorio ya está</h2>
+    <p class="obs-entrada">Quién manda en tu pueblo y con quién, qué se ha votado desde 1979, cómo están las cuentas y qué paga cada cual: los 947 municipios de Cataluña, uno a uno. Todo hecho con datos abiertos y cálculos que cualquiera puede repetir —ningún modelo de lenguaje de por medio— y cada cifra con su fuente al lado.</p>
     <ul class="obs-xifres">
-      <li><b>947</b><span>municipios, uno a uno</span></li>
-      <li><b>9.146</b><span>concejalías del mandato 2023-2027</span></li>
-      <li><b>12</b><span>elecciones desde 1979</span></li>
+      <li><b>947</b><span>fichas municipales</span></li>
+      <li><b>2.626</b><span>páginas de candidatura</span></li>
+      <li><b>43</b><span>comarcas</span></li>
+      <li><b>1.894</b><span>ficheros de datos</span></li>
     </ul>
-    <p><a class="boto" href="https://quivoto.cat/observatori/">Abre el Observatorio →</a></p>
-    <p class="obs-nota">Gratuito, sin registro y sin cookies. Las fichas están en catalán, que es la lengua de las fuentes oficiales. Si lo que esperas es la brújula, déjanos el correo aquí abajo.</p>
+    <ul class="obs-reixa">
+      <li><a href="https://quivoto.cat/observatori/els947.html"><span class="obs-etiqueta">toda Cataluña</span><b>Los 947</b><span class="obs-txt">Todos los municipios en una lista, con buscador y filtros: dónde hubo pacto, dónde ha cambiado la alcaldía a mitad de mandato, dónde manda siempre la misma fuerza, dónde no hay oposición.</span></a></li>
+      <li><a href="https://quivoto.cat/observatori/m/esplugues-de-llobregat/"><span class="obs-etiqueta">una por municipio</span><b>La ficha de un pueblo</b><span class="obs-txt">Quién manda y con quién, el pleno con nombres y apellidos, las doce elecciones desde 1979, las cuentas, los impuestos, y qué sabemos y qué no.</span></a></li>
+      <li><a href="https://quivoto.cat/observatori/comparador/"><span class="obs-etiqueta">lado a lado</span><b>El comparador</b><span class="obs-txt">Hasta cuatro municipios medidos con la misma vara: deuda, gasto por habitante, impuestos, participación y fragmentación del pleno.</span></a></li>
+      <li><a href="https://quivoto.cat/observatori/c/barcelones/"><span class="obs-etiqueta">43 comarcas</span><b>Quién manda en la comarca</b><span class="obs-txt">Cuántas alcaldías tiene cada fuerza, cómo queda cada municipio respecto de la media comarcal y dónde están las excepciones.</span></a></li>
+      <li><a href="https://quivoto.cat/observatori/dades/"><span class="obs-etiqueta">abiertos</span><b>Descarga los datos</b><span class="obs-txt">1.894 ficheros en CSV y JSON, con el esquema documentado campo a campo y la fuente de cada cifra. Para que puedas comprobarnos y reutilizarlos.</span></a></li>
+      <li><a href="https://quivoto.cat/observatori/preguntes/"><span class="obs-etiqueta">demostración</span><b>Las preguntas</b><span class="obs-txt">Las 25 preguntas que hará la brújula, escritas leyendo las actas del pleno. Siete municipios, y ya se pueden responder.</span></a></li>
+    </ul>
+    <p class="obs-accions"><a class="boto" href="https://quivoto.cat/observatori/">Abre el Observatorio →</a></p>
+    <p class="obs-nota">Gratuito, sin registro y sin cookies. Las fichas están en catalán, que es la lengua de las fuentes oficiales. Es un borrador: trabajamos a la vista de todos y todavía no está revisado del todo.</p>
+  </div>
+</section>
+
+<section class="exemple" id="prova-seccio">
+  <div class="exemple-carta">
+    <div class="prova" id="prova">
+      <p class="prova-avis"><b>Demostración.</b> Afirmaciones reales del pleno, pero <b>todavía sin validar</b>: mira la evidencia antes de hacerles caso.</p>
+      <div class="prova-barra" role="presentation"><i id="prova-progres" style="width:0%"></i></div>
+      <article class="carta-afirmacio" id="prova-carta">
+        <p class="etiqueta-muni">Badalona · <span id="prova-tema">Fiscalidad</span></p>
+        <p class="afirmacio" id="prova-text" aria-live="polite">El Ayuntamiento debe congelar el tipo del impuesto sobre bienes inmuebles durante todo el próximo mandato.</p>
+        <div class="cares" id="prova-cares" role="group" aria-label="Qué opinas">
+        <button type="button" class="cara-boto" data-v="-2"><svg class="cara-escala" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#E2735A" stroke="#1E1B2E" stroke-width="2.5"/><path d="M20 34 q4 -3 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M14 20 l5 3 M34 20 l-5 3" stroke="#1E1B2E" stroke-width="2.2" stroke-linecap="round"/></svg><span class="nomes-lectors">Muy en desacuerdo</span></button>
+        <button type="button" class="cara-boto" data-v="-1"><svg class="cara-escala" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#FFD8B8" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 33 q4 -2 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span class="nomes-lectors">Más bien no</span></button>
+        <button type="button" class="cara-boto" data-v="0"><svg class="cara-escala" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#FBF7EE" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 32 h8" stroke="#1E1B2E" stroke-width="2.2" stroke-linecap="round"/></svg><span class="nomes-lectors">Ni sí ni no</span></button>
+        <button type="button" class="cara-boto" data-v="1"><svg class="cara-escala" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 30 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span class="nomes-lectors">Más bien sí</span></button>
+        <button type="button" class="cara-boto" data-v="2"><svg class="cara-escala" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="2.5"/><path d="M19 29 q5 6 10 0 z" fill="#1E1B2E"/><path d="M15 21 q3 -4 6 0 M27 21 q3 -4 6 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span class="nomes-lectors">Muy de acuerdo</span></button>
+        </div>
+        <p class="escala-text">Muy en desacuerdo · Más bien no · Ni sí ni no · Más bien sí · Muy de acuerdo</p>
+      </article>
+      <div class="prova-fet" id="prova-fet" hidden aria-live="polite"></div>
+      <p class="peu-exemple" id="prova-peu">Afirmación 1 de 5 · Tus respuestas se quedan en el navegador. No se envía ninguna a ninguna parte.</p>
+      <noscript><p class="peu-exemple">Necesitas JavaScript para responder aquí. También puedes hacer la demostración entera en el Observatorio.
+        <a href="https://quivoto.cat/observatori/preguntes/badalona/prova/">Haz las 25 de Badalona →</a></p></noscript>
+    </div>
+    <script id="prova-dades" type="application/json">{"q": [{"t": "El Ayuntamiento debe congelar el tipo del impuesto sobre bienes inmuebles durante todo el próximo mandato.", "tema": "Fiscalidad", "ple": "Pleno del 27-10-2025: se aprueba subir un 2,4% los tipos del IBI para 2026, con 17 votos a favor (PP) y 9 en contra (PSC, ERC, BeCP y Guanyem).", "u": "https://media.seu-e.cat/acteca/801550006/2025/64b00b33-64ad-43a1-b1e0-2c42b8ca9dfe/Acta_15_Ple_27-10-2025.pdf", "p": [-2, 2, 2, 2, 2]}, {"t": "El Ayuntamiento debe prohibir las viviendas de uso turístico en todo el término municipal.", "tema": "Vivienda", "ple": "Pleno del 02-03-2026: la moción para prohibirlas en toda la ciudad a partir de octubre de 2028 se rechaza con 9 votos a favor y 18 en contra.", "u": "https://media.seu-e.cat/acteca/801550006/2026/6fb28919-82bb-4720-9c22-769aae94dcf8/ACTA_04_Ple_02-03-2026.pdf", "p": [-2, 2, 2, 2, 2]}, {"t": "El Ayuntamiento debe ampliar la red de cámaras de videovigilancia en las calles de la ciudad.", "tema": "Seguridad", "ple": "Pleno del 02-06-2025: modificación de presupuesto de 12.000.000 € para la red de videovigilancia, aprobada con 22 votos a favor (PP y PSC) y 5 en contra (ERC, BeCP y Guanyem), con informe desfavorable de la intervención.", "u": "https://media.seu-e.cat/acteca/801550006/2025/b671500a-56cc-44e2-ae1b-2109148680c4/Acta_07_Ple_02-06-2025.pdf", "p": [2, 2, -2, -2, -2]}, {"t": "El Ayuntamiento debe convertir la Guardia Urbana en una policía de barrio y de proximidad.", "tema": "Seguridad", "ple": "Pleno del 02-02-2026: la moción por un nuevo modelo de seguridad urbana basado en la proximidad se rechaza con 9 votos a favor y 18 en contra.", "u": "https://media.seu-e.cat/acteca/801550006/2026/51f8b74c-9fac-4d36-8aed-0ae3b19e3ece/ACTA_03_Ple_02-02-2026.pdf", "p": [-2, 2, 2, 2, 2]}, {"t": "El Ayuntamiento debe garantizar que todas las bibliotecas municipales abran todo el año.", "tema": "Cultura", "ple": "Pleno del 19-01-2026: la moción para la reapertura de las bibliotecas de Can Casacuberta, Llefià y Sant Roc se rechaza con 9 votos a favor y 18 en contra.", "u": "https://media.seu-e.cat/acteca/801550006/2026/041dcf67-5f41-4a30-9252-680e65776fdd/ACTA_02_Ple_19-01-2026.pdf", "p": [-2, 2, 2, 2, 2]}], "g": [{"nom": "Partit Popular", "sub": "18 concejales · gobierno"}, {"nom": "PSC-CP", "sub": "4 concejales"}, {"nom": "Esquerra Republicana", "sub": "2 concejales"}, {"nom": "Badalona En Comú Podem", "sub": "2 concejales"}, {"nom": "Guanyem Badalona", "sub": "1 concejal"}], "txt": {"compte": "Afirmación {n} de {t}", "resultat": "Con quién coincides", "ningu": "No has respondido ninguna afirmación.", "la_teva": "Tú:", "el_ple": "En el pleno:", "acta": "el acta", "detall": "Mira qué se votó en cada punto", "peu_nota": "Estas posiciones no son lo que el partido <em>dice<\/em> que piensa: se deducen de su voto en el pleno. Un partido puede votar en contra de una moción por quien la presenta y no por lo que dice. En 2027 serán las candidaturas quienes respondan, y entonces se podrán comparar las dos cosas.", "peu_mes": "Cinco afirmaciones es el mínimo que nos ponemos para dar un número. En Badalona hay veinticinco, y de momento siete municipios las tienen. La demostración completa está en catalán, que es la lengua de las actas.", "boto": "Haz las 25 de Badalona", "altres": "Los otros seis municipios", "torna": "Empezar de nuevo", "privadesa": "Tus respuestas se quedan en el navegador. No se envía ninguna a ninguna parte."}, "escala": ["Muy en desacuerdo", "Más bien no", "Ni sí ni no", "Más bien sí", "Muy de acuerdo"], "boto_url": "https://quivoto.cat/observatori/preguntes/badalona/prova/", "altres_url": "https://quivoto.cat/observatori/preguntes/"}</script>
+    <script>
+(function () {
+  var arrel = document.getElementById('prova');
+  var caixa = document.getElementById('prova-dades');
+  if (!arrel || !caixa || !document.querySelector) return;
+  var D; try { D = JSON.parse(caixa.textContent); } catch (e) { return; }
+  var Q = D.q, G = D.g, T = D.txt;
+
+  var carta = document.getElementById('prova-carta');
+  var fet = document.getElementById('prova-fet');
+  var peu = document.getElementById('prova-peu');
+  var progres = document.getElementById('prova-progres');
+  var tema = document.getElementById('prova-tema');
+  var text = document.getElementById('prova-text');
+  var cares = document.getElementById('prova-cares');
+  if (!carta || !fet || !cares) return;
+
+  var i = 0, respostes = [];
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function compte(n) { return T.compte.replace('{n}', n).replace('{t}', Q.length); }
+
+  function pinta() {
+    tema.textContent = Q[i].tema;
+    text.textContent = Q[i].t;
+    progres.style.width = Math.round(100 * i / Q.length) + '%';
+    peu.textContent = compte(i + 1) + ' · ' + T.privadesa;
+  }
+
+  function coincidencia(n) {
+    var num = 0, den = 0;
+    for (var k = 0; k < Q.length; k++) {
+      var r = respostes[k], p = Q[k].p[n];
+      if (r === undefined || p === null || p === undefined) continue;
+      num += 4 - Math.abs(r - p);
+      den += 4;
+    }
+    return den === 0 ? null : Math.max(0, Math.min(100, Math.round(100 * num / den)));
+  }
+
+  function acaba() {
+    progres.style.width = '100%';
+    carta.hidden = true;
+    peu.hidden = true;
+
+    var res = [];
+    for (var n = 0; n < G.length; n++) {
+      var pct = coincidencia(n);
+      if (pct !== null) res.push({ nom: G[n].nom, sub: G[n].sub, pct: pct });
+    }
+    res.sort(function (a, b) { return b.pct - a.pct; });
+
+    var h = '<h3 class="prova-titol">' + esc(T.resultat) + '</h3>';
+    if (!res.length) {
+      h += '<p>' + esc(T.ningu) + '</p>';
+    } else {
+      h += '<ul class="prova-grups">';
+      for (var j = 0; j < res.length; j++) {
+        h += '<li' + (res[j].pct === res[0].pct ? ' class="cap"' : '') + '>' +
+             '<span class="prova-cap"><span>' + esc(res[j].nom) + '</span>' +
+             '<span class="prova-pct">' + res[j].pct + ' %</span></span>' +
+             '<span class="prova-sub">' + esc(res[j].sub) + '</span>' +
+             '<span class="prova-bar"><i style="width:' + res[j].pct + '%"></i></span></li>';
+      }
+      h += '</ul>';
+    }
+    h += '<p class="prova-nota">' + T.peu_nota + '</p>';
+    h += '<details class="prova-detall"><summary>' + esc(T.detall) + '</summary><ol>';
+    for (var k = 0; k < Q.length; k++) {
+      var r = respostes[k];
+      h += '<li><b>' + esc(Q[k].t) + '</b>' +
+           '<span class="prova-teva">' + esc(T.la_teva) + ' ' +
+           esc(r === undefined ? '—' : D.escala[r + 2]) + '</span>' +
+           '<span class="prova-ple">' + esc(T.el_ple) + ' ' + esc(Q[k].ple) + ' ' +
+           '<a href="' + Q[k].u + '" target="_blank" rel="nofollow noopener">' +
+           esc(T.acta) + ' ↗</a></span></li>';
+    }
+    h += '</ol></details>';
+    h += '<p class="prova-mes">' + esc(T.peu_mes) + '</p>';
+    h += '<p class="prova-accions">' +
+         '<a class="boto" href="' + D.boto_url + '">' + esc(T.boto) + ' →</a>' +
+         '<a class="prova-altres" href="' + D.altres_url + '">' + esc(T.altres) + '</a>' +
+         '<button type="button" class="prova-torna" id="prova-torna">' + esc(T.torna) + '</button></p>';
+
+    fet.innerHTML = h;
+    fet.hidden = false;
+    var torna = document.getElementById('prova-torna');
+    if (torna) torna.addEventListener('click', function () {
+      i = 0; respostes = [];
+      fet.hidden = true; fet.innerHTML = '';
+      carta.hidden = false; peu.hidden = false;
+      pinta();
+      var b = cares.querySelector('button'); if (b) b.focus();
+    });
+  }
+
+  cares.addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('button[data-v]') : null;
+    if (!b) return;
+    respostes[i] = Number(b.getAttribute('data-v'));
+    i += 1;
+    if (i >= Q.length) acaba(); else pinta();
+  });
+})();
+</script>
+  </div>
+  <div class="exemple-text">
+    <h2>Pruébalo aquí mismo</h2>
+    <p>Cinco afirmaciones de verdad del pleno de Badalona. Responde con la cara que te encaje y te decimos con qué grupo del pleno coincides. Cada afirmación sale de un punto votado: una moción, unas ordenanzas, una modificación de presupuesto.</p>
+    <ol class="passos">
+      <li><b>1</b><div><h3>Eliges tu municipio</h3><p>Empezamos por los 200 más poblados y vamos ampliando.</p></div></li>
+      <li><b>2</b><div><h3>Respondes 25 afirmaciones</h3><p>Siete minutos. Puedes marcar las que más te importan y saltar las que no.</p></div></li>
+      <li><b>3</b><div><h3>Ves quién piensa como tú</h3><p>Porcentaje con cada partido y cada candidato, y dónde discrepáis.</p></div></li>
+      <li><b>4</b><div><h3>Lo compruebas tú mismo</h3><p>Cada posición enlaza al acta del pleno, al programa o a la noticia.</p></div></li>
+    </ol>
   </div>
 </section>
 
@@ -144,35 +355,6 @@
       <li style="--gir: -2deg; --retard: 0.0s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Neteja" style="--retard: 0.0s"><path d="M10 14 H38 L35 42 H13 Z" fill="#C9C4F2"/><rect x="6" y="8" width="36" height="6" rx="3" fill="#1E1B2E"/><path d="M19 20 V36 M29 20 V36" stroke="#1E1B2E" stroke-width="2.5" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="28" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="28" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="28.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="28.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 35.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Neteja</span></li>
       <li style="--gir: 4deg; --retard: 0.9s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="El ple" style="--retard: 0.9s"><path d="M6 30 A18 18 0 0 1 42 30 Z" fill="#E2735A"/><path d="M6 30 A18 18 0 0 1 42 30" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round"/><rect x="18" y="34" width="12" height="8" rx="2" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="24" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="24" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>El ple</span></li>
   </ul>
-</section>
-
-<section class="exemple">
-  <div class="exemple-carta">
-    <article class="carta-afirmacio">
-      <p class="etiqueta-muni">Sabadell · Movilidad</p>
-      <p class="afirmacio">La Gran Via debe perder un carril de coches para hacer carril bici y aceras más anchas.</p>
-      <div class="cares">
-        <svg class="cara-escala" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#E2735A" stroke="#1E1B2E" stroke-width="2.5"/><path d="M20 34 q4 -3 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M14 20 l5 3 M34 20 l-5 3" stroke="#1E1B2E" stroke-width="2.2" stroke-linecap="round"/></svg>
-      <svg class="cara-escala" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#FFD8B8" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 33 q4 -2 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>
-      <svg class="cara-escala" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#FBF7EE" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 32 h8" stroke="#1E1B2E" stroke-width="2.2" stroke-linecap="round"/></svg>
-      <svg class="cara-escala" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="2.5"/><circle cx="19" cy="23" r="2.4" fill="#1E1B2E"/><circle cx="29" cy="23" r="2.4" fill="#1E1B2E"/><path d="M20 30 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>
-      <svg class="cara-escala" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="2.5"/><path d="M19 29 q5 6 10 0 z" fill="#1E1B2E"/><path d="M15 21 q3 -4 6 0 M27 21 q3 -4 6 0" stroke="#1E1B2E" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>
-      </div>
-      <p class="escala-text">Muy en desacuerdo · Más bien no · Ni sí ni no · Más bien sí · Muy de acuerdo</p>
-      <p class="evidencia">Se votó en el pleno de marzo de 2025: el gobierno votó en contra; ERC, Comuns y CUP, a favor.</p>
-    </article>
-    <p class="peu-exemple">Ejemplo. Las afirmaciones reales las publicaremos municipio a municipio.</p>
-  </div>
-  <div class="exemple-text">
-    <h2>Una pregunta de verdad, no una encuesta</h2>
-    <p>Cada afirmación sale de algo que ha pasado en tu pueblo: una moción, un presupuesto, un plan urbanístico. Respondes con la cara que te encaje, y si un tema te importa mucho, lo marcas.</p>
-    <ol class="passos">
-      <li><b>1</b><div><h3>Eliges tu municipio</h3><p>Empezamos por los 200 más poblados y vamos ampliando.</p></div></li>
-      <li><b>2</b><div><h3>Respondes 25 afirmaciones</h3><p>Siete minutos. Puedes marcar las que más te importan y saltar las que no.</p></div></li>
-      <li><b>3</b><div><h3>Ves quién piensa como tú</h3><p>Porcentaje con cada partido y cada candidato, y dónde discrepáis.</p></div></li>
-      <li><b>4</b><div><h3>Lo compruebas tú mismo</h3><p>Cada posición enlaza al acta del pleno, al programa o a la noticia.</p></div></li>
-    </ol>
-  </div>
 </section>
 
 <section class="dif">

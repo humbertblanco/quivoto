@@ -94,3 +94,90 @@ describe("les coalicions «en comú», que porten la marca al mig", () => {
     expect(sameForce("Barcelona en Comú-C", "BCN en Comú - C")).toBe(true);
   });
 });
+
+/**
+ * Sigles que es quedaven en gris a la llista dels 947 tot i ser una marca amb
+ * color propi. Cadascuna ve d'un municipi concret, i el municipi hi consta
+ * perquè qui les repassi pugui comprovar-ho a la font.
+ */
+describe("sigles que hi eren i no es reconeixien", () => {
+  it("Junts escrit sencer, com a Tàrrega", () => {
+    expect(siglesFamily("JuntsxCat")).toBe("junts");
+    expect(siglesFamily("JxCat")).toBe("junts");
+  });
+
+  it("la Convergéncia Democratica Aranesa, com a Naut Aran", () => {
+    expect(siglesFamily("CDA-PNA")).toBe("cda");
+  });
+
+  it("no s'inventa una família per a una llista local", () => {
+    // «TxT» és Tot per Terrassa i no és cap marca supramunicipal: ha de
+    // continuar sense família, que és el que la deixa en gris i no la pinta
+    // del color d'un partit que no és el seu.
+    expect(siglesFamily("TxT")).toBeNull();
+    expect(siglesFamily("CANETENCS")).toBeNull();
+    expect(siglesFamily("SOM VEU")).toBeNull();
+  });
+});
+
+/**
+ * Les etiquetes de coalició. Són tres i cadascuna és d'un partit: «-AM» és
+ * l'Acord Municipal d'Esquerra, «-AMUNT» és de la CUP i «-CP» és la
+ * Candidatura de Progrés del PSC. Dues ja es reconeixien i la tercera no, i
+ * el resultat és que 33 alcaldies socialistes sortien sense color al mapa
+ * mentre les altres dues el tenien.
+ */
+describe("les etiquetes de coalició, totes tres", () => {
+  it("«-CP» és el PSC, com «-AM» és Esquerra", () => {
+    expect(siglesFamily("SS-CP")).toBe("psc");
+    expect(siglesFamily("CxB-CP")).toBe("psc");
+    expect(siglesFamily("UPTA-CP")).toBe("psc");
+    expect(siglesFamily("CP")).toBe("psc");
+    expect(siglesFamily("ERC-AM")).toBe("erc");
+  });
+
+  it("no s'aplica a un tros que només comenci per cp", () => {
+    // «CPT» no és cap candidatura de progrés: l'etiqueta és el tros sencer.
+    expect(siglesFamily("CPT")).toBeNull();
+  });
+});
+
+/**
+ * Casos trobats repassant les 163 sigles que es quedaven sense color, i
+ * cadascun amb el contraexemple que en fixa el límit. El límit és tan
+ * important com el cas: «-TE» és Tots per l'Empordà com a sufix, però «TE-XTU»
+ * de l'Espluga Calba no ho és, i pintar-lo seria un error.
+ */
+describe("sigles llargues i sufixos d'agrupació", () => {
+  it("l'espai i la barra separen trossos, no s'esborren", () => {
+    // «JUNTS PER RIALP CM» s'enganxava en un sol tros i no casava amb res.
+    expect(siglesFamily("JUNTS PER RIALP CM")).toBe("junts");
+    expect(siglesFamily("PLV/ERC")).toBe("erc");
+    // Els punts sí que s'esborren: «F.I.C.» és un sol tros i no cap sigla.
+    expect(siglesFamily("F.I.C.")).toBeNull();
+  });
+
+  it("els sufixos comarcals, només al final", () => {
+    expect(siglesFamily("EA-IdSELVA")).toBe("idselva");
+    expect(siglesFamily("TFS-TE")).toBe("te");
+    expect(siglesFamily("TE-XTU")).toBeNull();
+  });
+
+  it("l'Acord Municipal escrit sencer és Esquerra, com ja ho és «-AM»", () => {
+    expect(siglesFamily("VIU ESPOT-ACORD MUNICIPAL")).toBe("erc");
+    expect(siglesFamily("ERC-AM")).toBe("erc");
+  });
+});
+
+describe("els noms de dues paraules, amb separador i sense", () => {
+  it("«ARA PL» és PDeCAT tant junt com separat", () => {
+    expect(siglesFamily("ARA PL")).toBe("pdecat");
+    expect(siglesFamily("ARAPL")).toBe("pdecat");
+  });
+
+  it("i el PSC en totes les seves formes", () => {
+    expect(siglesFamily("PSC PSOE")).toBe("psc");
+    expect(siglesFamily("PSC-PSOE")).toBe("psc");
+    expect(siglesFamily("PSCPSOE")).toBe("psc");
+  });
+});

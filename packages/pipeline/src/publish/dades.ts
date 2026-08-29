@@ -362,7 +362,7 @@ const BLOCS: readonly Bloc[] = [
     nota: "Fins on arriba la nostra cobertura d'aquest municipi. Publicar el forat val tant com publicar la dada.",
     camps: [
       { clau: "actes_indexades", etiqueta: "Actes de ple indexades", unitat: "actes", font: "actes", global: true,
-        descripcio: "Actes de sessions al feed obert de l'AOC des del juny del 2023. Encara no n'hem llegit cap: només les tenim indexades." },
+        descripcio: "Actes de sessions al feed obert de l'AOC des del juny del 2023. Indexades per a tots; llegides i buidades punt per punt només als municipis de més de 20.000 habitants, que és on J12 arriba." },
       { clau: "acta_ultima", etiqueta: "Última acta indexada", unitat: "data", font: "actes",
         descripcio: "Data de l'última acta que consta al feed." },
       { clau: "cobertura_pct", etiqueta: "Cobertura d'indicadors", unitat: "%", font: "ensLocals", global: true, propi: true,
@@ -601,7 +601,14 @@ function indicadorsDe(fitxa: Fitxa): Fila[] {
   // --- dones i homes
   const paritat = fitxa.parity;
   if (paritat) {
-    afegeix(files, "dones_ple_pct", paritat.womenElectedPct, mandat);
+    // Només quan la llista d'electes quadra amb les regidories del ple: a 213
+    // municipis la font en dona menys, i el percentatge no és el del ple.
+    afegeix(
+      files,
+      "dones_ple_pct",
+      (paritat as { complet?: boolean }).complet === false ? null : paritat.womenElectedPct,
+      mandat,
+    );
     afegeix(files, "dones_ple", paritat.womenElected, mandat);
     afegeix(files, "elegides_total", paritat.elected, mandat);
     afegeix(files, "dones_llistes_pct", paritat.womenCandidatesPct, mandat);
@@ -990,7 +997,18 @@ async function carregaFitxes(db: Db): Promise<Fitxa[]> {
  * `outDir` és el directori de la secció (`web/public/observatori/dades/`);
  * els fitxers per municipi van a `<outDir>/m/`.
  */
-export async function writeDownloads(db: Db, outDir: string): Promise<{ files: number; bytes: number }> {
+/**
+ * Els fitxers de descàrrega, i **quants municipis i quants camps hi ha a dins**.
+ *
+ * Els dos números tornen d'aquí i no els compta qui crida perquè els fitxers
+ * sempre porten els municipis sencers de la base de dades, publiqui's una fitxa
+ * o les 947. Quan la pàgina de `/dades/` els comptava pel seu compte deia «6
+ * municipis · 0 camps» al costat d'un CSV de 947 files i 53 columnes.
+ */
+export async function writeDownloads(
+  db: Db,
+  outDir: string,
+): Promise<{ files: number; bytes: number; municipis: number; camps: number }> {
   const arrel = outDir.endsWith("/") ? outDir : `${outDir}/`;
   const generatedAt = new Date().toISOString().slice(0, 10);
   const fitxes = await carregaFitxes(db);
@@ -1110,7 +1128,7 @@ export async function writeDownloads(db: Db, outDir: string): Promise<{ files: n
   // ell inclòs.
   await desa(`${arrel}ESQUEMA.md`, esquema(generatedAt, globals.length, files + 1, coberturaBloc));
 
-  return { files, bytes };
+  return { files, bytes, municipis: globals.length, camps: columnes.length };
 }
 
 // -------------------------------------------------------------------- pàgina

@@ -145,20 +145,44 @@ export function resolveBrand(election: string, agrupacioCodi: string | null | un
  * força: preferim no detectar una alternança abans que inventar-ne una.
  */
 const SIGLES_FAMILIES: ReadonlyArray<readonly [RegExp, string]> = [
-  [/^(psc|pscpsoe|pscpm|psccp|pscpmc|psoe|pscunits)/, "psc"],
+  // El «-CP» final és la Candidatura de Progrés, l'etiqueta amb què el PSC es
+  // presenta en coalició a molts pobles: «SS-CP», «UB-CP», «CxB-CP». Hi és per
+  // la mateixa raó que l'«am» d'aquí sota és d'Esquerra i l'«amunt» és de la
+  // CUP —són marques de coalició registrades, no acrònims que sonin— i sense
+  // ell 33 alcaldies del PSC es quedaven sense color mentre les d'ERC i la CUP
+  // el tenien. La forma sencera «psccp» ja hi era; el que faltava era el tros.
+  [/^(psc|pscpsoe|pscpm|psccp|pscpmc|psoe|pscunits)|(^|-)cp$/, "psc"],
   [/^(ciu|cdc|convergencia|uniodemocratica|udc)/, "ciu"],
-  [/(^|-)(junts|jxcat|jxc|cm)($|-)/, "junts"],
+  // «juntsxcat» hi és perquè a Tàrrega les sigles s'escriuen senceres i el
+  // token «junts» no hi surt sol: sense això, l'alcaldia de Junts d'un poble de
+  // dinou mil habitants sortia sense marca.
+  [/(^|-)(junts|juntsxcat|jxcat|jxc|cm)($|-)/, "junts"],
   [/^(erc|esquerra|am$)/, "erc"],
   [/^(pp|ppc|apap|alianzapopular)/, "pp"],
   // «en comú» surt enmig del nom i no al principi: «Barcelona en Comú-C»,
   // «LHECP-C», «Sabadell en Comú Podem». Sense buscar-ho a dins, nou regidors
   // de Barcelona es quedaven sense grup.
-  [/^(icv|iniciativa|euia|entesa|ecp|eacp|comuns|ecg|psuc|pcc)|encomu/, "comuns"],
+  // «en-?comu» amb el guionet opcional: ara que `compact()` converteix l'espai
+  // en separador en comptes d'esborrar-lo, «Barcelona en Comú-C» és
+  // «barcelona-en-comu-c» i el testimoni enganxat ja no hi era.
+  [/^(icv|iniciativa|euia|entesa|ecp|eacp|comuns|ecg|psuc|pcc)|en-?comu/, "comuns"],
   [/^(cup|amunt)/, "cup"],
   [/^(cs|ciutadans|ciudadanos)/, "cs"],
   [/^vox/, "vox"],
   [/^(pdecat|arapl|pnc)/, "pdecat"],
   [/^(aliancacat|ac$)/, "aliancacat"],
+  // La Convergéncia Democratica Aranesa tenia marca i color però cap patró que
+  // hi arribés: a Naut Aran les sigles són «CDA-PNA» i es quedava en gris.
+  [/(^|-)(cda|cdaranesa)($|-)/, "cda"],
+  // «Independents de la Selva» i «Tots per l'Empordà» s'escriuen com a sufix
+  // dins de les sigles de la llista local amb qui van: «EA-IdSELVA»,
+  // «TFS-TE». Ancorats al final i no en qualsevol lloc: a l'Espluga Calba hi
+  // ha «TE-XTU», on «TE» no és Tots per l'Empordà i pintar-lo seria un error.
+  [/-idselva$/, "idselva"],
+  [/-te$/, "te"],
+  // L'Acord Municipal d'Esquerra escrit sencer. El testimoni «am» ja hi és a
+  // la línia d'ERC: deixar gris la forma llarga és incoherència, no prudència.
+  [/(^|-)acord-?municipal($|-)/, "erc"],
 ];
 
 /** Nom compacte i sense accents, per comparar. */
@@ -167,6 +191,11 @@ function compact(sigles: string): string {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
+    // L'espai i la barra separen trossos, i esborrar-los els enganxava: «JUNTS
+    // PER RIALP CM» es convertia en «juntsperrialpcm», que no és cap testimoni
+    // de res, i cinc alcaldies de Junts es quedaven sense marca. Els punts sí
+    // que s'esborren: «F.I.C.» ha de continuar sent un sol tros.
+    .replace(/[\s/]+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 }
 
@@ -180,8 +209,14 @@ function compact(sigles: string): string {
  */
 export function siglesFamily(sigles: string): string | null {
   const key = compact(sigles);
+  // Es prova amb els separadors i sense. Els patrons de dues paraules —«ARA
+  // PL», «PSC PSOE», «Alianza Popular»— es van escriure quan `compact()`
+  // esborrava els espais, i ara que els converteix en guió deixaven de casar:
+  // vuit alcaldies del PDeCAT es van quedar sense marca en fer el canvi. Provar
+  // les dues formes és el que fa que el canvi de separador no en trenqui cap.
+  const enganxat = key.replace(/-/g, "");
   for (const [pattern, family] of SIGLES_FAMILIES) {
-    if (pattern.test(key)) return family;
+    if (pattern.test(key) || pattern.test(enganxat)) return family;
   }
   const found = new Set<string>();
   for (const token of key.split("-").filter(Boolean)) {

@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { municipalities, municipalityMetrics, type Db } from "@quivoto/db";
+import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
+import { sobreColor } from "./contrast";
 import { carregaMetriques } from "./metriques";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
 import { SITE } from "./config";
-import { slugify } from "../lib/text";
+import { nomLlegible, slugify } from "../lib/text";
 
 /**
  * «Els 947» — l'índex de tots els municipis de Catalunya amb el que en sabem.
@@ -30,6 +32,10 @@ export type Els947Row = {
   s: string; n: string; c: string; p: number; r: number;
   /** alcaldia i sigles */
   a: string | null; g: string | null;
+  /** el retrat que publica el mateix ajuntament, si en publica */
+  ar: string | null;
+  /** el color de la força de l'alcaldia, quan les sigles el deixen deduir */
+  ac: string | null;
   /** governa el més votat: 1 sí, 0 no, null desconegut */
   w: 0 | 1 | null;
   /** majoria absoluta d'una sola llista */
@@ -52,8 +58,26 @@ export type Els947Row = {
   o: 0 | 1;
 };
 
-/** Les mètriques que la llista dels 947 llegeix, i cap més. */
+/**
+ * Les mètriques que la llista dels 947 llegeix, i cap més.
+ *
+ * Demanar-ne una que no hi és no falla: `own?.has(...)` torna fals i la columna
+ * surt buida sense dir res. Va passar amb `singleList`, que no hi era: el
+ * comptador de la portada dels 947 deia que cap municipi no té una sola
+ * candidatura al ple quan el Síndic n'hi compta **185**, i el filtre no trobava
+ * res. La llista de dalt s'ha de mirar cada cop que la fila creixi.
+ *
+ * Aquí hi havia també `"actes"`, que cap job no escriu —J12 i J16 desen
+ * `mocions`— i que aquí no caldria igualment: les actes indexades surten de
+ * `municipalities.minutesCount`, no de cap mètrica.
+ */
 const KINDS_ELS947: string[] = [
+  // «carrecs» hi és només per una cosa: el retrat de l'alcaldia. Són 5 kB per
+  // municipi —uns 4,7 MB en total— i `carregaMetriques` ja els demana en blocs
+  // de 200, que és el que fa que això no repeteixi el problema de memòria de
+  // les actes. Si un dia aquesta mètrica creix, el primer que s'ha de mirar és
+  // si val la pena continuar-la llegint aquí per una sola imatge.
+  "carrecs",
   "electoralHistory",
   "finances",
   "government",
@@ -61,8 +85,37 @@ const KINDS_ELS947: string[] = [
   "parity",
   "transparency",
   "results",
-  "actes",
+  "singleList",
 ];
+
+/**
+ * Llegir una mètrica **només** si s'ha demanat a la consulta.
+ *
+ * Sense això, demanar una clau que no és a `KINDS_ELS947` torna `undefined` i
+ * la columna surt buida per als 947 sense dir-ho enlloc. És com el comptador de
+ * plens amb una sola candidatura va estar dient 0 quan n'hi ha 185: no fallava
+ * res, simplement no s'havia demanat. Ara peta, i peta a la primera fila.
+ */
+export function lectorDe(own: Map<string, unknown> | undefined): {
+  llegeix: (kind: string) => unknown;
+  te: (kind: string) => boolean;
+} {
+  const comprova = (kind: string): void => {
+    if (!KINDS_ELS947.includes(kind)) {
+      throw new Error(`els947 llegeix la mètrica «${kind}» i no la demana: afegeix-la a KINDS_ELS947`);
+    }
+  };
+  return {
+    llegeix: (kind) => {
+      comprova(kind);
+      return own?.get(kind);
+    },
+    te: (kind) => {
+      comprova(kind);
+      return own?.has(kind) ?? false;
+    },
+  };
+}
 
 export async function loadEls947(db: Db): Promise<Els947Row[]> {
   const all = await db.select().from(municipalities);
@@ -92,18 +145,29 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
   return all
     .map((m): Els947Row => {
       const own = byMunicipality.get(m.id);
-      const government = own?.get("government") as
+      const { llegeix, te } = lectorDe(own);
+      const government = llegeix("government") as
         | { winnerGoverns: boolean | null; winnerHasMajority: boolean; mayorSigles: string | null }
         | undefined;
-      const mayors = own?.get("mayors") as { currentTermChange: unknown } | undefined;
-      const parity = own?.get("parity") as { womenElectedPct: number | null } | undefined;
-      const history = own?.get("electoralHistory") as { alternances: number; elections: number } | undefined;
-      const transparency = own?.get("transparency") as { pct: number | null } | undefined;
-      const finances = own?.get("finances") as
+      const mayors = llegeix("mayors") as { currentTermChange: unknown } | undefined;
+      const parity = llegeix("parity") as { womenElectedPct: number | null; complet?: boolean } | undefined;
+      const history = llegeix("electoralHistory") as { alternances: number; elections: number } | undefined;
+      const transparency = llegeix("transparency") as { pct: number | null } | undefined;
+      const finances = llegeix("finances") as
         | { indicators: { key: string; value: number | null }[] }
         | undefined;
       const indicator = (key: string): number | null =>
         finances?.indicators.find((i) => i.key === key)?.value ?? null;
+
+      // El retrat de qui té l'alcaldia. S'aparella pel càrrec i no pel nom:
+      // la seu electrònica escriu «Alcalde», «Alcaldessa» o «Alcaldia» i això
+      // és més estable que el nom, que cada font escriu a la seva manera.
+      const carrecs = llegeix("carrecs") as
+        | { carrecs: { nom: string; carrec: string; fotoPetita: string | null }[] }
+        | undefined;
+      const capDeCasa = carrecs?.carrecs.find((c) => /alcald/i.test(c.carrec)) ?? null;
+      const sigles = government?.mayorSigles ?? m.mayorPartyRaw ?? null;
+      const familia = sigles ? siglesFamily(sigles) : null;
 
       return {
         s: m.slug,
@@ -112,18 +176,20 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         p: m.population ?? 0,
         r: government ? (government as unknown as { totalSeats: number }).totalSeats : (m.councilSeats ?? 0),
         a: m.mayorName,
-        g: government?.mayorSigles ?? m.mayorPartyRaw ?? null,
+        g: sigles,
+        ar: capDeCasa?.fotoPetita ?? null,
+        ac: familia ? BRANDS_BY_ID.get(familia)?.color ?? null : null,
         w: government?.winnerGoverns === null || government === undefined ? null : government.winnerGoverns ? 1 : 0,
         m: government?.winnerHasMajority ? 1 : 0,
         k: mayors?.currentTermChange ? 1 : 0,
         t: m.minutesCount ?? 0,
         d: indicator("deute-habitant"),
         e: indicator("estalvi-net"),
-        f: parity?.womenElectedPct ?? null,
+        f: parity?.complet === false ? null : parity?.womenElectedPct ?? null,
         v: history?.alternances ?? null,
         q: history?.elections ?? null,
         y: transparency?.pct ?? null,
-        o: own?.has("singleList") ? 1 : 0,
+        o: te("singleList") ? 1 : 0,
       };
     })
     .sort((a, b) => b.p - a.p);
@@ -288,8 +354,9 @@ export function pastilles(fila: Fila, l: Llindars): string[] {
   if (fila.v === 0 && (fila.q ?? 0) >= 8) posa("La mateixa força des del 1979", "sempre");
   else if (fila.v !== null && fila.q !== null)
     posa(`${fila.v} canvis de mans en ${fila.q} eleccions`);
-  if (fila.a) posa(fila.a);
-  if (fila.g) posa(fila.g, "sigles");
+  // El nom de l'alcaldia i les seves sigles ja tenen la seva pròpia línia amb
+  // la cara i el color: com a pastilles hi sortien una segona vegada, en text
+  // pla i barrejades amb les xifres del poble.
   posa(`${fila.r} regidories`);
   posa(fila.t > 0 ? `${xifra(fila.t)} actes indexades` : "Sense actes", fila.t > 0 ? "" : "sense");
   if (fila.d !== null) posa(`${xifra(fila.d)} € de deute per habitant`);
@@ -313,6 +380,20 @@ const CSS = `
   letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .xifres span{font-size:.82rem;color:var(--ink-suau)}
 .pistes{display:flex;flex-wrap:wrap;gap:8px;margin:var(--e3) 0 0}
+
+/* --- qui mana a cada poble, a la llista dels 947 -------------------------
+   Amb 947 files, un nom i unes sigles en text pla es llegeixen d'una en una.
+   La cara i el color de la força es recullen d'una passada, que és el que fa
+   que la llista es pugui recórrer. Sense fotografia hi van les inicials amb el
+   color del partit: mai un buit, que faria semblar que d'aquell poble no en
+   sabem qui mana quan el que passa és que l'ajuntament no en publica el retrat. */
+.mana{display:flex;align-items:center;gap:9px;margin:6px 0 0;flex-wrap:wrap}
+.mana .cara{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:50% 22%;
+  border:2px solid var(--ink);background:var(--paper-2);flex:none}
+.mana .cara.inicials{display:flex;align-items:center;justify-content:center;font-family:var(--display);
+  font-weight:900;font-size:.72rem;background:var(--c);color:var(--t)}
+.mana .qui-mana{font-weight:800;font-size:.9rem;min-width:0;overflow-wrap:anywhere}
+.mana .sigla{font-size:.72rem;padding:0 9px}
 
 /* --- el tauler: cercador, filtres i llista ---------------------------- */
 .tauler{margin:var(--e4) 0 0}
@@ -428,11 +509,33 @@ export function renderEls947(
       const lloc = f.c
         ? `<a href="c/${escape(slugify(f.c))}/">${escape(f.c)}</a>`
         : "<span>sense comarca</span>";
+      // Qui mana, amb la cara que publica el seu ajuntament i el color de la
+      // seva força. Amb 947 files, un nom i unes sigles en text pla es
+      // llegeixen d'una en una; la cara i el color es recullen d'una passada,
+      // que és el que fa que aquesta llista es pugui recórrer de debò.
+      const qui = f.a
+        ? (() => {
+            const { fons, tinta } = sobreColor(f.ac ?? "#8b8b8b");
+            const inicials = f.a
+              .split(/\s+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((w) => w[0]!.toUpperCase())
+              .join("");
+            const cara = f.ar
+              ? `<img class="cara" src="${escape(f.ar)}" alt="" loading="lazy" width="30" height="30">`
+              : `<span class="cara inicials" style="--c:${fons};--t:${tinta}" aria-hidden="true">${escape(inicials)}</span>`;
+            return `<p class="mana">${cara}<span class="qui-mana">${escape(nomLlegible(f.a))}</span>${
+              f.g ? `<b class="sigla" style="--c:${fons};--t:${tinta}">${escape(f.g)}</b>` : ""
+            }</p>`;
+          })()
+        : "";
       return `<li class="fila" data-k="${escape(clauCerca(f.n) + " " + clauCerca(f.c))}" data-f="${escape(
         marques(f, llindars).join(" "),
       )}">
 <p class="titol">${titol}<span class="pob">${xifra(f.p)} hab.</span></p>
 <p class="lloc">${lloc}</p>
+${qui}
 <p class="dades">${pastilles(f, llindars).join("")}</p>
 </li>`;
     })

@@ -149,3 +149,38 @@ export function nomLlegible(text: string): string {
     })
     .join(" ");
 }
+
+const MESOS = [
+  "gener", "febrer", "març", "abril", "maig", "juny",
+  "juliol", "agost", "setembre", "octubre", "novembre", "desembre",
+] as const;
+
+/**
+ * Una data ISO escrita com es diu en català.
+ *
+ * Aquesta funció existia tres vegades —a `amb.ts`, a `comarques.ts` i a
+ * `radiografia.ts`— i **només dues estaven bé**: la de la fitxa, que és la
+ * pàgina que es publica 947 vegades, escrivia «19 de abril del 1979» a la taula
+ * d'alcaldies de tots els municipis. Abril, agost i octubre comencen per vocal
+ * i demanen apòstrof.
+ */
+export function dataCurta(iso: string | null): string {
+  if (!iso) return "";
+  const [any, mes, dia] = iso.slice(0, 10).split("-");
+  const nom = MESOS[Number(mes) - 1];
+  if (!nom) return `${any ?? ""}`;
+  const de = /^[aeiou]/.test(nom) ? "d'" : "de ";
+  return `${Number(dia)} ${de}${nom} del ${any}`;
+}
+
+/** «el 21 d'agost del 2026», i «l'1 de gener del 2025» quan cau en dia 1. */
+export function elDia(iso: string | null): string {
+  if (!iso) return "";
+  return Number(iso.slice(8, 10)) === 1 ? `l'${dataCurta(iso)}` : `el ${dataCurta(iso)}`;
+}
+
+/** El mateix darrere d'un «de»: «de l'1 de gener», «del 21 d'agost». */
+export function delDia(iso: string | null): string {
+  if (!iso) return "";
+  return Number(iso.slice(8, 10)) === 1 ? `de l'${dataCurta(iso)}` : `del ${dataCurta(iso)}`;
+}

@@ -39,10 +39,13 @@ COLOR = [CORAL, MINT, LAV, PEACH, MINT, MINT, LAV, PEACH, CORAL, PEACH, LAV, COR
 # Quan la icona porta cara, alguns detalls li trepitgen els ulls o la boca.
 # Aquí hi ha què s'ha de dibuixar en comptes del detall normal ('' = no res).
 DETALL_AMB_CARA = {
+ 0:  '<path d="M8 22 L24 8 L40 22" fill="none" stroke="{ink}" stroke-width="3" stroke-linejoin="round"/>',  # Habitatge: fora la porta, que queia entre els ulls i es menjava la boca
  3:  '',                                                                          # Seguretat: l'escut ja s'entén; el vistiplau feia de boca
  5:  '',                                                                          # Medi ambient: la nervadura passava pel mig dels ulls
  6:  '<path d="M30 19 L32.2 24 L37.5 24.4 L33.4 27.8 L34.7 33 L30 30.2 L25.3 33 L26.6 27.8 L22.5 24.4 L27.8 24 Z" fill="{ink}"/>',  # Cultura: fora la línia de puntets
+ 7:  '<path d="M11 19 H19 M11 25 H19 M29 19 H37 M29 25 H37" fill="none" stroke="{ink}" stroke-width="2.5" stroke-linecap="round"/>',  # Educació: fora el llom, que partia la cara pel mig i feia de boca
  8:  '',                                                                          # Serveis socials: el cor sol
+ 9:  '<path d="M4 20 H44" stroke="{ink}" stroke-width="3"/><path d="M12 12 V20 M20 12 V20 M28 12 V20 M36 12 V20" stroke="{ink}" stroke-width="2.5"/>',  # Comerç: fora la porta, que tapava la boca del tot
  10: '',                                                                          # Participació: el plec del palmell cauria damunt dels ulls
  11: '',                                                                          # Llengua: la bafarada sola, sense la ç sota la boca
  12: '',                                                                          # Esports: la pilota sola, sense pentàgon ni radis

@@ -4,7 +4,7 @@ import type { Els947Row } from "./els947";
 
 const fila = (s: string, extra: Partial<Els947Row> = {}): Els947Row => ({
   s, n: s, c: "una comarca", p: 1000, r: 11,
-  a: null, g: null, w: 1, m: 0, k: 0, t: 0,
+  a: null, g: null, ar: null, ac: null, w: 1, m: 0, k: 0, t: 0,
   d: 100, e: 5, f: 40, v: 1, q: 12, y: 60, o: 0,
   ...extra,
 });
@@ -70,5 +70,24 @@ describe("renderMapaCatalunya", () => {
     const iguals = files.map((f) => ({ ...f, f: 50, y: 50, v: 0 }));
     const html = renderMapaCatalunya(iguals, "2026-08-29");
     expect(html).toContain("<svg");
+  });
+});
+
+/**
+ * El mecanisme de les capes desa un graó per municipi en una cadena, i canviar
+ * de capa és reescriure classes llegint-ne els caràcters d'un en un. Si un
+ * graó n'ocupa dos, tot el que ve després queda desplaçat i el mapa pinta els
+ * municipis del color d'un altre. Va passar amb la capa dels partits: dotze
+ * famílies, els graons 10 i 11 escrits com a «10» i «11», i Lleida —que és del
+ * PSC— es pintava d'ERC.
+ */
+describe("cada graó ocupa exactament un caràcter", () => {
+  it("la cadena de cada capa té tants caràcters com municipis", () => {
+    const tots = Object.keys(geometria.municipis).map((s) => fila(s, { g: "PSC-CP" }));
+    const html = renderMapaCatalunya(tots, "2026-08-29");
+    const capes = JSON.parse(/var CAPES = (\[[\s\S]*?\]);/.exec(html)![1]!) as { g: string }[];
+    const camins = (html.match(/<a href="\/observatori\/m\//g) ?? []).length;
+    expect(capes.length).toBeGreaterThan(0);
+    for (const capa of capes) expect(capa.g.length).toBe(camins);
   });
 });
