@@ -60,7 +60,21 @@ main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
 .banda{background:var(--menta);margin:var(--e3) calc(-1 * var(--e3)) 0;padding:var(--e4) var(--e3);border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink)}
 @media (prefers-color-scheme: dark){ .banda{background:#243b31} }
 .banda .cos{max-width:var(--ample);margin:0 auto}
-.titular{font-family:var(--display);font-weight:900;font-size:clamp(1.4rem,4.5vw,2rem);letter-spacing:-.02em;margin:0 0 var(--e2)}
+.titular{font-family:var(--display);font-weight:900;font-size:clamp(1.4rem,4.5vw,2rem);letter-spacing:-.02em;margin:0}
+
+/* --- l'alcaldia: retrat i color del partit -----------------------------
+   El color del partit hi és com a franja i com a marca, no com a fons: la
+   banda continua sent de la marca de quivoto. Si un dia el color d'un partit
+   pinta el bloc sencer, la pàgina deixa de ser de ningú. */
+.banda-qui-mana{border-left:12px solid var(--partit)}
+.alcaldia-cap{display:flex;align-items:center;gap:var(--e3);margin-bottom:var(--e2);flex-wrap:wrap}
+.retrat-alcaldia{width:112px;height:112px;border-radius:50%;object-fit:cover;object-position:50% 22%;
+  border:3px solid var(--ink);box-shadow:var(--ombra);background:var(--paper-2);flex:none}
+.sigles-alcaldia{display:flex;align-items:center;gap:8px;font-weight:800;font-size:1.05rem;margin:6px 0 0}
+.sigles-alcaldia .marca-partit{width:15px;height:15px;border-radius:4px;background:var(--partit);
+  border:2px solid var(--ink);flex:none}
+.credit-foto{font-size:.76rem;color:rgba(30,27,46,.6);margin:var(--e2) 0 0}
+@media (prefers-color-scheme:dark){.credit-foto{color:var(--ink-suau)}}
 .veredicte{font-weight:800;font-size:1.05rem;margin:0 0 var(--e1)}
 .veredicte.pacte{color:var(--coral)}
 .avis{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2);margin-top:var(--e3);font-size:.95rem}
@@ -89,6 +103,32 @@ main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
 .participacio li,.paritat li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:4px}
 .paritat li{flex-direction:row;align-items:baseline;gap:var(--e2)}
 .gran{font-family:var(--display);font-weight:900;font-size:2.1rem;line-height:1;letter-spacing:-.03em}
+
+/* --- qui seu al ple --------------------------------------------------
+   El color de la candidatura hi és perquè es vegi el repartiment d'una ullada,
+   i és el mateix que a l'hemicicle. Va a la barra lateral i a la marca del
+   títol, mai al fons: el paper continua sent el de la marca, no el del partit. */
+.plens{display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-bottom:var(--e2)}
+.grup{background:var(--paper-2);border:2.5px solid var(--ink);border-left-width:10px;border-left-color:var(--c);
+  border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2)}
+.grup h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--display);font-weight:900;
+  font-size:1rem;letter-spacing:-.01em;margin:0 0 var(--e1)}
+.grup .marca-grup{width:13px;height:13px;border-radius:4px;background:var(--c);border:1.5px solid var(--ink);flex:none}
+.grup .quants{font-family:var(--text);font-weight:700;font-size:.74rem;color:var(--ink-suau);margin-left:auto}
+.grup ul{list-style:none;margin:0;padding:0}
+.grup li{padding:6px 0;border-top:1px solid var(--vora);display:flex;align-items:center;gap:10px}
+.grup .dades{display:flex;flex-direction:column;gap:1px;min-width:0}
+.retrat{width:44px;height:44px;border-radius:50%;object-fit:cover;object-position:50% 22%;
+  border:2px solid var(--ink);background:var(--paper);flex:none}
+.retrat.inicials{display:flex;align-items:center;justify-content:center;font-family:var(--display);
+  font-weight:900;font-size:.86rem;color:var(--ink-suau);background:var(--c);
+  filter:saturate(.35) opacity(.5)}
+.grup.noadscrit{border-left-style:dashed}
+.grup .qui a{text-decoration:none;border-bottom:1.5px solid var(--vora)}
+.grup li:first-child{border-top:0}
+.grup li.alcaldia .qui{font-weight:900}
+.grup .qui{font-size:.92rem;line-height:1.3}
+.grup .carrec{font-size:.74rem;color:var(--ink-suau)}
 
 /* --- alcaldies --- */
 .alcaldies{width:100%;border-collapse:collapse;font-size:.94rem}
@@ -239,6 +279,17 @@ main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
 
 .avis-dades{background:var(--presec);color:#1E1B2E;border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2);margin:0 0 var(--e2);font-size:.95rem}
+
+/* --- on anar després: les peces han d'estar connectades entre elles --- */
+.destins{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.destins > li > a{display:flex;flex-direction:column;gap:4px;background:var(--paper-2);border:2.5px solid var(--ink);
+  border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2);text-decoration:none;color:inherit;height:100%;
+  transition:transform .12s ease,box-shadow .12s ease}
+.destins > li > a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.destins b{font-family:var(--display);font-weight:900;font-size:1.1rem;letter-spacing:-.02em}
+.destins span{font-size:.86rem;color:var(--ink-suau);line-height:1.4}
+.destins span a{color:inherit}
+@media (prefers-reduced-motion:reduce){.destins > li > a{transition:none}}
 
 /* --- cobertura --- */
 .cobertura{border-left:10px solid var(--menta);padding-left:var(--e3)}

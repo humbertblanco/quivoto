@@ -1,0 +1,392 @@
+{
+  "municipi": {
+    "nom": "Reus",
+    "codi_ine": "43123",
+    "codi_ens_aoc": "4312330008",
+    "habitants_tram": "més de 100.000"
+  },
+  "candidatura": {
+    "nom": "Partit dels Socialistes de Catalunya — Candidatura de Progrés",
+    "sigla": "PSC-CP",
+    "rol_mandat": "govern",
+    "alcaldia": "Sandra Guaita Esteruelas, proclamada al ple de constitució del 17.06.2023",
+    "regidors": 8
+  },
+  "programa": {
+    "titol": "L'HORA DE REUS. PROGRAMA DE GOVERN REUS 2023-2030",
+    "fitxer": "psc-reus-programa-2023.pdf",
+    "pagines": 85,
+    "paraules": 23633,
+    "data_document": "2023-05-09 (ModDate del PDF)",
+    "accions_numerades": 260,
+    "avis": "El títol del programa fixa un horitzó 2030, posterior al mandat. El criteri 4 (termini dins del mandat) no s'ha aplicat com a exclusió general perquè cap acció concreta datava el seu compliment; queda anotat com a límit."
+  },
+  "mostra": {
+    "metode": "sistemàtica, una acció de cada 13 sobre les 260 numerades, en ordre de document",
+    "n": 20,
+    "per_que": "una tria a dit hauria inflat la proporció de verificables"
+  },
+  "classificacio_cega": {
+    "data": "2026-08-29",
+    "regla": "verificabilitat, via i llindar decidits abans d'obrir cap document del mandat",
+    "empremta_sha256_original": "aaac3ff0c3dc720871cb73314f57715b84fa2391ead4508ea2bb0328dcb94de6",
+    "empremta_sha256": "edacef75bb10d037dad8efa58ec91935244b923748825280f3e6019273dc2f38",
+    "nota": "La passada cega es va congelar el 29.08.2026 abans d'obrir cap document del mandat. Els llindars es van escriure sense accents i s'hi han posat després, comprovant que el text despullat d'accents és idèntic: el canvi és ortogràfic i no de contingut. Es conserven les dues empremtes."
+  },
+  "fonts_consultades": [
+    {
+      "font": "Actes de ple de l'AOC",
+      "recurs": "CKAN dadesobertes.seu-e.cat, resource b5d370d0-7916-48b6-8a69-3c7fa62a1467",
+      "abast": "45 actes de ple del 17.06.2023 al 16.07.2026, 16,2 MB de PDF, 1.046.403 paraules amb pdftotext -layout",
+      "avis": "només ple: Reus no publica actes de junta de govern local en aquest recurs"
+    },
+    {
+      "font": "Perfil del contractant (PSCP)",
+      "recurs": "analisi.transparenciacatalunya.cat resource ybgg-dgi6",
+      "abast": "1.084 anuncis de la família Reus (Ajuntament, Reus Serveis Municipals, Reus Esport i Lleure, Reus Desenvolupament Econòmic, IMRC, Reus Promoció, Reus Mobilitat, Reus Transport) publicats des de l'01.06.2023"
+    },
+    {
+      "font": "BDNS - Base de Dades Nacional de Subvencions",
+      "recurs": "infosubvenciones.es/bdnstrans/api, organs 1810-1815",
+      "abast": "1.274 convocatòries de Reus, 450 dins el mandat",
+      "avis": "registre de publicació exhaustiva per llei (art. 20 de la Llei 38/2003)"
+    },
+    {
+      "font": "Registre de convenis",
+      "recurs": "CKAN dadesobertes.seu-e.cat, resource 8747a24f-aa98-4a7e-938a-df81cc16769a",
+      "abast": "151 convenis de Reus, 56 dins el mandat",
+      "avis": "cobreix convenis amb la Generalitat i amb ens locals; NO és exhaustiu per a convenis amb entitats estatals"
+    }
+  ],
+  "resultat": {
+    "n": 20,
+    "verificabilitat": {
+      "V1": 5,
+      "V2": 9,
+      "V3": 6
+    },
+    "estats": {
+      "no_verificable": 16,
+      "en_curs": 2,
+      "complerta": 2
+    },
+    "resolts": 4,
+    "resolts_sobre_verificables": "4 de 14 (V1+V2)",
+    "per_verificabilitat": {
+      "V1/en_curs": 1,
+      "V1/no_verificable": 4,
+      "V2/complerta": 2,
+      "V2/en_curs": 1,
+      "V2/no_verificable": 6,
+      "V3/no_verificable": 6
+    },
+    "projeccio_final_de_mandat": "3 de les 16 no verificables (066 ajuts a joves, 222 beques de recerca, 248 ordenança d'activitats) són absències en registres de publicació exhaustiva i passarien a incomplerta si el mandat acaba sense el document. El comptador no pot emetre cap incomplerta abans de l'últim ple del mandat."
+  },
+  "promeses": [
+    {
+      "id": "reus/psc/2023/001",
+      "ordre": 1,
+      "num_accio": 1,
+      "text": "Treballarem per aconseguir un conveni amb la SAREB per la cessió de pisos i terrenys per fer nous habitatges.",
+      "verificabilitat": "V2",
+      "via": "govern",
+      "llindar": "Conveni amb la SAREB aprovat o signat dins el mandat, acreditat per acord de JGL/ple o registre de convenis. «Treballarem per aconseguir» és postura; el llistó es posa sobre el conveni, no sobre l'esforç.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "Cap conveni amb la SAREB entre els 56 convenis de Reus signats dins el mandat al Registre de convenis (recurs 8747a24f-aa98-4a7e-938a-df81cc16769a, consultat el 29.08.2026). El registre NO es pot tractar com a exhaustiu per a un conveni amb una entitat estatal, i per tant l'absència no acredita res: no verificable, no incomplerta."
+    },
+    {
+      "id": "reus/psc/2023/014",
+      "ordre": 2,
+      "num_accio": 14,
+      "text": "Creació d’un gran parc familiar públic on s’integrin diferents elements tants esportius i comunitaris.",
+      "verificabilitat": "V2",
+      "via": "govern",
+      "llindar": "Projecte aprovat o obra adjudicada d'un parc nou d'ús familiar amb elements esportius i comunitaris dins el mandat. «Gran» no està definit: qualsevol parc nou amb aquests elements compta.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "Cap contracte ni acord de ple d'un parc nou. L'únic contracte de parc del mandat és la remodelació de l'àrea de jocs infantils del Parc del Trenet (16.04.2025, 90.482,00 €), que és un parc existent i no compleix el llindar."
+    },
+    {
+      "id": "reus/psc/2023/027",
+      "ordre": 3,
+      "num_accio": 27,
+      "text": "Posarem en marxa una aplicació mòbil que permetrà a la ciutadania d’una manera fàcil notificar els problemes que es troben a la via pública per poder actuar d’una manera ràpida i eficient .",
+      "verificabilitat": "V1",
+      "via": "govern",
+      "llindar": "Contracte adjudicat al perfil del contractant o aplicació municipal en servei per notificar incidències a la via pública.",
+      "estat": "en_curs",
+      "etapa_que_falta": "Acreditar la posada en servei: no hi ha document de recepció del subministrament ni cap menció de l'aplicació als plens posteriors a la formalització.",
+      "evidencia": [
+        {
+          "tipus": "Formalització de contracte al perfil del contractant (nivell 3)",
+          "document": "Expedient CONMIX-0005/2025, «Subministrament, desenvolupament, integració, implantació, suport i manteniment d'una aplicació mòbil ciutadana de serveis comuns i d'incidències a la via pública al núvol»",
+          "adjudicatari": "CODIGITAL 360 SOLUTIONS, SL",
+          "import_sense_iva": 54338.0,
+          "data_adjudicacio": "2025-09-26",
+          "data_formalitzacio": "2025-10-27",
+          "durada": "01/11/2025 a 31/10/2029",
+          "enllac": "https://contractaciopublica.cat/ca/detall-publicacio/1fecb6ea-2f9e-46b8-b795-f6a5797002c5/300600379"
+        }
+      ]
+    },
+    {
+      "id": "reus/psc/2023/040",
+      "ordre": 4,
+      "num_accio": 40,
+      "text": "Crearem un nou pas de vianants a l’Avda. Sant Bernat Calbó, núm. 18.",
+      "verificabilitat": "V1",
+      "via": "govern",
+      "llindar": "Contracte, projecte o decret que acrediti un pas de vianants nou a l'Avda. Sant Bernat Calbó 18.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "Zero ocurrències del pas de vianants de l'Avda. Sant Bernat Calbó 18 a les 45 actes de ple del mandat i als 1.084 anuncis de contractació de la família Reus des del 06.2023. Una obra d'aquesta mida es fa per contracte menor o per brigada i pot no deixar rastre publicat: l'absència NO acredita l'incompliment."
+    },
+    {
+      "id": "reus/psc/2023/053",
+      "ordre": 5,
+      "num_accio": 53,
+      "text": "Impulsar la formació i el reconeixement de les bones pràctiques a la policia local.",
+      "verificabilitat": "V3",
+      "via": "govern",
+      "llindar": "«Impulsar la formació i el reconeixement» no té objecte delimitat ni document nomenable.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "V3 congelada: no s'ha buscat res, per definició no entra al comptador."
+    },
+    {
+      "id": "reus/psc/2023/066",
+      "ordre": 6,
+      "num_accio": 66,
+      "text": "Crear una línia d’ajuts per joves per facilitar l'accés a un habitatge.",
+      "verificabilitat": "V1",
+      "via": "govern",
+      "llindar": "Bases reguladores i convocatòria d'ajuts a joves per a l'habitatge publicades al BOPT o a la BDNS dins el mandat.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "Cap convocatòria d'ajuts a joves per a l'habitatge entre les 450 convocatòries de l'Ajuntament de Reus i els seus organismes publicades a la BDNS dins el mandat (òrgans 1810-1815, consultat el 29.08.2026). La BDNS SÍ que és un registre de publicació exhaustiva (art. 20 de la Llei 38/2003): si el mandat acaba sense la convocatòria, aquesta promesa passa a incomplerta. A 29.08.2026 el mandat no ha acabat, i per tant l'estat és no verificable."
+    },
+    {
+      "id": "reus/psc/2023/079",
+      "ordre": 7,
+      "num_accio": 79,
+      "text": "Crear un servei d'informació municipal als casals i als CAP, així com un nou servei de visitadors a domicili de les persones grans per tal que puguin oferir informació sobre l'accés a tots els ajuts o tràmits d'administracions públiques, tràmits amb entitats bancàries o activitats d'entitats socials.",
+      "verificabilitat": "V2",
+      "via": "govern",
+      "llindar": "Contracte, plec o acord de creació d'un servei de visitadors a domicili per a gent gran. La part del servei d'informació als casals no entra al llistó.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "Cap contracte d'un servei de visitadors a domicili per a gent gran. L'únic contracte proper és el de Teleassistència Domiciliària (08.05.2024, 288.000 €), que és un servei preexistent i diferent."
+    },
+    {
+      "id": "reus/psc/2023/092",
+      "ordre": 8,
+      "num_accio": 92,
+      "text": "Assegurar que a les licitacions vetllin pel compliment de l’ODS 5. Aconseguir la igualtat de gènere i empoderar totes les dones i nenes",
+      "verificabilitat": "V3",
+      "via": "govern",
+      "llindar": "«Assegurar que les licitacions vetllin pel compliment de l'ODS 5» no és un acte acreditable: no diu quantes ni amb quina clàusula.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "V3 congelada."
+    },
+    {
+      "id": "reus/psc/2023/105",
+      "ordre": 9,
+      "num_accio": 105,
+      "text": "Programa per garantir l'accés universal de tots els ciutadans i ciutadanes amb discapacitat o sense discapacitat als drets i serveis ciutadans i socials.",
+      "verificabilitat": "V3",
+      "via": "govern",
+      "llindar": "Enunciat nominal sense verb ni objecte delimitat.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "V3 congelada."
+    },
+    {
+      "id": "reus/psc/2023/118",
+      "ordre": 10,
+      "num_accio": 118,
+      "text": "Desenvolupament de nous models d’atenció a les necessitats bàsiques en l’àmbit d’alimentació basats en la coresponsabilitat i la promoció personal i buscant una alimentació equilibrada.",
+      "verificabilitat": "V3",
+      "via": "govern",
+      "llindar": "«Desenvolupament de nous models d'atenció» és intenció, no acte.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "V3 congelada."
+    },
+    {
+      "id": "reus/psc/2023/131",
+      "ordre": 11,
+      "num_accio": 131,
+      "text": "Creació de noves propostes museístiques com el museu de la ceràmica promocionant la ceràmica de reflexe metàl·lic incorporant el forn ceràmic de Cal Montseny a la ruta del Forn del Sugranyes i amb exposició amb obres d’artistes locals com el Ramon Ferran, Neus Segrià i d’altres.",
+      "verificabilitat": "V2",
+      "via": "govern",
+      "llindar": "Acord municipal, projecte museogràfic o adjudicació que creï una proposta museística de ceràmica o incorpori el forn de Cal Montseny a una ruta.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "Zero ocurrències de «ceràmica», «Cal Montseny» o «Sugranyes» a les 45 actes de ple i als 1.084 anuncis de contractació. Les obres museístiques del mandat són del Museu d'Art i Història (147.815,64 € d'obra el 12.2024 i 619.000 € de museïtzació), que és un altre equipament."
+    },
+    {
+      "id": "reus/psc/2023/144",
+      "ordre": 12,
+      "num_accio": 144,
+      "text": "Creació i desenvolupament del projecte Reus Fa Esport, una connexió entre els diferents equipaments esportius de la ciutat on podràs moure’t entre ells tant amb carril bici com fent footing o donant un passeig. I a més, ajudant- nos de les noves tecnologies, crear incentius per fer més esport i atorgar vals descompte aquells que més activitat física hagin fet al llarg de l’any.",
+      "verificabilitat": "V2",
+      "via": "govern",
+      "llindar": "Existeix un programa municipal anomenat Reus Fa Esport (o el mateix contingut amb un altre nom) acreditat per acord, contracte o partida.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "Zero ocurrències de «Reus Fa Esport» a les 45 actes i als 1.084 anuncis. Cap contracte ni acord amb aquest contingut."
+    },
+    {
+      "id": "reus/psc/2023/157",
+      "ordre": 13,
+      "num_accio": 157,
+      "text": "Potenciació de Reus Energia, per promoure els consum d’energies verdes als edificis públics i per a l’enllumenat públic.",
+      "verificabilitat": "V3",
+      "via": "govern",
+      "llindar": "«Potenciació» és postura; no diu quant ni amb quin acte.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "V3 congelada."
+    },
+    {
+      "id": "reus/psc/2023/170",
+      "ordre": 14,
+      "num_accio": 170,
+      "text": "Finalització del Pla per redimensionar les zones verdes de la ciutat: a cada barri una zona verda. Zones verdes cada cinc minuts.",
+      "verificabilitat": "V2",
+      "via": "govern",
+      "llindar": "Aprovació municipal d'un pla de zones verdes dins el mandat. El «a cada barri una zona verda» no s'exigeix com a resultat.",
+      "estat": "en_curs",
+      "etapa_que_falta": "L'aprovació municipal del pla. Només consta contractada la redacció; cap acord de ple del mandat aprova un pla de zones verdes.",
+      "evidencia": [
+        {
+          "tipus": "Formalització de contracte al perfil del contractant (nivell 3)",
+          "document": "«Servei de la redacció del Pla de la infraestructura Verda-Blava i biodiversitat de Reus. Acció A1 parcial» (programa RENATUReus)",
+          "adjudicatari": "UTE JORNET LLOP PASTOR, SLP - MINUARTIA ESTUDIS AMBIENTALS, SL",
+          "import_sense_iva": 64372.4,
+          "data_publicacio": "2024-06-20",
+          "enllac": "https://analisi.transparenciacatalunya.cat/resource/ybgg-dgi6.json"
+        },
+        {
+          "tipus": "Contracte relacionat (nivell 3)",
+          "document": "«Servei de redacció de l'avantprojecte, del projecte executiu i direcció d'obra per a la creació d'una bassa naturalitzada — RENATUReus»",
+          "adjudicatari": "LA CASA DELS OCELLS, SL",
+          "import_sense_iva": 66868.0,
+          "data_publicacio": "2024-04-25"
+        }
+      ]
+    },
+    {
+      "id": "reus/psc/2023/183",
+      "ordre": 15,
+      "num_accio": 183,
+      "text": "Que la ciutat sigui reconeguda com a Reus Smart Turístic.",
+      "verificabilitat": "V3",
+      "via": "altri",
+      "llindar": "No diu qui ha de reconèixer ni amb quin document.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "V3 congelada."
+    },
+    {
+      "id": "reus/psc/2023/196",
+      "ordre": 16,
+      "num_accio": 196,
+      "text": "Exigència a la Generalitat perquè reformi l’estació d’autobusos.",
+      "verificabilitat": "V2",
+      "via": "altri",
+      "llindar": "Acord de ple, moció o requeriment formal registrat de l'Ajuntament a la Generalitat sobre l'estació d'autobusos. Només es verifica la reclamació, no el resultat.",
+      "estat": "complerta",
+      "evidencia": [
+        {
+          "tipus": "Acord de ple (nivell 2)",
+          "document": "Ple ordinari del 24 d'octubre de 2025, punt 5. «Gestió Urbanística. Aprovació inicial de la Modificació puntual de la Revisió del Pla general d'ordenació urbana en l'àmbit del Carrilet i la nova estació d'autobusos». Àmbit de 33.048 m², document redactat per Comas-Pont Arquitectes, SLP per encàrrec municipal.",
+          "votacio": "19 vots a favor (PSC, ERC, A, PP, VOX i el regidor no adscrit Sr. Ruiz), 3 en contra (CUP i el regidor no adscrit Sr. Pardo), 5 abstencions (JxR-CM)",
+          "enllac": "https://media.seu-e.cat/acteca/4312330008/2025/"
+        },
+        {
+          "tipus": "Donar compte a l'acta del ple (nivell 2, només corrobora)",
+          "document": "Ple del 21 de novembre de 2025, informació de l'Alcaldia: «13/11/2025: Presentació de les millores als serveis de mobilitat realitzada per l'Honorable Consellera, Sra. Sílvia Paneque i signatura del Protocol per la nova estació d'autobusos de Reus»"
+        }
+      ],
+      "nota": "El llindar congelat només exigia la reclamació formal a la Generalitat, no el resultat. S'ha trobat més que això: un acord de ple i un protocol signat. Contrapunt documentat: el 19.01.2024 el ple va rebutjar la moció del PP sobre l'estació d'autobusos amb els 8 vots del PSC en contra (10 a favor, 14 en contra, 1 abstenció); és una moció d'altre contingut i no és la mateixa promesa."
+    },
+    {
+      "id": "reus/psc/2023/209",
+      "ordre": 17,
+      "num_accio": 209,
+      "text": "Impuls del programa CER (Capturar-Esterilitzar-Retornar) a les colònies felines urbanes com mètode més eficaç per a la gestió ètica.",
+      "verificabilitat": "V2",
+      "via": "govern",
+      "llindar": "Contracte, conveni o partida municipal específica per al mètode CER de colònies felines dins el mandat.",
+      "estat": "complerta",
+      "evidencia": [
+        {
+          "tipus": "Adjudicació de contracte (nivell 3)",
+          "document": "«Servei de veterinari clínic pel control de colònies urbanes controlades de gats de carrer a la ciutat de Reus»",
+          "adjudicatari": "UNAVETS HEALTHCARE, SL",
+          "import_sense_iva": 14976.86,
+          "data_publicacio": "2023-09-22"
+        },
+        {
+          "tipus": "Adjudicació de contracte (nivell 3)",
+          "document": "Mateix objecte, exercici següent",
+          "adjudicatari": "GABRIELA GARCIA BAGES",
+          "import_sense_iva": 17125.62,
+          "data_publicacio": "2025-09-03"
+        },
+        {
+          "tipus": "Contracte (nivell 3)",
+          "document": "«Redacció projecte adequació espai acollida, gestió i recuperació 150 gats» i, després, «Servei de manteniment de l'espai d'acollida temporal de gats del municipi de Reus»",
+          "adjudicatari": "BIYU PREMIUM SL",
+          "import_sense_iva": 31587.73,
+          "data_publicacio": "2026-05-28"
+        }
+      ],
+      "nota": "AVÍS METODOLÒGIC. El llindar congelat deia «contracte, conveni o partida específica per al mètode CER» i es compleix. Però el verb de la promesa era «Impuls», i el llindar no mesurava creixement: el servei de veterinari ja existia abans del mandat. En sentit contrari, l'espai d'acollida per a 150 gats sí que és nou. La CUP va sostenir al ple del 24.01.2025 que «no s'ha incrementat la dotació econòmica per continuar amb el programa»; és una al·legació de l'oposició, no acredita res, i queda anotada al costat. Aquest cas mostra que un llindar V2 laxe converteix continuïtat en compliment."
+    },
+    {
+      "id": "reus/psc/2023/222",
+      "ordre": 18,
+      "num_accio": 222,
+      "text": "Creació d’un pla de beques d’ajut a la investigació de projectes que es focalitzin en temàtiques associades a la ciutadania de Reus i a millores per a la nostra ciutat.",
+      "verificabilitat": "V1",
+      "via": "govern",
+      "llindar": "Bases i convocatòria d'un programa de beques de recerca publicades al BOPT o a la BDNS dins el mandat.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "Cap convocatòria de beques de recerca entre les 450 de la BDNS dins el mandat. L'única «beca» que hi surt és el Premi Beca de Dansa Roseta Mauri, preexistent i d'altre objecte. Igual que la 066: la BDNS és exhaustiva i això passaria a incomplerta si el mandat acaba sense la convocatòria."
+    },
+    {
+      "id": "reus/psc/2023/235",
+      "ordre": 19,
+      "num_accio": 235,
+      "text": "Creació d’un pla que lluiti contra la l’assetjament i el ciberassetjament, que revisi els protocols i planifiqui la prevenció.",
+      "verificabilitat": "V2",
+      "via": "govern",
+      "llindar": "Aprovació municipal d'un pla o protocol contra l'assetjament i el ciberassetjament dins el mandat.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "Cap pla ni protocol municipal contra l'assetjament aprovat a les 45 actes de ple. L'única ocurrència de «ciberassetjament» és a la declaració institucional del 25-N (ple del 21.11.2025), que no és un pla. AVÍS: un pla d'aquesta mena es pot aprovar per junta de govern local, i Reus NO publica actes de junta de govern al recurs de l'AOC: el registre no és exhaustiu i per tant l'absència no acredita l'incompliment."
+    },
+    {
+      "id": "reus/psc/2023/248",
+      "ordre": 20,
+      "num_accio": 248,
+      "text": "Revisió de les ordenances municipals en qüestió de llicències d'activitat comercial que siguin facilitadores per a nous establiments, procurant que la normativa s'adapti en tot el possible, segons la realitat física i constructiva preexistent en els locals.",
+      "verificabilitat": "V1",
+      "via": "ple",
+      "llindar": "Modificació d'ordenança municipal sobre llicències d'activitat comercial aprovada i publicada al BOPT dins el mandat.",
+      "estat": "no_verificable",
+      "evidencia": [],
+      "nota": "Cap modificació de l'ordenança de llicències d'activitat comercial a les 45 actes del mandat. Les ordenances tocades són les fiscals (cada any), la de verificació d'habitatges (16.02.2024), la de la Zona de Baixes Emissions (15.03.2024), la de recollida i prevenció de residus (2025) i la d'habitatges buits (15.05.2026). Les ordenances passen sempre pel ple i pel BOPT: és un registre exhaustiu, i això passaria a incomplerta si el mandat acaba sense la revisió. Context: el 19.06.2026 el ple va rebutjar amb 24 vots en contra (PSC inclòs) la moció de la CUP per redactar una Ordenança d'usos i activitats, però el contingut d'aquella moció no és el de la promesa i no s'hi computa."
+    }
+  ],
+  "avisos": [
+    "Cap estat d'aquest fitxer no està signat per una persona. Segons docs/COMPLIMENT.md §6, cap veredicte no és publicable sense que una persona hagi obert el document citat i n'hagi comprovat cita, localitzador i data; «complerta» i «incomplerta» exigeixen dues signatures. Això és una PROVA DE FOC del mètode, no una fitxa publicable.",
+    "No hi ha cap estat «incomplerta» perquè el mandat no ha acabat: acaba el 23.05.2027.",
+    "La cerca s'ha fet amb grep sobre el text de les actes i amb consultes estructurades als registres, no enviant el corpus a un model."
+  ]
+}

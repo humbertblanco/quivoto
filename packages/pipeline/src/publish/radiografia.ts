@@ -1,10 +1,12 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import {
-  dataIssues, electionParticipation, municipalities, municipalityMetrics, type Db,
+  candidatures, councillorMandates, dataIssues, electionParticipation, municipalities,
+  municipalityMetrics, people, politicalGroups, type Db,
 } from "@quivoto/db";
-import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
+import { BRANDS_BY_ID, sameForce } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { hemicycle } from "./hemicycle";
+import { slugify } from "../lib/text";
 import { INDEXABLE, SITE } from "./config";
 import { RADIOGRAFIA_CSS } from "./estil";
 
@@ -89,6 +91,26 @@ type ServicesMetric = {
   year: number;
   services: { label: string; perHead: number; total: number; management: string }[];
   medians: Record<string, number | null>;
+};
+/** El ple tal com el publica avui l'ajuntament a la seva seu electrònica. */
+type CarrecSeue = {
+  nom: string; carrec: string; grup: string | null; equipGovern: boolean;
+  foto: string | null; fotoPetita: string | null; fitxa: string | null;
+};
+type FitxaCarrecs = {
+  font: string; url: string; slug: string; descarregat: string;
+  totalCarrecs: number; ambFoto: number;
+  cobertura: "completa" | "parcial" | "cap";
+  carrecs: CarrecSeue[];
+};
+type Councillor = {
+  name: string;
+  role: string | null;
+  groupName: string | null;
+  sigles: string | null;
+  color: string | null;
+  brandId: string | null;
+  orderNum: number | null;
 };
 type CouncilChangesMetric = {
   changes: { person: string; electedFor: string | null; nowWith: string | null; kind: string }[];
@@ -560,6 +582,151 @@ function renderServices(services: ServicesMetric): string {
   es cobra per ell.</p>`;
 }
 
+/**
+ * Qui seu al ple, amb nom i cognoms.
+ *
+ * Són càrrecs públics i la seva identitat ja és oberta: la publica la
+ * Generalitat. Publicar-la aquí és el que permet que algú es reconegui —o
+ * reconegui el seu veí— i entengui que això va d'ell. Del càrrec i prou: cap
+ * correu, cap adreça, cap telèfon.
+ *
+ * El color de la candidatura sí que hi va: aquí no és decoració d'interfície
+ * sinó la manera més ràpida de veure com es reparteix el ple, i és el mateix
+ * color que ja fa servir l'hemicicle de dues seccions més amunt.
+ */
+/**
+ * El ple segons la seu electrònica del mateix ajuntament.
+ *
+ * És més al dia que el registre de la Generalitat —a Esplugues aquest hi tenia
+ * un tinent d'alcaldia que ja no hi és i li faltaven dues regidores— i, sobre
+ * tot, **etiqueta els regidors no adscrits**, que és una cosa que el conjunt
+ * obert no diu enlloc i que nosaltres havíem renunciat a deduir.
+ *
+ * Les fotografies segueixen la regla del tot o res: o les té tot el ple o no
+ * se'n mostra cap. Un ple on l'equip de govern surt amb retrat i l'oposició amb
+ * inicials seria un tracte desigual que no hem triat però que publicaríem.
+ */
+function renderCarrecsSeue(fitxa: FitxaCarrecs, colorPer: (grup: string | null) => string): string {
+  const ambFoto = fitxa.cobertura === "completa";
+
+  const groups = new Map<string, CarrecSeue[]>();
+  for (const carrec of fitxa.carrecs) {
+    const key = carrec.grup ?? "Sense grup";
+    const list = groups.get(key);
+    if (list) list.push(carrec);
+    else groups.set(key, [carrec]);
+  }
+
+  const isMayor = (c: CarrecSeue): boolean => /alcald/i.test(c.carrec);
+  const noAdscrit = (name: string): boolean => /no\s*adscri/i.test(name);
+  const ordered = [...groups.entries()].sort((a, b) => {
+    const mA = a[1].some(isMayor) ? 1 : 0;
+    const mB = b[1].some(isMayor) ? 1 : 0;
+    if (mA !== mB) return mB - mA;
+    // Els no adscrits sempre al final: no són un grup, són el que en queda.
+    const nA = noAdscrit(a[0]) ? 1 : 0;
+    const nB = noAdscrit(b[0]) ? 1 : 0;
+    if (nA !== nB) return nA - nB;
+    return b[1].length - a[1].length;
+  });
+
+  const blocks = ordered
+    .map(([name, list]) => {
+      const members = [...list]
+        .sort((a, b) => (isMayor(b) ? 1 : 0) - (isMayor(a) ? 1 : 0))
+        .map((c) => {
+          const inicials = c.nom
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((w) => w[0]!.toUpperCase())
+            .join("");
+          const retrat =
+            ambFoto && c.fotoPetita
+              ? `<img class="retrat" src="${escape(c.fotoPetita)}" alt="" loading="lazy" width="44" height="44">`
+              : `<span class="retrat inicials" aria-hidden="true">${escape(inicials)}</span>`;
+          const nom = c.fitxa
+            ? `<a href="${escape(c.fitxa)}" target="_blank" rel="noopener">${escape(c.nom)}</a>`
+            : escape(c.nom);
+          return `<li${isMayor(c) ? ' class="alcaldia"' : ""}>
+        ${retrat}
+        <span class="dades"><span class="qui">${nom}</span>
+        <span class="carrec">${escape(c.carrec)}</span></span>
+      </li>`;
+        })
+        .join("");
+      return `<div class="grup${noAdscrit(name) ? " noadscrit" : ""}" style="--c:${colorPer(name)}">
+      <h3><span class="marca-grup"></span>${escape(name)}
+        <span class="quants">${list.length}</span></h3>
+      <ul>${members}</ul>
+    </div>`;
+    })
+    .join("");
+
+  return `<div class="plens${ambFoto ? " amb-retrats" : ""}">${blocks}</div>
+  <p class="nota">Composició del ple segons la seu electrònica del mateix ajuntament,
+  consultada el ${escape(fitxa.descarregat)}. Va més al dia que el registre de la Generalitat.
+  ${
+    ambFoto
+      ? `Les fotografies les publica l'ajuntament al seu portal de transparència
+         (<a href="${escape(fitxa.url)}" target="_blank" rel="noopener">fitxa original</a>);
+         les reproduïm en mida petita i les retirem a la primera petició de la persona.`
+      : fitxa.ambFoto > 0
+        ? `L'ajuntament publica fotografia de ${fitxa.ambFoto} dels ${fitxa.totalCarrecs} càrrecs.
+           Com que no les té tothom, no en mostrem cap: ensenyar-ne només algunes seria un
+           tracte desigual.`
+        : ""
+  }
+  Hi surten nom, càrrec i grup, que és el que deriva del càrrec públic; cap dada de contacte.</p>`;
+}
+
+function renderCouncillors(councillors: readonly Councillor[]): string {
+  if (councillors.length === 0) return "";
+
+  const groups = new Map<string, Councillor[]>();
+  for (const councillor of councillors) {
+    const key = councillor.sigles ?? councillor.groupName ?? "Sense grup";
+    const list = groups.get(key);
+    if (list) list.push(councillor);
+    else groups.set(key, [councillor]);
+  }
+
+  // L'alcaldia primer, i després per mida del grup: és l'ordre en què la gent
+  // s'ho mira.
+  const isMayor = (c: Councillor): boolean => /alcald/i.test(c.role ?? "");
+  const ordered = [...groups.entries()].sort((a, b) => {
+    const mayorA = a[1].some(isMayor) ? 1 : 0;
+    const mayorB = b[1].some(isMayor) ? 1 : 0;
+    if (mayorA !== mayorB) return mayorB - mayorA;
+    return b[1].length - a[1].length;
+  });
+
+  const blocks = ordered
+    .map(([name, list]) => {
+      const color = list.find((c) => c.color)?.color ?? "#8b8b8b";
+      const members = [...list]
+        .sort((a, b) => (isMayor(b) ? 1 : 0) - (isMayor(a) ? 1 : 0) || (a.orderNum ?? 99) - (b.orderNum ?? 99))
+        .map(
+          (c) => `<li${isMayor(c) ? ' class="alcaldia"' : ""}>
+        <span class="qui">${escape(c.name)}</span>
+        ${c.role ? `<span class="carrec">${escape(c.role)}</span>` : ""}
+      </li>`,
+        )
+        .join("");
+      return `<div class="grup" style="--c:${color}">
+      <h3><span class="marca-grup"></span>${escape(name)}
+        <span class="quants">${list.length} ${list.length === 1 ? "regidoria" : "regidories"}</span></h3>
+      <ul>${members}</ul>
+    </div>`;
+    })
+    .join("");
+
+  return `<div class="plens">${blocks}</div>
+  <p class="nota">Composició actual del ple segons el registre de càrrecs electes de la
+  Generalitat. Hi surten el nom, el càrrec i el grup, que és el que deriva del càrrec públic;
+  cap dada de contacte. Si hi ha un error o vols que retirem alguna cosa, escriu-nos.</p>`;
+}
+
 function renderMayors(mayorsMetric: MayorsMetric): string {
   const history = [...mayorsMetric.history].sort((a, b) => b.term.localeCompare(a.term));
   const rows = history.map((m) => {
@@ -592,6 +759,8 @@ export type RadiografiaData = {
   spending: SpendingMetric | null;
   services: ServicesMetric | null;
   councilChanges: CouncilChangesMetric | null;
+  councillors: Councillor[];
+  carrecs: FitxaCarrecs | null;
   participation: (typeof electionParticipation.$inferSelect)[];
   /** Incidències obertes que afecten aquest municipi, si n'hi ha. */
   issues: { kind: string; severity: string; entity: string | null; detail: unknown }[];
@@ -633,6 +802,30 @@ export function renderRadiografia(data: RadiografiaData): string {
   const totalSeats = current?.seats ?? m.councilSeats ?? 0;
   const majority = absoluteMajority(totalSeats);
   const change = data.mayors?.currentTermChange ?? null;
+
+  /**
+   * Color d'un grup del ple. Els noms de seu-e («Grup Municipal del PSC»,
+   * «ERC-AM», «No adscrits») no coincideixen amb les sigles de la candidatura,
+   * així que es comparen per força amb `sameForce`, que ja sap que PSC-PSOE i
+   * PSC-CP són el mateix. Si no lliga, gris: val més no acolorir que acolorir
+   * malament, perquè aquí el color diu de qui és cada cosa.
+   */
+  const colorPerGrup = (grup: string | null): string => {
+    if (!grup || /no\s*adscri/i.test(grup)) return "#8b8b8b";
+    const candidature = (current?.candidatures ?? []).find(
+      (c) => sameForce(c.sigles, grup) || sameForce(c.brandId, grup),
+    );
+    return candidature ? colorOf(candidature) : "#8b8b8b";
+  };
+
+  /** La foto de l'alcaldia, si l'ajuntament la publica i en té de tot el ple. */
+  const mayorPhoto =
+    data.carrecs?.cobertura === "completa"
+      ? data.carrecs.carrecs.find((c) => /alcald/i.test(c.carrec))?.foto ?? null
+      : null;
+  const mayorColor = government?.mayorSigles
+    ? colorPerGrup(government.mayorSigles)
+    : "#8b8b8b";
 
   const coverageLevel = (m.minutesCount ?? 0) >= 20 ? "bo" : (m.minutesCount ?? 0) > 0 ? "parcial" : "cap";
   const coverageText =
@@ -691,6 +884,7 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
 <nav class="index" aria-label="Seccions d'aquesta pàgina">
   ${data.finances && data.finances.mandates.some((m) => m.id === "2023-2027" && m.years.length > 1) ? '<a href="#balanc">Balanç del mandat</a>' : ""}
   <a href="#ple">El ple</a>
+  ${data.councillors.length > 0 ? '<a href="#regidors">Qui hi seu</a>' : ""}
   ${data.history && data.history.series.length > 3 ? '<a href="#historia">Elecció a elecció</a>' : ""}
   <a href="#participacio">Participació</a>
   ${data.mayors && data.mayors.history.length > 0 ? '<a href="#alcaldies">Alcaldies</a>' : ""}
@@ -699,15 +893,21 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
   ${data.finances ? '<a href="#comptes">Comptes</a>' : ""}
   <a href="#dades">Què en sabem</a>
   <a href="#joc">El 23-M</a>
+  <a href="#anar">Segueix estirant</a>
 </nav>
 
-${government ? `<section class="banda banda-qui-mana">
+${government ? `<section class="banda banda-qui-mana" style="--partit:${mayorColor}">
   <div class="cos">
     <h2>Qui mana</h2>
-    <p class="titular">
-      ${government.mayorName ? `<b>${escape(government.mayorName)}</b>` : "Alcaldia no identificada"}
-      ${government.mayorSigles ? ` · ${escape(government.mayorSigles)}` : ""}
-    </p>
+    <div class="alcaldia-cap">
+      ${mayorPhoto ? `<img class="retrat-alcaldia" src="${escape(mayorPhoto)}" alt="" width="112" height="112">` : ""}
+      <div>
+        <p class="titular">
+          ${government.mayorName ? `<b>${escape(government.mayorName)}</b>` : "Alcaldia no identificada"}
+        </p>
+        ${government.mayorSigles ? `<p class="sigles-alcaldia"><span class="marca-partit"></span>${escape(government.mayorSigles)}</p>` : ""}
+      </div>
+    </div>
     ${
       government.winnerGoverns === null
         ? `<p class="nota">No hem pogut lligar el partit de l'alcaldia amb cap llista del 2023. Ho tenim marcat per revisar.</p>`
@@ -725,6 +925,7 @@ ${government ? `<section class="banda banda-qui-mana">
              ${change.onlySuccessorKnown ? "La font oberta només desa qui hi ha ara, així que no en podem dir el motiu." : ""}</p>`
         : ""
     }
+    ${mayorPhoto ? `<p class="credit-foto">Fotografia publicada per l'ajuntament a la seva seu electrònica.</p>` : ""}
     ${data.singleList ? `<p class="avis"><b>Al ple hi ha una sola candidatura.</b>
       El Síndic de Greuges compta aquest ajuntament entre els que no tenen oposició.</p>` : ""}
     ${government.mayorMatchConfidence !== null && government.mayorMatchConfidence < 0.8
@@ -745,6 +946,18 @@ ${current ? `<section class="bloc" id="ple">
   <p class="nota">Partits efectius al ple: ${government ? government.effectiveParties.toString().replace(".", ",") : "—"}.
   És una mesura de fragmentació: 1 vol dir un ple d'un sol color; ${totalSeats}, un de tan repartit com sigui possible.</p>
 </section>` : ""}
+
+${data.carrecs && data.carrecs.carrecs.length > 0
+  ? `<section class="bloc" id="regidors">
+  <h2>Qui seu al ple</h2>
+  ${renderCarrecsSeue(data.carrecs, colorPerGrup)}
+</section>`
+  : data.councillors.length > 0
+    ? `<section class="bloc" id="regidors">
+  <h2>Qui seu al ple</h2>
+  ${renderCouncillors(data.councillors)}
+</section>`
+    : ""}
 
 ${data.history && data.history.series.length > 3 ? `<section class="bloc" id="historia">
   <h2>El ple, elecció a elecció</h2>
@@ -877,6 +1090,21 @@ ${data.parity ? `<section class="bloc">
   finals d'abril del 2027, quan la Junta Electoral les proclami.</p>
 </section>
 
+<section class="bloc anar" id="anar">
+  <h2>Segueix estirant</h2>
+  <ul class="destins">
+    ${m.comarca ? `<li><a href="../../c/${escape(slugify(m.comarca))}/">
+      <b>${escape(m.comarca)}</b><span>Qui mana a la comarca, quantes alcaldies té cada força i com hi queda ${escape(m.name)}</span></a></li>` : ""}
+    <li><a href="../../comparador/?m=${escape(m.slug)}">
+      <b>Compara'l</b><span>Posa ${escape(m.name)} al costat de fins a tres municipis més</span></a></li>
+    <li><a href="../../els947.html">
+      <b>Els 947</b><span>Tots els municipis de Catalunya, amb cercador i filtres</span></a></li>
+    <li><a href="../../dades/m/${escape(m.slug)}.csv" download>
+      <b>Baixa't les dades</b><span>Tot el que hi ha en aquesta pàgina, en CSV. També en
+      <a href="../../dades/m/${escape(m.slug)}.json">JSON</a> i amb l'<a href="../../dades/">esquema documentat</a></span></a></li>
+  </ul>
+</section>
+
 <section class="bloc fonts">
   <h2>D'on surt tot això</h2>
   <ul>
@@ -939,6 +1167,23 @@ export async function loadRadiografia(db: Db, slug: string, generatedAt: string)
     spending: (byKind.get("spending") ?? null) as SpendingMetric | null,
     services: (byKind.get("services") ?? null) as ServicesMetric | null,
     councilChanges: (byKind.get("councilChanges") ?? null) as CouncilChangesMetric | null,
+    carrecs: (byKind.get("carrecs") ?? null) as FitxaCarrecs | null,
+    councillors: await db
+      .select({
+        name: people.fullName,
+        role: councillorMandates.role,
+        groupName: politicalGroups.name,
+        sigles: candidatures.sigles,
+        color: candidatures.color,
+        brandId: candidatures.brandId,
+        orderNum: councillorMandates.orderNum,
+      })
+      .from(councillorMandates)
+      .innerJoin(people, eq(people.id, councillorMandates.personId))
+      .leftJoin(politicalGroups, eq(politicalGroups.id, councillorMandates.groupId))
+      .leftJoin(candidatures, eq(candidatures.id, politicalGroups.candidatureId))
+      .where(eq(councillorMandates.municipalityId, municipality.id))
+      .orderBy(asc(councillorMandates.orderNum)),
     mayors: (byKind.get("mayors") ?? null) as MayorsMetric | null,
     participation,
     issues: (

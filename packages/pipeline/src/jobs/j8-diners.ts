@@ -48,13 +48,24 @@ const AREES: Record<string, string> = {
 };
 
 /** Serveis del cost efectiu, en català i només els que s'entenen sols. */
+/**
+ * Serveis del cost efectiu, en català.
+ *
+ * Parany verificat el 29-08-2026: el conjunt té **dues files per a residus i
+ * dues per a parcs**, i les que semblen les bones pel nom són les petites.
+ * «Medio ambiente urbano: Gestión de los residuos sólidos urbanos» suma 57 M€ a
+ * tot Catalunya; «Recogida de residuos», 549 M€. A Abrera la primera val 6.095 €
+ * i la segona 637.818 €, i la de parcs val zero, o sigui que la fitxa arribava a
+ * publicar que Abrera no té parcs ni jardins. Es fan servir les grans.
+ */
 const SERVEIS: Record<string, string> = {
-  "medio ambiente urbano gestion de los residuos solidos urbanos": "Recollida d'escombraries",
+  "recogida de residuos": "Recollida d'escombraries",
+  "tratamiento de residuos": "Tractament de residus",
+  "parque publico": "Parcs i jardins",
   "limpieza viaria": "Neteja viària",
   "alumbrado publico": "Enllumenat públic",
   "abastecimiento domiciliario de agua potable": "Aigua potable",
   alcantarillado: "Clavegueram",
-  "medio ambiente urbano parques y jardines publicos": "Parcs i jardins",
   "instalaciones deportivas de uso publico": "Instal·lacions esportives",
   "biblioteca publica": "Biblioteca",
   cementerio: "Cementiri",
@@ -363,6 +374,22 @@ export async function j8Diners(db: Db): Promise<void> {
         const management = String(row.TIPUS_GESTIO ?? "");
         const cost = num(row.COST_EFECTIU);
         const people = peopleIn(municipalityId, year);
+        // Guarda contra els errors de qui declara. Callús, un poble de 2.180
+        // habitants, hi declarava 9.810 milions d'euros en atenció social, i la
+        // fitxa ho publicava com a «4.500.455 € per habitant». Cap servei
+        // municipal no costa mil euros per habitant: quan hi surt, és un error
+        // de la font, i el que toca és apartar-lo i deixar-ne constància, no
+        // publicar-lo perquè ho digui el conjunt oficial.
+        if (people > 0 && cost / people > 1_000) {
+          await run.issue({
+            kind: "cost_efectiu_implausible",
+            severity: "alta",
+            municipalityId,
+            entity: label,
+            detail: { any: year, cost, habitants: people, perHabitant: Math.round(cost / people) },
+          });
+          continue;
+        }
         const byService = observed.get(municipalityId) ?? new Map<string, Observation[]>();
         const list = byService.get(label) ?? [];
         list.push({

@@ -1,0 +1,128 @@
+Intervé el Sr. Rubio.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=2975.0
+
+Intervé la Sra. Alegre.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=3028.0
+
+Intervé la Sra. Pagès.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=3110.0
+
+Intervé el Sr. Arbós.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=3417.0
+
+Intervé el Sr. Alcalde.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=3645.0ç
+
+Intervé la Sra. Pagès.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=3814.0
+
+Intervé el Sr. Alcalde.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=3854.0
+
+Intervé la Sra. Pagès.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=3904.0
+
+Intervé el Sr. Alcalde.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=3937.0
+
+Intervé el Sr. Gasulla.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=4192.0
+
+Intervé el Sr. Alcalde.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=4205.0
+
+Intervé el Sr. Gasulla.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=4274.0
+
+Intervé el Sr. Alcalde.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=4414.0
+
+Intervé el Sr. Gasulla.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=4438.0
+
+Intervé el Sr. Alcalde.
+Enllaç videoactes:
+https://actes.olot.cat/session/sessionDetail/8a80808487bd8e80018bfb192ffc0511?startAt=4498.0
+
+
+
+
+Mod ACTS_DP06
+Sotmesa la proposta a votació s’aprova amb 13 vots a favor (8 JUNTS, 3 ERC, 1
+ACTIVEM i 1 VOX), 4 vots en contra (4 PSC) i 4 abstencions (4 CUP)
+
+          9.1. - APROVAR LES ADDENDES DE LA NÚMERO 26 A LA 45 AL PLA
+                      ESTRATÈGIC DE SUBVENCIONS ANY 2023
+
+Núm. de referència : X2023063272
+Núm. expedient: CPG12023000010
+
+Vist l’expedient administratiu i antecedents corresponents, el president de la Comissió
+informativa del Ple, proposa al Ple l’adopció dels següents acords:
+
+
+Primer: Aprovar l’addenda número 26 del Pla Estratègic de subvencions exercici 2023:
+
+Proposar una subvenció nominativa a l’entitat d’economia social INTEGRA per donar
+suport a servei de transport adaptat d’usuaris del taller ocupacional d’Integra per a
+persones amb discapacitat intel·lectual i als infants amb trastorns en els seu
+desenvolupament, per un import de 5.000.- euros i amb càrrec a l’estat de despeses
+del pressupost de 2023, habilitant crèdit pressupostari a la partida 23 100 912 480003
+“Subvenció Integra” amb una dotació prevista de 5.000.- euros.
+
+Operaci    Referència   Tipus     Partida             Import   Descripció                    CC    CC    CC    CC    CC    CC
+ó                                                                                            1     2     3     4     5     6
+200220                  Despese   23 100 912 480003   5.000    SUBVENCIO INTEGRA             100   001   001   001   000   000
+                        s
+
+
+
+Segon: Aprovar l’addenda número 27 del Pla Estratègic de subvencions exercici 2023:
+
+Proposar una subvenció nominativa a l’entitat FUNDACIÓ IMPULSA per donar suport
+i contribuir amb les beques per estudis i mentoratge de joves amb compromís i
+motivació pels estudis amb dificultats econòmiques que els dificulta poder cursar cicles
+de Formació Professional, per un import de 26.000.- euros i amb càrrec a l’estat de
+despeses del pressupost de 2023, habilitant crèdit pressupostari a la partida 23 100
+912 480004 “Subvenció Fundació Impulsa” amb una dotació prevista de 26.000.-
+euros.
+
+Operaci    Referència   Tipus     Partida             Import   Descripció                    CC    CC    CC    CC    CC    CC
+ó                                                                                            1     2     3     4     5     6
+200220                  Despese   23 100 912 480004   26.000   SUBVENCIO FUNDACIO IMPULSA    100   001   001   001   000   000
+                        s
+
+
+
+Tercer: Aprovar l’addenda número 28 del Pla Estratègic de subvencions exercici 2023:
+
+Proposar una subvenció nominativa a l’ASSOCIACIÓ DEL CENTRE CÍVIC D’OLOT
+(Casal de la gent gran d’Olot) per donar suport a les diferents activitats que realitzen al
+llarg de l’any donat que van quedar fora de la convocatòria de concurrència pública,
+per un import de 3.600.- euros i amb càrrec a l’estat de despeses del pressupost de
+2023, habilitant crèdit pressupostari a la partida 23 100 912 480005 “Subvenció
+Associació Centre Cívic Olot” amb una dotació prevista de 3.600.- euros.
+
+Operaci    Referència   Tipus     Partida             Import   Descripció                    CC    CC    CC    CC    CC    CC
+ó                                                                                            1     2     3     4     5     6
+200220                  Despese   23 100 912 480005   3.600    SUBVENCIO ASSOCIACIO CENTRE   100   001   001   001   000   000
+                        s                                      CIVIC OLOT
+
+
+
+
+Mod ACTS_DP06

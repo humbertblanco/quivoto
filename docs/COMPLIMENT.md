@@ -1,11 +1,13 @@
 # Promeses i compliment: contrastar el programa de 2023 amb el mandat
 
-> **Estat a 29 d'agost de 2026.** Aquest document descriu un mètode que **encara no existeix**. D'això, avui està
-> implementat: **res** — cap taula de promeses, cap programa processat, cap veredicte emès, cap línia de codi que
-> llegeixi un programa. L'única feina feta és un **rastreig manual de disponibilitat de programes** als quatre
-> municipis pilot (Esplugues, Sabadell, Girona, Reus), l'agost de 2026, d'on surten els exemples d'aquestes pàgines:
-> es van obrir llavors, no s'han tornat a comprovar, i valen com a il·lustració, no com a dada publicable. La resta
-> és compromís, i va marcada amb ⏳ secció a secció.
+> **Estat a 29 d'agost de 2026.** Aquest document descriu un mètode que **encara no existeix com a producte**. Del
+> que descriuen les seccions 1 a 7, avui està implementat: **res** — cap taula de promeses, cap esquema, cap cua de
+> revisió, cap veredicte publicat, cap línia de codi que llegeixi un programa. Hi ha dues feines fetes: un
+> **rastreig manual de disponibilitat de programes** als quatre municipis pilot (Esplugues, Sabadell, Girona, Reus)
+> l'agost de 2026, d'on surten els exemples d'aquestes pàgines; i una **prova de foc sobre 20 promeses reals** del
+> programa del PSC de Reus, feta a mà el 29 d'agost de 2026, que és la [secció 8](#8-què-hem-après-provant-ho). El
+> que en surt està a [COMPLIMENT-VEREDICTE.md](COMPLIMENT-VEREDICTE.md), i la conclusió és **ajornar**. La resta és
+> compromís, i va marcada amb ⏳ secció a secció.
 
 Contrastar el que un partit va prometre amb el que ha passat és la peça més delicada de quivoto, perquè és l'única
 on la temptació d'opinar entra per la porta del davant. Aquí es fixa la ratlla: **només diem si allò escrit ha
@@ -203,6 +205,82 @@ candidatura.
   esborrem veredictes: els superem.
 - **El programa perdut és recuperable.** Si una candidatura ens envia el programa que no vam saber trobar, li refem
   la fitxa sencera. «Sense programa recuperable» és sempre reversible, i la fitxa dirà des de quin dia ho és.
+
+## 8. Què hem après provant-ho
+
+> ✅ **Això sí que s'ha fet**, el 29 d'agost de 2026, i és l'única part d'aquest document que no és
+> compromís. Dades brutes a `packages/pipeline/src/publish/promeses-mostra.json`; el que se'n
+> conclou, a [COMPLIMENT-VEREDICTE.md](COMPLIMENT-VEREDICTE.md).
+
+**Què s'ha provat.** El programa del **PSC de Reus del 2023** («L'HORA DE REUS. Programa de govern
+Reus 2023-2030», 85 pàgines, 23.633 paraules, PDF del 9 de maig de 2023), la candidatura que
+**governa** —Sandra Guaita, proclamada alcaldessa al ple de constitució del 17 de juny de 2023— i
+per tant el cas **més favorable** que existeix: només qui governa deixa rastre documental.
+
+El programa conté **260 accions numerades**. Se n'ha pres una mostra **sistemàtica, una de cada
+13**, en ordre de document: 20 promeses. La mostra és sistemàtica i no triada perquè escollir a mà
+hauria inflat la proporció de verificables, que és exactament la xifra que es volia mesurar. La
+classificació de verificabilitat, via i llindar es va **congelar amb empremta SHA-256 abans**
+d'obrir cap document del mandat.
+
+### Les xifres
+
+| | |
+|---|---|
+| Promeses de la mostra | **20** de 260 |
+| V1 · verificables | **5** (25%) |
+| V2 · parcialment | **9** (45%) |
+| V3 · no verificables des del primer dia | **6** (30%) |
+| **Complertes** | **2** |
+| **En curs** | **2** |
+| **Incomplertes** | **0** |
+| **No verificables** | **16** (80%) |
+| Resoltes sobre les verificables | **4 de 14** (29%) |
+
+**Fonts obertes i llegides de veritat:** 45 actes de ple de l'AOC del 17.06.2023 al 16.07.2026
+(16,2 MB de PDF, 1.046.403 paraules amb `pdftotext -layout`); 1.084 anuncis del perfil del
+contractant de la família Reus; 450 convocatòries de subvenció de Reus a la BDNS dins el mandat;
+56 convenis al Registre de convenis.
+
+### Les cinc coses que no esperàvem
+
+1. **La classificació prèvia no prediu si es trobarà el document.** De les 5 promeses V1 —les més
+   concretes— se n'ha resolt **1**; de les 9 V2, **3**. L'escala V1/V2/V3 mesura com està escrit el
+   programa, no la probabilitat de resoldre'l. Serveix per no enganyar-se, no per prioritzar feina.
+2. **Els registres exhaustius resolen; cercar per paraules dins les actes, no.** Les úniques
+   absències defensables surten de la BDNS (cap convocatòria d'ajuts a joves per a l'habitatge ni
+   de beques de recerca en 450) i del ple+BOPT (cap revisió de l'ordenança de llicències
+   d'activitat comercial en 45 actes; les ordenances tocades són les fiscals, la de verificació
+   d'habitatges, la de la Zona de Baixes Emissions, la de residus i la d'habitatges buits). En
+   canvi, `grep` sobre un milió de paraules d'actes va donar **zero** a 9 dels 14 casos.
+3. **Un llindar V2 laxe converteix continuïtat en compliment.** La promesa «Impuls del programa
+   CER de colònies felines» surt **complerta** perquè hi ha contractes de veterinari clínic el
+   2023 i el 2025 i un espai d'acollida nou per a 150 gats; però el servei de veterinari ja existia
+   abans del mandat i el llindar congelat només exigia «un contracte». El verb prometia
+   *creixement* i el llindar mesurava *existència*. És un error nostre, i seria sistemàtic: mig
+   programa municipal està escrit amb «impulsar» i «potenciar».
+4. **El comptador no pot dir «incomplerta» abans que s'acabi el mandat.** Tres de les 16 no
+   verificables són absències en registres exhaustius i passarien a incomplertes el dia que el
+   mandat es tanqui sense el document; a 29 d'agost de 2026, amb nou mesos per endavant, l'estat
+   honest és «no verificable». **La finestra del comptador és l'últim ple del mandat**, no abans.
+5. **El forat de la junta de govern local.** Reus publica al recurs de l'AOC 45 actes de **ple** i
+   **cap** de junta de govern, i és a la junta on s'aproven la majoria de plans i bases
+   reguladores. Tota promesa de «fer un pla» és irresoluble per construcció, i la seva absència no
+   acredita res.
+
+### Les quatre resoltes, amb el document
+
+| Promesa | Estat | Document |
+|---|---|---|
+| «Exigència a la Generalitat perquè reformi l'estació d'autobusos» | **Complerta** | Ple del 24.10.2025, punt 5: aprovació inicial de la modificació del PGOU en l'àmbit del Carrilet i la nova estació (19 a favor, 3 en contra, 5 abstencions); protocol signat amb la Generalitat el 13.11.2025, donat compte al ple del 21.11.2025 |
+| «Impuls del programa CER a les colònies felines urbanes» | **Complerta**, amb avís | Adjudicacions del servei de veterinari clínic (2023, 14.976,86 €; 2025, 17.125,62 €) i espai d'acollida per a 150 gats (2026, 31.587,73 €) |
+| «Posarem en marxa una aplicació mòbil… per notificar els problemes… a la via pública» | **En curs** | Expedient CONMIX-0005/2025, formalitzat el 27.10.2025 amb CODIGITAL 360 SOLUTIONS per 54.338 €, execució de l'1.11.2025 al 31.10.2029. Falta acreditar-ne la posada en servei |
+| «Finalització del Pla per redimensionar les zones verdes» | **En curs** | Contracte de redacció del Pla d'infraestructura Verda-Blava (RENATUReus), 20.06.2024, 64.372,40 €. Falta l'aprovació municipal del pla |
+
+**Cap d'aquests estats no està signat per una persona**, i per tant cap no és publicable segons el
+§6: això és una prova de foc del mètode, no una fitxa. El titular honest d'aquesta prova és el que
+ja s'anunciava als límits, ara amb número al davant: **de cada cinc promeses del partit que
+governa, quatre no es poden respondre amb un document.**
 
 ## Límits d'aquest mètode
 

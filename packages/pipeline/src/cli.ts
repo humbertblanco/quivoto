@@ -9,6 +9,7 @@ import { j7ContextObert } from "./jobs/j7-context-obert";
 import { j8Diners } from "./jobs/j8-diners";
 import { j9HabitatgeResidus } from "./jobs/j9-habitatge-residus";
 import { j10Activitat } from "./jobs/j10-activitat";
+import { j11Fotos } from "./jobs/j11-fotos";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
 import { deriveFinances } from "./derive/finances";
@@ -27,6 +28,7 @@ const COMMANDS = {
   j8: j8Diners,
   j9: j9HabitatgeResidus,
   j10: j10Activitat,
+  j11: j11Fotos,
   derive: deriveMetrics,
   alcaldies: deriveMayorChanges,
   comptes: deriveFinances,
