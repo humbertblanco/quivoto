@@ -60,7 +60,7 @@ evidència pública no hi haurà brúixola, només la radiografia electoral.
 > radiografia— amb un cercador pel nom del poble. Ho desbloqueja la classificació d'òrgan de
 > les actes, perquè abans d'això la xifra que et donaríem seria enganyosa.
 
-Aquí resumim les cinc peces del mètode i enllacem al detall de cadascuna.
+Aquí resumim les sis peces del mètode i enllacem al detall de cadascuna.
 
 ---
 
@@ -216,11 +216,41 @@ comparteixis l'enllaç.
 
 → **[Detall complet: metodologia/05-neutralitat-i-dades.md](metodologia/05-neutralitat-i-dades.md)**
 
+## 6. Com deduïm la posició de cada grup del ple
+
+> ✅ **Implementat, i només per a la demo.** Les regles viuen a
+> [`packages/pipeline/src/publish/posicions.ts`](../packages/pipeline/src/publish/posicions.ts)
+> (22 tests) i el lligam entre una afirmació i el punt d'acta que cita, a
+> [`enllac-actes.ts`](../packages/pipeline/src/publish/enllac-actes.ts) (12 tests). Es fan
+> servir a les pàgines de prova de l'Observatori, que van amb `noindex` i amb el segell
+> «esborrany · sense validar». **No hi ha camp `basis` ni `confidence` a la base de dades**, i
+> cap d'aquestes posicions no és una posició declarada per cap partit.
+
+Mentre les candidatures del 2027 no existeixin, el que podem ensenyar no és què diu un partit
+sinó **què ha votat el seu grup municipal**. Aquesta secció explica com passem d'una evidència
+—«aprovat amb 17 vots a favor, 1 en contra i 1 abstenció»— a la posició de cada grup, per
+quatre vies i per ordre de força: l'acta llegida amb el vot desglossat; el resum que anomena
+els grups de cada costat; l'aritmètica dels escons, quan només hi ha un repartiment possible;
+i la regla del bloc, quan els vots contraris no caben a l'oposició.
+
+La part important és quan **no** en diem res, que és sovint: govern partit entre els dos
+costats, noms que no lliguen amb cap grup del ple, recomptes que no quadren amb les
+regidories, vots en blanc i absències. El buit és una decisió presa, i es veu: cada grup porta
+al costat en quantes afirmacions se'l pot situar. Amb el material d'avui, en esborrany,
+Esplugues situa algun grup en 16 de 25 afirmacions, Badalona en 10 de 25 i Sant Just Desvern
+en 7 de 22.
+
+I el límit que no arregla cap millora tècnica: **un partit pot votar en contra d'una moció per
+qui la presenta i no pel que hi diu.** La deducció recull el vot, no el motiu. Això només ho
+resol preguntar-ho als partits, i això no passa fins al 2027.
+
+→ **[Detall complet: metodologia/06-posicions-deduides.md](metodologia/06-posicions-deduides.md)**
+
 ---
 
 ## Què no farem
 
-Els límits reals, agregats dels cinc documents. Si el portal sembla saber més del que aquí diem
+Els límits reals, agregats dels sis documents. Si el portal sembla saber més del que aquí diem
 que pot saber, avisa'ns.
 
 - **92 municipis no tenen cap acta al feed** i 59 en tenen menys de 10. Allà no hi haurà
@@ -313,6 +343,10 @@ Deu paraules que fem servir sense poder-les evitar.
 | Decisions obertes | Els cinc documents marquen com a **proposta oberta** el que encara no està decidit: terminis de resposta, llindars numèrics d'acceptació de l'extracció, mostra mínima per retirar afirmacions, llicència de les nostres dades i model de finançament |
 | Actualitzacions | Aquest document canvia a mesura que es tanquen decisions; quan hi hagi portal, els canvis aniran al registre públic de `/canvis` |
 
-Si trobes una contradicció entre aquesta pàgina i un dels cinc documents detallats, mana el
+Si trobes una contradicció entre aquesta pàgina i un dels sis documents detallats, mana el
 document detallat —excepte en el que diem sobre l'aprovació automàtica de posicions (§2), on
 mana aquesta pàgina—, i t'agrairem que ens ho diguis.
+
+## El pla cap al 2027
+
+Què queda per fer, quines dades falten i com pensem tractar-les: [PLA-DADES-2027.md](PLA-DADES-2027.md).

@@ -1,15 +1,28 @@
 import { eq } from "drizzle-orm";
 import { municipalities, municipalityMetrics, type Db } from "@quivoto/db";
+import { carregaMetriques } from "./metriques";
+import { RADIOGRAFIA_CSS } from "./estil";
+import { MASCOTA_CSS, papereta } from "./mascota";
+import { icona } from "./icones";
+import { SITE } from "./config";
+import { slugify } from "../lib/text";
 
 /**
  * «Els 947» — l'índex de tots els municipis de Catalunya amb el que en sabem.
  *
- * És un guinyo a els947.cat, el repte de geografia catalana, i alhora la manera
- * més honesta d'ensenyar què hem construït: no una demostració amb tres pobles
- * triats, sinó els 947 alhora, amb la dada que hi tenim i el forat on no n'hi ha.
+ * 947 és el nombre de municipis que té Catalunya, i la pàgina existeix per
+ * ensenyar-los tots amb la seva dada: no una demostració amb tres pobles triats,
+ * sinó els 947 alhora, amb el que en sabem i el forat on no n'hi ha.
  *
- * Tot el conjunt va incrustat a la pàgina i el filtre és al navegador: són poques
- * dades i així funciona sense servidor, sense peticions i sense saber qui mira què.
+ * El nom coincideix amb el d'els947.cat, un joc de geografia catalana. La
+ * coincidència és de la xifra i de res més: el joc és d'una altra gent, no hi
+ * tenim cap relació ni cap acord, i aquesta pàgina no en depèn gens. L'enllaç
+ * que hi ha a baix és un guinyo, i s'ha de continuar llegint com a tal.
+ *
+ * La llista va escrita a l'HTML, fila a fila: sense JavaScript es llegeix
+ * sencera i s'arriba a totes les fitxes. Els filtres són caselles i CSS, i el
+ * cercador és l'única peça que necessita el navegador. No surt res d'aquí: ni
+ * peticions ni manera de saber qui mira què.
  */
 
 export type Els947Row = {
@@ -39,9 +52,36 @@ export type Els947Row = {
   o: 0 | 1;
 };
 
+/** Les mètriques que la llista dels 947 llegeix, i cap més. */
+const KINDS_ELS947: string[] = [
+  "electoralHistory",
+  "finances",
+  "government",
+  "mayors",
+  "parity",
+  "transparency",
+  "results",
+  "actes",
+];
+
 export async function loadEls947(db: Db): Promise<Els947Row[]> {
   const all = await db.select().from(municipalities);
-  const metrics = await db.select().from(municipalityMetrics);
+  /**
+   * Les mètriques, només les que calen i **de tros en tros**.
+   *
+   * Aquesta consulta portava la taula sencera. Quan J12 hi va afegir els punts
+   * votats de les actes —41.113 punts amb el seu text i el vot de cada grup, 18
+   * MB en 67 files— el motor de WebAssembly de PGlite es quedava sense memòria
+   * («memory access out of bounds») i la publicació sencera fallava abans de
+   * generar res, per una columna que aquí no es mira mai.
+   *
+   * Filtrar per tipus no n'hi havia prou: només la liquidació ja són 8 MB, i el
+   * resultat sencer ha de cabre a la memòria del motor d'una tirada. Es demana
+   * en blocs, que és el que fa que això aguanti quan la base de dades creixi
+   * —i creixerà, perquè les actes són el que més té per créixer.
+   */
+  const metrics = await carregaMetriques(db, KINDS_ELS947);
+
   const byMunicipality = new Map<number, Map<string, unknown>>();
   for (const metric of metrics) {
     let map = byMunicipality.get(metric.municipalityId);
@@ -90,23 +130,330 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
 }
 
 const escape = (text: string): string =>
-  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 
-export function renderEls947(rows: readonly Els947Row[], generatedAt: string, withPage: ReadonlySet<string>): string {
+/** Una fila amb el que la pàgina hi afegeix: si el municipi ja té radiografia. */
+export type Fila = Els947Row & { x: 0 | 1 };
+
+/**
+ * La normalització de la cerca.
+ *
+ * Es fa servir dos cops: aquí per escriure la clau de cada fila a l'HTML, i al
+ * navegador per normalitzar el que s'escriu. Va serialitzada amb `toString()` i
+ * no copiada, perquè no hi pugui haver mai dues versions que es desincronitzin:
+ * que un municipi no es trobés escrivint el seu propi nom seria l'error més
+ * ridícul possible en una llista que es diu «els 947».
+ */
+export function clauCerca(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/['’]/g, " ")
+    .replace(/^(l|el|la|els|les|es|sa)\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** La mediana d'una llista de xifres, o `null` si no n'hi ha cap. */
+export function mediana(valors: readonly number[]): number | null {
+  const nets = valors.filter((v) => Number.isFinite(v)).sort((a, b) => a - b);
+  if (nets.length === 0) return null;
+  const mig = Math.floor(nets.length / 2);
+  return nets.length % 2 === 1 ? nets[mig]! : (nets[mig - 1]! + nets[mig]!) / 2;
+}
+
+/**
+ * Els dos llindars que es calculen del conjunt i no vénen de cap font.
+ *
+ * Són medianes, i van arrodonides perquè l'etiqueta del filtre digui exactament
+ * la regla que s'aplica: si el botó diu «per sobre de 1.204 €», el que filtra ha
+ * de ser 1.204 i no 1.203,5. També hi va quants municipis tenen la dada: amb
+ * quatre no té sentit oferir cap mediana, i el filtre desapareix.
+ */
+export type Llindars = {
+  deute: number | null;
+  transparencia: number | null;
+  ambDeute: number;
+  ambTransparencia: number;
+};
+
+/** Per sota d'això, una mediana diu més del forat de dades que dels municipis. */
+const MINIM_PER_A_MEDIANA = 40;
+
+export function llindarsDe(files: readonly Els947Row[]): Llindars {
+  const deutes = files.map((f) => f.d).filter((v): v is number => v !== null);
+  const transparencies = files.map((f) => f.y).filter((v): v is number => v !== null);
+  const arrodoneix = (v: number | null): number | null => (v === null ? null : Math.round(v));
+  return {
+    deute: deutes.length >= MINIM_PER_A_MEDIANA ? arrodoneix(mediana(deutes)) : null,
+    transparencia:
+      transparencies.length >= MINIM_PER_A_MEDIANA ? arrodoneix(mediana(transparencies)) : null,
+    ambDeute: deutes.length,
+    ambTransparencia: transparencies.length,
+  };
+}
+
+const xifra = (n: number): string => n.toLocaleString("ca-ES");
+
+/**
+ * Els filtres, agrupats per la pregunta que responen.
+ *
+ * Cap filtre no diu si el que troba està bé o malament: «deute per sobre de la
+ * mediana» és una posició dins dels 947, no una nota de gestió. Els quatre
+ * últims (dones al ple, deute, transparència i mida) són camps que ja hi eren a
+ * cada fila i que no es podien filtrar: la pàgina els ensenyava i no deixava
+ * preguntar-los, que és la manera més segura de tenir una dada que no serveix.
+ */
+type GrupFiltres = { clau: string; titol: string; tema: string };
+
+const GRUPS_FILTRE: readonly GrupFiltres[] = [
+  { clau: "mana", titol: "Qui hi mana", tema: "participació" },
+  { clau: "ple", titol: "Com és el ple", tema: "el ple" },
+  { clau: "papers", titol: "Els comptes i els papers", tema: "fiscalitat" },
+  { clau: "municipi", titol: "Quin municipi", tema: "urbanisme" },
+];
+
+type Filtre = {
+  clau: string;
+  grup: string;
+  text: (l: Llindars) => string;
+  te: (f: Fila, l: Llindars) => boolean;
+  /** Si el conjunt no dóna per a aquest filtre, no es dibuixa. */
+  hi?: (l: Llindars) => boolean;
+};
+
+export const FILTRES: readonly Filtre[] = [
+  { clau: "pacte", grup: "mana", text: () => "Governa qui no va guanyar", te: (f) => f.w === 0 },
+  { clau: "canvi", grup: "mana", text: () => "Canvi d'alcaldia a mig mandat", te: (f) => f.k === 1 },
+  {
+    clau: "sempre",
+    grup: "mana",
+    text: () => "La mateixa força des del 1979",
+    te: (f) => f.v === 0 && (f.q ?? 0) >= 8,
+  },
+  { clau: "majoria", grup: "ple", text: () => "Majoria absoluta", te: (f) => f.m === 1 },
+  { clau: "unica", grup: "ple", text: () => "Una sola candidatura", te: (f) => f.o === 1 },
+  {
+    clau: "dones",
+    grup: "ple",
+    text: () => "Més dones que homes al ple",
+    te: (f) => f.f !== null && f.f > 50,
+  },
+  {
+    clau: "deute",
+    grup: "papers",
+    text: (l) => `Deute per sobre de ${xifra(l.deute ?? 0)} €`,
+    te: (f, l) => l.deute !== null && f.d !== null && f.d > l.deute,
+    hi: (l) => l.deute !== null,
+  },
+  {
+    clau: "opac",
+    grup: "papers",
+    text: (l) => `Transparència per sota del ${xifra(l.transparencia ?? 0)} %`,
+    te: (f, l) => l.transparencia !== null && f.y !== null && f.y < l.transparencia,
+    hi: (l) => l.transparencia !== null,
+  },
+  { clau: "sense", grup: "papers", text: () => "Sense cap acta del ple", te: (f) => f.t === 0 },
+  { clau: "petits", grup: "municipi", text: () => "Menys de 1.000 habitants", te: (f) => f.p < 1000 },
+  { clau: "fitxa", grup: "municipi", text: () => "Amb radiografia", te: (f) => f.x === 1 },
+];
+
+/** Els filtres que aquest conjunt de dades permet oferir. */
+export function filtresDisponibles(l: Llindars): readonly Filtre[] {
+  return FILTRES.filter((f) => (f.hi ? f.hi(l) : true));
+}
+
+/** Les marques d'una fila: el que el filtre de CSS busca amb `[data-f~=…]`. */
+export function marques(fila: Fila, l: Llindars): string[] {
+  return filtresDisponibles(l)
+    .filter((f) => f.te(fila, l))
+    .map((f) => f.clau);
+}
+
+/** Les pastilles d'una fila, en l'ordre en què es llegeixen. */
+export function pastilles(fila: Fila, l: Llindars): string[] {
+  const out: string[] = [];
+  const posa = (text: string, mena = ""): number =>
+    out.push(`<span class="pastilla${mena ? ` ${mena}` : ""}">${escape(text)}</span>`);
+
+  if (fila.w === 0) posa("Governa qui no va guanyar", "pacte");
+  if (fila.k === 1) posa("Canvi d'alcaldia a mig mandat", "canvi");
+  if (fila.m === 1) posa("Majoria absoluta", "majoria");
+  if (fila.o === 1) posa("Una sola candidatura", "unica");
+  if (fila.v === 0 && (fila.q ?? 0) >= 8) posa("La mateixa força des del 1979", "sempre");
+  else if (fila.v !== null && fila.q !== null)
+    posa(`${fila.v} canvis de mans en ${fila.q} eleccions`);
+  if (fila.a) posa(fila.a);
+  if (fila.g) posa(fila.g, "sigles");
+  posa(`${fila.r} regidories`);
+  posa(fila.t > 0 ? `${xifra(fila.t)} actes indexades` : "Sense actes", fila.t > 0 ? "" : "sense");
+  if (fila.d !== null) posa(`${xifra(fila.d)} € de deute per habitant`);
+  if (fila.f !== null) posa(`${xifra(fila.f)} % de dones al ple`);
+  if (fila.y !== null) posa(`Transparència ${xifra(fila.y)} %`);
+  return out;
+}
+
+/**
+ * El CSS propi. Tota la resta —tipografies, colors, capçalera, `.destins`,
+ * `.bloc`, `.index`— surt de `RADIOGRAFIA_CSS`, que és el que fa que aquesta
+ * pàgina rebi les correccions de la resta de l'Observatori en comptes de
+ * quedar-se amb una còpia vella dels mateixos estils.
+ */
+const CSS = `
+.xifres{list-style:none;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  margin:var(--e4) 0 0;padding:0}
+.xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
+  box-shadow:var(--ombra);padding:var(--e2)}
+.xifres b{display:block;font-family:var(--display);font-weight:900;font-size:2.1rem;line-height:1;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.xifres span{font-size:.82rem;color:var(--ink-suau)}
+.pistes{display:flex;flex-wrap:wrap;gap:8px;margin:var(--e3) 0 0}
+
+/* --- el tauler: cercador, filtres i llista ---------------------------- */
+.tauler{margin:var(--e4) 0 0}
+.cercador{position:sticky;top:0;z-index:5;background:var(--paper);padding:var(--e2) 0;
+  border-bottom:2.5px solid var(--ink)}
+/* El cercador és l'única peça que necessita JavaScript: sense ell no faria res
+   i seria un camp que enganya. Els filtres, en canvi, són caselles i CSS. */
+.cercador{display:none}
+.js .cercador{display:block}
+#cerca{width:100%;font:inherit;font-size:1.1rem;padding:13px 16px;border:2.5px solid var(--ink);
+  border-radius:var(--r-m);background:var(--paper-2);color:var(--ink);box-shadow:var(--ombra)}
+
+.filtres{margin:var(--e3) 0 0}
+.colla{margin:0 0 var(--e2)}
+.colla h3{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-family:var(--text);
+  font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-suau)}
+.colla h3 .icona{width:26px;height:26px}
+.tries{display:flex;flex-wrap:wrap;gap:8px}
+.filtre{display:inline-flex;align-items:center;min-height:44px;padding:0 15px;font-size:.82rem;
+  font-weight:800;border:2px solid var(--ink);border-radius:var(--r-max);cursor:pointer;
+  overflow-wrap:anywhere}
+.commutador:checked+.filtre{background:var(--ink);color:var(--paper)}
+.commutador:focus-visible+.filtre{outline:3px solid var(--coral);outline-offset:2px}
+.eines{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin:var(--e2) 0 0}
+.neteja{font:inherit;font-size:.82rem;font-weight:800;display:inline-flex;align-items:center;
+  min-height:44px;padding:0 15px;border:2px dashed var(--ink);border-radius:var(--r-max);
+  background:transparent;color:inherit;cursor:pointer}
+.recompte{font-size:.86rem;color:var(--ink-suau);margin:0}
+
+.llista{list-style:none;margin:var(--e2) 0 0;padding:0}
+.fila{border-bottom:1px solid var(--vora);padding:2px 0 var(--e2);min-width:0}
+.fila .titol{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--e2);margin:0}
+.fila .municipi{display:inline-flex;align-items:center;min-height:44px;font-family:var(--display);
+  font-weight:900;font-size:1.15rem;letter-spacing:-.02em;text-decoration:none;overflow-wrap:anywhere}
+.fila a.municipi{border-bottom:2.5px solid var(--coral)}
+.fila .pob{font-size:.9rem;font-weight:800;color:var(--ink-suau);font-variant-numeric:tabular-nums;
+  margin-left:auto}
+.fila .lloc{margin:0;font-size:.82rem;color:var(--ink-suau)}
+.fila .lloc a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;
+  border-bottom:1.5px solid var(--vora)}
+/* Una pastilla com «Josep Maria Gras Charles» o «AGRUPACIÓ D'ELECTORS-PROGRÉS
+   MUNICIPAL» feia 453 px amb «white-space:nowrap» i desplaçava la pàgina
+   sencera de costat en un mòbil de 320. Aquí no hi ha cap «nowrap»: el nom i
+   les sigles van en pastilles separades i totes dues es poden partir. */
+.fila .dades{display:flex;flex-wrap:wrap;gap:6px;margin:var(--e1) 0 0;min-width:0}
+.pastilla{font-size:.72rem;font-weight:700;line-height:1.4;border:1.5px solid var(--vora);
+  border-radius:var(--r-max);padding:3px 10px;max-width:100%;min-width:0;overflow-wrap:anywhere}
+.pastilla.pacte{background:var(--presec);border-color:var(--ink);color:#1E1B2E}
+.pastilla.canvi{background:var(--lavanda);border-color:var(--ink);color:#1E1B2E}
+.pastilla.majoria{background:var(--menta);border-color:var(--ink);color:#1E1B2E}
+.pastilla.sempre{background:var(--coral);border-color:var(--ink);color:#1E1B2E}
+.pastilla.unica{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.pastilla.sigles{border-color:var(--ink);font-weight:900}
+.pastilla.sense{border-style:dashed;color:var(--ink-suau)}
+.buit{padding:var(--e4) 0;color:var(--ink-suau)}
+.fila.fora{display:none}
+
+/* Les 43 comarques reaprofiten les pastilles de l'índex de la fitxa, però aquí
+   van dins d'un bloc que ja porta la seva ratlla: dues de seguides es llegien
+   com una separació doble. */
+.bloc .index{border-top:0;margin-top:var(--e2);padding-top:0}
+
+/* --- els filtres, sense JavaScript ------------------------------------
+   Cada casella amaga les files que no porten la seva marca. Ho fa el navegador
+   amb «:has()»; si algun no el sap fer, no passa res greu: la llista es queda
+   sencera i llegible, que és el mínim que aquesta pàgina ha de complir sempre. */
+${FILTRES.map(
+  (f) =>
+    `.tauler:has(#f-${f.clau}:checked) .fila:not([data-f~="${f.clau}"]){display:none}`,
+).join("\n")}
+`;
+
+export function renderEls947(
+  rows: readonly Els947Row[],
+  generatedAt: string,
+  withPage: ReadonlySet<string>,
+): string {
+  const files: Fila[] = rows.map((r) => ({ ...r, x: withPage.has(r.s) ? 1 : 0 }));
+  const llindars = llindarsDe(rows);
+  const disponibles = filtresDisponibles(llindars);
+
   const totals = {
-    municipis: rows.length,
-    regidories: rows.reduce((a, r) => a + r.r, 0),
-    governaMesVotat: rows.filter((r) => r.w === 1).length,
-    pacte: rows.filter((r) => r.w === 0).length,
-    majoria: rows.filter((r) => r.m === 1).length,
-    canvis: rows.filter((r) => r.k === 1).length,
-    sempre: rows.filter((r) => r.v === 0 && (r.q ?? 0) >= 8).length,
-    senseOposicio: rows.filter((r) => r.o === 1).length,
-    senseActes: rows.filter((r) => r.t === 0).length,
-    comarques: new Set(rows.map((r) => r.c)).size,
+    municipis: files.length,
+    regidories: files.reduce((a, r) => a + r.r, 0),
+    pacte: files.filter((r) => r.w === 0).length,
+    majoria: files.filter((r) => r.m === 1).length,
+    canvis: files.filter((r) => r.k === 1).length,
+    sempre: files.filter((r) => r.v === 0 && (r.q ?? 0) >= 8).length,
+    senseOposicio: files.filter((r) => r.o === 1).length,
+    senseActes: files.filter((r) => r.t === 0).length,
+    comarques: new Set(files.map((r) => r.c).filter(Boolean)).size,
   };
 
-  const data = JSON.stringify(rows.map((r) => ({ ...r, x: withPage.has(r.s) ? 1 : 0 })));
+  const comarques = [...new Set(files.map((r) => r.c).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, "ca"),
+  );
+
+  /**
+   * La llista va sencera a l'HTML, fila a fila.
+   *
+   * Abans es dibuixava amb JavaScript des d'un JSON incrustat, i sense
+   * JavaScript la pàgina era un títol i una llista buida: ni es podia llegir ni
+   * s'arribava a cap fitxa. Ara el navegador només hi fa dues coses —cercar i
+   * comptar—, i el que hi ha escrit no depèn que cap script s'executi.
+   */
+  const llista = files
+    .map((f) => {
+      const nom = escape(f.n);
+      const titol =
+        f.x === 1
+          ? `<a class="municipi" href="m/${escape(f.s)}/">${nom}</a>`
+          : `<span class="municipi">${nom}</span>`;
+      const lloc = f.c
+        ? `<a href="c/${escape(slugify(f.c))}/">${escape(f.c)}</a>`
+        : "<span>sense comarca</span>";
+      return `<li class="fila" data-k="${escape(clauCerca(f.n) + " " + clauCerca(f.c))}" data-f="${escape(
+        marques(f, llindars).join(" "),
+      )}">
+<p class="titol">${titol}<span class="pob">${xifra(f.p)} hab.</span></p>
+<p class="lloc">${lloc}</p>
+<p class="dades">${pastilles(f, llindars).join("")}</p>
+</li>`;
+    })
+    .join("\n");
+
+  const tries = GRUPS_FILTRE.map((grup) => {
+    const seus = disponibles.filter((f) => f.grup === grup.clau);
+    if (seus.length === 0) return "";
+    const botons = seus
+      .map(
+        (f) => `<input class="commutador nomes-lectors" type="checkbox" id="f-${f.clau}" value="${f.clau}">
+      <label class="filtre" for="f-${f.clau}">${escape(f.text(llindars))}</label>`,
+      )
+      .join("\n      ");
+    return `<section class="colla">
+    <h3>${icona(grup.tema)}${escape(grup.titol)}</h3>
+    <div class="tries">
+      ${botons}
+    </div>
+  </section>`;
+  }).join("\n  ");
 
   return `<!doctype html>
 <html lang="ca">
@@ -115,91 +462,40 @@ export function renderEls947(rows: readonly Els947Row[], generatedAt: string, wi
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Els 947 · Observatori de quivoto</title>
-<meta name="description" content="Tots els municipis de Catalunya, i el que en sabem: qui governa, si va guanyar, si ha canviat d'alcaldia, com estan els comptes i quantes actes del ple en tenim.">
-<style>
-:root{
-  --paper:#FBF7EE;--paper-2:#FFFFFF;--ink:#1E1B2E;--ink-suau:#6B6680;
-  --coral:#E2735A;--menta:#BFE8D2;--lavanda:#C9C4F2;--presec:#FFD8B8;
-  --vora:rgba(30,27,46,.12);--r-s:10px;--r-m:18px;--r-max:999px;
-  --e1:8px;--e2:16px;--e3:24px;--e4:40px;
-  --display:"Gabarito",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --text:"Nunito Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
-  --ombra:3px 3px 0 var(--ink);
-}
-@media (prefers-color-scheme:dark){:root{--paper:#17141F;--paper-2:#211D2C;--ink:#F4F0E6;--ink-suau:#A9A3B8;--vora:rgba(244,240,230,.16)}}
-*,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--text);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
-h1{font-family:var(--display);font-weight:900;letter-spacing:-.04em;line-height:.95;font-size:clamp(3rem,13vw,7rem);margin:0}
-h2{font-family:var(--display);font-weight:900;letter-spacing:-.02em;font-size:1.2rem;margin:0 0 var(--e2)}
-a{color:inherit}
-:focus-visible{outline:3px solid var(--coral);outline-offset:2px;border-radius:4px}
-.embolcall{max-width:1080px;margin:0 auto;padding:var(--e3)}
-.capcalera{display:flex;justify-content:space-between;align-items:center;gap:var(--e2)}
-.logo{font-family:var(--display);font-weight:900;letter-spacing:-.05em;font-size:1.25rem;text-decoration:none}
-.etiqueta{background:var(--presec);color:#1E1B2E;border-radius:var(--r-max);padding:5px 12px;font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
-.entradeta{font-size:1.1rem;color:var(--ink-suau);max-width:46ch;margin:var(--e2) 0 var(--e4)}
-.entradeta b{color:var(--ink)}
-
-.xifres{list-style:none;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:0 0 var(--e4);padding:0}
-.xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2)}
-.xifres b{display:block;font-family:var(--display);font-weight:900;font-size:2.1rem;line-height:1;letter-spacing:-.03em}
-.xifres span{font-size:.82rem;color:var(--ink-suau)}
-
-.controls{position:sticky;top:0;z-index:5;background:var(--paper);padding:var(--e2) 0;border-bottom:2.5px solid var(--ink);margin-bottom:var(--e2)}
-#cerca{width:100%;font:inherit;font-size:1.15rem;padding:14px 16px;border:2.5px solid var(--ink);border-radius:var(--r-m);background:var(--paper-2);color:var(--ink);box-shadow:var(--ombra)}
-.filtres{display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--e2)}
-.filtre{font:inherit;font-size:.82rem;font-weight:800;padding:7px 13px;border:2px solid var(--ink);border-radius:var(--r-max);background:transparent;color:inherit;cursor:pointer}
-.filtre[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
-.recompte{font-size:.86rem;color:var(--ink-suau);margin:var(--e2) 0 0}
-
-.llista{list-style:none;margin:0;padding:0}
-.fila{border-bottom:1px solid var(--vora);padding:var(--e2) 0;display:grid;grid-template-columns:1fr auto;gap:4px var(--e2);align-items:baseline}
-.nom{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em}
-.nom a{text-decoration:none;border-bottom:2.5px solid var(--coral)}
-.lloc{font-size:.82rem;color:var(--ink-suau)}
-.dades{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.pastilla{font-size:.72rem;font-weight:700;border:1.5px solid var(--vora);border-radius:var(--r-max);padding:3px 10px;white-space:nowrap}
-.pastilla.pacte{background:var(--presec);border-color:var(--ink);color:#1E1B2E}
-.pastilla.canvi{background:var(--lavanda);border-color:var(--ink);color:#1E1B2E}
-.pastilla.majoria{background:var(--menta);border-color:var(--ink);color:#1E1B2E}
-.pastilla.sense{background:transparent;border-style:dashed;color:var(--ink-suau)}
-.pastilla.sempre{background:var(--coral);border-color:var(--ink);color:#FBF7EE}
-.pastilla.unica{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-.pob{font-variant-numeric:tabular-nums;font-weight:800;font-size:.9rem;white-space:nowrap}
-.buit{padding:var(--e4) 0;color:var(--ink-suau)}
-.peu{border-top:2.5px solid var(--ink);margin-top:var(--e3);padding-top:var(--e3);font-size:.84rem;color:var(--ink-suau)}
-
-/* --- el guinyo: convidar a jugar-hi, no només citar-los --- */
-.joc{background:var(--lavanda);color:#1E1B2E;border:2.5px solid #1E1B2E;border-radius:var(--r-m);
-  box-shadow:6px 6px 0 #1E1B2E;padding:var(--e3);margin:var(--e4) 0 var(--e3);transform:rotate(-.6deg)}
-.joc h2{font-size:1.7rem;margin-bottom:var(--e1)}
-.joc p{margin:0 0 var(--e2);max-width:52ch}
-.joc .boto{display:inline-block;background:#1E1B2E;color:#FBF7EE;text-decoration:none;font-weight:800;
-  padding:12px 22px;border-radius:var(--r-max);box-shadow:3px 3px 0 rgba(30,27,46,.35);
-  transition:transform .12s ease,box-shadow .12s ease}
-.joc .boto:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(30,27,46,.35)}
-.joc .lletra-petita{font-size:.82rem;opacity:.72;margin:0}
-@media (prefers-reduced-motion:reduce){.joc{transform:none}.joc .boto{transition:none}}
-</style>
+<meta name="description" content="Els 947 municipis de Catalunya en una llista, amb el que en sabem de cadascun: qui hi mana, si va guanyar, si ha canviat d'alcaldia, com estan els comptes i quantes actes del ple en tenim.">
+<link rel="canonical" href="${SITE}/observatori/els947.html">
+<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${CSS}</style>
+<script>document.documentElement.className += " js";</script>
 </head>
 <body>
-<div class="embolcall">
+<a class="salta" href="#llista">Ves a la llista</a>
 
 <header class="capcalera">
   <a class="logo" href="./">Observatori</a>
   <span class="etiqueta">esborrany · dades obertes</span>
 </header>
 
-<h1>Els 947</h1>
-<p class="entradeta">Tots els municipis de Catalunya i el que en sabem: qui hi mana,
-si va ser la llista més votada, si hi ha hagut canvi d'alcaldia a mig mandat, com estan
-els comptes i quantes actes del ple en tenim indexades. <b>Sense cap excepció i sense cap
-municipi triat a dit.</b> I si el que vols és posar a prova si te'ls saps tots,
-<a href="https://els947.cat/" target="_blank" rel="noopener">hi ha un joc per a això</a>.</p>
+<main>
+<section class="portada">
+  <div class="presenta">${papereta(120, "felic")}<div>
+    <p class="micro">Tot Catalunya, sense triar</p>
+    <h1>Els 947</h1>
+  </div></div>
+  <p class="entrada">Tots els municipis de Catalunya i el que en sabem: qui hi mana, si va ser la
+  llista més votada, si hi ha hagut canvi d'alcaldia a mig mandat, com estan els comptes i quantes
+  actes del ple en tenim indexades. <b>Sense cap excepció i sense cap municipi triat a dit.</b>
+  Si el que busques és posar a prova si te'ls saps tots de memòria, això ho fa
+  <a href="https://els947.cat/" target="_blank" rel="noopener">els947.cat</a>, un joc d'una altra
+  gent amb qui no tenim cap relació.</p>
+  <p class="pistes">
+    <a class="prova-enllac" href="mapa/">Els mateixos 947, al mapa →</a>
+    <a class="prova-enllac" href="comparador/">Posa'n quatre de costat →</a>
+  </p>
+</section>
 
 <ul class="xifres">
   <li><b>${totals.municipis}</b><span>municipis, de ${totals.comarques} comarques</span></li>
-  <li><b>${totals.regidories.toLocaleString("ca-ES")}</b><span>regidories el 2023</span></li>
+  <li><b>${xifra(totals.regidories)}</b><span>regidories el 2023</span></li>
   <li><b>${totals.pacte}</b><span>on governa una llista que no va guanyar</span></li>
   <li><b>${totals.canvis}</b><span>han canviat d'alcaldia a mig mandat</span></li>
   <li><b>${totals.majoria}</b><span>amb majoria absoluta d'una sola llista</span></li>
@@ -208,110 +504,117 @@ municipi triat a dit.</b> I si el que vols és posar a prova si te'ls saps tots,
   <li><b>${totals.senseActes}</b><span>sense cap acta de ple publicada</span></li>
 </ul>
 
-<div class="controls">
-  <label class="nomes-lectors" for="cerca">Cerca un municipi</label>
-  <input id="cerca" type="search" placeholder="Escriu un poble: esplugues, la seu, hospitalet…" autocomplete="off" spellcheck="false">
-  <div class="filtres" role="group" aria-label="Filtres">
-    <button class="filtre" data-f="pacte" aria-pressed="false">Hi va haver pacte</button>
-    <button class="filtre" data-f="canvi" aria-pressed="false">Canvi d'alcaldia</button>
-    <button class="filtre" data-f="majoria" aria-pressed="false">Majoria absoluta</button>
-    <button class="filtre" data-f="sempre" aria-pressed="false">Sempre els mateixos</button>
-    <button class="filtre" data-f="unica" aria-pressed="false">Sense oposició</button>
-    <button class="filtre" data-f="sense" aria-pressed="false">Sense actes</button>
-    <button class="filtre" data-f="fitxa" aria-pressed="false">Amb radiografia</button>
+<form class="tauler" id="tauler">
+  <div class="cercador">
+    <label class="nomes-lectors" for="cerca">Cerca un municipi o una comarca</label>
+    <input id="cerca" type="search" autocomplete="off" spellcheck="false"
+      placeholder="Escriu un poble: esplugues, la seu, hospitalet…">
   </div>
-  <p class="recompte" id="recompte" aria-live="polite"></p>
-</div>
 
-<ul class="llista" id="llista"></ul>
-<p class="buit" id="buit" hidden>Cap municipi coincideix. Prova amb menys lletres.</p>
+  <div class="filtres" role="group" aria-label="Filtres">
+  ${tries}
+  </div>
 
-<aside class="joc">
+  <div class="eines">
+    <button class="neteja" type="reset">Treu-ho tot</button>
+    <p class="recompte" id="recompte" aria-live="polite">${totals.municipis} municipis, dels més grans als més petits</p>
+  </div>
+
+  <p class="nota">Les medianes són el municipi que queda al mig dels ${totals.municipis}: diuen on
+  cau cadascun respecte dels altres, no si això està bé o malament. Els filtres es poden combinar.</p>
+
+  <ul class="llista" id="llista">
+${llista}
+  </ul>
+  <p class="buit" id="buit" hidden>Cap municipi no coincideix. Prova amb menys lletres o treu algun filtre.</p>
+</form>
+
+<section class="bloc">
+  <h2>Les ${comarques.length} comarques</h2>
+  <p class="entrada-bloc">Cada comarca té la seva pàgina: quantes alcaldies hi té cada força i com
+  hi queda cada municipi.</p>
+  <nav class="index" aria-label="Comarques">${comarques
+    .map((c) => `<a href="c/${escape(slugify(c))}/">${escape(c)}</a>`)
+    .join("")}</nav>
+</section>
+
+<section class="bloc joc">
   <h2>I tu, te'ls saps?</h2>
   <p>Nosaltres tenim les dades dels 947. Saber-ne els noms i on són ja és una altra cosa.
   Hi ha un joc que ho posa a prova, i és boníssim:</p>
-  <p><a class="boto" href="https://els947.cat/" target="_blank" rel="noopener">Ves a jugar a els947.cat →</a></p>
-  <p class="lletra-petita">No hi tenim res a veure: és el repte de geografia catalana d'algú altre,
+  <p class="crida"><a href="https://els947.cat/" target="_blank" rel="noopener">Ves a jugar a els947.cat →</a></p>
+  <p class="nota">No hi tenim res a veure: és el repte de geografia catalana d'algú altre,
   i ens va recordar que 947 no és una xifra abstracta sinó 947 llocs amb gent que hi vota.</p>
-</aside>
+</section>
+
+<section class="bloc anar">
+  <h2>Segueix estirant</h2>
+  <ul class="destins">
+    <li><a href="mapa/"><b>El mapa dels 947</b>
+      <span>Els mateixos municipis, pintats: on hi ha majoria absoluta, on no governa qui va
+      guanyar i on mana la mateixa força des del 1979</span></a></li>
+    <li><a href="comparador/"><b>El comparador</b>
+      <span>De dos a quatre municipis a la mateixa taula, amb la mateixa vara</span></a></li>
+    <li><a href="preguntes/"><b>Les preguntes</b>
+      <span>Les afirmacions que la brúixola farà, escrites llegint les actes del ple</span></a></li>
+    <li><a href="dades/"><b>Baixa't les dades</b>
+      <span>Tot això en CSV i JSON, amb l'esquema documentat i la font de cada xifra</span></a></li>
+  </ul>
+</section>
+
+<section class="bloc fonts">
+  <h2>D'on surt tot això</h2>
+  <p class="nota">Padró, alcaldia i dades de l'ens, resultats des del 1979, llistes de candidats i
+  historial d'alcaldies: dades obertes de la Generalitat de Catalunya. Comptes i deute: Ministeri
+  d'Hisenda via el portal de la Generalitat. Índex d'actes del ple i compliment del portal de
+  transparència: Consorci AOC. Cada fitxa de municipi porta el codi del conjunt d'on surt cada
+  xifra, i a <a href="dades/">dades obertes</a> hi ha l'esquema camp a camp.</p>
+  <p class="nota">Aquí no hi ha cap veredicte de gestió: hi ha la dada, la font i on queda respecte
+  de la resta. El judici és de qui llegeix.</p>
+</section>
+</main>
 
 <footer class="peu">
-  <p>Generat el ${escape(generatedAt)} amb dades obertes de la Generalitat de Catalunya i del
-  Consorci AOC.</p>
-  <p>Esborrany intern de quivoto, no indexat.</p>
+  <p>quivoto · Observatori municipal · pàgina generada el ${escape(generatedAt)} ·
+  esborrany intern, no indexat</p>
 </footer>
-</div>
 
 <script>
-const DADES = ${data};
-const norm = (s) => s.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase()
-  .replace(/['\\u2019]/g, " ").replace(/^(l|el|la|els|les|es|sa)\\s+/, "").replace(/\\s+/g, " ").trim();
-for (const row of DADES) row._k = norm(row.n) + " " + norm(row.c);
-
-const llista = document.getElementById("llista");
+const norm = ${clauCerca.toString()};
+const tauler = document.getElementById("tauler");
+const files = Array.prototype.slice.call(tauler.querySelectorAll(".fila"));
+const claus = files.map(function (el) { return el.getAttribute("data-k"); });
+const marques = files.map(function (el) { return " " + el.getAttribute("data-f") + " "; });
+const caselles = Array.prototype.slice.call(tauler.querySelectorAll(".commutador"));
+const cerca = document.getElementById("cerca");
 const recompte = document.getElementById("recompte");
 const buit = document.getElementById("buit");
-const cerca = document.getElementById("cerca");
-const filtres = new Set();
+const TOTAL = files.length;
 
-const eur = (n) => n.toLocaleString("ca-ES");
-
-function pastilles(row){
-  const out = [];
-  if (row.w === 0) out.push('<span class="pastilla pacte">Governa qui no va guanyar</span>');
-  if (row.k === 1) out.push('<span class="pastilla canvi">Canvi d\\'alcaldia</span>');
-  if (row.m === 1) out.push('<span class="pastilla majoria">Majoria absoluta</span>');
-  if (row.o === 1) out.push('<span class="pastilla unica">Una sola candidatura</span>');
-  if (row.v === 0 && row.q >= 8) out.push('<span class="pastilla sempre">Sempre la mateixa força des del 1979</span>');
-  else if (row.v !== null && row.q !== null) out.push('<span class="pastilla">' + row.v + ' canvis de mans en ' + row.q + ' eleccions</span>');
-  if (row.a) out.push('<span class="pastilla">' + row.a + (row.g ? " · " + row.g : "") + '</span>');
-  out.push('<span class="pastilla">' + row.r + ' regidories</span>');
-  out.push(row.t > 0
-    ? '<span class="pastilla">' + row.t + ' actes indexades</span>'
-    : '<span class="pastilla sense">Sense actes</span>');
-  if (row.d !== null) out.push('<span class="pastilla">' + eur(row.d) + ' € de deute per habitant</span>');
-  if (row.f !== null) out.push('<span class="pastilla">' + row.f + ' % de dones al ple</span>');
-  if (row.y !== null) out.push('<span class="pastilla">transparència ' + row.y + ' %</span>');
-  return out.join("");
-}
-
-function coincideix(row, q){
-  if (q && !row._k.includes(q)) return false;
-  if (filtres.has("pacte") && row.w !== 0) return false;
-  if (filtres.has("canvi") && row.k !== 1) return false;
-  if (filtres.has("majoria") && row.m !== 1) return false;
-  if (filtres.has("sense") && row.t !== 0) return false;
-  if (filtres.has("sempre") && !(row.v === 0 && row.q >= 8)) return false;
-  if (filtres.has("unica") && row.o !== 1) return false;
-  if (filtres.has("fitxa") && row.x !== 1) return false;
-  return true;
-}
-
-function pinta(){
+// El navegador ja amaga les files amb els filtres de CSS; això ho torna a fer
+// perquè el recompte sigui cert i perquè funcioni igual si algun no sap «:has()».
+function pinta() {
   const q = norm(cerca.value);
-  const trobats = DADES.filter((row) => coincideix(row, q));
-  // Amb 947 files no cal virtualitzar res, però sí evitar 947 reflows: una sola escriptura.
-  llista.innerHTML = trobats.slice(0, 400).map((row) =>
-    '<li class="fila"><span class="nom">' +
-      (row.x ? '<a href="m/' + row.s + '/">' + row.n + '</a>' : row.n) +
-    '</span><span class="pob">' + eur(row.p) + ' hab.</span>' +
-    '<span class="lloc">' + row.c + '</span>' +
-    '<span class="dades">' + pastilles(row) + '</span></li>').join("");
-  buit.hidden = trobats.length > 0;
-  recompte.textContent = trobats.length === DADES.length
-    ? DADES.length + " municipis"
-    : trobats.length + " de " + DADES.length + " municipis" + (trobats.length > 400 ? " · se'n mostren 400" : "");
+  const actius = caselles.filter(function (c) { return c.checked; })
+    .map(function (c) { return " " + c.value + " "; });
+  let quants = 0;
+  for (let i = 0; i < TOTAL; i++) {
+    let hi = q === "" || claus[i].indexOf(q) !== -1;
+    for (let j = 0; hi && j < actius.length; j++) {
+      if (marques[i].indexOf(actius[j]) === -1) hi = false;
+    }
+    if (hi) quants++;
+    files[i].classList.toggle("fora", !hi);
+  }
+  buit.hidden = quants > 0;
+  recompte.textContent = quants === TOTAL
+    ? TOTAL + " municipis, dels més grans als més petits"
+    : quants + " de " + TOTAL + " municipis";
 }
 
 cerca.addEventListener("input", pinta);
-for (const boto of document.querySelectorAll(".filtre")) {
-  boto.addEventListener("click", () => {
-    const key = boto.dataset.f;
-    if (filtres.has(key)) filtres.delete(key); else filtres.add(key);
-    boto.setAttribute("aria-pressed", filtres.has(key) ? "true" : "false");
-    pinta();
-  });
-}
+tauler.addEventListener("change", pinta);
+tauler.addEventListener("reset", function () { setTimeout(pinta, 0); });
 pinta();
 </script>
 </body>

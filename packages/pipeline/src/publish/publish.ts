@@ -5,13 +5,21 @@ import { loadRadiografia, renderRadiografia } from "./radiografia";
 import { loadEls947, renderEls947 } from "./els947";
 import { INDEXABLE, SITE } from "./config";
 import { loadComarques, renderComarca } from "./comarques";
+import { loadAmb, renderAmb } from "./amb";
 import { loadComparador, renderComparador } from "./comparador";
 import { renderDadesIndex, writeDownloads } from "./dades";
 import { loadCandidatures, renderCandidatura } from "./candidatura";
 import { writeOgImages } from "./og";
 import type { PuntMapa } from "./mapa";
 import { carregaPreguntes, renderIndexPreguntes, renderPreguntes } from "./preguntes";
-import { slugify } from "../lib/text";
+import { renderProva } from "./prova";
+import { verifica } from "./verificacio";
+import { renderPortada } from "./portada";
+import { renderMapaCatalunya } from "./mapa-catalunya";
+import { encaixa, type Grup } from "./posicions";
+import { adrecesRegidors, renderRegidor, type Regidor } from "./regidor";
+import { sameForce } from "@quivoto/shared-schemas/brands";
+import { normalizePersonName, slugify } from "../lib/text";
 import { withRun } from "../lib/run";
 
 /**
@@ -51,42 +59,46 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       .map((m) => ({ slug: m.slug, nom: m.nom, lat: Number(m.lat), lon: Number(m.lon), pes: m.pes ?? 0 }));
     const done: string[] = [];
 
+    // Els conjunts d'afirmacions es carreguen abans de les fitxes perquè cada
+    // fitxa hi pugui enllaçar: és el pas de «mira les dades» a «jutja-ho tu».
+    const conjunts = carregaPreguntes();
+    const preguntesPerSlug = new Map(
+      conjunts.map((c) => [c.slug, { jugable: verifica(c).jugable, quantes: c.afirmacions.length }]),
+    );
+    /**
+     * L'índex dels 947 i el mapa es generen **abans** de les fitxes.
+     *
+     * PGlite es queda sense memòria després d'una sessió llarga, i amb 947
+     * radiografies, 4.807 fitxes de regidor i 2.626 candidatures pel mig, la
+     * consulta que els alimentava petava just al final: el mapa no s'arribava a
+     * generar mai i no ho notava ningú perquè l'error surt després d'haver
+     * escrit tota la resta. Fent-ho primer, la consulta es fa amb el motor
+     * acabat d'obrir.
+     */
+    const carregats = await loadEls947(db);
+    await mkdir(`${OUT_DIR}../mapa`, { recursive: true });
+    await writeFile(`${OUT_DIR}../mapa/index.html`, renderMapaCatalunya(carregats, generatedAt), "utf8");
+    run.say(`mapa de Catalunya amb ${carregats.length} municipis`);
+
+    let regidorsEscrits = 0;
     for (const slug of wanted) {
       const data = await loadRadiografia(db, slug, generatedAt);
       if (!data) {
         await run.issue({ kind: "unknown_slug", severity: "mitjana", entity: slug });
         continue;
       }
-      const html = renderRadiografia(data, mapa);
+      const html = renderRadiografia(data, mapa, preguntesPerSlug);
       await mkdir(`${OUT_DIR}${slug}`, { recursive: true });
       await writeFile(`${OUT_DIR}${slug}/index.html`, html, "utf8");
+      regidorsEscrits += await escriuRegidors(data, slug, generatedAt);
       if (!all) run.say(`${data.municipality.name} → observatori/m/${slug}/ (${Math.round(html.length / 1024)} kB)`);
       done.push(slug);
       run.rowsOut += 1;
     }
 
     if (all) run.say(`${done.length} radiografies generades`);
+    run.say(`${regidorsEscrits} fitxes de regidor`);
 
-    // Sitemap: es genera sempre, però només s'enllaça quan siguin indexables.
-    const lastmod = generatedAt;
-    const urls = [
-      `${SITE}/observatori/`,
-      `${SITE}/observatori/els947.html`,
-      ...done.map((slug) => `${SITE}/observatori/m/${slug}/`),
-    ];
-    await writeFile(
-      `${OUT_DIR}../sitemap.xml`,
-      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
-        .map(
-          (url, i) =>
-            `  <url><loc>${url}</loc><lastmod>${lastmod}</lastmod><changefreq>monthly</changefreq><priority>${
-              i < 2 ? "0.9" : "0.6"
-            }</priority></url>`,
-        )
-        .join("\n")}\n</urlset>\n`,
-      "utf8",
-    );
-    run.say(`sitemap amb ${urls.length} adreces · ${INDEXABLE ? "indexable" : "encara amb noindex"}`);
 
     // Una pàgina per candidatura amb representació: és el subjecte que la
     // brúixola compararà, i qui busca un partit al seu poble hi arriba directe.
@@ -107,6 +119,20 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       await writeFile(`${OUT_DIR}../c/${slug}/index.html`, renderComarca(comarca, generatedAt), "utf8");
     }
     run.say(`${comarques.length} pàgines de comarca`);
+
+    // L'AMB és un ens propi i no una comarca: agrupa municipis de cinc comarques
+    // diferents i decideix el transport, l'aigua i els residus de tots. Es
+    // reaprofiten les comarques ja carregades en comptes de tornar a lligar
+    // alcaldies i marques per a trenta-sis municipis.
+    const amb = await loadAmb(db, comarques);
+    if (amb) {
+      await mkdir(`${OUT_DIR}../amb`, { recursive: true });
+      await writeFile(`${OUT_DIR}../amb/index.html`, renderAmb(amb, generatedAt), "utf8");
+      run.say(`pàgina de l'AMB amb ${amb.municipis.length} municipis`);
+    } else {
+      // Sense J17 no hi ha composició, i una llista inventada seria pitjor que cap.
+      run.say("sense pàgina de l'AMB: cap municipi marcat com a metropolità (falta J17)");
+    }
 
     // Comparador: triar municipis i veure'ls costat a costat.
     const comparador = await loadComparador(db);
@@ -132,83 +158,318 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     // Les preguntes de prova: esborrany, amb l'evidència i el veredicte del
     // llindar a la vista. No és el test; és el material perquè qui conegui el
     // poble el pugui jutjar.
-    const preguntes = carregaPreguntes();
+    const preguntes = conjunts;
     if (preguntes.length > 0) {
       for (const conjunt of preguntes) {
         await mkdir(`${OUT_DIR}../preguntes/${conjunt.slug}`, { recursive: true });
         await writeFile(`${OUT_DIR}../preguntes/${conjunt.slug}/index.html`, renderPreguntes(conjunt, generatedAt), "utf8");
+        // La demostració que es pot respondre només es genera si el conjunt
+        // s'aguanta en actes del ple. Terrassa en tenia vint-i-cinc afirmacions
+        // i cap acta: només premsa i dos enllaços al nostre propi web. Deixar
+        // respondre allò seria oferir «què n'ha dit el diari» disfressat de «què
+        // ha votat cadascú».
+        const estat = verifica(conjunt);
+        if (!estat.jugable) {
+          run.say(`  ${conjunt.municipi}: sense demostració (${estat.motiu})`);
+          continue;
+        }
+        // Necessita el ple d'avui —quins grups hi ha, quants en són i qui és al
+        // govern— per poder deduir de les actes quina posició té cadascun.
+        const dades = await loadRadiografia(db, conjunt.slug, generatedAt);
+        await mkdir(`${OUT_DIR}../preguntes/${conjunt.slug}/prova`, { recursive: true });
+        await writeFile(
+          `${OUT_DIR}../preguntes/${conjunt.slug}/prova/index.html`,
+          renderProva(
+            conjunt,
+            dades ? grupsDelPle(dades) : [],
+            dades?.mocions?.llista ?? [],
+            generatedAt,
+          ),
+          "utf8",
+        );
       }
       await writeFile(`${OUT_DIR}../preguntes/index.html`, renderIndexPreguntes(preguntes, generatedAt), "utf8");
       run.say(`${preguntes.length} conjunts de preguntes de prova`);
     }
 
+    // Sitemap: es genera sempre, però només s'enllaça quan siguin indexables.
+    const lastmod = generatedAt;
+    const urls = [
+      `${SITE}/observatori/`,
+      `${SITE}/observatori/els947.html`,
+      `${SITE}/observatori/mapa/`,
+      `${SITE}/observatori/comparador/`,
+      ...(amb ? [`${SITE}/observatori/amb/`] : []),
+      ...comarques.map((c) => `${SITE}/observatori/c/${slugify((c as { name?: string; nom?: string }).name ?? (c as { nom?: string }).nom ?? "")}/`),
+      ...done.map((slug) => `${SITE}/observatori/m/${slug}/`),
+    ];
+    await writeFile(
+      `${OUT_DIR}../sitemap.xml`,
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
+        .map(
+          (url, i) =>
+            `  <url><loc>${url}</loc><lastmod>${lastmod}</lastmod><changefreq>monthly</changefreq><priority>${
+              i < 2 ? "0.9" : "0.6"
+            }</priority></url>`,
+        )
+        .join("\n")}\n</urlset>\n`,
+      "utf8",
+    );
+    run.say(`sitemap amb ${urls.length} adreces · ${INDEXABLE ? "indexable" : "encara amb noindex"}`);
+
+    // La portada de l'Observatori: es genera amb la resta perquè els números que
+    // hi surten siguin els que s'acaben de publicar.
+    await writeFile(
+      `${OUT_DIR}../index.html`,
+      renderPortada(
+        {
+          municipis: done.length,
+          comarques: comarques.length,
+          candidatures: totes.length,
+          fitxersDades: downloads.files,
+          conjuntsPreguntes: preguntes.length,
+          amb: amb?.municipis.length ?? null,
+          exemple: preguntes[0]
+            ? { slug: preguntes[0].slug, nom: preguntes[0].municipi }
+            : null,
+          provaDestacada: preguntes[0]
+            ? { slug: preguntes[0].slug, nom: preguntes[0].municipi }
+            : null,
+        },
+        generatedAt,
+      ),
+      "utf8",
+    );
+    run.say("portada de l'Observatori");
+
     // «Els 947»: l'índex de tot Catalunya, amb el que en sabem de cadascun.
-    const index947 = await loadEls947(db);
+    const index947 = await carregats;
     await writeFile(`${OUT_DIR}../els947.html`, renderEls947(index947, generatedAt, new Set(done)), "utf8");
     run.say(`els947.html amb ${index947.length} municipis`);
 
-    // Portada de la secció.
-    const rows = await db
-      .select({ slug: municipalities.slug, name: municipalities.name, comarca: municipalities.comarca, population: municipalities.population })
-      .from(municipalities)
-      .where(isNotNull(municipalities.population))
-      .orderBy(desc(municipalities.population));
-    const byslug = new Map(rows.map((r) => [r.slug, r]));
-    const items = done
-      .map((slug) => byslug.get(slug))
-      .filter(Boolean)
-      .map((r) => `<li><a href="m/${r!.slug}/">${r!.name}</a> <span>${r!.comarca ?? ""} · ${(r!.population ?? 0).toLocaleString("ca-ES")} hab.</span></li>`)
-      .join("\n");
-    await writeFile(
-      `${OUT_DIR}../index.html`,
-      `<!doctype html><html lang="ca"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow">
-<title>Observatori municipal · quivoto</title>
-<meta name="description" content="Els 947 municipis de Catalunya amb dades obertes: qui governa, resultats des del 1979, comptes, impostos i transparència.">
-<style>
-:root{--paper:#FBF7EE;--paper-2:#FFF;--ink:#1E1B2E;--ink-suau:#6B6680;--coral:#E2735A;--menta:#BFE8D2;--presec:#FFD8B8;--vora:rgba(30,27,46,.12);--ombra:3px 3px 0 var(--ink)}
-@media (prefers-color-scheme:dark){:root{--paper:#17141F;--paper-2:#211D2C;--ink:#F4F0E6;--ink-suau:#A9A3B8;--vora:rgba(244,240,230,.16)}}
-*,*::before,*::after{box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font-family:"Nunito Sans",system-ui,sans-serif;margin:0;padding:0;line-height:1.55}
-main{max-width:760px;margin:0 auto;padding:24px 24px 64px}
-.dalt{display:flex;justify-content:space-between;align-items:center;gap:16px;max-width:760px;margin:0 auto;padding:24px 24px 0}
-.logo{font-family:"Gabarito",system-ui,sans-serif;font-weight:900;letter-spacing:-.05em;font-size:1.25rem;text-decoration:none;color:inherit}
-.etiqueta{background:var(--presec);color:#1E1B2E;border-radius:999px;padding:5px 12px;font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
-h1{font-family:"Gabarito",system-ui,sans-serif;font-weight:900;letter-spacing:-.04em;font-size:clamp(2.8rem,10vw,4.6rem);line-height:.98;margin:16px 0 8px}
-.entradeta{color:var(--ink-suau);font-size:1.1rem;max-width:46ch}
-.targetes{list-style:none;padding:0;margin:40px 0 0;display:grid;gap:16px}
-.targetes a{display:block;background:var(--paper-2);border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--ombra);
-  padding:20px;text-decoration:none;color:inherit;transition:transform .12s ease,box-shadow .12s ease}
-.targetes a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-.targetes b{font-family:"Gabarito",system-ui,sans-serif;font-weight:900;font-size:1.4rem;letter-spacing:-.02em;display:block;margin-bottom:4px}
-.targetes span{color:var(--ink-suau);font-size:.94rem}
-.peu{border-top:2.5px solid var(--ink);margin-top:40px;padding-top:24px;font-size:.84rem;color:var(--ink-suau)}
-@media (prefers-reduced-motion:reduce){.targetes a{transition:none}}
-</style></head>
-<body>
-<div class="dalt"><a class="logo" href="/">quivoto</a><span class="etiqueta">esborrany · dades obertes</span></div>
-<main>
-<h1>Observatori municipal</h1>
-<p class="entradeta">Els 947 municipis de Catalunya amb el que en diuen les dades obertes.
-Sense cap model de llenguatge pel mig: tot són fonts oficials i càlculs que qualsevol pot repetir.</p>
-
-<ul class="targetes">
-  <li><a href="els947.html"><b>Els 947</b>
-    <span>Tots els municipis en una llista, amb cercador i filtres: on va haver-hi pacte,
-    on ha canviat l'alcaldia a mig mandat, on mana sempre la mateixa força, on no hi ha oposició.</span></a></li>
-  <li><a href="m/esplugues-de-llobregat/"><b>La fitxa d'un municipi</b>
-    <span>Qui mana, el ple, les dotze eleccions des del 1979, les alcaldies, els comptes,
-    els impostos i què en sabem i què no. N'hi ha una per a cadascun dels 947.</span></a></li>
-</ul>
-
-<div class="peu">
-  <p>Generat el ${generatedAt}. Fonts: Generalitat de Catalunya, Consorci AOC i Síndic de Greuges.
-  Esborrany intern, no indexat.</p>
-</div>
-</main></body></html>`,
-      "utf8",
-    );
+    /*
+     * Aquí hi havia una segona portada.
+     *
+     * L'Observatori generava `index.html` dues vegades al mateix camí: una amb
+     * `renderPortada()`, que és la bona, i una altra amb HTML escrit a mà just
+     * després. Com que la segona s'escrivia l'última, **guanyava sempre**, i
+     * durant setmanes la portada que es veia no era la que es mantenia: els
+     * enllaços nous —el mapa, les preguntes, l'AMB— s'afegien a `portada.ts` i
+     * no sortien enlloc, i ningú no ho notava perquè la pàgina existia i tenia
+     * bon aspecte.
+     *
+     * Una sola font. Si hi falta res, va a `portada.ts`.
+     */
 
     return { generades: done.length, municipis: done };
   });
+}
+
+/**
+ * El ple d'avui, en la forma que necessita la deducció de posicions.
+ *
+ * Surt de la fitxa de la seu electrònica de l'ajuntament (J11), que és l'única
+ * font que diu **qui és a l'equip de govern**, i sense això no hi ha manera
+ * d'orientar el sentit d'una votació. Quan un municipi no la té, la llista surt
+ * buida i la demostració es queda comparant només amb el govern.
+ *
+ * El color el posa la candidatura del 2023 que li correspon; el gris és el que
+ * queda quan no s'ha pogut lligar, i és preferible a acolorir malament.
+ */
+function grupsDelPle(dades: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>): Grup[] {
+  const carrecs = dades.carrecs?.carrecs ?? [];
+  if (carrecs.length === 0) return [];
+
+  // Les sigles s'agafen creuant PERSONES, no noms de grup.
+  //
+  // La seu electrònica escriu «Grup Municipal Republicà» i «Grup Municipal
+  // Popular», i les actes escriuen «ERC» i «PP». Comparar els dos noms no lliga
+  // mai: cap dels dos conté l'altre i la família de sigles d'«un grup municipal
+  // republicà» no és reconeixible. Però les dues fonts contenen les mateixes
+  // persones, i el nom d'una persona sí que lliga. Creuant-les, cada grup del
+  // ple recupera les sigles de la seva candidatura i les actes hi encaixen.
+  //
+  // Sense això, un sol nom que no lligava descartava la frase sencera i a
+  // Esplugues es perdia el desglossament de tota l'oposició.
+  const siglesPerPersona = new Map<string, string>();
+  for (const regidor of dades.councillors) {
+    if (regidor.sigles !== null) siglesPerPersona.set(normalizePersonName(regidor.name), regidor.sigles);
+  }
+
+  const per = new Map<string, { escons: number; govern: number; sigles: Map<string, number> }>();
+  for (const c of carrecs) {
+    const nom = c.grup ?? "Sense grup";
+    const acumulat = per.get(nom) ?? { escons: 0, govern: 0, sigles: new Map<string, number>() };
+    acumulat.escons += 1;
+    if (c.equipGovern) acumulat.govern += 1;
+    const sigles = siglesPerPersona.get(normalizePersonName(c.nom));
+    if (sigles !== undefined) acumulat.sigles.set(sigles, (acumulat.sigles.get(sigles) ?? 0) + 1);
+    per.set(nom, acumulat);
+  }
+
+  return [...per.entries()].map(([nom, { escons, govern, sigles }]) => {
+    // Les sigles del grup són les de la majoria dels seus membres: si un ha
+    // canviat de grup a mig mandat, no ha d'arrossegar tot el grup.
+    const majoritaries = [...sigles.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
+    return {
+      nom,
+      sigles: majoritaries && majoritaries[1] > escons / 2 ? majoritaries[0] : null,
+      escons,
+      // Un grup compta com a govern quan tot el grup hi és. Si només n'hi ha una
+      // part —passa amb els no adscrits— votarà partit i no serveix per orientar.
+      govern: govern === escons && govern > 0,
+      color:
+        dades.councillors.find((r) => r.groupName !== null && sameForce(r.groupName, nom))?.color ??
+        null,
+    };
+  });
+}
+
+
+/**
+ * Les fitxes de les persones que seuen al ple d'un municipi.
+ *
+ * El vot que s'hi ensenya és el del **grup**, perquè és l'únic que consta a les
+ * actes: es reutilitza `deLActa`, que ja sap lligar el nom que escriu l'acta
+ * amb el grup del ple i que, davant del dubte, no lliga res.
+ */
+async function escriuRegidors(
+  dades: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>,
+  slug: string,
+  generatedAt: string,
+): Promise<number> {
+  const carrecs = dades.carrecs?.carrecs ?? [];
+  if (carrecs.length === 0) return 0;
+  const grups = grupsDelPle(dades);
+  const perNom = new Map(dades.councillors.map((c) => [normalizePersonName(c.name), c]));
+  const canvis = new Map(
+    (dades.councilChanges?.changes ?? []).map((c) => [normalizePersonName(c.person), c]),
+  );
+
+  // Els vots de cada grup, una sola vegada per municipi i no un cop per persona.
+  //
+  // `tot` diu si el grup hi va votar sencer, que és el que permet atribuir el
+  // vot a cada persona: si un grup de divuit regidories hi posa divuit vots, no
+  // queda ningú a qui atribuir un vot diferent. Quan l'acta no dona la xifra,
+  // l'adaptador ja ho llegeix com «tot el grup»; quan en dona menys que
+  // regidories, algú no hi era o va votar a part i no es pot dir qui.
+  const escons = new Map(grups.map((g) => [g.nom, g.escons]));
+  const votsPerGrup = new Map<
+    string,
+    {
+      data: string;
+      titol: string;
+      sentit: string;
+      url: string;
+      tot: boolean;
+      marge: number | null;
+      favor: number;
+      contra: number;
+    }[]
+  >();
+  for (const punt of dades.mocions?.llista ?? []) {
+    if (punt.vots.length === 0) continue;
+    // Com de renyida va ser. Un punt aprovat per tothom no separa ningú i no
+    // diu res de qui hi seu; un decidit per un vot ho diu tot. El marge és la
+    // diferència entre els dos costats: com més petit, més val la pena
+    // ensenyar-lo, i és el criteri d'ordenació en comptes de la data.
+    let favor = 0;
+    let contra = 0;
+    for (const v of punt.vots) {
+      if (v.sentit === "favor") favor += v.vots ?? 0;
+      if (v.sentit === "contra") contra += v.vots ?? 0;
+    }
+    const marge = favor + contra === 0 ? null : Math.abs(favor - contra);
+    for (const vot of punt.vots) {
+      if (vot.sentit !== "favor" && vot.sentit !== "contra" && vot.sentit !== "abstencio") continue;
+      const grup = encaixa(vot.grup, grups);
+      if (grup === null) continue;
+      const total = escons.get(grup.nom) ?? 0;
+      const llista = votsPerGrup.get(grup.nom) ?? [];
+      llista.push({
+        data: punt.data,
+        titol: punt.titol,
+        sentit: vot.sentit,
+        url: punt.url,
+        tot: vot.vots === null || (total > 0 && vot.vots === total),
+        marge,
+        favor,
+        contra,
+      });
+      votsPerGrup.set(grup.nom, llista);
+    }
+  }
+  // Primer les renyides, i entre les igual de renyides, les més recents. Les
+  // que no porten recompte van al final: no sabem si van separar ningú.
+  for (const llista of votsPerGrup.values()) {
+    llista.sort((a, b) => {
+      const ma = a.marge ?? Number.MAX_SAFE_INTEGER;
+      const mb = b.marge ?? Number.MAX_SAFE_INTEGER;
+      return ma !== mb ? ma - mb : b.data.localeCompare(a.data);
+    });
+  }
+
+  const totalSeats = carrecs.length;
+  let escrites = 0;
+  const adreces = adrecesRegidors(carrecs);
+  for (const carrec of carrecs) {
+    const clau = normalizePersonName(carrec.nom);
+    const delRegistre = perNom.get(clau) ?? null;
+    const canvi = canvis.get(clau) ?? null;
+    const regidor: Regidor = {
+      nom: carrec.nom,
+      carrec: carrec.carrec,
+      grup: carrec.grup,
+      sigles: delRegistre?.sigles ?? null,
+      color: delRegistre?.color ?? null,
+      equipGovern: carrec.equipGovern,
+      foto: carrec.foto ?? carrec.fotoPetita,
+      fitxaOficial: carrec.fitxa,
+      posicioLlista: delRegistre?.orderNum ?? null,
+      entradaTardana: canvi?.kind === "substitucio",
+      canviDeGrup:
+        canvi?.kind === "canvi-de-grup" ? { de: canvi.electedFor, a: canvi.nowWith } : null,
+    };
+    const dir = `${OUT_DIR}${slug}/regidor/${adreces.get(carrec)!}`;
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      `${dir}/index.html`,
+      renderRegidor(
+        regidor,
+        {
+          municipi: dades.municipality.name,
+          slug,
+          regidories: totalSeats,
+          majoria: Math.floor(totalSeats / 2) + 1,
+          votsDelGrup: carrec.grup ? votsPerGrup.get(carrec.grup) ?? [] : [],
+          actesLlegides: dades.mocions?.actes.llegides ?? 0,
+          assistencia: assistenciaDe(dades, carrec.nom),
+        },
+        generatedAt,
+      ),
+      "utf8",
+    );
+    escrites += 1;
+  }
+  return escrites;
+}
+
+
+/**
+ * A quants plens ha anat una persona, si les actes ho diuen.
+ *
+ * L'aparellament es fa pel nom normalitzat, i si un nom lliga amb més d'una
+ * persona de la llista no es diu res: comptar-li a algú les absències d'un altre
+ * és el pitjor error possible en una pàgina amb el seu nom al títol.
+ */
+function assistenciaDe(
+  dades: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>,
+  nom: string,
+): { hi: number; de: number } | null {
+  const assistencia = dades.mocions?.assistencia ?? null;
+  if (!assistencia || assistencia.plensAmbLlista < 5) return null;
+  const clau = normalizePersonName(nom);
+  const encaixen = assistencia.persones.filter((p) => normalizePersonName(p.nom) === clau);
+  if (encaixen.length !== 1) return null;
+  return { hi: encaixen[0]!.plens, de: assistencia.plensAmbLlista };
 }

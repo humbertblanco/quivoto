@@ -706,12 +706,14 @@ const COMARCA_CSS = `
 
 /* Les altres 42: sense això, cada pàgina de comarca és un carreró sense sortida. */
 .veines{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
-.veines a{display:inline-block;font-size:.8rem;font-weight:800;text-decoration:none;
-  border:2px solid var(--ink);border-radius:var(--r-max);padding:5px 12px}
+.veines a{display:inline-flex;align-items:center;min-height:44px;font-size:.8rem;font-weight:800;
+  text-decoration:none;border:2px solid var(--ink);border-radius:var(--r-max);padding:5px 12px}
 .veines a:hover{background:var(--ink);color:var(--paper)}
 .veines .aqui{background:var(--coral);color:#1E1B2E;border-color:var(--ink)}
 .resum-xifres{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e2);
-  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  /* 150 px no cabien: una xifra com «2.416.005» en fa 162 amb «.gran» i vessava
+     sobre el text del costat a 768 px. */
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
 .resum-xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:2px}
 `;

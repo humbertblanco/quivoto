@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 import { informe, validaConjunt, type Conjunt, type Veredicte } from "./llindar";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
+import { verifica } from "./verificacio";
+import { verificaCites } from "./cites";
+import { MASCOTA_CSS, papereta } from "./mascota";
+import { icona } from "./icones";
 
 /**
  * Les preguntes de prova, tal com estan: en esborrany i sense validar.
@@ -21,7 +25,17 @@ import { SITE } from "./config";
 const escape = (t: string): string =>
   t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-export type ConjuntAmbSlug = Conjunt & { slug: string; veredicte: Veredicte };
+export type ConjuntAmbSlug = Conjunt & {
+  slug: string;
+  veredicte: Veredicte;
+  /**
+   * Els índexs de les afirmacions amb alguna cita que no és al document que
+   * diuen citar. Es queden a la pàgina d'esborrany, marcades, perquè qui les
+   * vulgui criticar les vegi; però no entren al test, perquè respondre-les
+   * seria fer decidir algú a partir d'una frase que ningú no ha dit.
+   */
+  citesFallides: readonly number[];
+};
 
 /** Llegeix tots els conjunts escrits, amb el seu veredicte ja calculat. */
 export function carregaPreguntes(): ConjuntAmbSlug[] {
@@ -34,9 +48,42 @@ export function carregaPreguntes(): ConjuntAmbSlug[] {
   }
   return fitxers
     .map((fitxer) => {
-      const conjunt = JSON.parse(readFileSync(join(dir, fitxer), "utf8")) as Conjunt;
-      return { ...conjunt, slug: fitxer.replace(/\.json$/, ""), veredicte: validaConjunt(conjunt) };
+      /**
+       * Un fitxer mal format **no pot tombar la publicació sencera**.
+       *
+       * Els conjunts d'afirmacions s'escriuen a mà i de vegades s'estan
+       * escrivint mentre es publica. Un JSON a mitges feia petar `JSON.parse`
+       * i amb ell les 947 fitxes, el mapa i tota la resta, per un fitxer que
+       * només afectava un municipi. Es queda fora amb un avís i el web surt.
+       */
+      let conjunt: Conjunt;
+      try {
+        conjunt = JSON.parse(readFileSync(join(dir, fitxer), "utf8")) as Conjunt;
+      } catch (error) {
+        process.stderr.write(
+          `  avís: ${fitxer} no es pot llegir i queda fora (${String(error).slice(0, 90)})\n`,
+        );
+        return null;
+      }
+      if (!Array.isArray(conjunt.afirmacions) || conjunt.afirmacions.length === 0) {
+        process.stderr.write(`  avís: ${fitxer} no té cap afirmació i queda fora\n`);
+        return null;
+      }
+      const amb: ConjuntAmbSlug = {
+        ...conjunt,
+        slug: fitxer.replace(/\.json$/, ""),
+        veredicte: validaConjunt(conjunt),
+        citesFallides: [
+          ...new Set(
+            verificaCites(conjunt)
+              .filter((c) => c.estat === "no-hi-es")
+              .map((c) => c.afirmacio),
+          ),
+        ],
+      };
+      return amb;
     })
+    .filter((c): c is ConjuntAmbSlug => c !== null)
     .sort((a, b) => b.veredicte.resum.ambVotCitable - a.veredicte.resum.ambVotCitable);
 }
 
@@ -50,13 +97,13 @@ function capcalera(titol: string, descripcio: string, canonical: string): string
 <title>${escape(titol)}</title>
 <meta name="description" content="${escape(descripcio)}">
 <link rel="canonical" href="${canonical}">
-<style>${RADIOGRAFIA_CSS}${EXTRA_CSS}</style>
+<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${EXTRA_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
 <header class="capcalera">
   <a class="logo" href="/observatori/">Observatori</a>
-  <span class="etiqueta">esborrany · sense validar</span>
+  <span class="etiqueta">dades obertes</span>
 </header>`;
 }
 
@@ -90,10 +137,19 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
   const v = conjunt.veredicte;
   const preguntes = conjunt.afirmacions
     .map(
-      (a, i) => `<article class="pregunta">
+      (a, i) => `<article class="pregunta${conjunt.citesFallides.includes(i) ? " cita-fallida" : ""}">
     <span class="num">Pregunta ${i + 1} de ${conjunt.afirmacions.length}</span>
+    ${
+      conjunt.citesFallides.includes(i)
+        ? `<p class="avis-cita"><b>Alguna cita d'aquesta afirmació no s'ha trobat al document
+           que diu citar.</b> Queda fora del test fins que es corregeixi o es retiri. La deixem a
+           la vista perquè el que s'ha de poder criticar és el que hem escrit, no una versió
+           neta.</p>`
+        : ""
+    }
     <h3>${escape(a.text)}</h3>
-    <span class="tema">${escape(a.tema)}</span>
+    <span class="tema">${icona(a.tema)}<span>${escape(a.tema)}</span></span>
+    ${a.districte ? `<span class="districte">${escape(a.districte)}</span>` : ""}
     <span class="govern">el govern hi és ${escape(a.posicio_govern)}</span>
     <dl>
       ${a.context ? `<dt>Per què es pregunta això aquí</dt><dd>${escape(a.context)}</dd>` : ""}
@@ -118,15 +174,41 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
   )}
 <main id="contingut">
   <section class="portada">
-    <p class="micro">Esborrany de la brúixola</p>
-    <h1>${escape(conjunt.municipi)}</h1>
-    <p class="entrada">Les ${conjunt.afirmacions.length} preguntes que faríem aquí, cadascuna amb
-    l'evidència que la sosté. <b>Encara no es poden respondre</b>: primer han de passar el
-    llindar de publicació.</p>
+    <div class="presenta">${papereta(110, "pregunta")}<div>
+      <p class="micro">${conjunt.veredicte.avaluable ? "Avaluació del mandat" : "Esborrany"}</p>
+      <h1>${escape(conjunt.municipi)}</h1>
+    </div></div>
+    <p class="entrada">${
+      conjunt.veredicte.avaluable
+        ? `Les ${conjunt.afirmacions.length} preguntes d'aquest mandat, cadascuna amb la votació
+           del ple que la sosté. <b>Es poden respondre</b>, i les anirem millorant els pròxims
+           mesos a mesura que llegim més actes.`
+        : `Les ${conjunt.afirmacions.length} preguntes que faríem aquí, cadascuna amb l'evidència
+           que la sosté. Aquest conjunt <b>encara no es pot respondre</b>: mira'n el veredicte
+           aquí sota per saber per què.`
+    }</p>
+    ${
+      verifica(conjunt).jugable
+        ? `<p><a class="boto-prova" href="prova/">Respon-les i mira amb qui coincideixes →</a></p>
+    <p class="nota">És una demostració del que es pot fer avui, amb el que hi ha. Les
+    afirmacions encara no estan validades.</p>`
+        : `<p class="nota"><b>Aquest conjunt no es pot respondre.</b>
+    ${escape(verifica(conjunt).motiu ?? "")}, i sense acta no podem dir què ha votat cada grup:
+    el que ensenyaríem seria què n'ha dit la premsa, que és una altra cosa. Les afirmacions es
+    queden aquí perquè es vegin i es puguin criticar.</p>`
+    }
   </section>
 
   <div class="veredicte-llindar">
-    <h3>${v.publicable ? "Passa el llindar" : "Encara no passa el llindar"}</h3>
+    <h3>${
+      v.avaluable
+        ? "Es pot respondre com a avaluació del mandat"
+        : "Encara no es pot respondre"
+    }</h3>
+    <p class="secundari">La <b>brúixola electoral</b> —comparar el que una candidatura promet amb
+    el que ha votat— arriba quan les candidatures responguin, a partir de finals d'abril del 2027.
+    Això d'ara és l'altra meitat: <b>què s'ha votat aquests quatre anys</b>, que surt de les actes
+    i no necessita cap programa.</p>
     <p class="secundari">${v.resum.ambVotCitable} de ${v.total} lligades a una votació del ple ·
     ${v.resum.ambPrograma} amb cita de programa · el govern hi és d'acord en ${v.resum.acordAmbGovern}
     · com a molt ${v.resum.paraulesMaxim} paraules</p>
@@ -144,6 +226,8 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
     <ul class="destins">
       <li><a href="../../m/${escape(conjunt.slug)}/"><b>La fitxa de ${escape(conjunt.municipi)}</b>
         <span>Qui mana, els comptes, el ple i com queda respecte dels municipis de la seva mida</span></a></li>
+      <li><a href="prova/"><b>Respon les preguntes</b>
+        <span>La demostració: compara't amb els grups del ple a partir de com han votat</span></a></li>
       <li><a href="../"><b>Les altres proves</b>
         <span>Els municipis on ja hem escrit les preguntes</span></a></li>
     </ul>
@@ -170,7 +254,8 @@ export function renderIndexPreguntes(conjunts: readonly ConjuntAmbSlug[], genera
       <b>${escape(c.municipi)}</b>
       <span class="secundari">${c.veredicte.resum.ambVotCitable} de ${c.veredicte.total} preguntes
       lligades a una votació del ple</span>
-    </a></li>`,
+    </a>
+    <a class="prova-enllac" href="${escape(c.slug)}/prova/">Respon-les →</a></li>`,
     )
     .join("");
 
@@ -181,11 +266,16 @@ export function renderIndexPreguntes(conjunts: readonly ConjuntAmbSlug[], genera
   )}
 <main id="contingut">
   <section class="portada">
-    <p class="micro">Esborrany</p>
-    <h1>Preguntes de prova</h1>
-    <p class="entrada">La brúixola farà 25 preguntes sobre cada municipi i compararà les teves
-    respostes amb la posició de cada candidatura. Aquí hi ha les primeres, escrites llegint les
-    actes del ple, <b>encara sense validar i sense poder-se respondre</b>.</p>
+    <div class="presenta">${papereta(120, "pregunta")}<div>
+      <p class="micro">Esborrany</p>
+      <h1>Preguntes de prova</h1>
+    </div></div>
+    <p class="entrada">Vint-i-cinc preguntes sobre el teu municipi, escrites llegint les actes
+    del ple, i la posició de cada grup treta de <b>com ha votat</b>. Les anirem millorant i
+    ampliant els pròxims mesos.</p>
+    <p class="entrada">Cadascuna es pot <b>respondre ja</b>, a tall de demostració: com que les
+    candidatures del 2027 encara no existeixen, la comparació es fa amb els grups que hi ha ara
+    al ple i amb la posició que es dedueix de <b>com han votat</b>.</p>
     <p class="entrada">Les ensenyem perquè qui conegui el poble ens digui què hi sobra: és
     exactament així com hem descobert els sis errors de redacció que ara són a la metodologia.</p>
   </section>
