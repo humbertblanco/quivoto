@@ -1,0 +1,203 @@
+{
+ "version": "2.0",
+ "class": "dataset",
+ "href": "https://api.idescat.cat/taules/v2/censph/293/296/mun/data?YEAR=2023,2024,2025&PBIRTH=ESTR,TOTAL",
+ "link": {
+  "describedby": [
+   {
+    "class": "dataset",
+    "href": "https://api.idescat.cat/taules/v2/censph/293/296/mun",
+    "label": "Població. Per lloc de naixement. Municipis"
+   }
+  ],
+  "monitor": [
+   {
+    "type": "application/json",
+    "href": "https://api.idescat.cat/rectificacions/v1/rectificacions/cerca.json?id=603"
+   }
+  ],
+  "related": [
+   {
+    "class": "dataset",
+    "href": "https://api.idescat.cat/taules/v2/censph/293/296/cat",
+    "label": "Població. Per lloc de naixement. Catalunya"
+   },
+   {
+    "class": "dataset",
+    "href": "https://api.idescat.cat/taules/v2/censph/293/296/prov",
+    "label": "Població. Per lloc de naixement. Províncies"
+   },
+   {
+    "class": "dataset",
+    "href": "https://api.idescat.cat/taules/v2/censph/293/296/at",
+    "label": "Població. Per lloc de naixement. Àmbits del Pla territorial"
+   },
+   {
+    "class": "dataset",
+    "href": "https://api.idescat.cat/taules/v2/censph/293/296/com",
+    "label": "Població. Per lloc de naixement. Comarques i Aran"
+   },
+   {
+    "class": "dataset",
+    "href": "https://api.idescat.cat/taules/v2/censph/293/296/ac",
+    "label": "Població. Per lloc de naixement. Per agrupacions censals"
+   },
+   {
+    "class": "dataset",
+    "href": "https://api.idescat.cat/taules/v2/censph/293/296/dis",
+    "label": "Població. Per lloc de naixement. Districtes censals"
+   },
+   {
+    "class": "dataset",
+    "href": "https://api.idescat.cat/taules/v2/censph/293/296/sec",
+    "label": "Població. Per lloc de naixement. Seccions censals"
+   }
+  ]
+ },
+ "label": "Població. Per lloc de naixement. Municipis",
+ "source": "Idescat, a partir del Cens de població anual de l'INE.",
+ "updated": "2026-02-25",
+ "id": [
+  "YEAR",
+  "MUN",
+  "PBIRTH",
+  "CONCEPT"
+ ],
+ "size": [
+  3,
+  5,
+  2,
+  1
+ ],
+ "role": {
+  "geo": [
+   "MUN"
+  ],
+  "metric": [
+   "CONCEPT"
+  ],
+  "time": [
+   "YEAR"
+  ]
+ },
+ "dimension": {
+  "YEAR": {
+   "category": {
+    "index": [
+     "2023",
+     "2024",
+     "2025"
+    ],
+    "label": {
+     "2023": "2023",
+     "2024": "2024",
+     "2025": "2025"
+    }
+   },
+   "label": "any"
+  },
+  "MUN": {
+   "category": {
+    "index": [
+     "080018",
+     "081878",
+     "171220",
+     "250019",
+     "TOTAL"
+    ],
+    "label": {
+     "080018": "Abrera",
+     "081878": "Sabadell",
+     "171220": "Palmerola",
+     "250019": "Abella de la Conca",
+     "TOTAL": "Catalunya"
+    }
+   },
+   "label": "municipi"
+  },
+  "PBIRTH": {
+   "category": {
+    "index": [
+     "ESTR",
+     "TOTAL"
+    ],
+    "label": {
+     "ESTR": "estranger",
+     "TOTAL": "total"
+    }
+   },
+   "label": "lloc de naixement"
+  },
+  "CONCEPT": {
+   "category": {
+    "index": [
+     "POP"
+    ],
+    "label": {
+     "POP": "població"
+    },
+    "unit": {
+     "POP": {
+      "decimals": 0
+     }
+    }
+   },
+   "label": "concepte",
+   "extension": {
+    "%": [
+     "POP"
+    ]
+   }
+  }
+ },
+ "value": [
+  1429,
+  12821,
+  39524,
+  217968,
+  null,
+  null,
+  28,
+  166,
+  1774641,
+  7901963,
+  1631,
+  12981,
+  43292,
+  221564,
+  null,
+  null,
+  27,
+  161,
+  1906832,
+  8012231,
+  1775,
+  13207,
+  46870.0,
+  224589,
+  null,
+  null,
+  22,
+  162,
+  2039015,
+  8124126
+ ],
+ "status": {
+  "4": "..",
+  "5": "..",
+  "14": "..",
+  "15": "..",
+  "24": "..",
+  "25": ".."
+ },
+ "extension": {
+  "status": {
+   "label": {
+    "..": "Dada confidencial, amb baixa fiabilitat o no disponible"
+   }
+  },
+  "source": [
+   "Idescat, a partir del Cens de població anual de l'INE."
+  ]
+ }
+}

@@ -1,7 +1,7 @@
 import { municipalFinances, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { ckanSql } from "../adapters/aoc";
 import { socrataAll } from "../adapters/socrata";
-import { medianOf } from "../derive/peers";
+import { buildPeerGroups, medianOf } from "../derive/peers";
 import { normalize } from "../lib/text";
 import { withRun } from "../lib/run";
 
@@ -27,18 +27,23 @@ const LIQUIDACIONS = "ytva-5kp3";
 const COST_EFECTIU = "12c13cdd-03ca-48d3-92cb-f3e586e1135a";
 
 /** Figures tributàries que la gent reconeix quan les veu. */
-const FIGURES: Record<string, string> = {
+export const FIGURES: Record<string, string> = {
   "impost sobre bens immobles": "IBI",
   "impost sobre vehicles de traccio mecanica": "Vehicles",
   "impt s increment valor terrenys naturalesa urbana": "Plusvàlua",
-  "impost sobre construccions installacions i obres": "Obres",
+  // El punt volat de «instal·lacions» el normalitzem a espai, així que la clau
+  // ha de dur-hi l'espai: amb «installacions» no lligava mai i l'impost d'obres
+  // no s'havia recollit a cap dels 947 municipis, tot i estar documentat a
+  // l'esquema de descàrrega. És l'impost que grava les llicències d'obra, i en
+  // un poble que construeix pot ser una part gens petita del que ingressa.
+  "impost sobre construccions instal lacions i obres": "Obres",
   "impost sobre activitats economiques": "Activitats econòmiques",
   taxes: "Taxes",
   "preus publics": "Preus públics",
 };
 
 /** Grans blocs de despesa de la classificació per programes. */
-const AREES: Record<string, string> = {
+export const AREES: Record<string, string> = {
   "serveis publics basics": "Serveis públics bàsics",
   "actuacions de proteccio i promocio social": "Protecció i promoció social",
   "produccio de bens publics de caracter preferent": "Educació, cultura i esport",
@@ -58,7 +63,7 @@ const AREES: Record<string, string> = {
  * i la segona 637.818 €, i la de parcs val zero, o sigui que la fitxa arribava a
  * publicar que Abrera no té parcs ni jardins. Es fan servir les grans.
  */
-const SERVEIS: Record<string, string> = {
+export const SERVEIS: Record<string, string> = {
   "recogida de residuos": "Recollida d'escombraries",
   "tratamiento de residuos": "Tractament de residus",
   "parque publico": "Parcs i jardins",
@@ -276,26 +281,116 @@ export async function j8Diners(db: Db): Promise<void> {
       }
     }
 
-    const mediansFor = (source: Map<number, Entry[]>, labels: string[]): Record<string, number | null> =>
+    const mediansFor = (
+      source: Map<number, Entry[]>,
+      labels: string[],
+      quins?: ReadonlySet<number>,
+    ): Record<string, number | null> =>
       Object.fromEntries(
         labels.map((label) => [
           label,
-          median([...source.values()].map((list) => list.find((e) => e.label === label)?.perHead ?? 0)),
+          median(
+            [...source.entries()]
+              .filter(([id]) => quins === undefined || quins.has(id))
+              .map(([, list]) => list.find((e) => e.label === label)?.perHead ?? 0),
+          ),
         ]),
       );
 
     const revenueMedians = mediansFor(revenue, Object.values(FIGURES));
     const spendingMedians = mediansFor(spending, Object.values(AREES));
 
+    /**
+     * Comparar els diners amb la mediana de tot Catalunya mesura la població i
+     * no la gestió: els pobles de menys de 100 habitants gasten 4.964 €/habitant
+     * de mediana i les ciutats de més de 50.000, 1.472 €. Amb la vara catalana,
+     * el 96% dels pobles petits surten «per sobre» i el 4% de les ciutats grans
+     * també —facin el que facin els seus governs—, i la frase no informa de res.
+     * Per això cada xifra es compara també amb els municipis de la seva mida.
+     */
+    const grups = buildPeerGroups(
+      [...population.entries()].map(([id, pop]) => ({ id, population: pop })),
+    );
+    const membres = new Map<string, Set<number>>();
+    for (const [id, grup] of grups) {
+      const conjunt = membres.get(grup.key) ?? new Set<number>();
+      conjunt.add(id);
+      membres.set(grup.key, conjunt);
+    }
+    const perGrup = (
+      source: Map<number, Entry[]>,
+      labels: string[],
+    ): Map<string, Record<string, number | null>> => {
+      const sortida = new Map<string, Record<string, number | null>>();
+      for (const [clau, conjunt] of membres) sortida.set(clau, mediansFor(source, labels, conjunt));
+      return sortida;
+    };
+    const revenueGroupMedians = perGrup(revenue, Object.values(FIGURES));
+    const spendingGroupMedians = perGrup(spending, Object.values(AREES));
+
+    /** Quants del grup tenen liquidació: sense això el percentil no es pot llegir. */
+    const ambDada = (font: Map<number, Entry[]>, clau: string): number =>
+      [...(membres.get(clau) ?? [])].filter((id) => font.has(id)).length;
+
+    /**
+     * Quina part del que gasta l'ajuntament la paguen els impostos i taxes
+     * d'aquí. És la comparació més política de totes: com més baixa, més depèn
+     * el pressupost del poble de decisions que no es prenen al seu ple. Va del
+     * 15% de mediana als municipis de menys de 100 habitants al 56% als de
+     * 10.001 a 20.000, i per això només es pot comparar dins del grup.
+     *
+     * El que no cobreixen els impostos propis no ve necessàriament de
+     * transferències: pot ser deute, venda de patrimoni o altres ingressos. Es
+     * diu «no surt d'impostos d'aquí», mai «ve de la Generalitat».
+     */
+    const propis = new Map<number, number>();
+    for (const [id, list] of revenue) propis.set(id, list.reduce((a, e) => a + e.perHead, 0));
+    const autofinancament = new Map<number, number>();
+    for (const [id, list] of spending) {
+      const gasta = list.reduce((a, e) => a + e.perHead, 0);
+      const cobra = propis.get(id);
+      if (cobra === undefined || gasta <= 0) continue;
+      autofinancament.set(id, Math.round((1000 * cobra) / gasta) / 10);
+    }
+    const medianaDelGrup = (valors: Map<number, number>, clau: string | null): number | null =>
+      clau === null
+        ? null
+        : roundOrNull(
+            medianOf(
+              [...(membres.get(clau) ?? [])]
+                .map((id) => valors.get(id))
+                .filter((v): v is number => v !== undefined),
+            ),
+          );
+    const propisCatalunya = roundOrNull(medianOf([...propis.values()]));
+
     for (const [municipalityId, list] of revenue) {
+      const grup = grups.get(municipalityId) ?? null;
       await save(municipalityId, "revenue", {
         year: Number(year),
         figures: list.filter((e) => e.perHead > 0).sort((a, b) => b.perHead - a.perHead),
         medians: revenueMedians,
+        grup: grup
+          ? { etiqueta: grup.label, mida: grup.size, ambDada: ambDada(revenue, grup.key) }
+          : null,
+        medianesGrup: grup ? revenueGroupMedians.get(grup.key) ?? null : null,
+        propis: {
+          perHabitant: Math.round(propis.get(municipalityId) ?? 0),
+          // Aquesta sí que es pot comparar amb tot Catalunya: el que recapta un
+          // ajuntament per habitant amb els seus propis impostos amb prou feines
+          // depèn de la mida del municipi, a diferència de la despesa.
+          medianaCatalunya: propisCatalunya,
+          municipisAmbDada: propis.size,
+        },
       });
     }
     for (const [municipalityId, list] of spending) {
       const total = list.reduce((a, e) => a + e.perHead, 0);
+      const grup = grups.get(municipalityId) ?? null;
+      const totalsDelGrup = [...(membres.get(grup?.key ?? "") ?? [])]
+        .map((id) => spending.get(id))
+        .filter((l): l is Entry[] => l !== undefined)
+        .map((l) => l.reduce((a, e) => a + e.perHead, 0));
       await save(municipalityId, "spending", {
         year: Number(year),
         areas: list
@@ -304,6 +399,21 @@ export async function j8Diners(db: Db): Promise<void> {
           .sort((a, b) => b.perHead - a.perHead),
         totalPerHead: Math.round(total),
         medians: spendingMedians,
+        grup: grup
+          ? { etiqueta: grup.label, mida: grup.size, ambDada: ambDada(spending, grup.key) }
+          : null,
+        medianesGrup: grup ? spendingGroupMedians.get(grup.key) ?? null : null,
+        // La mediana del total del grup: és la que permet dir quants euros de
+        // pressupost separen aquest municipi dels de la seva mida.
+        totalMediaGrup: roundOrNull(medianOf(totalsDelGrup)),
+        poblacio: population.get(municipalityId) ?? null,
+        autofinancament:
+          autofinancament.get(municipalityId) === undefined
+            ? null
+            : {
+                pct: autofinancament.get(municipalityId)!,
+                medianaGrup: medianaDelGrup(autofinancament, grup?.key ?? null),
+              },
       });
     }
     run.rowsOut = revenue.size + spending.size;

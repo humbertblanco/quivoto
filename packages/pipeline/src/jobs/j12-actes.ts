@@ -10,6 +10,7 @@ import {
   type PuntActa,
   type SentitVot,
 } from "../adapters/actes";
+import { normalizePersonName } from "../lib/text";
 import { sleep } from "../lib/http";
 import { withRun, type Run } from "../lib/run";
 
@@ -201,6 +202,37 @@ async function baixaActa(fila: FilaIndex, run: Run, municipalityId: number): Pro
     });
     return null;
   }
+  /**
+   * El text s'extreu, però ¿diu res?
+   *
+   * Hi ha PDF que porten la font xifrada amb un desplaçament constant:
+   * `pdftotext` en treu caràcters sense queixar-se i el que en surt sembla text
+   * però no ho és. Les actes del 2023 de Palafrugell són així, i fins ara les
+   * donàvem per bones: l'extractor de vots hi passava per sobre i el que en
+   * tragués seria un vot atribuït a partir de soroll, que és el pitjor error
+   * que pot cometre aquest projecte.
+   *
+   * La comprovació és barata i no admet discussió: una acta de ple **sempre**
+   * conté unes quantes d'aquestes paraules. Si no n'hi ha cap, no és una acta
+   * llegible, digui el que digui l'extractor.
+   */
+  const minuscules = text.toLowerCase();
+  const marques = ["ajuntament", "sessió", "sessio", "acord", "regidor", "alcald", "ordre del dia"];
+  if (!marques.some((m) => minuscules.includes(m))) {
+    await run.issue({
+      kind: "acta_text_illegible",
+      severity: "alta",
+      municipalityId,
+      entity: codiActa,
+      detail: {
+        url,
+        caracters: text.length,
+        motiu: "el text extret no conté cap paraula d'una acta: PDF amb la font xifrada o escanejat",
+      },
+    });
+    return null;
+  }
+
   await writeFile(baseTxt, text);
 
   return {
@@ -393,6 +425,8 @@ export async function j12Actes(
       const punts: PuntDesat[] = [];
       let omesos = 0;
       let plens = 0;
+      let plensAmbLlista = 0;
+      const assistencies = new Map<string, { nom: string; plens: number }>();
       let darrera = "";
 
       for (const acta of baixades) {
@@ -407,6 +441,18 @@ export async function j12Actes(
         if (extreta.organ === "desconegut") actesSenseOrgan += 1;
         plens += 1;
         actesLlegides += 1;
+        // Qui hi era. L'acta ho diu al capçal, i és l'única dada del projecte
+        // que és **de la persona i no del grup**: assistir o no assistir a un
+        // ple no ho decideix ningú més. Es compta per nom normalitzat perquè
+        // cada acta l'escriu com vol.
+        plensAmbLlista += extreta.assistents.length > 0 ? 1 : 0;
+        for (const assistent of extreta.assistents) {
+          const clau = normalizePersonName(assistent.nom);
+          if (clau.length < 5) continue;
+          const previ = assistencies.get(clau);
+          if (previ) previ.plens += 1;
+          else assistencies.set(clau, { nom: assistent.nom, plens: 1 });
+        }
         if (acta.data > darrera) darrera = acta.data;
 
         for (const punt of extreta.punts) {
@@ -464,6 +510,16 @@ export async function j12Actes(
               ambVotPerGrup: ambGrup,
             },
             grups: resumPerGrup(punts),
+            /**
+             * Assistència per persona. Només té sentit al costat de
+             * `plensAmbLlista`: si de vint actes només cinc porten la llista
+             * d'assistents, «hi ha anat 4 vegades» no vol dir que se n'hagi
+             * saltat setze.
+             */
+            assistencia: {
+              plensAmbLlista,
+              persones: [...assistencies.values()].sort((a, b) => b.plens - a.plens),
+            },
             llista: punts,
           },
           computedAt: new Date(),

@@ -471,7 +471,10 @@ export function proposantDeTitol(titol: string): string | null {
 const ETIQUETA_SENTIT: ReadonlyArray<readonly [RegExp, SentitVot]> = [
   [/^vots?\s+en\s+blanc$|^en\s+blanc$|^vots?\s+blancs?$/i, "blanc"],
   [/^vots?\s+en\s+contra$|^en\s+contra$|^vots?\s+contraris?$|^contraris?$/i, "contra"],
-  [/^abstencions?$|^abstenci(?:ó|o)$|^vots?\s+d[’']abstenci(?:ó|o)$/i, "abstencio"],
+  // «S'abstenen: 3» és com el Prat encapçala el bloc d'abstencions; sense
+  // aquesta etiqueta el bloc queda penjat del sentit anterior i els seus grups
+  // s'atribueixen als vots en contra.
+  [/^abstencions?$|^abstenci(?:ó|o)$|^vots?\s+d[’']abstenci(?:ó|o)$|^s[’']absten(?:en|ci(?:ó|o))?$|^s[’']abst[eé]$/i, "abstencio"],
   [/^absents?$|^no\s+assisteixen$/i, "absent"],
   [/^vots?\s+(?:a\s+)?favor$|^a\s+favor$|^vots?\s+favorables?$|^favorables?$/i, "favor"],
 ];
@@ -490,14 +493,37 @@ function sentitDEtiqueta(etiqueta: string): SentitVot | null {
 const SOROLL_DE_GRUP: ReadonlyArray<RegExp> = [
   /^\s*(?:\d+\s+)?(?:que\s+)?correspone?n?\s+(?:als?|a\s+la|a)\s+/i,
   /\bgrups?\s+pol[ií]tics?\s+municipals?\s*/gi,
+  // «Vots a favor: 12. Dels grups del PSC-CP i ERC-AM.» (Ripollet). Sense
+  // aquesta regla el grup es desava com a «grups del PSC-CP», que no encaixa
+  // amb cap sigla de la taula de marques i, per tant, és un vot perdut.
+  // Demana l'article («dels grups»), perquè un «GRUP» sol pot ser part del nom:
+  // a Blanes hi ha un partit que es diu literalment «GRUP BLANES».
+  /\bde(?:l|ls)?\s+grups?\s+(?:pol[ií]tics?\s+)?(?:municipals?\s+)?(?:de(?:l|ls)?\s+|d[’']\s*)?/gi,
   /\bde\s+la\s+corporaci(?:ó|o)\s+municipal\b/gi,
-  /\bdels?\s+regidors?(?:\s*\/\s*es|es)?\s*(?:i\s+(?:les\s+)?(?:les\s+)?regidor(?:a|e)s)?\s*(?:assistents?)?\s*/gi,
-  /\bdels?\s+membres?\s+(?:electes\s+)?(?:de\s+la\s+corporaci(?:ó|o)\s+)?/gi,
+  /\bde(?:l|ls)?\s*\/\s*de\s+l(?:es|a)\s+/gi,
+  // L'article davant de «regidor» és obligatori a posta. Sense ell, la taula
+  // d'assistents del capçal —«María Carmen Olària Segret, regidora»— es
+  // quedava sense la paraula que la delatava i els cognoms sortien publicats
+  // com a grups amb un sentit de vot al costat (Mollet).
+  /\b(?:de(?:l|ls)?|de\s+les|els|les)\s+regidor(?:s|a|es)?(?:\s*\/\s*(?:regidor)?(?:a|es|s)?)?\s*(?:i\s+(?:les\s+)?regidor(?:a|e)?s)?\s*(?:assistents?|presents?)?\s*/gi,
+  /\b\d+\s+regidor(?:s|a|es)?(?:\s*\/\s*(?:regidor)?(?:a|es|s)?)?\s*(?:assistents?|presents?)?\s*/gi,
+  /\b(?:de(?:l|ls)?\s+|els\s+|les\s+)?membres?\s+(?:electes\s+)?(?:de\s+la\s+corporaci(?:ó|o)\s+)?(?:de(?:l|ls)?\s+|d[’']\s*)?/gi,
   /\b(?:de\s+)?(?:l[’'])?assistents?\b/gi,
   /\bgrups?\s+municipals?\s*/gi,
   /\bde\s+la\s+corporaci(?:ó|o)\b/gi,
   /\bpresents?\b/gi,
   /\bGM\b\s*/g,
+  // «21 vots corresponent als membres dels grups municipals de X»: la regla
+  // ancorada de dalt no hi arriba perquè quan li toca el torn la frase encara
+  // comença per una altra cosa, i sense aquesta el grup es desava com a
+  // «corresponent als CUP Mataró».
+  /\bcorresponents?\s+(?:als?|a\s+la|a)\s+/gi,
+  // «l'abstenció de la resta de regidors dels grups municipals d'ENDAVANT SJ»:
+  // «la resta» és una manera de dir «els altres», no part del nom del grup.
+  /\b(?:la\s+)?resta\s+(?:de(?:l|ls)?\s+|d[’']\s*)?/gi,
+  // «…l'abstenció de Poble Actiu del total de 21 regidors»: el que ve després
+  // de «del total de» és la mida del ple, no part del nom del grup.
+  /\bde(?:l)?\s+total\s+d[e’'].*$/i,
 ];
 
 /**
@@ -509,12 +535,45 @@ const SEMBLA_PERSONA =
   /^(?:sr|sra|sres|srs|senyor|senyora|senyors|senyores)\b|^(?:el|la|les|els)\s+senyor|\b(?:regidor|regidora|alcalde|alcaldessa)\b/i;
 
 /**
+ * Beneficiaris jurídics, no grups municipals. A Ripollet un punt que adjudica
+ * una obra diu «…a favor de l'empresa FEU I GODOY», i la lectura de prosa sense
+ * xifres ho publicava com si l'empresa hagués votat a favor. «A favor de» hi vol
+ * dir «en benefici de»: és l'única accepció de la frase que no és un vot, i és
+ * prou freqüent (adjudicacions, cessions, bonificacions) per barrar-la a mà.
+ */
+const NO_ES_UN_GRUP =
+  /^(?:(?:l[’']|la\s+|el\s+|els\s+|les\s+)?(?:empresa|societat|mercantil|entitat|fundaci|associaci|companyia|ajuntament|generalitat|diputaci|consorci|consell|àrea\s+metropolitana|junta\s+de\s+govern|comissi|titular|tipologia))\b/i;
+
+/**
+ * Referències normatives i identificadors fiscals que la partició deixava anar
+ * («CIF núm. P0800258F», «l'art. 114.1 del Decret legislatiu»). Cap grup
+ * municipal no es diu així, i tots dos casos surten d'actes reals.
+ */
+const REFERENCIA_LEGAL = /\b(?:núm|n[uú]m\.|nº|art|apartat|CIF|NIF|DNI|decret|llei|reial|expedient|exp)\b\.?/i;
+
+/**
+ * Paraules soltes que la partició de llistes deixa caure i que semblen sigles
+ * però no ho són. Totes surten d'extraccions reals que publicaven un vot: a
+ * Ripollet «***** URGÈNCIA» amb tres abstencions, al Prat «S'abstenen» amb vuit
+ * vots en contra, a Vila-seca «Absents» amb una abstenció.
+ */
+const PARAULA_NO_GRUP = new Set([
+  "urgencia", "urgencies", "absent", "absents", "assistents", "precs", "preguntes",
+  "votacio", "votacions", "resultat", "resultats", "acord", "acords", "esmena", "esmenes",
+  "cap", "ningu", "abstencio", "abstencions", "unanimitat", "majoria", "dictamen",
+  "proposta", "mocio", "punt", "expedient", "total", "sabstenen", "sabste",
+  // Formes jurídiques que queden soltes quan la llista parteix el nom d'una
+  // empresa per la coma: «BANCO SANTANDER, SA», «RGB MUSIC, SL».
+  "sa", "sl", "slu", "sau", "sccl", "sam", "cif", "nif",
+]);
+
+/**
  * Paraules que només surten en noms de candidatura. Són l'escapatòria del filtre
  * de persones: «Sitges Grup Independent» té la mateixa forma que «Elena López
  * Luján» —tres mots amb majúscula inicial— i sense aquesta llista es perdria.
  */
 const VOCABULARI_DE_GRUP =
-  /\b(?:grup|junts|esquerra|partit|candidatura|com[uú]|podem|independent|independents|municipal|municipalista|movem|guanyem|ara|sumem|som|compromís|alternativa|popular|socialista|socialistes|progrés|ciutadans|verds|units|acord|per|del?|en|la|el|els|les|i|d)\b/i;
+  /\b(?:grup|junts|esquerra|partit|candidatura|com[uú]|comuns|podem|independent|independents|municipal|municipalista|movem|guanyem|ara|sumem|som|compromís|alternativa|popular|socialista|socialistes|progrés|ciutadans|verds|units|acord|vox|activem|endavant|capgirem|decidim|avancem|prim[àa]ries|reagrupament|unitat|poble|gent|per|del?|en|la|el|els|les|i|d)\b/i;
 
 /**
  * Els noms de grup tenen sigles, connectors o vocabulari de partit; els noms de
@@ -526,43 +585,106 @@ const VOCABULARI_DE_GRUP =
 export function semblaGrup(nom: string): boolean {
   if (nom.length < 2 || nom.length > 60) return false;
   if (SEMBLA_PERSONA.test(nom)) return false;
+  if (NO_ES_UN_GRUP.test(nom)) return false;
+  if (REFERENCIA_LEGAL.test(nom)) return false;
+  if (PARAULA_NO_GRUP.has(sensAccents(nom).replace(/[^a-z]/g, ""))) return false;
+  // Ha de començar per lletra: «***** URGÈNCIA», «-VOX», «]PP» són restes de la
+  // partició, no noms. Els parèntesis els desembolcalla `netejaNomGrup`.
+  if (!/^[A-Za-zÀ-úÇ(]/.test(nom)) return false;
+  // Un tros de tres lletres o menys només és una sigla si va en majúscules:
+  // «PP» i «CUP» sí, «Jav», «Car» i «Gl» són noms de pila tallats a mitges per
+  // una línia partida, i publicar-los com a partit és inventar-se un grup.
+  // L'excepció són els partits que el vocabulari coneix i que s'escriuen en
+  // caixa mixta, com «Vox».
+  if (nom.length <= 3 && nom !== nom.toUpperCase() && !VOCABULARI_DE_GRUP.test(nom)) return false;
   // Trossos de prosa que s'esmunyien com si fossin partits i acabaven a la
   // fitxa amb un sentit de vot al costat: «Resultat: s'aprova per unanimitat»
   // votant en abstenció, o «S'aprova el dictamen» amb nou vots en contra.
   if (nom.includes(":")) return false;
+  // Una coma vol dir que hi ha quedat més d'un grup dins del mateix nom
+  // («ERC-AM, JxS-CM i IPS-CUP», Salt): val més no publicar-ho que publicar un
+  // partit inexistent amb el nom de tres.
+  if (nom.includes(",")) return false;
+  // Un punt seguit de text vol dir que hi hem enganxat la frase següent
+  // («Olària. Total», «CUP... Per tant»). A Mollet això publicava el cognom de
+  // l'última regidora d'una crida nominal com si fos un grup abstingut.
+  if (/[.;]\s+\S/.test(nom)) return false;
+  // Lletres soltes: a Lleida les columnes del marge deixen caure caràcters
+  // orfes davant del nom («C O ERC-AM», «D PP»).
+  if (/(?:^|\s)[A-ZÀ-ÚÇa-z](?:\s|$)/.test(nom.replace(/\b[iy]\b/g, ""))) return false;
   if (nom.split(/\s+/).length > 5) return false;
   if (VOCABULARI_DE_VOT.test(nom) || RESULTAT_APROVAT.test(nom) || RESULTAT_REBUTJAT.test(nom)) return false;
   if (!/[A-ZÀ-ÚÇ]/.test(nom)) return false;
   // Tres o més paraules en minúscula seguides és prosa, no una sigla.
   if (/(?:\b[a-zà-ú]+\b\s+){3,}/.test(nom)) return false;
+  // Un sol mot amb la inicial en majúscula i la resta en minúscula és un cognom
+  // o un nom de departament, no una candidatura: «Dalfó», «Gavara», «Reixac»,
+  // «Compres», «Intervenció», «Administració». Les sigles de partit van en
+  // majúscules («VOX», «NMC», «PECP») i els noms d'una sola paraula que sí que
+  // són partits —Junts, Esquerra, Guanyem, Movem— els salva el vocabulari.
+  if (/^[A-ZÀ-ÚÇ][a-zà-úç·'’]+$/.test(nom) && !VOCABULARI_DE_GRUP.test(nom)) return false;
   const mots = nom.split(/\s+/);
-  const totMajusculaInicial = mots.every((mot) => /^[A-ZÀ-ÚÇ][a-zà-úç·'’]{2,}$/.test(mot));
+  // La classe de lletres ha d'arribar fins a la ü i admetre el punt volat, o
+  // «Raül Asensio Gonzàlez» i «Marcel·Lina Bosch Costa» s'escapen del filtre de
+  // persones i acaben publicats com si fossin partits.
+  const totMajusculaInicial = mots.every((mot) =>
+    /^[A-ZÀ-ÚÇ][a-zà-ÿç'’]{2,}(?:·[A-ZÀ-ÚÇ]?[a-zà-ÿç'’]+)*$/.test(mot),
+  );
   if (mots.length >= 3 && totMajusculaInicial && !VOCABULARI_DE_GRUP.test(nom)) return false;
   return true;
 }
 
 const netejaNomGrup = (nom: string): string => {
   let net = nom
+    // Glifs de la zona d'ús privat: els pics de llista de Wingdings arriben com
+    // a U+F0D8 i s'enganxen al nom («VOX \uF0D8»).
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ue000-\uf8ff\ufffd]/g, " ")
     // «(sra. Sabater)», «(srs./sres. García, Agüera…)»: qui són els regidors del
     // grup, no el nom del grup.
     .replace(/\(\s*(?:sr|sra|srs|sres|senyor|senyora)[^)]*\)/gi, " ")
-    .replace(/^[\s,;:.·•\-–—]+|[\s,;:.·•\-–—]+$/g, "")
+    .replace(/^[\s,;:.·•*\-–—]+|[\s,;:.·•*\-–—]+$/g, "")
     // Restes de la frase que s'arrosseguen quan el sentit ve en prosa:
     // «i 7 abstencions dels d'ERC», «grups de PSC-CP», «amb 1 abstenció de VOX».
     .replace(
-      /^(?:(?:i|amb|amb\s+el|amb\s+els)\s+)?(?:\d+\s+)?(?:vots?\s+|abstenci(?:ó|ons)\s+|favorables?\s+|contraris?\s+)*(?:(?:a\s+favor|en\s+contra|en\s+blanc)\s+)?(?:grups?\s+)?(?:municipals?\s+)?(?:de(?:l|ls)?\s+|d[’']\s*)*/i,
+      // El `grups?` demana que darrere hi vingui «municipal» o una preposició:
+      // sense la condició, el grup de Blanes que es diu literalment «GRUP
+      // BLANES» es desava com a «BLANES», que és una altra cosa.
+      /^(?:(?:i|amb|amb\s+el|amb\s+els)\s+)?(?:\d+\s+)?(?:vots?\s+|abstenci(?:ó|ons)\s+|favorables?\s+|contraris?\s+)*(?:(?:a\s+favor|en\s+contra|en\s+blanc)\s+)?(?:grups?\s+(?=municipals?\b|de\b|del\b|dels\b|d[’']))?(?:municipals?\s+)?(?:de(?:l|ls)?\s+|d[’']\s*)*/i,
       "",
     )
     .replace(/^(?:de(?:l|ls)?|d[’']|la|les|el|els)\s+/i, "")
+    // Banyoles encapçala cada grup amb «GM». Es treu aquí i no només al partidor
+    // de llistes perquè, si no, «GM ERC-SomB» i «ERC-SomB» compten com a dos.
+    .replace(/^GM[\s.]+/, "")
+    // Amb `-layout` el guionet d'una sigla es queda a final de línia i el tros
+    // següent baixa a la línia de sota: «ARA VIC-\n PL», «SF- ECP», «PSC- CP».
+    // Sense tornar-los a ajuntar, el mateix grup compta com a dos.
+    .replace(/([A-Za-zÀ-ÿÇ0-9])-\s+(?=[A-Za-zÀ-ÿÇ0-9])/g, "$1-")
+    // A Lleida el marge deixa caure lletres soltes just davant del nom («C O
+    // ERC-AM», «D PP», «'A P PSC-UNITS-CP»). Es treuen aquí perquè el grup és
+    // correcte i només li sobra la brossa del davant.
+    .replace(/^(?:[’'"]?[A-ZÀ-ÚÇ][\s.]+){1,3}(?=[A-ZÀ-ÚÇ][A-Za-zÀ-ÿÇ0-9])/, "")
     .replace(/\s{2,}/g, " ")
     .trim();
   // «9 (PSC-CP)» (Rubí) deixa el nom sencer dins d'un parèntesi.
-  const embolcallat = net.match(/^\((.+)\)$/);
-  if (embolcallat && !embolcallat[1]!.includes("(")) net = embolcallat[1]!.trim();
-  // Parèntesis desaparellats que ha deixat la partició de la llista.
+  const embolcallat = net.match(/^[([](.+)[)\]]$/);
+  if (embolcallat && !/[([]/.test(embolcallat[1]!)) net = embolcallat[1]!.trim();
+  // Parèntesis desaparellats que ha deixat la partició de la llista. Els
+  // claudàtors hi són perquè Santa Coloma de Gramenet hi tanca els grups
+  // («21 vots a favor [PSC i C’S]») i la partició deixava «[PSC» i «C’S]».
   if (net.includes(")") && !net.includes("(")) net = net.replace(/\)/g, "").trim();
   if (net.includes("(") && !net.includes(")")) net = net.replace(/\(/g, "").trim();
-  return net.replace(/^[\s,;:.·•\-–—]+|[\s,;:.·•\-–—]+$/g, "");
+  if (net.includes("]") && !net.includes("[")) net = net.replace(/\]/g, "").trim();
+  if (net.includes("[") && !net.includes("]")) net = net.replace(/\[/g, "").trim();
+  net = net.replace(/\s+\d{1,3}$/, "");
+  // Connectors penjats al final («Partit dels Socialistes de», «PP i»): són
+  // restes de la frase, i el nom que en queda ja és el bo.
+  let anterior = "";
+  while (anterior !== net) {
+    anterior = net;
+    net = net.replace(/\s+(?:de(?:l|ls)?|d[’']|i|amb|a|en|per|la|el|els|les)$/i, "").trim();
+  }
+  return net.replace(/^[\s,;:.·•*\-–—]+|[\s,;:.·•*\-–—]+$/g, "");
 };
 
 /**
@@ -576,8 +698,8 @@ export function parteixLlista(text: string): string[] {
   let profunditat = 0;
   for (let i = 0; i < text.length; i += 1) {
     const c = text[i]!;
-    if (c === "(") profunditat += 1;
-    if (c === ")") profunditat = Math.max(0, profunditat - 1);
+    if (c === "(" || c === "[") profunditat += 1;
+    if (c === ")" || c === "]") profunditat = Math.max(0, profunditat - 1);
     if (profunditat === 0) {
       if (c === "," || c === ";") {
         trossos.push(actual);
@@ -596,6 +718,186 @@ export function parteixLlista(text: string): string[] {
   return trossos.map((t) => t.trim()).filter(Boolean);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Crida nominal: la forma que més vots falsos publicava
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Les fórmules de tractament amb què les actes obren la llista de regidors d'un
+ * grup: «senyors/a», «Senyora/or», «Sr.», «Sres.».
+ */
+const TRACTAMENT_RE =
+  /(?:^|[\s,])(?:sr|sra|srs|sres|senyor|senyora|senyors|senyores)\.?(?:\s*\/\s*[a-zà-úç]{1,3}\.?)*\s*,?\s+/gi;
+
+/**
+ * On comença un grup dins d'una crida nominal. El lookbehind no és cosmètic:
+ * «del grup municipal de VOX» **no** obre una llista de regidors, i sense
+ * excloure'l el partidor s'engegava enmig d'una frase corrent.
+ */
+const INTRODUCTOR_DE_GRUP =
+  /(?<![\wàèéíòóúïüç’'])(?<!\bde\s)(?<!\bdel\s)(?<!\bdels\s)(?<!\bd[’']\s?)(?:GM|[Gg]rups?\s+[Mm]unicipals?|GRUPS?\s+MUNICIPALS?|[Rr]egidor(?:a)?\s+[Nn]o\s+[Aa]dscrit(?:a)?)\b/g;
+
+/**
+ * Parteix «PSC-CP Senyors/es, Maria Garcia, Jose García…» en el nom del grup i
+ * la llista de regidors. El separador ha d'estar a fora de qualsevol parèntesi:
+ * a Badalona el tractament va **dins** («Esquerra Republicana de Catalunya
+ * (sr./sra. Montornès, Gàmez)») i allà el nom del grup és tot el que hi ha
+ * abans del parèntesi, no abans del «sr.».
+ */
+function parteixGrupIRegidors(tros: string): { nom: string; membres: string } | null {
+  const candidats: { index: number; llarg: number }[] = [];
+  const dosPunts = tros.indexOf(":");
+  if (dosPunts >= 0) candidats.push({ index: dosPunts, llarg: 1 });
+  TRACTAMENT_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = TRACTAMENT_RE.exec(tros)) !== null) candidats.push({ index: m.index, llarg: m[0].length });
+  candidats.sort((a, b) => a.index - b.index);
+  for (const { index, llarg } of candidats) {
+    const abans = tros.slice(0, index);
+    const obre = (abans.match(/[([]/g) ?? []).length;
+    const tanca = (abans.match(/[)\]]/g) ?? []).length;
+    if (obre > tanca) continue;
+    return { nom: abans, membres: tros.slice(index + llarg) };
+  }
+  return null;
+}
+
+/**
+ * Compta quants regidors hi ha en una enumeració de noms.
+ *
+ * La subtilesa és la «i»: a «Josep M. Teixidor Boadas i Ana Comalat Roca»
+ * separa dues persones, però a «JORDI IBERN i TORTOSA» (el Prat) uneix els dos
+ * cognoms d'una de sola. Els distingim perquè un cognom sol no fa un nom: si el
+ * que ve després de la «i» té un sol mot, no és ningú nou.
+ */
+export function nomsDeRegidors(text: string): string[] {
+  const fora: string[] = [];
+  for (const part of text.split(/[,;]/)) {
+    let resta = part.trim();
+    for (;;) {
+      const m = resta.match(/^(.*?\S)\s+i\s+(\S.*)$/);
+      if (!m || m[2]!.trim().split(/\s+/).length < 2) break;
+      fora.push(m[1]!.trim());
+      resta = m[2]!.trim();
+    }
+    if (resta) fora.push(resta);
+  }
+  return fora
+    .map((n) => n.replace(/[.\s]+$/, "").trim())
+    .filter((n) => /^[A-ZÀ-ÚÇ]/.test(n) && n.split(/\s+/).length >= 2 && n.length <= 60);
+}
+
+/**
+ * Crida nominal agrupada: **el patró que més vots falsos publicava de tot el
+ * corpus.** Cornellà, Sant Joan Despí, el Prat i Banyoles escriuen
+ *
+ *   Vots a favor:
+ *   Grup Municipal de CECP-C, senyors/a Claudio Carmona, Sergio Gómez i Maria Martin.
+ *   Grup Municipal del PSC-CP, senyors/es Antonio Balmón, Emilia Briones, …
+ *
+ * i el partidor de llistes genèric ho trossejava per les comes: el primer grup
+ * s'extreia bé i tota la resta de la llista —vint noms de persona— s'atribuïa al
+ * mateix sentit de vot, amb el grup següent enganxat al final d'un nom
+ * («Maria Victoria Martin Herreros. d'ERC-EUiA-AM»). El resultat era que
+ * ERC-EUiA-AM constava votant en contra en una votació on s'havia abstingut.
+ *
+ * Aquí el nom del grup surt de l'introductor i el recompte, de quants regidors
+ * s'enumeren. Els regidors no adscrits també hi entren, perquè són vots que
+ * compten i sense ells la suma no quadraria amb el total que diu l'acta.
+ */
+export function grupsNominals(cua: string): { grup: string; vots: number | null }[] | null {
+  const net = cua.replace(/\s+/g, " ").trim();
+  INTRODUCTOR_DE_GRUP.lastIndex = 0;
+  const marques: { obre: number; despres: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = INTRODUCTOR_DE_GRUP.exec(net)) !== null) {
+    marques.push({ obre: m.index, despres: m.index + m[0].length });
+  }
+  if (marques.length === 0) return null;
+
+  const files: { grup: string; vots: number | null }[] = [];
+  let cobert = 0;
+  for (const [i, marca] of marques.entries()) {
+    const fi = marques[i + 1]?.obre ?? net.length;
+    const tros = net.slice(marca.despres, fi);
+    const partit = parteixGrupIRegidors(tros);
+    if (!partit) continue;
+    const regidors = nomsDeRegidors(partit.membres);
+    if (regidors.length === 0) continue;
+    // «Grup municipal PP (5), senyor Xavier Palau, …» (Lleida): quan l'acta diu
+    // ella mateixa quants són, la seva xifra mana sobre la que hem comptat.
+    const declarat = partit.nom.match(/\(\s*(\d+)\s*\)[\s.,;:•·]*$/);
+    // Sense nom de grup l'introductor era «Regidor no adscrit»: el vot existeix
+    // i compta per a la suma, però no s'atribueix a cap partit.
+    const nom = netejaNomGrup(declarat ? partit.nom.slice(0, declarat.index) : partit.nom)
+      || "Regidor no adscrit";
+    if (nom !== "Regidor no adscrit" && !semblaGrup(nom)) continue;
+    const quants = declarat ? Number.parseInt(declarat[1]!, 10) : regidors.length;
+    cobert += fi - marca.obre;
+    const ja = files.find((f) => f.grup === nom);
+    if (ja) ja.vots = (ja.vots ?? 0) + quants;
+    else files.push({ grup: nom, vots: quants });
+  }
+  // Si els blocs de grup no cobreixen la cua, el text és una altra cosa amb un
+  // «grup municipal» a dins i val més deixar-ho al partidor genèric.
+  if (files.length === 0 || cobert / net.length < 0.5) return null;
+  return files;
+}
+
+/**
+ * Crida nominal amb la sigla al costat de cada regidor, que és com escriu Vic:
+ *
+ *   VOTS A FAVOR, 13: Albert Castells (JxVIC), Bet Piella (JxVIC), … i Arnau Martí (VECP)
+ *
+ * El codi anterior en treia les sigles correctes però assignava **el total de la
+ * votació al primer grup** («JxVIC, 16 vots») i deixava la resta sense xifra: un
+ * número fals al costat d'un partit real. Aquí es compta quants regidors porta
+ * cada sigla, que és el que diu l'acta.
+ */
+const REGIDOR_AMB_SIGLA =
+  /([A-ZÀ-ÚÇ][A-Za-zÀ-úÇ.'’·]*(?:\s+[A-ZÀ-ÚÇ][A-Za-zÀ-úÇ.'’·]*)+)\s*\(\s*([^()]{1,25}?)\s*\)/g;
+
+export function grupsPerRegidor(cua: string): { grup: string; vots: number | null }[] | null {
+  const net = cua.replace(/\s+/g, " ").trim();
+  REGIDOR_AMB_SIGLA.lastIndex = 0;
+  const compte = new Map<string, number>();
+  let cobert = 0;
+  let trobats = 0;
+  let m: RegExpExecArray | null;
+  while ((m = REGIDOR_AMB_SIGLA.exec(net)) !== null) {
+    const sigla = netejaNomGrup(m[2]!);
+    // Una sigla només de xifres és un recompte, no un grup: «Sitges Grup
+    // Independent (3)» és l'altra família de formats i no s'ha de comptar aquí.
+    if (!/[A-Za-zÀ-úÇ]/.test(sigla) || !semblaGrup(sigla)) continue;
+    trobats += 1;
+    cobert += m[0].length;
+    compte.set(sigla, (compte.get(sigla) ?? 0) + 1);
+  }
+  if (trobats < 3 || cobert / net.length < 0.5) return null;
+  return [...compte].map(([grup, vots]) => ({ grup, vots }));
+}
+
+/**
+ * El desglossament d'una cua de votació, amb la procedència del recompte.
+ */
+export type Desglossament = {
+  files: { grup: string; vots: number | null }[];
+  /**
+   * Els vots no els diu l'acta: els hem comptat nosaltres (quants regidors
+   * s'enumeren). Un número deduït s'ha de poder contrastar amb el total abans de
+   * publicar-lo; un número transcrit, no.
+   */
+  deduit: boolean;
+};
+
+export function desglossaCua(cua: string): Desglossament {
+  const nominals = grupsNominals(cua);
+  if (nominals) return { files: nominals, deduit: true };
+  const perRegidor = grupsPerRegidor(cua);
+  if (perRegidor) return { files: perRegidor, deduit: true };
+  return { files: llistaDeGrups(cua), deduit: false };
+}
+
 /**
  * Converteix la cua d'una etiqueta de votació en files (grup, vots).
  *
@@ -609,6 +911,10 @@ export function parteixLlista(text: string): string[] {
  *   «Junts per les Franqueses (JxLF) (7)»     → les Franqueses
  */
 export function separaGrups(cua: string): { grup: string; vots: number | null }[] {
+  return desglossaCua(cua).files;
+}
+
+function llistaDeGrups(cua: string): { grup: string; vots: number | null }[] {
   let net = cua.replace(/\s+/g, " ").trim();
   // «GM Junts Banyoles-CM: Miquel Noguer, Jordi Congost…» — el grup és el que hi
   // ha abans dels dos punts i el recompte, quants noms hi ha després.
@@ -622,20 +928,28 @@ export function separaGrups(cua: string): { grup: string; vots: number | null }[
   }
 
   for (const soroll of SOROLL_DE_GRUP) net = net.replace(soroll, " ");
+  // «21 vots a favor [PSC i C’S]» (Santa Coloma): el claudàtor tanca la llista
+  // sencera, no un grup, i si no s'obre abans de partir-la els dos partits es
+  // desen com un de sol que es diria «PSC i C’S».
+  net = net.replace(/\[([^[\]]{1,200})\]/g, "$1");
   net = net.replace(/\s{2,}/g, " ").trim();
 
   // Si tota la cua és un parèntesi, el parèntesi ÉS la llista de grups
-  // («4 abstencions (1VOX, 1Primer El Vendrell, 1Fem Vendrell)»).
-  const embolcallat = net.match(/^\((.+)\)$/s);
-  if (embolcallat && !embolcallat[1]!.includes("(")) net = embolcallat[1]!;
+  // («4 abstencions (1VOX, 1Primer El Vendrell, 1Fem Vendrell)»). Els claudàtors
+  // fan el mateix paper a Santa Coloma: «21 vots a favor [PSC i C’S]».
+  const embolcallat = net.match(/^[([](.+)[)\]][\s,.;]*$/s);
+  if (embolcallat && !/[([]/.test(embolcallat[1]!)) net = embolcallat[1]!;
   const trossos = parteixLlista(net);
 
   const files: { grup: string; vots: number | null }[] = [];
   for (const tros of trossos) {
     // Recompte al davant: «8 JUNTS», «7 de Sumem per Salou-PSC», «tres d'ERC».
+    // El Vendrell enganxa la xifra al nom, sense espai: «1VOX, 1Fem Vendrell».
     let vots: number | null = null;
     let nom = tros;
-    const davant = tros.match(/^\(?\s*(\d+|[a-zà-úï·]+)\s*\)?\s+(?:de(?:l|ls)?\s+|d[’']\s*)?(.+)$/i);
+    const davant = tros.match(
+      /^[([]?\s*(\d+|[a-zà-úï·]+)\s*[)\]]?\s+(?:de(?:l|ls)?\s+|d[’']\s*)?(.+)$/i,
+    ) ?? tros.match(/^[([]?\s*(\d{1,2})([A-ZÀ-ÚÇ].+)$/);
     if (davant) {
       const n = aNombre(davant[1]!);
       if (n !== null) {
@@ -644,7 +958,8 @@ export function separaGrups(cua: string): { grup: string; vots: number | null }[
       }
     }
     // Recompte al darrere: «JxCAT (7)», «Junts per les Franqueses (JxLF) (7)».
-    const darrere = nom.match(/^(.*?)\s*\(\s*(\d+)\s*\)\s*$/);
+    // El punt final hi és perquè a Sitges la llista acaba amb «i Guanyem (1).».
+    const darrere = nom.match(/^(.*?)\s*\(\s*(\d+)\s*\)[\s.,;:•·*\-–—]*$/);
     if (darrere) {
       const n = aNombre(darrere[2]!);
       if (n !== null) {
@@ -678,7 +993,17 @@ export function separaGrups(cua: string): { grup: string; vots: number | null }[
  * «Vots a favor (14)» i «VOTS A FAVOR, 18: JxVIC, ERC-AM».
  */
 const BLOC_ETIQUETA =
-  /(?:^|\n)[ \t]*[-•·*]?[ \t]*(vots?\s+(?:a\s+)?favor|a\s+favor|vots?\s+favorables?|vots?\s+en\s+contra|en\s+contra|vots?\s+contraris?|abstencions?|abstenci(?:ó|o)|vots?\s+en\s+blanc|en\s+blanc|absents?)[ \t]*[,:]?[ \t]*(\(?[ \t]*\d+[ \t]*\)?)?[ \t]*[,:]?[ \t]*/gi;
+  /(?:^|\n)[ \t]*[-•·*]?[ \t]*(vots?\s+(?:a\s+)?favor|a\s+favor|vots?\s+favorables?|vots?\s+en\s+contra|en\s+contra|vots?\s+contraris?|abstencions?|abstenci(?:ó|o)|s[’']absten(?:en|ci(?:ó|o))?|vots?\s+en\s+blanc|en\s+blanc|absents?)[ \t]*[,:]?[ \t]*(\(?[ \t]*\d+[ \t]*\)?)?[ \t]*[,:]?[ \t]*/gi;
+
+/**
+ * On s'acaba la llista de grups d'un sentit i comença la del següent. A Sant
+ * Just Desvern l'acta ho encadena dins de la mateixa frase —«amb els vots a
+ * favor de PSC, SJECP-C, ERC, PP i CUP-AMUNT, amb l'abstenció de la resta de
+ * regidores i regidors dels grups municipals d'ENDAVANT SJ, JUNTSxCAT i VOX»—
+ * i sense tallar-hi els tres grups que s'abstenien constaven votant a favor.
+ */
+const SENTIT_ENCADENAT =
+  /,?\s+(?:i\s+)?(?:amb\s+(?:els?\s+)?)?(?:l[’']abstenci(?:ó|o)|les\s+abstenci|abstenci(?:ó|ons)|(?:els?\s+)?vots?\s+(?:en\s+contra|contraris?|a\s+favor|favorables?)|el\s+vot\s+contrari|en\s+contra)(?![a-zà-ÿ])/i;
 
 /**
  * La cua d'una etiqueta no s'acaba a final de línia. A Sitges la llista de grups
@@ -688,8 +1013,24 @@ const BLOC_ETIQUETA =
  */
 function cuaDEtiqueta(cru: string, limit: number): string {
   let cua = cru.slice(0, limit);
-  const buit = cua.search(/\n[ \t]*\n[ \t]*\n/);
-  if (buit > 0) cua = cua.slice(0, buit);
+  // La llista s'acaba a la primera línia en blanc **si el que ve després no és
+  // un altre grup**. Amb el tall incondicional es perdien els grups segon i
+  // següents de Cornellà, que van separats per una línia buida; sense cap tall,
+  // a Cambrils la cua es menjava el paràgraf següent i en treia «Compres» —de
+  // «Comissió Informativa d'Hisenda, Compres i Contractació»— com si fos un
+  // grup que s'havia abstingut.
+  let pos = cua.match(/^\s*/)![0].length;
+  for (;;) {
+    const relatiu = cua.slice(pos).search(/\n[ \t]*\n/);
+    if (relatiu < 0) break;
+    const tall = pos + relatiu;
+    const resta = cua.slice(tall).replace(/^\s+/, "");
+    if (!/^(?:GM\b|Grups?\s+[Mm]unicipals?\b|GRUPS?\s+MUNICIPALS?\b|[Rr]egidor)/.test(resta)) {
+      cua = cua.slice(0, tall);
+      break;
+    }
+    pos = cua.length - resta.length;
+  }
   // Les etiquetes no sempre comencen línia («…CUP-AMUNT) Vots en contra: 0»), i
   // si no hi tallem el sentit següent s'endú els grups del sentit anterior.
   const seguent = cua.search(ETIQUETA_ENMIG);
@@ -698,12 +1039,34 @@ function cuaDEtiqueta(cru: string, limit: number): string {
   if (seguent >= 0) cua = cua.slice(0, seguent);
   const encadenat = cua.search(/\bi\s+(?:amb\s+)?\d+\s+(?:vots?|abstenci|en\s+blanc)/i);
   if (encadenat > 0) cua = cua.slice(0, encadenat);
+  // El punt següent de l'ordre del dia comença just després del bloc de vot i
+  // sense línia en blanc pel mig: «…Del grup del PP. 17.- Precs i preguntes». Si
+  // no s'hi talla, «PP. 17.- Precs» acaba desat com si fos el nom d'un grup.
+  const puntSeguent = cua.search(/\.\s*\d{1,2}\s*\.?\s*-\s*[A-ZÀ-ÚÇ]/);
+  if (puntSeguent > 0) cua = cua.slice(0, puntSeguent);
+  const altreSentit = cua.search(SENTIT_ENCADENAT);
+  if (altreSentit > 0) cua = cua.slice(0, altreSentit);
   return cua;
 }
 
 /** La mateixa llista d'etiquetes, per tallar-hi la cua allà on aparegui. */
 const ETIQUETA_ENMIG =
-  /(?:vots?\s+(?:a\s+)?favor|vots?\s+favorables?|vots?\s+en\s+contra|vots?\s+contraris?|en\s+contra|abstencions?|abstenci(?:ó|o)|vots?\s+en\s+blanc|absents?)\s*[,:]?\s*\d|(?:vots?\s+en\s+contra|abstencions?|en\s+blanc)\s*[,:]/i;
+  /(?:vots?\s+(?:a\s+)?favor|vots?\s+favorables?|vots?\s+en\s+contra|vots?\s+contraris?|en\s+contra|abstencions?|abstenci(?:ó|o)|s[’']absten(?:en|ci(?:ó|o))?|vots?\s+en\s+blanc|absents?)\s*[,:]?\s*\d|(?:vots?\s+en\s+contra|abstencions?|s[’']abstenen|en\s+blanc)\s*[,:]/i;
+
+/**
+ * La taula de distribució de Barberà del Vallès, una fila per grup:
+ *
+ *   Nom del grup                      Vots i tipologia
+ *   Grup Municipal PSC-CP             7 vots a favor
+ *   Grup Municipal VOX                1 abstenció
+ *
+ * És el format més explícit del corpus —grup, xifra i sentit a la mateixa
+ * línia— i el que pitjor sortia: les etiquetes soltes en treien «tipologia
+ * PSC-CP» amb una abstenció, que barreja el títol de la columna amb el nom del
+ * grup i li penja un sentit que no és el seu.
+ */
+const TAULA_DE_GRUPS =
+  /(?:^|\n)[ \t]*(?:Grups?\s+[Mm]unicipals?|GRUPS?\s+MUNICIPALS?|GM)[ \t]+(\S[^\n]{1,60}?)[ \t]{2,}(\d+|[a-zà-úï·\-]+)[ \t]+(vots?\s+(?:a\s+)?favor|vots?\s+favorables?|vots?\s+en\s+contra|vots?\s+contraris?|abstenci(?:ó|ons)|vots?\s+en\s+blanc)[ \t]*(?=\n|$)/gi;
 
 /**
  * Prosa: «s'aprova amb 13 vots a favor (8 JUNTS, 3 ERC…), 4 vots en contra (4
@@ -711,7 +1074,7 @@ const ETIQUETA_ENMIG =
  * 100.000 habitants.
  */
 const PROSA_SENTIT =
-  /(\d+|[a-zà-úï·\-]+)\s+(?:vots?\s+)?(a\s+favor|en\s+contra|favorables?|contraris?|abstencions?|abstenci(?:ó|o)|en\s+blanc)\b[ \t]*:?[ \t]*((?:\([^)]{0,300}\))|(?:\s*(?:de(?:l|ls)?|d[’'])\s+[^.;\n]{0,220}))?/gi;
+  /(\d+|[a-zà-úï·\-]+)\s+(?:vots?\s+)?(a\s+favor|en\s+contra|favorables?|contraris?|abstencions?|abstenci(?:ó|o)|en\s+blanc)\b[ \t]*:?[ \t]*((?:\([^)]{0,300}\))|(?:\[[^\]]{0,300}\])|(?:\s*(?:de(?:l|ls)?|d[’'])\s+[^.;\n]{0,220}))?/gi;
 
 /**
  * Blanes i altres escriuen només els grups, sense cap xifra: «amb els vots a
@@ -719,7 +1082,16 @@ const PROSA_SENTIT =
  * ple dret, encara que no digui quants regidors són.
  */
 const PROSA_SENSE_XIFRA =
-  /(?:amb\s+)?(?:els?\s+)?(?:vots?\s+)?(a\s+favor|en\s+contra|l[’']abstenci(?:ó|o)|abstenci(?:ó|o)|el\s+vot\s+contrari)\s+(?:de(?:l|ls)?|d[’'])\s+([^.;\n]{2,220}?)(?=\s*(?:\.|;|\n|\s+i\s+amb\b|$))/gi;
+  /(?:amb\s+)?(?:els?\s+)?(?:vots?\s+)?(a\s+favor|en\s+contra|l[’']abstenci(?:ó|o)|abstenci(?:ó|o)|el\s+vot\s+contrari)\s+(?:de(?:l|ls)?|d[’'])\s+([^.;]{2,220}?)(?=\s*(?:\.|;|\n[ \t]*\n|,?\s*(?:i\s+)?amb\b|$))/gi;
+
+/**
+ * El recompte agregat d'esPublico Gestiona, en una sola línia i amb els quatre
+ * sentits: «A favor: 17, En contra: 2, Abstencions: 2, Absents: 0». Les
+ * etiquetes soltes només n'enganxaven la primera, perquè les altres tres no
+ * comencen línia; llegit sencer és el millor control de qualitat del corpus.
+ */
+const RECOMPTE_AGREGAT =
+  /A\s*favor\s*:\s*(\d+)\s*,\s*En\s*contra\s*:\s*(\d+)\s*,\s*Abstencions?\s*:\s*(\d+)(?:\s*,\s*Absents?\s*:\s*(\d+))?/i;
 
 const RESULTAT_APROVAT =
   /s[’']?apro(?:va|ven|vat|vada)|queda\s+aprova|és\s+aprovad|resta\s+aprovad|resulta\s+aprovad|ACORDA|acorda\b|s[’']?admet|es\s+ratifica|RATIFICA|\bFavorable\b/i;
@@ -795,6 +1167,37 @@ export function extreuVotacio(segment: string): Votacio | null {
   const perGrup: VotGrup[] = [];
   let patro = "cap";
 
+  // Vot nominal d'esPublico: el sentit va en una columna a la dreta i
+  // `pdftotext -layout` l'intercala enmig dels noms («…Juan Antonio  A favor
+  // Ramírez Rubio, …»). Del text pla no se'n pot treure qui vota què —a
+  // Vila-seca publicava «Ramírez Rubio» votant a favor i «Moya» en contra, dos
+  // cognoms partits pel mig— i **preferim no dir res**: el recompte agregat que
+  // ve just abans sí que és fiable i es llegeix igualment.
+  const nominalEnColumnes = /Tipus\s+de\s+votaci(?:ó|o)\s*:?\s*Nominal/i.test(zona);
+
+  // ── Lectura 0: la taula de distribució. Diu grup, xifra i sentit a la mateixa
+  // línia, així que quan hi és no cal endevinar res i mana sobre les altres
+  // lectures, que d'aquesta disposició en columnes només en treuen soroll.
+  TAULA_DE_GRUPS.lastIndex = 0;
+  const perTaula: VotGrup[] = [];
+  for (let t = TAULA_DE_GRUPS.exec(zona); t !== null; t = TAULA_DE_GRUPS.exec(zona)) {
+    const sentit = sentitDEtiqueta(t[3]!) ?? sentitDEtiqueta(`vots ${t[3]!}`);
+    const nom = netejaNomGrup(t[1]!);
+    const quants = aNombre(t[2]!);
+    if (!sentit || quants === null || !semblaGrup(nom)) continue;
+    if (perTaula.some((v) => v.grup === nom && v.sentit === sentit)) continue;
+    perTaula.push({ grup: nom, sentit, vots: quants });
+  }
+  const hiHaTaula = perTaula.length >= 1;
+  if (hiHaTaula) {
+    perGrup.push(...perTaula);
+    patro = "taula";
+    for (const sentit of ["favor", "contra", "abstencio", "blanc"] as const) {
+      const files = perTaula.filter((v) => v.sentit === sentit);
+      if (files.length > 0) recompte[sentit] = files.reduce((suma, v) => suma + (v.vots ?? 0), 0);
+    }
+  }
+
   // ── Lectura 1: blocs etiquetats. El format més net i el més freqüent.
   BLOC_ETIQUETA.lastIndex = 0;
   const marques: { sentit: SentitVot; xifra: number | null; enParentesi: boolean; fi: number }[] = [];
@@ -821,7 +1224,10 @@ export function extreuVotacio(segment: string): Votacio | null {
     // «9 (PSC-CP), 2 (ECP)…» (Rubí): el parèntesi seguit de coma vol dir que
     // som dins d'una llista i que la xifra és d'aquest grup; «11 (TSF i GS)»,
     // sense coma al darrere, és el total de la votació.
-    const llistaEntreParentesis = /^\(\s*[^)]{1,40}\)\s*[,;]/.test(cua.trimStart());
+    // Sense excloure-hi la coma, «12 vots a favor (ERC-AM, JxS-CM i IPS-CUP), 4
+    // vots en contra…» (Salt) es llegia com una llista de grups amb recompte i
+    // els tres partits acabaven desats com un de sol.
+    const llistaEntreParentesis = /^\(\s*[^),;]{1,40}\)\s*[,;]/.test(cua.trimStart());
     if (
       n !== null &&
       !marca.enParentesi &&
@@ -843,7 +1249,8 @@ export function extreuVotacio(segment: string): Votacio | null {
     }
     if (n === null && /^\s*(?:cap|ningú|ninguna|cap\.)/i.test(cua)) n = 0;
 
-    const files = cua.trim() ? separaGrups(cua) : [];
+    const desglossament = cua.trim() ? desglossaCua(cua) : { files: [], deduit: false };
+    let files = desglossament.files;
     // El total pot venir al final («… 4 ERC-AM (19)») o no venir gens, i llavors
     // el calculem sumant els grups. Sense total no es pot validar la suma, i
     // sense validar la suma no es detecta una extracció truncada.
@@ -854,11 +1261,32 @@ export function extreuVotacio(segment: string): Votacio | null {
         n = files.reduce((suma, f) => suma + (f.vots ?? 0), 0);
       }
     }
+    // Quan els vots no els diu l'acta sinó que els hem comptat —quants regidors
+    // s'enumeren— han de quadrar amb el total que sí que hi diu. Si no quadren
+    // ens hem menjat o ens hem inventat un nom, i llavors publiquem el grup i el
+    // sentit, que sabem segurs, però no la xifra.
+    if (desglossament.deduit && n !== null) {
+      const suma = files.reduce((total, f) => total + (f.vots ?? 0), 0);
+      if (suma !== n) files = files.map((f) => ({ grup: f.grup, vots: null }));
+    }
+    // Zero vots vol dir zero grups. Sembla obvi i no ho era: darrere d'un
+    // «Abstencions: 0» hi ha el text del punt següent, i el partidor n'agafava
+    // el que li semblés («Intervenció», «Comptabilitat») i ho publicava com un
+    // grup que s'hauria abstingut en una votació sense cap abstenció.
+    if (n === 0) files = [];
     if (n !== null && recompte[marca.sentit] === null) recompte[marca.sentit] = n;
-    if (files.length) afegeix(perGrup, marca.sentit, files);
+    if (files.length && !nominalEnColumnes && !hiHaTaula) afegeix(perGrup, marca.sentit, files);
   }
   const etiquetes = marques.length;
-  if (perGrup.length > 0) patro = "etiquetes";
+  if (perGrup.length > 0 && patro === "cap") patro = "etiquetes";
+
+  const agregat = hiHaTaula ? null : zona.match(RECOMPTE_AGREGAT);
+  if (agregat) {
+    recompte.favor = Number.parseInt(agregat[1]!, 10);
+    recompte.contra = Number.parseInt(agregat[2]!, 10);
+    recompte.abstencio = Number.parseInt(agregat[3]!, 10);
+    if (agregat[4] !== undefined) recompte.absent = Number.parseInt(agregat[4], 10);
+  }
 
   // ── Lectura 2: prosa amb recompte i grups entre parèntesis.
   if (perGrup.length === 0 || etiquetes < 2) {
@@ -869,20 +1297,24 @@ export function extreuVotacio(segment: string): Votacio | null {
       const sentit = sentitDEtiqueta(m[2]!) ?? sentitDEtiqueta(`vots ${m[2]!}`);
       if (!sentit) continue;
       if (recompte[sentit] === null) recompte[sentit] = n;
-      let cua = (m[3] ?? "").replace(/^\s*[\(]/, "").replace(/\)\s*$/, "");
+      let cua = (m[3] ?? "").replace(/^\s*[([]/, "").replace(/[)\]]\s*$/, "");
       // La prosa encadena sentits («…13 vots a favor del PSC i 1 abstenció de
       // VOX»): si no hi tallem, VOX queda registrat com a vot a favor.
       const talla = cua.search(ETIQUETA_ENMIG);
       if (talla > 0) cua = cua.slice(0, talla);
       const encadenat = cua.search(/\bi\s+(?:amb\s+)?\d+\s+(?:vots?|abstenci|en\s+blanc)/i);
       if (encadenat > 0) cua = cua.slice(0, encadenat);
-      if (cua.trim()) afegeix(perGrup, sentit, separaGrups(cua));
+      const altreSentit = cua.search(SENTIT_ENCADENAT);
+      if (altreSentit > 0) cua = cua.slice(0, altreSentit);
+      if (cua.trim() && !nominalEnColumnes && !hiHaTaula) afegeix(perGrup, sentit, separaGrups(cua));
     }
     if (perGrup.length > 0 && patro === "cap") patro = "prosa";
   }
 
-  // ── Lectura 3: prosa sense xifres, només noms de grup.
-  if (perGrup.length === 0) {
+  // ── Lectura 3: prosa sense xifres, només noms de grup. Serveix tant quan no
+  // hi ha hagut sort com quan l'acta encadena els sentits en una sola frase i
+  // les etiquetes només n'han enganxat el primer.
+  if (perGrup.length === 0 || etiquetes < 2) {
     PROSA_SENSE_XIFRA.lastIndex = 0;
     while ((m = PROSA_SENSE_XIFRA.exec(zona)) !== null) {
       const brut = m[1]!.toLowerCase();
@@ -891,7 +1323,16 @@ export function extreuVotacio(segment: string): Votacio | null {
         : brut.includes("abstenci")
           ? "abstencio"
           : "favor";
-      afegeix(perGrup, sentit, separaGrups(m[2]!));
+      let llista = m[2]!;
+      const encadenat = llista.search(SENTIT_ENCADENAT);
+      if (encadenat > 0) llista = llista.slice(0, encadenat);
+      // Un grup que ja consta amb un altre sentit no se sobreescriu: si les dues
+      // lectures no diuen el mateix, la que ha vist la xifra mana i aquesta
+      // calla. Val més quedar-nos curts que contradir-nos.
+      const files = separaGrups(llista).filter(
+        (f) => !perGrup.some((v) => v.grup === f.grup && v.sentit !== sentit),
+      );
+      if (!nominalEnColumnes && !hiHaTaula) afegeix(perGrup, sentit, files);
     }
     if (perGrup.length > 0) patro = "prosa-sense-xifra";
   }
@@ -915,7 +1356,11 @@ export function extreuVotacio(segment: string): Votacio | null {
     resultat = "rebutjat";
   }
 
-  if (resultat === "desconegut" && perGrup.length === 0 && !unanimitat) return null;
+  const hiHaRecompte = Object.values(recompte).some((n) => n !== null);
+  // Un recompte llegit ja és una votació encara que la narració no digui com
+  // acaba: «Vots a favor: 21. Vots en contra: cap» és informació, i abans es
+  // llençava sencera perquè el text no contenia cap fórmula d'aprovació.
+  if (resultat === "desconegut" && perGrup.length === 0 && !unanimitat && !hiHaRecompte) return null;
   if (patro === "cap") patro = unanimitat ? "unanimitat" : "resultat-global";
 
   return { resultat, unanimitat, recompte, perGrup, cita: citaDe(zona.slice(0, 900)), patro };

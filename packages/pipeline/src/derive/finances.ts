@@ -114,17 +114,28 @@ export function computeIndicators(row: typeof municipalFinances.$inferSelect): I
  * quina direcció és millor. Codificat a mà i no deduït del signe: al deute,
  * menys és millor; a l'estalvi, més. Confondre-ho seria pitjor que no comparar.
  */
+/**
+ * Els quatre indicadors que es comparen amb el grup.
+ *
+ * N'hi havia vuit, i quatre eren repeticions. Sobre els 947 municipis, el deute
+ * per habitant i el deute sobre ingressos corrents correlacionen a 0,98: són la
+ * mateixa barra dues vegades. L'estalvi brut i el net, a 0,86. La conseqüència
+ * no era només soroll: un municipi endeutat cobrava tres barres vermelles pel
+ * mateix fet i el comptador de «va endarrerit en N indicadors» sortia inflat
+ * —a 209 dels 947, els tres indicadors de deute donaven el mateix veredicte
+ * extrem alhora.
+ *
+ * Es queden els quatre que diuen coses diferents: l'estalvi net (que és el que
+ * té conseqüència legal, perquè si és negatiu obliga a un pla de sanejament),
+ * el deute per habitant, l'execució d'inversions i els dies per pagar —aquests
+ * dos últims són els únics genuïnament independents de la resta.
+ */
 const PEER_INDICATORS: ReadonlyArray<{ key: string; lowerIsBetter: boolean }> = [
   { key: "estalvi-net", lowerIsBetter: false },
-  { key: "estalvi-brut", lowerIsBetter: false },
   { key: "deute-habitant", lowerIsBetter: true },
-  { key: "deute-ingressos", lowerIsBetter: true },
-  { key: "saldo-no-financer", lowerIsBetter: false },
-  { key: "carrega-financera", lowerIsBetter: true },
   { key: "execucio-inversions", lowerIsBetter: false },
   { key: "pmp", lowerIsBetter: true },
 ];
-
 /** Per sota d'aquest nombre de companys, un percentil promet una precisió que no hi és. */
 const MIN_FOR_PERCENTILE = 30;
 

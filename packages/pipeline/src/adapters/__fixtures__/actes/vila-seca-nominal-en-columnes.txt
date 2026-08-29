@@ -1,0 +1,10 @@
+Tipus de votació: Nominal
+Desfavorable
+A favor: 6, En contra: 15, Abstencions: 0, Absents: 0
+Josep Forasté Casas, Anabel Margalef Alpert, Juan Antonio        A favor
+Ramírez Rubio, Miguel Ángel Hidalgo Gutiérrez, Francesc
+Benaiges Oriol, Federico Modia Pérez
+Cristina Carlota Cid Salavert, David Melero Domènech, David      En contra
+Rodríguez Vergara, Elisabet Torrademe Pascual, Jordi Trillo
+Toro, Josep Toquero Pujals, Lucia Teruel Carrillo, Manuela
+Moya Moya

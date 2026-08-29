@@ -375,3 +375,200 @@ describe("errors que publicarien un vot fals", () => {
     expect(extreuVotacio(zona)?.unanimitat).toBe(true);
   });
 });
+
+/**
+ * Cada cas d'aquest bloc surt d'una acta on l'extractor **publicava un vot que
+ * no s'havia produït**, o on el nom del grup sortia tan brut que no hi havia
+ * manera d'encaixar-lo amb cap sigla. Un vot mal atribuït és pitjor que un vot
+ * que no s'extreu: acusa un partit d'haver votat el que no ha votat.
+ */
+describe("vot per grup: els patrons que abans s'atribuïen malament", () => {
+  it("treu «Dels grups del…» del nom del grup (Ripollet)", () => {
+    // El grup es desava com a «grups del PSC-CP», que no és cap sigla coneguda:
+    // vot correcte, però inservible perquè no lliga amb cap marca.
+    const votacio = extreuVotacio(fixture("ripollet-dels-grups.txt"))!;
+    expect(votacio.perGrup).toContainEqual({ grup: "PSC-CP", sentit: "favor", vots: null });
+    expect(votacio.perGrup).toContainEqual({ grup: "ERC-AM", sentit: "favor", vots: null });
+    expect(votacio.perGrup).toContainEqual({ grup: "ADR", sentit: "abstencio", vots: null });
+    expect(votacio.perGrup).toContainEqual({ grup: "PP", sentit: "abstencio", vots: null });
+    expect(votacio.recompte.favor).toBe(12);
+    expect(votacio.recompte.abstencio).toBe(9);
+  });
+
+  it("no confon una adjudicació «a favor de l'empresa X» amb un vot (Ripollet)", () => {
+    // «A favor de» hi vol dir «en benefici de». L'extractor publicava
+    // l'empresa adjudicatària com si hagués votat a favor de la proposta.
+    const votacio = extreuVotacio(fixture("ripollet-adjudicacio-a-favor.txt"))!;
+    expect(votacio.perGrup).toEqual([]);
+    expect(votacio.recompte.favor).toBe(21);
+  });
+
+  it("llegeix la crida nominal agrupada i no publica els regidors com a grups (Cornellà)", () => {
+    // Abans: CECP-C bé, i tot seguit vint noms de persona amb el mateix sentit
+    // de vot, amb el grup següent enganxat al final d'un nom
+    // («Maria Victoria Martin Herreros. d'ERC-EUiA-AM»). El PSC-CP, que és el
+    // grup més gran, es perdia sencer.
+    const votacio = extreuVotacio(fixture("cornella-nominal-per-grup.txt"))!;
+    expect(votacio.perGrup).toEqual([
+      { grup: "CECP-C", sentit: "favor", vots: 3 },
+      { grup: "PSC-CP", sentit: "favor", vots: 12 },
+      { grup: "PP", sentit: "contra", vots: 3 },
+      { grup: "VOX", sentit: "abstencio", vots: 2 },
+    ]);
+  });
+
+  it("compta els regidors de cada grup i quadra amb el total declarat (el Prat)", () => {
+    // «S'abstenen: 3» és una etiqueta de vot, i sense reconèixer-la el bloc
+    // quedava penjat del sentit anterior. El recompte de cada grup surt de
+    // quants regidors s'enumeren i ha de sumar el total que diu l'acta.
+    const votacio = extreuVotacio(fixture("prat-nominal-per-grup.txt"))!;
+    const favor = votacio.perGrup.filter((v) => v.sentit === "favor");
+    expect(favor.reduce((s, v) => s + (v.vots ?? 0), 0)).toBe(votacio.recompte.favor);
+    expect(votacio.perGrup).toContainEqual({ grup: "Prat en Comú", sentit: "favor", vots: 9 });
+    expect(votacio.perGrup).toContainEqual({
+      grup: "Socialista-Candidatura de Progrés", sentit: "favor", vots: 4,
+    });
+    // «JORDI IBERN i TORTOSA» és una persona, no dues: la «i» que uneix dos
+    // cognoms no separa regidors.
+    expect(votacio.perGrup).toContainEqual({
+      grup: "Esquerra Republicana de Catalunya-Acord Municipal", sentit: "abstencio", vots: 3,
+    });
+    expect(votacio.recompte.abstencio).toBe(3);
+  });
+
+  it("compta les sigles d'una crida nominal per regidor (Vic)", () => {
+    // Abans, el total de la votació s'assignava al primer grup: «JxVIC, 13
+    // vots». Aquí es compta quants regidors porta cada sigla.
+    const votacio = extreuVotacio(fixture("vic-nominal-amb-sigla.txt"))!;
+    expect(votacio.perGrup).toEqual([
+      { grup: "JxVIC", sentit: "favor", vots: 8 },
+      { grup: "ARA VIC-PL", sentit: "favor", vots: 2 },
+      { grup: "SOMI", sentit: "favor", vots: 2 },
+      { grup: "VECP", sentit: "favor", vots: 1 },
+      { grup: "ERC-AM", sentit: "abstencio", vots: 3 },
+      { grup: "CUP VIC", sentit: "abstencio", vots: 3 },
+      { grup: "PSC-CP", sentit: "abstencio", vots: 2 },
+    ]);
+    expect(votacio.recompte.favor).toBe(13);
+    expect(votacio.recompte.abstencio).toBe(8);
+  });
+
+  it("obre els claudàtors que tanquen la llista de grups (Santa Coloma)", () => {
+    // El pitjor error mesurat: ERC i PP constaven votant **a favor** d'un punt
+    // que havien votat en contra, perquè «[ERC i PP]» no s'obria i el sentit
+    // anterior se'l quedava.
+    const votacio = extreuVotacio(fixture("santa-coloma-claudators.txt"))!;
+    expect(votacio.perGrup).toContainEqual({ grup: "PSC", sentit: "favor", vots: null });
+    expect(votacio.perGrup).toContainEqual({ grup: "ERC", sentit: "contra", vots: null });
+    expect(votacio.perGrup).toContainEqual({ grup: "PP", sentit: "contra", vots: null });
+    expect(votacio.perGrup).toContainEqual({ grup: "VOX", sentit: "abstencio", vots: null });
+    expect(votacio.perGrup.some((v) => v.grup.includes("["))).toBe(false);
+  });
+
+  it("llegeix la taula de distribució, grup i sentit a la mateixa línia (Barberà)", () => {
+    const votacio = extreuVotacio(fixture("barbera-taula.txt"))!;
+    expect(votacio.patro).toBe("taula");
+    expect(votacio.perGrup).toContainEqual({ grup: "PSC-CP", sentit: "favor", vots: 7 });
+    expect(votacio.perGrup).toContainEqual({ grup: "VOX", sentit: "abstencio", vots: 1 });
+    expect(votacio.recompte.favor).toBe(20);
+    expect(votacio.recompte.abstencio).toBe(1);
+    // El títol de la columna no és un grup.
+    expect(votacio.perGrup.some((v) => v.grup.includes("tipologia"))).toBe(false);
+  });
+
+  it("no talla la frase pel mig quan l'acta encadena dos sentits (Sant Just)", () => {
+    // «…a favor de PSC, SJECP-C, ERC, PP i CUP-AMUNT, amb l'abstenció de la
+    // resta … d'ENDAVANT SJ, JUNTSxCAT i VOX»: els tres que s'abstenien
+    // constaven votant a favor.
+    const votacio = extreuVotacio(fixture("sant-just-sentits-encadenats.txt"))!;
+    expect(votacio.perGrup.filter((v) => v.sentit === "favor").map((v) => v.grup)).toEqual([
+      "PSC", "SJECP-C", "ERC", "PP", "CUP-AMUNT",
+    ]);
+    expect(votacio.perGrup.filter((v) => v.sentit === "abstencio").map((v) => v.grup)).toEqual([
+      "ENDAVANT SJ", "JUNTSxCAT", "VOX",
+    ]);
+  });
+});
+
+/**
+ * L'altra meitat de la feina: saber callar. Quan la redacció no permet dir
+ * quin grup ha votat què, l'extractor no ha de dir res. Un buit es pot omplir
+ * després; una atribució falsa ja s'ha publicat.
+ */
+describe("vot per grup: quan val més no dir res", () => {
+  it("no reparteix el vot nominal en columnes d'esPublico (Vila-seca)", () => {
+    // El sentit va en una columna a la dreta i `pdftotext -layout` l'insereix
+    // enmig dels noms: publicava «Ramírez Rubio» votant a favor i «Moya» en
+    // contra, dos cognoms partits pel mig. El recompte agregat sí que es llegeix.
+    const votacio = extreuVotacio(fixture("vila-seca-nominal-en-columnes.txt"))!;
+    expect(votacio.perGrup).toEqual([]);
+    expect(votacio.recompte).toMatchObject({ favor: 6, contra: 15, abstencio: 0, absent: 0 });
+    expect(votacio.resultat).toBe("rebutjat");
+  });
+
+  it("no treu res d'una crida nominal per cognoms sense grup (Mollet)", () => {
+    // Vint-i-quatre cognoms i cap sigla: no hi ha manera de saber de quin grup
+    // és cadascú sense la taula d'assistents, i inventar-s'ho seria pitjor.
+    expect(extreuVotacio(fixture("mollet-crida-per-cognoms.txt"))).toBeNull();
+  });
+
+  it("no accepta com a grup el que no ho és", () => {
+    for (const fals of [
+      "l’empresa FEU I GODOY",     // adjudicatària d'un contracte
+      "la societat municipal",
+      "Junta de Govern Local",
+      "CIF núm. P0800258F",
+      "***** URGÈNCIA",
+      "S'abstenen",
+      "Absents",
+      "Compres",                    // nom d'una regidoria
+      "Gavara",                     // cognom d'un regidor
+      "Olària. Total",              // cognom amb la frase següent enganxada
+      "ERC-AM, JxS-CM i IPS-CUP",   // tres grups en un
+      "Jav",                        // nom de pila tallat per un salt de línia
+      "C O ERC-AM",                 // lletres òrfenes del marge de signatura
+    ]) {
+      expect(semblaGrup(fals), fals).toBe(false);
+    }
+  });
+
+  it("continua acceptant les sigles reals, també les de caixa mixta", () => {
+    for (const bo of ["Vox", "Junts", "Guanyem", "GRUP BLANES", "JxVIC", "TxB – ARA PL", "SGdP"]) {
+      expect(semblaGrup(bo), bo).toBe(true);
+    }
+  });
+});
+
+describe("noms de grup escrits a trossos", () => {
+  it("torna a ajuntar la sigla que el salt de línia ha partit pel guionet", () => {
+    // «ARA VIC-\n   PL» i «ARA VIC-PL» han de ser el mateix grup, o el mateix
+    // partit surt dues vegades a la fitxa amb la meitat dels vots cadascuna.
+    expect(separaGrups("3 ARA VIC- PL i 2 SF- ECP")).toEqual([
+      { grup: "ARA VIC-PL", vots: 3 },
+      { grup: "SF-ECP", vots: 2 },
+    ]);
+  });
+
+  it("no es menja el «GRUP» que forma part del nom (Blanes)", () => {
+    // A Blanes hi ha un partit que es diu literalment «GRUP BLANES»; el
+    // farciment «dels grups municipals de» sí que s'ha de treure.
+    expect(separaGrups("PSC, GRUP BLANES i la CUP")).toEqual([
+      { grup: "PSC", vots: null },
+      { grup: "GRUP BLANES", vots: null },
+      { grup: "CUP", vots: null },
+    ]);
+    expect(separaGrups("dels grups municipals de PSC-CP, ADR i ERC-AM")).toEqual([
+      { grup: "PSC-CP", vots: null },
+      { grup: "ADR", vots: null },
+      { grup: "ERC-AM", vots: null },
+    ]);
+  });
+
+  it("llegeix la xifra enganxada al nom, «1VOX» (el Vendrell)", () => {
+    expect(separaGrups("1VOX, 1 Primer El Vendrell i 1 Fem Vendrell")).toEqual([
+      { grup: "VOX", vots: 1 },
+      { grup: "Primer El Vendrell", vots: 1 },
+      { grup: "Fem Vendrell", vots: 1 },
+    ]);
+  });
+});

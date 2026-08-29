@@ -193,6 +193,46 @@ export type Comparacio = {
  * percentil calculat sobre 14 municipis d'un grup de 300 s'ha de poder llegir
  * amb la desconfiança que mereix.
  */
+/**
+ * Com ha canviat el grup durant el mateix període.
+ *
+ * És la xifra que converteix una variació en un judici. Que la recollida
+ * selectiva d'un poble hagi pujat cinc punts sona bé fins que saps que als
+ * municipis de la seva mida ha pujat deu: llavors el poble no ha millorat, s'ha
+ * quedat enrere. I al revés: baixar un punt quan tot el grup en baixa quatre és
+ * aguantar.
+ *
+ * Es fa amb la mediana de les variacions dels municipis del grup que tenen les
+ * dues puntes de la sèrie. Els que només en tenen una no hi entren: una
+ * variació a mitges no és una variació.
+ */
+function variacioDelGrup(
+  variacions: ReadonlyMap<number, { diferencia: number; percentual: number | null }>,
+  grups: ReadonlyMap<number, PeerGroup>,
+): Map<number, { diferencia: number | null; percentual: number | null; municipis: number }> {
+  const perGrup = new Map<string, { dif: number[]; pct: number[] }>();
+  for (const [id, v] of variacions) {
+    const grup = grups.get(id);
+    if (!grup) continue;
+    const acumulat = perGrup.get(grup.key) ?? { dif: [], pct: [] };
+    acumulat.dif.push(v.diferencia);
+    if (v.percentual !== null) acumulat.pct.push(v.percentual);
+    perGrup.set(grup.key, acumulat);
+  }
+  const sortida = new Map<number, { diferencia: number | null; percentual: number | null; municipis: number }>();
+  for (const [id] of variacions) {
+    const grup = grups.get(id);
+    if (!grup) continue;
+    const acumulat = perGrup.get(grup.key)!;
+    sortida.set(id, {
+      diferencia: arrodoneix(medianOf(acumulat.dif) ?? 0, 2),
+      percentual: acumulat.pct.length > 0 ? arrodoneix(medianOf(acumulat.pct) ?? 0, 1) : null,
+      municipis: acumulat.dif.length,
+    });
+  }
+  return sortida;
+}
+
 function comparaDinsDelGrup(
   valors: ReadonlyMap<number, number>,
   grups: ReadonlyMap<number, PeerGroup>,
@@ -347,6 +387,14 @@ export async function j9HabitatgeResidus(db: Db): Promise<void> {
     }
     const comparacions = comparaDinsDelGrup(preusDarrerAny, grups);
 
+    // Les variacions de mandat de tothom, per poder dir com ha anat el grup.
+    const mandats = new Map<number, { diferencia: number; percentual: number | null }>();
+    for (const [id, serie] of series) {
+      const v = variacioEntre(serie.map((p) => ({ any: p.any, valor: p.preu })), MANDAT, darrerAny);
+      if (v) mandats.set(id, { diferencia: v.diferencia, percentual: v.percentual });
+    }
+    const mandatsDelGrup = variacioDelGrup(mandats, grups);
+
     let ambMandat = 0;
     for (const [municipalityId, serie] of series) {
       const punts: PuntSerie[] = serie.map((p) => ({ any: p.any, valor: p.preu }));
@@ -365,6 +413,7 @@ export async function j9HabitatgeResidus(db: Db): Promise<void> {
         contractes: serie.find((p) => p.any === darrerAny)?.contractes ?? null,
         mandat,
         mandatAnterior: variacioEntre(punts, MANDAT_ANTERIOR, MANDAT),
+        mandatDelGrup: mandatsDelGrup.get(municipalityId) ?? null,
         comparacio: comparacions.get(municipalityId) ?? null,
       });
       run.rowsOut += 1;
@@ -469,6 +518,25 @@ export async function j9HabitatgeResidus(db: Db): Promise<void> {
     }
     const comparacions = comparaDinsDelGrup(taxesDarrerAny, grups);
 
+    /**
+     * Com ha canviat la recollida selectiva al grup, durant el mateix mandat.
+     *
+     * És la xifra que converteix una variació en un judici. Que la selectiva
+     * hagi pujat cinc punts sona bé fins que saps que als municipis de la seva
+     * mida ha pujat deu: llavors el poble no ha millorat, s'ha quedat enrere. I
+     * al revés, aguantar mentre tothom baixa és una notícia.
+     */
+    const mandatsResidus = new Map<number, { diferencia: number; percentual: number | null }>();
+    for (const [id, punts] of series) {
+      const v = variacioEntre(
+        punts.map((p) => ({ any: p.any, valor: p.taxa ?? 0 })),
+        MANDAT,
+        darrerAny,
+      );
+      if (v) mandatsResidus.set(id, { diferencia: v.diferencia, percentual: v.percentual });
+    }
+    const mandatsResidusGrup = variacioDelGrup(mandatsResidus, grups);
+
     let ambMandat = 0;
     for (const [municipalityId, punts] of series) {
       const serie: PuntSerie[] = punts.map((p) => ({ any: p.any, valor: p.taxa }));
@@ -500,6 +568,7 @@ export async function j9HabitatgeResidus(db: Db): Promise<void> {
           kgHabAnySelectiva: p.kgHabAnySelectiva,
         })),
         taxaSelectiva: ultim?.taxa ?? null,
+        mandatDelGrup: mandatsResidusGrup.get(municipalityId) ?? null,
         kgHabAny: ultim?.kgHabAny ?? null,
         tonesGenerades: ultim?.generacio ?? null,
         fraccions: fraccions

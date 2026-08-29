@@ -1,0 +1,178 @@
+{
+ "fitxes": {
+  "p": "id=081878",
+  "gg": {
+   "g": [
+    {
+     "tt": {
+      "t": {
+       "ff": {
+        "f": [
+         {
+          "r": "2025",
+          "c": "Superfície",
+          "u": "km²",
+          "v": "37.79,583.13,32107.98",
+          "calt": "Superfície",
+          "id": "f271",
+          "updated": "2025-05-07T10:00:00+00:00"
+         }
+        ]
+       },
+       "c": "Indicadors geogràfics",
+       "id": "t176",
+       "l": "https://www.idescat.cat/pub/?id=inddt&n=396&geo=mun:081878"
+      }
+     },
+     "c": "Territori",
+     "id": "g173"
+    },
+    {
+     "tt": {
+      "t": [
+       {
+        "ff": {
+         "f": [
+          {
+           "c": "Homes",
+           "v": "109371,476151,4006834",
+           "calt": "Homes",
+           "id": "f318"
+          }
+         ]
+        },
+        "r": "2025",
+        "c": "Població. Per sexe",
+        "s": "Idescat, a partir del Cens de població anual de l'INE.",
+        "calt": "Sexe",
+        "id": "t195",
+        "l": "https://www.idescat.cat/pub/?id=censph&n=538&geo=mun:081878",
+        "updated": "2026-02-25T11:00:00+00:00"
+       },
+       {
+        "ff": {
+         "f": [
+          {
+           "c": "De 0 a 14 anys",
+           "v": "31500,139084,1079859",
+           "calt": "Població de 0 a 14 anys",
+           "id": "f167"
+          }
+         ]
+        },
+        "r": "2025",
+        "c": "Població. Per grups d'edat",
+        "s": "Idescat, a partir del Cens de població anual de l'INE.",
+        "calt": "Grups d'edat",
+        "id": "t25",
+        "l": "https://www.idescat.cat/pub/?id=censph&n=539&geo=mun:081878",
+        "updated": "2026-02-25T11:00:00+00:00"
+       },
+       {
+        "ff": {
+         "f": [
+          {
+           "c": "Catalunya",
+           "v": "144577,643041,4987842",
+           "calt": "Població nascuda a Catalunya",
+           "id": "f69"
+          }
+         ]
+        },
+        "r": "2025",
+        "c": "Població. Per lloc de naixement",
+        "s": "Idescat, a partir del Cens de població anual de l'INE.",
+        "calt": "Lloc de naixement",
+        "id": "t68",
+        "l": "https://www.idescat.cat/pub/?id=censph&n=293&geo=mun:081878",
+        "updated": "2026-02-25T11:00:00+00:00"
+       },
+       {
+        "ff": {
+         "f": [
+          {
+           "c": "Espanyola",
+           "v": "190527,841642,6601307",
+           "calt": "Població amb nacionalitat espanyola",
+           "id": "f183"
+          }
+         ]
+        },
+        "r": "2025",
+        "c": "Població. Per nacionalitat",
+        "s": "Idescat, a partir del Cens de població anual de l'INE.",
+        "calt": "Nacionalitat",
+        "id": "t75",
+        "l": "https://www.idescat.cat/pub/?id=censph&n=479&geo=mun:081878",
+        "updated": "2026-02-25T11:00:00+00:00"
+       },
+       {
+        "ff": {
+         "f": [
+          {
+           "c": "Homes",
+           "v": "4332,15017,218308",
+           "calt": "Homes residents a l'estranger",
+           "id": "f334"
+          }
+         ]
+        },
+        "r": "2026",
+        "c": "Població resident a l'estranger a 1 de gener. Per sexe",
+        "s": "Idescat, a partir del Padró d'espanyols residents a l'estranger de l'INE.",
+        "calt": "Població resident a l'estranger",
+        "id": "t197",
+        "l": "https://www.idescat.cat/pub/?id=phre&n=3697&geo=mun:081878",
+        "updated": "2026-04-22T10:00:00+00:00"
+       },
+       {
+        "ff": {
+         "f": [
+          {
+           "r": "2025 (p)",
+           "c": "Taxa bruta de natalitat",
+           "v": "7.37,6.80,6.65",
+           "calt": "Taxa bruta de natalitat",
+           "id": "f330",
+           "updated": "2026-07-16T10:00:00+00:00"
+          }
+         ]
+        },
+        "c": "Creixement de la població",
+        "s": "Idescat. Indicadors demogràfics.",
+        "u": "taxa bruta per 1.000 habitants",
+        "calt": "Creixement de la població",
+        "id": "t52",
+        "l": "https://www.idescat.cat/pub/?id=inddt&geo=mun:081878"
+       }
+      ]
+     },
+     "c": "Població",
+     "id": "g168"
+    }
+   ]
+  },
+  "lang": "ca",
+  "version": "1.00",
+  "cols": {
+   "col": [
+    {
+     "scheme": "mun",
+     "id": "081878",
+     "content": "Sabadell"
+    },
+    {
+     "scheme": "com",
+     "id": "40",
+     "content": "Vallès Occidental"
+    },
+    {
+     "scheme": "ca",
+     "id": "09",
+     "content": "Catalunya"
+    }
+   ]
+  },
+  "o": "dades"
+ }
+}
