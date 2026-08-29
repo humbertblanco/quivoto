@@ -10,6 +10,7 @@ import { j8Diners } from "./jobs/j8-diners";
 import { j9HabitatgeResidus } from "./jobs/j9-habitatge-residus";
 import { j10Activitat } from "./jobs/j10-activitat";
 import { j11Fotos } from "./jobs/j11-fotos";
+import { j12Actes } from "./jobs/j12-actes";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
 import { deriveFinances } from "./derive/finances";
@@ -30,6 +31,7 @@ const COMMANDS = {
   j9: j9HabitatgeResidus,
   j10: j10Activitat,
   j11: j11Fotos,
+  j12: j12Actes,
   derive: deriveMetrics,
   alcaldies: deriveMayorChanges,
   comptes: deriveFinances,

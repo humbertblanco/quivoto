@@ -1,0 +1,240 @@
+{
+  "municipi": "Sant Just Desvern",
+  "codi_ens": "0822120002",
+  "ine5": "08221",
+  "mandat": "2023-2027",
+  "govern": "PSC-CP (8 regidories) amb Sant Just En Comú Podem (1): 9 de 17, majoria absoluta justa",
+  "afirmacions": [
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de suprimir la part variable de la taxa d'escombraries lligada a l'ús del contenidor d'orgànica.",
+      "context": "Sant Just cobra la taxa de residus en dos trossos: una part bàsica per habitatge (96 € el 2026) i una part variable que depèn de quants dies s'obre el contenidor d'orgànica: 0 € a partir de 48 aportacions anuals, 42 € entre 10 i 48 i 110 € per sota de 10, amb exempció per a qui fa autocompostatge. El municipi ja recicla el 65,7% (percentil 97 dels 46 municipis catalans de 20.001 a 50.000 habitants), i el govern ha acabat no cobrant la part variable del 2025.",
+      "evidencia": "Ordenança fiscal núm. 28, reguladora de la taxa per la prestació del servei de gestió de residus municipals, aprovada provisionalment per al 2026 al Ple del 30 d'octubre de 2025: «La quota tributària estarà integrada per una part bàsica més una part variable que es determinarà en funció de la quantitat i tipus de residus generats». Aprovada amb 9 vots a favor (PSC i SJECP-C), l'abstenció del PP i el vot en contra d'ENDAVANT SJ, JUNTSxCAT, ERC, CUP-AMUNT i VOX.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/a45d8640-0a27-4134-b2e3-7de5aa4a0c16/20251030%20ACTA.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El govern (PSC+SJECP-C) va crear i defensa la part variable; tota la resta del ple va votar en contra de les ordenances fiscals del 2026 excepte el PP, que s'hi va abstenir. JUNTSxCAT ha dit públicament que prefereix «bonificar i no penalitzar aquell que no recicla»."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de demanar nous préstecs per construir els equipaments pendents del poble.",
+      "context": "El deute de Sant Just ha caigut de 356 € per habitant el 2020 a 23 € el 2025, dels més baixos del seu grup de mida (percentil 18). Tot i això, el 2023 la liquidació va donar estalvi net negatiu i el ple va haver d'aprovar un pla de sanejament financer 2024-2027. El pressupost del 2026 preveu 4.000.000 € de passius financers, és a dir, tornar-se a endeutar, amb 5,2 milions d'inversió.",
+      "evidencia": "Pressupost general per al 2026 aprovat inicialment el 30 d'octubre de 2025: estat d'ingressos, «Capítol 9. Passius financers 4.000.000,00 €», sobre un total de 37.401.700 €. Aprovat amb 9 vots a favor (PSC i SJECP-C) i el vot en contra de tota la resta de grups. Pla de sanejament financer 2024/2027 aprovat al Ple del 24 d'octubre de 2024 perquè «de la liquidació del pressupost municipal de l'exercici 2023 es presenta un estalvi net negatiu».",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/a45d8640-0a27-4134-b2e3-7de5aa4a0c16/20251030%20ACTA.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El govern pressuposta endeutament nou; ENDAVANT SJ, JUNTSxCAT, ERC, CUP-AMUNT, PP i VOX van votar en contra del pressupost que el conté."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de rebaixar el coeficient de l'impost d'activitats econòmiques que paguen les empreses del municipi.",
+      "context": "Sant Just té dos polígons i dos parcs d'oficines (Sant Just Diagonal, el Pla) i aplica a l'IAE un coeficient màxim de 3,8, quan la mediana catalana és 1,5. L'impost d'activitats econòmiques hi recapta 68 € per habitant, un 189% per sobre de la mediana catalana, i la plusvàlua, un 201% per sobre. És, de llarg, el municipi de la comarca amb la fiscalitat empresarial més alta en relació amb la seva mida.",
+      "evidencia": "Tipus impositius declarats per l'Ajuntament per al 2025 (dataset AOC 82ae0ea2): IAE, coeficient màxim 3,8 (mediana catalana 1,5); IBI urbà 0,73%. Recaptació per habitant del 2025, Generalitat (ytva-5kp3): activitats econòmiques 68 €/habitant.",
+      "url_evidencia": "https://dadesobertes.seu-e.cat/",
+      "posicio_govern": "desacord",
+      "discrimina": "El govern manté el coeficient al màxim legal i el revisa cada any a l'alça amb les ordenances fiscals; VOX va portar al ple del 27 de març de 2024 una moció per suprimir el tribut metropolità i el PP s'hi va abstenir, mentre PSC, SJECP-C, ENDAVANT SJ, ERC i CUP-AMUNT hi votaven en contra."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'IBI ha de pujar més per a les oficines i els comerços grans que per als habitatges.",
+      "context": "L'IBI és la principal font d'ingressos del poble: 553 € per habitant, un 59% per sobre de la mediana catalana, amb un cadastre revisat per última vegada el 1996. Per al 2026 el tipus general puja a 0,752% i l'ordenança manté tipus diferenciats més alts per a certs usos (oficines, comercial, industrial) a partir d'un valor cadastral mínim.",
+      "evidencia": "Ordenança fiscal reguladora de l'IBI per al 2026, aprovada provisionalment el 30 d'octubre de 2025: «El tipus de gravamen serà el següent quan es tracti de béns urbans, 0,752% en general, exceptuant els tipus diferenciats que s'assenyalen en la taula annexa […] es determina el valor cadastral mínim, per a cadascun dels usos, a partir del qual seran d'aplicació els tipus incrementats».",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/a45d8640-0a27-4134-b2e3-7de5aa4a0c16/20251030%20ACTA.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El govern aplica i amplia els tipus diferenciats per usos; el PP s'hi absté i VOX, JUNTSxCAT i ENDAVANT SJ hi voten en contra en el paquet d'ordenances."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de comprar pisos exercint el dret de tanteig i retracte per ampliar el parc públic de lloguer.",
+      "context": "El lloguer mitjà a Sant Just és de 1.477 € al mes (2025), el percentil 99 dels 46 municipis catalans de la seva mida, on la mediana és de 719 €. El 2025 el ple va constatar que els 30 pisos protegits del carrer Carolina Catasús, 3, amb protecció de només 30 anys, canviaven de mans cap a una societat del grup InmoCaixa que no volia continuar llogant-los.",
+      "evidencia": "Moció d'ERC, CUP-AMUNT i Sant Just En Comú «en defensa de les veïnes i veïns de Sant Just Desvern davant INMOCAIXA», Ple del 29 de juliol de 2025, acord tercer: «Instar a l'Ajuntament de Sant Just Desvern a exercir el dret de tanteig i retracte, directament o mitjançant l'ens competent, en qualsevol procés de transmissió d'aquests habitatges». Aprovada amb 11 vots a favor (PSC, SJECP-C, ERC i CUP-AMUNT), abstenció d'ENDAVANT SJ, JUNTSxCAT i PP i el vot en contra de VOX.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/fcd276d9-df9f-4e9f-9548-816730a817b6/20250729%20ACTA.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "PSC, SJECP-C, ERC i CUP-AMUNT hi són a favor; VOX hi és en contra i ENDAVANT SJ, JUNTSxCAT i PP s'hi van abstenir."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de pagar un ajut mensual per al lloguer als joves empadronats amb ingressos baixos.",
+      "context": "Amb el lloguer mitjà a 1.477 € i només 299 contractes nous signats el 2025 (n'eren 447 el 2023), el ple va debatre l'abril del 2024 una proposta d'ajuts municipals directes al lloguer: 250 € al mes el primer any per a menors de 35 anys amb ingressos per sota de dotze mensualitats del salari mínim, i 200 € per a la resta de trams.",
+      "evidencia": "Moció del grup municipal del PP d'ajudes al lloguer, Ple del 25 d'abril de 2024: «Per a joves de fins a 35 anys. Les ajudes serien de 250 € mensuals durant el primer any de lloguer, 200 € per al segon any i 50 € per a la resta de la durabilitat contractual». Aprovada amb 12 vots a favor (PSC, ENDAVANT SJ, PP i VOX) i l'abstenció de JUNTSxCAT, ERC i CUP-AMUNT.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2024/3daed0bb-27b6-478c-9b42-325249cf5064/SEC-2024-85-16.pdf.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El PSC va votar a favor dels ajuts directes al lloguer amb el PP, ENDAVANT SJ i VOX; JUNTSxCAT, ERC i CUP-AMUNT s'hi van abstenir perquè consideren que subvencionar la demanda encareix el preu."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha d'exigir més de tres anys d'empadronament per adjudicar els habitatges de lloguer protegit.",
+      "context": "El juny del 2026 el ple va aprovar les bases d'adjudicació d'uns 150 pisos de lloguer protegit a la carretera Reial, fets amb col·laboració público-privada. Les bases demanen tres anys d'empadronament o cinc anys treballant al municipi. És el primer gran paquet d'habitatge protegit del mandat, dins de les tres promocions que han de sumar fins a 220 pisos de lloguer assequible.",
+      "evidencia": "Ràdio Desvern, 10 de juny de 2026, sobre el ple que aprova les bases del nou lloguer de protecció oficial: la portaveu d'ENDAVANT SJ hi replica que «amb tres anys d'empadronament no es garanteix que els joves i veïns que porten tota la vida a Sant Just tinguin preferència real per accedir a aquests pisos». El compromís de construcció i cessió de sostre protegit a la carretera Reial ve de l'acord del Ple del 16 d'octubre de 2023 sobre el Sector 1 de la Carretera Reial.",
+      "url_evidencia": "https://www.radiodesvern.com/news/sant-just-aprova-les-bases-per-al-nou-lloguer-de-proteccio-oficial/",
+      "posicio_govern": "desacord",
+      "discrimina": "El govern ha fixat el llindar en tres anys; ENDAVANT SJ el considera insuficient i demana més arrelament. Altres grups defensen que endurir-lo deixaria fora els nouvinguts amb més necessitat."
+    },
+    {
+      "tema": "habitatge",
+      "text": "Els habitatges protegits que promogui l'Ajuntament han de mantenir la protecció per sempre, sense termini de desqualificació.",
+      "context": "El cas dels 30 pisos del carrer Carolina Catasús, protegits només 30 anys, contrasta amb les altres promocions de Mas Lluí (Violeta Parra i Comte de Vilardaga), que tenen vigència permanent d'HPO. El ple va debatre el maig del 2025 si la qualificació permanent s'ha de generalitzar a tot el parc protegit.",
+      "evidencia": "Moció de Sant Just En Comú «per garantir la qualificació permanent dels habitatges de protecció oficial (HPO)», Ple del 29 de maig de 2025. Aprovada amb 10 vots a favor (PSC, SJECP-C i ERC), abstenció d'ENDAVANT SJ, PP i VOX i el vot en contra de JUNTSxCAT.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/d70721ed-6918-420f-97fa-59e192b71083/20250529%20ACTA.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "PSC, SJECP-C i ERC hi són a favor; JUNTSxCAT hi va votar en contra i ENDAVANT SJ, PP i VOX s'hi van abstenir."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha d'assumir les petites reparacions per desgast dels pisos municipals de lloguer per a la gent gran.",
+      "context": "Els pisos amb serveis per a gent gran del Mil·lenari es van inaugurar el 2004 i els gestiona l'empresa municipal d'habitatge. El reglament aprovat el 2025 fa pagar a la persona llogatera les petites reparacions causades pel desgast d'ús ordinari, tal com permet la Llei d'arrendaments urbans.",
+      "evidencia": "Ple del 29 de maig de 2025, desestimació de les al·legacions d'ERC i aprovació definitiva del reglament del servei d'habitatges de lloguer amb serveis per a la gent gran «el Mil·lenari». L'al·legació demanava treure la frase «o sigui causat pel desgast per l'ús ordinari de l'habitatge» perquè els pisos «ja porten 21 anys en funcionament». Aprovat amb 13 vots a favor (PSC, SJECP-C, ENDAVANT SJ, PP i VOX), abstenció de JUNTSxCAT i el vot en contra d'ERC.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/d70721ed-6918-420f-97fa-59e192b71083/20250529%20ACTA.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El govern va rebutjar l'esmena; ERC hi va votar en contra i JUNTSxCAT s'hi va abstenir."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de prohibir la circulació dels vehicles més contaminants dins la zona de baixes emissions.",
+      "context": "Sant Just ha passat dels 20.000 habitants i té superacions de contaminants, cosa que l'obliga a tenir zona de baixes emissions. El ple del 25 de juny de 2026 va aprovar inicialment el projecte de ZBE i l'ordenança que regula l'accés, la circulació i l'estacionament de determinats vehicles, amb control per lectura de matrícules a través de la plataforma metropolitana.",
+      "evidencia": "Ordenança de la restricció de l'accés, la circulació i l'estacionament de determinats vehicles, registre CIDO de 7 de juliol de 2026, i comunicat municipal del 26 de juny de 2026: el ple «va donar llum verda inicial al Projecte de Zona de Baixes Emissions (ZBE) i a la nova ordenança que regularà l'accés, la circulació i l'estacionament de determinats vehicles al municipi».",
+      "url_evidencia": "https://cido.diba.cat/normativa_local/21888024",
+      "posicio_govern": "acord",
+      "discrimina": "VOX ja va portar al ple del 27 de març de 2024 una moció contra les zones de baixes emissions, rebutjada amb 14 vots en contra (PSC, SJECP-C, ENDAVANT SJ, ERC i CUP-AMUNT) i l'abstenció del PP."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "Els veïns empadronats han de poder aparcar de franc a les zones regulades del municipi.",
+      "context": "El reglament d'estacionament regulat aprovat el 2025 crea zona blava, zona verda, dues menes de zona taronja, aparcament d'intercanvi i zona de petó i adeu, i el gestiona l'empresa municipal. Els residents de zona verda paguen 0,61 € la setmana o 0,26 € el dia; els no residents, 0,0419 € el minut.",
+      "evidencia": "Reglament del servei d'estacionament regulat a les vies públiques i de l'aparcament del Mil·lenari, aprovat definitivament al Ple del 29 de maig de 2025, i ordenança fiscal núm. 7 per al 2026, tarifa b.1) «Residents a la zona d'aparcament regulat (amb un horari de 8 a 20h.) 0,61 per setmana; per dia 0,26».",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/d70721ed-6918-420f-97fa-59e192b71083/20250529%20ACTA.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El govern cobra els residents i n'ingressa a través de l'empresa municipal; el reglament es va aprovar amb 14 vots a favor i l'abstenció de JUNTSxCAT, però les tarifes van dins el paquet d'ordenances fiscals que la resta de l'oposició vota en contra."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "Els treballadors dels parcs d'oficines han de pagar la mateixa tarifa d'aparcament que la resta de conductors.",
+      "context": "A la zona taronja de Sant Just Diagonal hi ha una tarifa acreditada per a qui hi treballa: 0,0042 € el minut, uns 25 cèntims l'hora, mentre que qui no té acreditació paga 0,0419 € el minut, uns 2,50 € l'hora. És una excepció pensada per als parcs d'oficines del municipi.",
+      "evidencia": "Ordenança fiscal núm. 7 per al 2026, aprovada al Ple del 30 d'octubre de 2025, tarifa c.1) «Per l'estacionament de vehicles a les vies públiques en zones taronges amb control de persones acreditades (Sant Just Diagonal) […] persones usuàries amb acreditació com a persones treballadores de la zona, 1 minut 0,0042», davant de c.3) «No acreditats zona taronja (horari de 8 a 20 h) 1 minut 0,0419».",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/a45d8640-0a27-4134-b2e3-7de5aa4a0c16/20251030%20ACTA.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El govern manté la tarifa bonificada per als treballadors acreditats en les ordenances de cada any; els grups que voten en contra del paquet fiscal i els que defensen reduir el cotxe als polígons hi tenen posicions oposades."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de pagar amb diners municipals més freqüència de pas del bus urbà.",
+      "context": "El bus urbà JT passa cada 30 minuts i el ple ha demanat a l'Àrea Metropolitana un tercer vehicle per baixar a 20 minuts i per allargar la línia fins a Mas Lluí. La línia exprés X30, la principal cap a Barcelona i Esplugues, acumula retards des del canvi d'operadora el 2024. Tot això depèn del contracte metropolità, no del pressupost municipal.",
+      "evidencia": "Moció de Junts per Catalunya per la millora de la mobilitat, Ple del 29 de juliol de 2025, acord sisè: «Instar a l'AMB que […] estudiï la possible ampliació de la línia urbana JT amb un vehicle més (de 2 a 3) […] per a poder millorar la freqüència de la mateixa línia de 30 a 20 minuts». Aprovada per unanimitat. Moció d'ERC per un model digne de transport públic, Ple del 27 de novembre de 2025, també unànime, sobre les incidències de la X30.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/fcd276d9-df9f-4e9f-9548-816730a817b6/20250729%20ACTA.pdf",
+      "posicio_govern": "desconeguda",
+      "discrimina": "Tots els grups reclamen més servei a l'AMB, però cap acord del ple diu qui l'ha de pagar: posar-hi diners municipals per un servei metropolità separa els qui volen resultats immediats dels qui no volen assumir una despesa que no els toca."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de finançar noves estacions de bicicleta pública amb pressupost propi.",
+      "context": "El servei metropolità de bicicleta pública AMBici funciona a Sant Just per sobre de la mitjana: segons el mateix ple, el municipi «dobla, triplica i quadruplica» la resta de municipis en altes, usos per estació i usos per bicicleta. L'oposició ha portat dues mocions al ple per ampliar-lo i millorar-lo.",
+      "evidencia": "Moció d'ENDAVANT Sant Just per a la millora del servei AMBici i el transport públic, Ple del 25 d'abril de 2024, aprovada amb 15 vots a favor i l'abstenció de VOX; moció prèvia del mateix grup el 27 de març de 2024. Moció de Junts del 29 de juliol de 2025: «el nou servei de bicicleta pública metropolitana, l'AMBICI, a Sant Just està funcionant d'una manera excel·lent».",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2024/3daed0bb-27b6-478c-9b42-325249cf5064/SEC-2024-85-16.pdf.pdf",
+      "posicio_govern": "desconeguda",
+      "discrimina": "Ampliar el servei té suport ampli, però pagar-lo amb diners de l'Ajuntament en comptes d'esperar l'AMB no ha estat mai votat i separa els grups segons què prioritzen dins un pressupost amb només 5,2 milions d'inversió."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de fer un gran parc central a la vall de Sant Just.",
+      "context": "La vall de Sant Just és l'espai de contacte entre el nucli urbà i Collserola, ordenat des del conveni del 2004 amb els propietaris del sòl. El gener del 2025 el ple va acordar impulsar-hi un parc central que reguli la riera, renaturalitzi els espais naturals i connecti Mas Lluí, el barri sud i el centre.",
+      "evidencia": "Moció de Junts per Catalunya per impulsar el projecte del parc a la Vall de Sant Just, Ple del 30 de gener de 2025, acord primer: «Instar el govern municipal a impulsar el projecte de parc central a la vall de Sant Just, amb l'objectiu de crear un gran espai verd que inclogui la regeneració de la riera». Aprovada amb 14 vots a favor (PSC, SJECP-C, ENDAVANT SJ, JUNTSxCAT i PP), abstenció d'ERC i VOX i el vot en contra de la CUP-AMUNT.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/f27e5bbf-6d42-4fc7-95ec-4ed276afc445/20250130%20ACTA.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "La CUP-AMUNT hi va votar en contra i ERC i VOX s'hi van abstenir; la discussió de fons és si urbanitzar la vall com a parc equival a validar el desenvolupament urbanístic pactat amb els propietaris."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de permetre convertir en pisos els edificis catalogats del centre.",
+      "context": "El 2024 el ple va modificar la fitxa del catàleg de patrimoni i el planejament d'una casa catalogada del centre, promoguda per una societat privada, per passar de l'ús previst de restaurant i habitatge unifamiliar a habitatge plurifamiliar, amb oficines, comerç i gimnàs admesos al soterrani.",
+      "evidencia": "Ple del 30 de maig de 2024, aprovació provisional de la modificació de la fitxa 19 del Catàleg i Pla especial de protecció del patrimoni arquitectònic i de la modificació puntual del PGM: la proposta «té per objecte modificar les determinacions de la fitxa 19 […] adaptant les previsions del Catàleg original d'ús preferent de restaurant i l'ús existent d'habitatge unifamiliar al nou ús proposat d'habitatge plurifamiliar». Aprovades amb 12 vots a favor (PSC, SJECP-C, JUNTSxCAT i VOX), abstenció d'ENDAVANT SJ, ERC i PP i el vot en contra de la CUP-AMUNT.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2024/dbbb99f7-7cfe-45dc-9929-86c18f14418a/SEC-2024-99-18.pdf.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El govern i JUNTSxCAT hi van votar a favor; la CUP-AMUNT en contra i ENDAVANT SJ, ERC i PP s'hi van abstenir."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha d'acceptar nous blocs de pisos a la vall a canvi que els promotors cedeixin sòl públic.",
+      "context": "El desenvolupament de la carretera Reial i de la vall es fa amb convenis amb els propietaris del sòl signats el 2004 i el 2019: el promotor edifica i, a canvi, cedeix sòl i sostre a l'Ajuntament. D'aquí surten, entre altres coses, els pisos protegits de lloguer que s'han de construir a la carretera Reial.",
+      "evidencia": "Ple del 16 d'octubre de 2023, «Acceptació de la cessió parcial de la finca resultant FR04 del Projecte de reparcel·lació del Sector 1 de la Carretera Reial, i compromís de construcció i cessió gratuïta de sostre», que desenvolupa el conveni de 2004 per a la preservació de la Vall de Sant Just i el conveni de 2019 de transformació urbanística de la carretera Reial. Aprovat amb 9 vots a favor (PSC i SJECP-C) i l'abstenció d'ENDAVANT SJ, JUNTSxCAT, ERC, PP i VOX.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2023/32ecdcbd-9507-44e1-8c8f-62ae23faa963/20231016%20ACTA.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Només el govern hi va votar a favor: tota la resta del ple s'hi va abstenir. És la peça que separa qui accepta el creixement pactat de qui vol aturar l'edificació a la vall."
+    },
+    {
+      "tema": "residus i medi ambient",
+      "text": "L'Ajuntament ha d'implantar la recollida d'escombraries porta a porta a tot el municipi.",
+      "context": "El contracte de neteja viària i recollida de residus, adjudicat el 2024 per cinc anys i 15,19 milions d'euros, manté el model de contenidors, ara amb contenidors intel·ligents que compten les aportacions d'orgànica per calcular la taxa. Sant Just recicla el 65,7% i genera 426 quilos per habitant i any.",
+      "evidencia": "Ple del 25 de gener de 2024, aprovació dels plecs del servei de neteja viària, recollida i transport de residus, amb «un pressupost base de licitació de 13.809.545,50 euros, més 1.380.954,55 euros en concepte d'IVA», aprovat amb 9 vots a favor (PSC i SJECP-C), abstenció d'ENDAVANT SJ i PP i el vot en contra de JUNTSxCAT, ERC, VOX i CUP-AMUNT. Adjudicació al Ple del 30 de maig de 2024 amb 9 vots a favor i el vot en contra de JUNTSxCAT, ERC i CUP-AMUNT.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2024/ff0c038f-f1ce-442b-9680-e10724b703b5/SEC-2024-30-18.pdf.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El govern ha triat contenidors intel·ligents amb pagament per generació; JUNTSxCAT defensa el porta a porta i «bonificar i no penalitzar», i JUNTSxCAT, ERC i CUP-AMUNT van votar en contra del contracte que fixa el model per cinc anys."
+    },
+    {
+      "tema": "residus i medi ambient",
+      "text": "L'Ajuntament ha de sancionar les empreses del polígon que provoquin males olors al poble.",
+      "context": "Sant Just té els polígons enganxats al nucli i indústria química i de fragàncies. El ple va aprovar el 2025 una ordenança pròpia d'olors, poc habitual en municipis d'aquesta mida, que permet fixar límits i règim sancionador. El 2023 ja s'havia aprovat el mapa de capacitat acústica i uns criteris d'immissió al medi natural.",
+      "evidencia": "Ple del 29 de juliol de 2025, aprovació inicial de l'Ordenança reguladora de les olors al municipi de Sant Just Desvern (exp. SEC 2023 178), amb 15 vots a favor (PSC, SJECP-C, ENDAVANT SJ, JUNTSxCAT, ERC i PP), l'abstenció de la CUP-AMUNT i el vot en contra de VOX. Represa al Ple del 25 de setembre de 2025.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/fcd276d9-df9f-4e9f-9548-816730a817b6/20250729%20ACTA.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "VOX hi va votar en contra i la CUP-AMUNT s'hi va abstenir; l'ordenança afecta directament activitats industrials del municipi."
+    },
+    {
+      "tema": "residus i medi ambient",
+      "text": "L'Ajuntament ha d'instal·lar més elements d'ombra a les places i els parcs del poble.",
+      "context": "Sant Just gasta 56,70 € per habitant en parcs i jardins, dues vegades i mitja la mediana catalana, però el ple va discutir el 2024 si calia un pla específic d'ombra (arbrat, tendals i altres elements) als parcs, places i jardins per als mesos de calor.",
+      "evidencia": "Moció d'ENDAVANT Sant Just «per a l'estudi i col·locació d'arbres, tendals i altres elements d'ombra als parcs, places i jardins de Sant Just», Ple del 29 de febrer de 2024. Aprovada amb 8 vots a favor (ENDAVANT SJ, JUNTSxCAT, ERC, PP, CUP-AMUNT i VOX) i l'abstenció del PSC i SJECP-C.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2024/5723c09b-d2c3-4b2d-8fd5-f2ad97d38185/SEC-2024-47-16.pdf.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "És l'única votació del mandat en què tota l'oposició va votar junta a favor i el govern es va abstenir en bloc."
+    },
+    {
+      "tema": "equipaments i esports",
+      "text": "L'Ajuntament ha de gestionar directament el complex esportiu municipal quan s'acabi la concessió.",
+      "context": "El Complex Esportiu Municipal La Bonaigua el gestiona una empresa des del contracte adjudicat pel ple l'any 2000. És l'únic servei gran que no es presta en gestió directa: costa 19,02 € per habitant, menys de la meitat de la mediana catalana (46,20 €), mentre que neteja viària, parcs i atenció social, que sí que són directes, estan molt per sobre. Les tarifes i les revisions de preus del concessionari passen pel ple cada any.",
+      "evidencia": "Ple del 27 de març de 2025, «Aprovació de la revisió de preus del contracte per a la gestió del Complex Esportiu La Bonaigua», que recorda que «per acord del Ple de data 27 de juliol de 2000 es va adjudicar el contracte per a la gestió», aprovada amb 9 vots a favor (PSC i SJECP-C) i l'abstenció de la resta. Ple del 30 de gener de 2025: autorització a la concessionària per construir una nova piscina exterior. Cost efectiu dels serveis 2024, Ministeri d'Hisenda via AOC.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/bd6bccee-9be9-480d-9f81-c7752c40acd1/20250327%20ACTA.pdf",
+      "posicio_govern": "desconeguda",
+      "discrimina": "El govern ha anat prorrogant i ampliant la concessió sense que cap grup n'hagi demanat formalment la municipalització al ple; les revisions de preus les aprova sol, amb l'abstenció de tota l'oposició."
+    },
+    {
+      "tema": "educació",
+      "text": "L'Ajuntament ha d'obrir més places públiques d'escola bressol al municipi.",
+      "context": "El mandat va començar creant l'escola bressol municipal La Mainada, amb dues places noves d'educador a la plantilla, i el ple ha modificat dues vegades el preu públic del servei per implantar-hi tarifació social. L'Ajuntament dedica 341 € per habitant a educació, cultura i esport, a tocar de la mediana catalana.",
+      "evidencia": "Ple del 27 de juliol de 2023, modificació de la plantilla «per incorporació de dues places d'educador/a escola com a conseqüència de la creació de l'escola bressol La Mainada»; Ple del 30 de maig de 2024 i Ple del 24 d'abril de 2025, modificacions de l'ordenança de preus públics núm. 17 del servei d'escola bressol, amb revisió de bonificacions per fer-les compatibles amb «el sistema de tarifació social que contempla aquest preu públic».",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2023/4718cb4e-6c53-412f-84db-b2aeb071ed46/20230727%20ACTA.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El govern ha ampliat l'oferta pública; part de l'oposició ha defensat en canvi solucions concertades o ajuts a les famílies sense plaça, i el paquet de preus públics es vota dividit cada any."
+    },
+    {
+      "tema": "educació",
+      "text": "L'Ajuntament ha d'ampliar els ajuts municipals de menjador escolar fins a fer-lo gratuït per a tot l'alumnat.",
+      "context": "El ple es va comprometre el novembre del 2025 a «revisar i reforçar els programes de beques i ajuts municipals destinats al menjador i a les activitats extraescolars, avançant cap a la gratuïtat efectiva», i a incorporar indicadors de cobertura al Pla Local d'Infància i Adolescència aprovat el setembre del 2025.",
+      "evidencia": "Moció d'ERC per garantir el menjador i les activitats extraescolars gratuïts, Ple del 27 de novembre de 2025, acord tercer, àmbit municipal. Aprovada amb 14 vots a favor (PSC, SJECP-C, JUNTSxCAT, ERC, PP i CUP-AMUNT) i l'abstenció d'ENDAVANT SJ i VOX.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2025/c4d5b3f6-e96c-41ad-bd4c-04b30c69a2fe/20251127%20ACTA%20PLE.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "ENDAVANT SJ i VOX s'hi van abstenir; la gratuïtat universal pagada amb fons municipals és cara per a un pressupost amb un pla de sanejament financer obert."
+    },
+    {
+      "tema": "seguretat",
+      "text": "L'Ajuntament ha de crear una figura de vigilància nocturna de proximitat als carrers del poble.",
+      "context": "Després dels robatoris en establiments de Mas Lluí i d'un augment d'actes vandàlics, l'oposició va proposar el 2026 recuperar una figura tipus sereno per fer vigilància nocturna de proximitat. El govern va rebutjar la moció i va considerar alarmista el retrat de la situació.",
+      "evidencia": "Ple del 29 d'abril de 2026: «La moció del grup municipal ENDAVANT SANT JUST per a la millora integral de la seguretat ciutadana i la implantació de nous models de vigilància de proximitat va ser rebutjada» (comunicat municipal del 30 d'abril de 2026). La portaveu del grup ho resumia a Ràdio Desvern: «La gent està alarmada [per la seguretat] i espera que els polítics fem coses».",
+      "url_evidencia": "https://comunicacio.santjust.net/2026/04/30/el-ple-municipal-dabril-aprova-el-protocol-contra-lassetjament-i-linventari-de-camins-municipals/",
+      "posicio_govern": "desacord",
+      "discrimina": "El govern (PSC i SJECP-C) va tombar la moció; ENDAVANT SJ la va impulsar i altres grups de l'oposició hi van donar suport."
+    },
+    {
+      "tema": "participació",
+      "text": "L'Ajuntament ha de convocar audiències públiques periòdiques obertes a tot el veïnat.",
+      "context": "El reglament orgànic municipal no preveu audiències públiques regulars. El novembre del 2023 el ple va votar si se n'havien de fer sobre temes d'interès general i si calia estudiar-ne la periodicitat, mensual o bimensual, en una propera modificació del reglament.",
+      "evidencia": "Moció de la CUP-AMUNT «per a la realització d'audiències públiques sobre temes d'interès general pel conjunt del veïnat i entitats de Sant Just Desvern», Ple del 30 de novembre de 2023, amb l'acord de «en una propera modificació del ROM, estudiar la viabilitat d'establir les audiències públiques d'una forma regular: mensualment o bimensualment». Rebutjada amb 10 vots en contra (PSC, SJECP-C i PP) i els vots a favor d'ENDAVANT SJ, JUNTSxCAT, ERC, VOX i CUP-AMUNT.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/822120002/2023/9c51b436-74b6-4daf-aa08-c7d7c46fc381/20231130%20ACTA.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El govern i el PP hi van votar en contra; la resta del ple, cinc grups, hi va votar a favor. És una de les poques votacions on el PP fa majoria amb el govern."
+    }
+  ],
+  "equilibri": {
+    "acord_amb_govern": 12,
+    "total": 25,
+    "per_tema": "fiscalitat 4 · habitatge 5 · mobilitat 5 · urbanisme 3 · residus i medi ambient 3 · equipaments i esports 1 · educació 2 · seguretat 1 · participació 1"
+  },
+  "notes": "COBERTURA I FONTS. He llegit les 29 actes de ple publicades al feed de l'AOC des del juny del 2023 (l'índex s'atura el 27 de novembre de 2025) i he completat el 2026 amb comunicats municipals i amb Ràdio Desvern, que és el mitjà local que cobreix els plens. 20 de les 25 afirmacions estan lligades a un punt votat i citable del ple d'aquest mandat, amb el vot desglossat per grup; el mínim metodològic és 8. FONT DE PREMSA ÚNICA (no promocionables fins a tenir una segona font documental): l'arrelament de tres anys per als habitatges de lloguer protegit (Ràdio Desvern, 10-6-2026) i la vigilància nocturna de proximitat (comunicat municipal del 30-4-2026 i Ràdio Desvern); totes dues es podran verificar contra les actes del 2026 quan l'AOC les publiqui. EQUILIBRI. El primer tall en deixava 9 amb el govern del costat de l'«acord», per sota del mínim de 10. He mogut dues coses: he substituït el Pacte contra la Segregació Educativa (aprovat 14 a 0 amb una sola abstenció, discrimina poc) per la moció de menjador i extraescolars, i he afegit l'afirmació sobre tipus diferenciats d'IBI. Amb això queden 12 de 25. DESCARTATS PER COMPETÈNCIA. Bona part de les mocions del mandat només insten la Generalitat o l'Estat i no les decideix el ple: regulació del lloguer de temporada i d'habitacions, escola catalana, amnistia, suport a la pagesia, jutges de pau, Rodalies, Pacte Nacional per la Llengua, finançament dels ens locals. DESCARTATS PER UNANIMITAT. Tramvia per Laureà Miró i millores de la X30 (moció de Junts i moció d'ERC, unànimes), recuperació de la riera com a parc fluvial, aparcament al subsòl del parc de Miquel Reverter, cessió de sòl a Salut per ampliar el CAP, ordenança de patinets, mòduls escolars de l'institut escola. DESCARTAT PER PRUDÈNCIA. La moció de la CUP-AMUNT i ERC sobre l'actuació policial de les Festes de Tardor (rebutjada el 27-11-2025 amb 9 vots en contra de PSC i VOX, i tornada a rebutjar el març del 2026) és una de les votacions més divisives del mandat, però afecta una causa judicial oberta i persones identificables: la deixo a la reserva. RESERVA (amb evidència, per a substitucions o desempat): personar-se com a acusació popular pels fets de les Festes de Tardor; pavelló i aparcament de Mas Lluí amb desviació del camí de la Salut, 7,57 milions, aprovat només amb els 9 vots del govern i el vot en contra d'ENDAVANT SJ, JUNTSxCAT, CUP-AMUNT i VOX; tarifes del complex esportiu La Bonaigua; demanar al Cadastre la revisió dels valors, congelats des del 1996; execució del pressupost d'inversions, que es queda al 23,5% i deixa sense gastar 13,4 milions de mitjana cada any; i el període mitjà de pagament a proveïdors, 45 dies, percentil 95 del seu grup de mida. AVÍS SOBRE LES ACTES. Alguna acta té errors de transcripció en el recompte de vots (el ple del 25-4-2024 dona 'cinc' i 'nou' vots en contra amb la mateixa llista de grups, i el del 26-10-2023 porta una nota interna 'REVISAR VOTACIÓ AMB VIDEOACTA'). Cap de les 25 afirmacions no depèn d'aquests punts."
+}

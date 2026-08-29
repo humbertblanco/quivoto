@@ -523,9 +523,15 @@ const VOCABULARI_DE_GRUP =
  * les que llisten grups, i sense aquest filtre publicaríem «Elena López Luján»
  * com si fos un partit.
  */
-function semblaGrup(nom: string): boolean {
+export function semblaGrup(nom: string): boolean {
   if (nom.length < 2 || nom.length > 60) return false;
   if (SEMBLA_PERSONA.test(nom)) return false;
+  // Trossos de prosa que s'esmunyien com si fossin partits i acabaven a la
+  // fitxa amb un sentit de vot al costat: «Resultat: s'aprova per unanimitat»
+  // votant en abstenció, o «S'aprova el dictamen» amb nou vots en contra.
+  if (nom.includes(":")) return false;
+  if (nom.split(/\s+/).length > 5) return false;
+  if (VOCABULARI_DE_VOT.test(nom) || RESULTAT_APROVAT.test(nom) || RESULTAT_REBUTJAT.test(nom)) return false;
   if (!/[A-ZÀ-ÚÇ]/.test(nom)) return false;
   // Tres o més paraules en minúscula seguides és prosa, no una sigla.
   if (/(?:\b[a-zà-ú]+\b\s+){3,}/.test(nom)) return false;
@@ -672,7 +678,7 @@ export function separaGrups(cua: string): { grup: string; vots: number | null }[
  * «Vots a favor (14)» i «VOTS A FAVOR, 18: JxVIC, ERC-AM».
  */
 const BLOC_ETIQUETA =
-  /(?:^|\n)[ \t]*[-•·*]?[ \t]*(vots?\s+(?:a\s+)?favor|a\s+favor|vots?\s+favorables?|vots?\s+en\s+contra|en\s+contra|vots?\s+contraris?|abstencions?|abstenci(?:ó|o)|vots?\s+en\s+blanc|en\s+blanc|absents?)[ \t]*[,:]?[ \t]*(\(?\s*\d+\s*\)?)?[ \t]*[,:]?[ \t]*/gi;
+  /(?:^|\n)[ \t]*[-•·*]?[ \t]*(vots?\s+(?:a\s+)?favor|a\s+favor|vots?\s+favorables?|vots?\s+en\s+contra|en\s+contra|vots?\s+contraris?|abstencions?|abstenci(?:ó|o)|vots?\s+en\s+blanc|en\s+blanc|absents?)[ \t]*[,:]?[ \t]*(\(?[ \t]*\d+[ \t]*\)?)?[ \t]*[,:]?[ \t]*/gi;
 
 /**
  * La cua d'una etiqueta no s'acaba a final de línia. A Sitges la llista de grups
@@ -687,7 +693,9 @@ function cuaDEtiqueta(cru: string, limit: number): string {
   // Les etiquetes no sempre comencen línia («…CUP-AMUNT) Vots en contra: 0»), i
   // si no hi tallem el sentit següent s'endú els grups del sentit anterior.
   const seguent = cua.search(ETIQUETA_ENMIG);
-  if (seguent > 0) cua = cua.slice(0, seguent);
+  // `>= 0` i no `> 0`: quan l'etiqueta següent comença just al principi de
+  // la cua, no tallar-la feia que un bloc s'endugués el del costat.
+  if (seguent >= 0) cua = cua.slice(0, seguent);
   const encadenat = cua.search(/\bi\s+(?:amb\s+)?\d+\s+(?:vots?|abstenci|en\s+blanc)/i);
   if (encadenat > 0) cua = cua.slice(0, encadenat);
   return cua;
@@ -888,7 +896,15 @@ export function extreuVotacio(segment: string): Votacio | null {
     if (perGrup.length > 0) patro = "prosa-sense-xifra";
   }
 
-  const unanimitat = UNANIMITAT.test(zona) && perGrup.every((v) => v.sentit === "favor");
+  // `every` sobre una llista buida és cert, i el recompte no s'hi mirava: un
+  // punt amb dotze vots a favor i nou en contra sortia com a unànime només
+  // perquè la paraula «unanimitat» apareixia en algun lloc de la finestra.
+  const unanimitat =
+    UNANIMITAT.test(zona) &&
+    !recompte.contra &&
+    !recompte.abstencio &&
+    !recompte.blanc &&
+    !perGrup.some((v) => v.sentit !== "favor");
   let resultat: ResultatVotacio = "desconegut";
   if (EMPAT.test(zona)) resultat = "empat";
   else if (RESULTAT_REBUTJAT.test(zona)) resultat = "rebutjat";

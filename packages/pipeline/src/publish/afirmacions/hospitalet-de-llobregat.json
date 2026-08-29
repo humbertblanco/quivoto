@@ -1,0 +1,236 @@
+{
+  "municipi": "l'Hospitalet de Llobregat",
+  "afirmacions": [
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de cobrar un recàrrec municipal sobre l'impost d'estades en establiments turístics.",
+      "context": "L'Hospitalet acull el recinte firal de Gran Via i el districte hoteler de plaça Europa, però fins al 2026 no cobrava res per les pernoctacions. El ple havia demanat aquesta competència el 2024 i el govern la va exercir el 2026.",
+      "evidencia": "El ple del 29/07/2026 va aprovar provisionalment l'establiment de l'ordenança fiscal 1.6 del recàrrec de l'impost sobre les estades en establiments turístics (punt 22, expedient AJT/39550/2026, Gestió Tributària). Abans, el ple del 23/09/2024 havia aprovat la moció per permetre que l'Hospitalet imposés aquest recàrrec (punt 43).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2026/e02d98f9-7bbd-42ac-843f-d97c890e5f0a/20260729%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Qui hi està en contra diu que encareix un sector que dona feina i que competeix amb Barcelona; qui hi està a favor diu que el turisme genera costos de neteja i pressió sobre l'habitatge que ara paguen només els veïns."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha d'abaixar el tipus de gravamen de l'IBI dels habitatges.",
+      "context": "El tipus d'IBI urbà de l'Hospitalet és del 0,85%, per sobre de la mediana catalana (0,70%), i el govern el va modificar el 2024. Tot i el tipus alt, es recapten 277 € per habitant, un 20% per sota de la mediana catalana, perquè els valors cadastrals són del 2000.",
+      "evidencia": "Tipus vigent el 2025: IBI urbà 0,85% contra una mediana catalana del 0,70% (dades obertes de l'AOC, recurs 82ae0ea2). El ple del 28/10/2025 va rebutjar la moció de VOX «para la reducción de impuestos municipales sobre la vivienda y la promoción del acceso a la propiedad» (punt 33); el 20/12/2024 el ple havia aprovat definitivament la modificació de l'ordenança fiscal 1.01 de l'IBI a proposta de Gestió Tributària (punt 4).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2025/690794a0-d5a2-4552-92d1-69f1f95e23c4/20251028%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "L'IBI és el primer ingrés propi de la ciutat i finança serveis; abaixar-lo alleuja les famílies propietàries però obliga a retallar despesa o a apujar altres tributs."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de demanar una revisió cadastral que actualitzi el valor dels pisos de la ciutat.",
+      "context": "L'última revisió cadastral de l'Hospitalet és de l'any 2000: fa 26 anys. Per això la ciutat té un tipus d'IBI per sobre de la mediana i alhora recapta per sota. Una actualització repartiria la càrrega d'una altra manera i faria pujar el rebut a molts pisos.",
+      "evidencia": "Última revisió cadastral declarada per l'Ajuntament: 2000; recaptació d'IBI de 277 € per habitant el 2025, un 20% per sota de la mediana catalana (dades obertes de l'AOC i de la Generalitat, recursos 82ae0ea2 i ytva-5kp3). El ple del 25/06/2025 va aprovar la moció del Partit Popular «para solicitar el fraccionamiento sin recargo del pago del IBI y transparencia en la actualización catastral impulsada por el ayuntamiento» (punt 25), que constata que l'actualització la impulsa l'Ajuntament.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2025/e8bd488a-a26f-4876-9824-af5b7cddb1b4/20250625%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Actualitzar el cadastre corregeix desigualtats entre barris i entre pisos vells i nous, però apuja el rebut de molta gent que fa dècades que paga poc, sense que hi hagi hagut cap canvi al seu habitatge."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de reclamar a l'Àrea Metropolitana de Barcelona la supressió del tribut metropolità.",
+      "context": "El tribut metropolità és un recàrrec sobre l'IBI que paguen tots els propietaris dels 36 municipis de l'AMB i que finança transport, parcs i serveis metropolitans. A l'Hospitalet, dos grups del ple han demanat dues vegades que l'Ajuntament en demani la supressió.",
+      "evidencia": "El ple del 22/03/2024 va rebutjar la moció del Partit Popular i VOX «para eliminar el tributo metropolitano» (punt 16) i el ple del 30/06/2026 va tornar a rebutjar la mateixa proposta del Partit Popular (punt 31).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2026/caa8e2a1-8e78-4e36-977a-65dcb15a16a1/20260630%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "És un impost que el veí paga sense veure'n el retorn directe al seu carrer; però suprimir-lo obligaria a retallar el transport metropolità i els parcs que l'Hospitalet fa servir intensament, com el de Can Boixeres o el de Bellvitge."
+    },
+    {
+      "tema": "habitatge",
+      "text": "Els pisos d'ús turístic que ja tenen llicència han de deixar de funcionar d'aquí a cinc anys.",
+      "context": "El lloguer mitjà de l'Hospitalet va arribar a 839,91 € el 2025 i els contractes nous han caigut de 6.135 el 2019 a 3.351 el 2025. El govern ha optat per posar data de caducitat als habitatges d'ús turístic existents en comptes de deixar-los indefinidament.",
+      "evidencia": "El ple del 29/07/2026 va aprovar provisionalment la modificació puntual del PGM per a la regulació de les condicions d'emplaçament dels habitatges d'ús turístic, apartaments turístics, albergs de joventut i allotjaments del col·lectiu educatiu (punt 16, expedient AJT/132103/2025), amb un màxim de cinc anys prorrogables per als existents; aprovació inicial al ple del 28/10/2025 (punt 5). Preu del lloguer: Agència de l'Habitatge de Catalunya, conjunt qww9-bvhh.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2026/e02d98f9-7bbd-42ac-843f-d97c890e5f0a/20260729%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Hi ha qui defensa que aquests pisos han de tornar al lloguer residencial i qui considera que caducar llicències concedides legalment perjudica petits propietaris que hi van invertir."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de deixar de donar llicències noves de pis turístic a tota la ciutat.",
+      "context": "El 2024 el ple va rebutjar una moratòria d'apartaments turístics i el govern va escollir després una via diferent: regular on es poden posar, no prohibir-los. L'associació de veïns de Collblanc-la Torrassa va demanar la paraula al ple del març del 2026 justament per parlar de pisos turístics i lloguers abusius.",
+      "evidencia": "El ple del 22/04/2024 va rebutjar la moció de L'Hospitalet en Comú Podem-Confluència «per demanar una moratòria d'apartaments turístics» (punt 31). La modificació del PGM aprovada el 2026 regula l'emplaçament i la densitat d'aquests allotjaments, no els prohibeix. Petició de paraula de l'Associació de Veïns de Collblanc-la Torrassa sobre pisos turístics i lloguers abusius al ple del 24/03/2026.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2024/3e13e689-0554-4d0e-9df3-800f69b5235e/20240422%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Una prohibició total és més senzilla d'aplicar i protegeix el parc residencial, però deixa la ciutat sense oferta reglada davant el creixement de l'allotjament il·legal i pot acabar impugnada als tribunals."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de continuar autoritzant noves residències privades d'estudiants a Collblanc i la Torrassa.",
+      "context": "L'Hospitalet s'ha convertit en pol de residències universitàries per la proximitat amb Barcelona. El juliol del 2025 el ple va aprovar dos plans especials per a residències privades al districte més dens de la ciutat, amb el govern sol defensant-los.",
+      "evidencia": "El ple del 29/07/2025 va aprovar provisionalment els plans especials urbanístics per a residències d'estudiants a la Travessera de Collblanc 77 i al carrer Cotonat 14-20 amb Vallparda 24 (punts 7 i 8, Desenvolupament Estratègic). Segons L'Hdigital (12/08/2025), hi va votar a favor només el grup socialista i la resta de grups hi van votar en contra; el regidor de l'àrea va respondre que «no disposem de base ni legal ni urbanística per impedir un ús permès per la normativa vigent».",
+      "url_evidencia": "https://lhdigital.cat/noticies/divisio-dopinions-respecte-a-les-residencies-destudiants-a-collblanc/",
+      "posicio_govern": "acord",
+      "discrimina": "Porten inversió i activitat econòmica i la normativa vigent les permet; però ocupen solars escassos en un barri que reclama escoles i zones verdes i, segons l'oposició, pressionen a l'alça el preu del lloguer del voltant."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "La zona verda d'aparcament ha de continuar limitada al barri on viu cada resident.",
+      "context": "A l'Hospitalet la targeta de resident només serveix al propi barri. El ple ha discutit tres vegades en aquest mandat si s'ha de convertir tota la ciutat en una sola zona per als residents o si s'han d'ampliar les bonificacions.",
+      "evidencia": "El ple del 27/05/2024 va rebutjar la moció del Partit Popular «para establecer las áreas verdes como zona única de aparcamiento gratuito para residentes en la ciudad» (punt 28) i el ple extraordinari del 22/05/2026 va rebutjar la moció de VOX «para la racionalización de las zonas de estacionamiento regulado» (punt 4). El 24/11/2025 el ple va aprovar parcialment la moció d'ERC-EUiA per ampliar les bonificacions d'ús de la zona verda (punt 30).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2024/e14dde8c-16ae-466f-b190-fa8ba6e1fa29/20240527%20Extracte%20acords%20del%20Ple%20ordinari%20mes%20de%20maig.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Limitar-la per barri manté la rotació i evita que el cotxe es mogui per la ciutat buscant plaça; obrir-la a tota la ciutat abarateix el dia a dia de qui necessita el cotxe en una ciutat sense gaire aparcament soterrani."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha d'ampliar la xarxa de carrils per a bicicletes i patinets elèctrics.",
+      "context": "L'Hospitalet és el segon municipi més dens de Catalunya i el repartiment de l'espai del carrer és una discussió constant al ple: hi ha hagut mocions per aturar els nous carrils i mocions per endurir el control dels patinets.",
+      "evidencia": "El ple del 27/05/2024 va rebutjar la moció de VOX «instando a una moratoria de la implantación de nuevos carriles para vehículos de movilidad personal» (punt 32). El 25/02/2025 el ple va aprovar amb esmenes dues mocions per modificar l'ordenança de mobilitat i augmentar el control sobre els patinets (punts 29 i 34).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2024/e14dde8c-16ae-466f-b190-fa8ba6e1fa29/20240527%20Extracte%20acords%20del%20Ple%20ordinari%20mes%20de%20maig.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Cada carril nou treu espai a la calçada o a la vorera en una ciutat molt estreta; per a uns és l'única manera de treure cotxes i per a d'altres és un problema de seguretat per als vianants."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de tancar al trànsit els carrers on hi ha escoles i convertir-los en espais de vianants.",
+      "context": "La proposta d'obrir carrers i pacificar entorns escolars s'ha presentat dues vegades al ple d'aquest mandat: el 2023 es va aprovar retallada i el 2026 es va rebutjar. Mentrestant el govern ha tramitat pacificacions concretes, com la de l'entorn de l'escola Milagros Consarnau.",
+      "evidencia": "El ple del 27/01/2026 va rebutjar la moció de L'Hospitalet en Comú Podem-Confluència «per promoure un urbanisme més pacífic i obrint carrers a la ciutadania» (punt 25). El 22/11/2023 una versió anterior de la mateixa moció es va aprovar només parcialment i amb esmenes (punt 20).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2026/57da25e0-b976-481e-bc27-ca8623bdff21/20260127%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Guanya espai de joc i redueix contaminació davant les escoles, però desplaça el trànsit i les places d'aparcament a carrers veïns d'una trama urbana on ja no hi caben."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de permetre construir nous hotels al districte econòmic de la Granvia.",
+      "context": "L'abril del 2025 el ple va tombar el pla que permetia un hotel al carrer de les Ciències 103. El govern hi va resoldre el recurs del promotor i al desembre va tornar a portar l'expedient, que aquesta vegada sí que va passar.",
+      "evidencia": "El ple del 29/04/2025 no va aprovar el pla de millora urbana per a la implantació de l'ús hoteler al carrer de les Ciències 103 i al carrer del Pi 6 (punt 4). El 25/06/2025 el ple va resoldre el recurs de reposició del promotor (punt 2) i el 19/12/2025 va aprovar el text refós del mateix pla (punt 2).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2025/ff29a20d-e8e3-4b13-ae2a-b709f3db239e/20250429%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El districte econòmic és el que aporta activitat i ara també recàrrec turístic; però part del ple considera que aquell sòl hauria d'anar a habitatge o equipaments i que la ciutat ja té prou places hoteleres."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de comprar les fàbriques protegides que quedin buides per convertir-les en equipaments públics.",
+      "context": "L'Hospitalet va ser una ciutat industrial i li queden naus i fàbriques catalogades que es van buidant. El ple ha votat quatre vegades en aquest mandat sobre comprar-ne alguna, i les propostes de compra han caigut sempre.",
+      "evidencia": "El ple del 27/09/2023 va rebutjar la moció d'ERC-EUiA i L'Hospitalet en Comú per a la protecció del patrimoni industrial (punt 18); el del 28/06/2024 va rebutjar la moció perquè Albert Germans fos un equipament públic (punt 33) i el del 25/11/2024 va tornar a rebutjar-ho (punt 24). El 24/01/2024 la moció per adquirir l'edifici d'Olis Regàs només es va aprovar parcialment (punt 14).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2024/53d3ec3e-0a5f-4afb-b260-9575a77d83ce/20240628%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Comprar edificis catalogats salva patrimoni i genera equipaments en barris que en tenen pocs, però costa molts diners de compra i rehabilitació en un ajuntament que ja no executa ni el 21% de la inversió que pressuposta."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de suspendre les llicències d'obra nova als terrenys inundables de la ciutat.",
+      "context": "L'Hospitalet és pla i té problemes de drenatge reconeguts: el ple ha tractat el pla municipal d'inundacions, el dipòsit pluvial del parc de les Planes i la canalització de les aigües pluvials. La proposta de no construir a les zones inundables va caure el febrer del 2025.",
+      "evidencia": "El ple del 25/02/2025 va rebutjar la moció de L'Hospitalet en Comú Podem-Confluència «per a la suspensió de les construccions en zones inundables» (punt 39). El 25/11/2024 el ple havia rebutjat també la moció de VOX per renovar urgentment el pla municipal d'inundacions (punt 35) i havia aprovat la moció per elaborar els plans d'emergència i executar les obres de canalització pendents (punt 25).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2025/c973c5b1-551c-492f-82aa-0048e46dbd5c/20250225%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Suspendre llicències evita riscos i indemnitzacions futures, però immobilitza solars en una ciutat sense sòl i pot fer caure operacions d'habitatge ja compromeses."
+    },
+    {
+      "tema": "neteja",
+      "text": "L'Ajuntament ha de licitar de nou el contracte de neteja i recollida de residus.",
+      "context": "La neteja viària de l'Hospitalet costa 65,63 € per habitant, més del doble de la mediana catalana, i el contracte que la presta arrossega problemes de vigència que una entitat va portar al ple el 2024. Les propostes de revisar-lo o de fer-ne seguiment han estat rebutjades dues vegades.",
+      "evidencia": "Cost efectiu del 2024: neteja viària 65,63 € per habitant contra una mediana catalana de 31,97 € (Ministeri d'Hisenda via AOC, recurs 12c13cdd). El ple del 23/09/2024 va rebutjar la moció d'ERC-EUiA «per impulsar una revisió a fons del contracte de neteja» (punt 37) i el ple extraordinari del 22/05/2026 va rebutjar la moció «para la creación de una comisión de seguimiento del contrato de recogida de residuos y limpieza urbana» (punt 3). El 28/10/2024 l'entitat Foment de la Informació Crítica va demanar la paraula al ple per la manca de vigència d'aquest contracte.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2024/3daa6c2f-ff6c-43b4-b6e0-7d24411a7ab7/20240923%20Extracte%20acords%20del%20Ple%20ordinari%20mes%20de%20setembre.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Un concurs nou permet redefinir el servei i el preu, però obre mesos d'incertesa en un servei diari en una ciutat de 289.510 habitants i pot sortir més car."
+    },
+    {
+      "tema": "medi ambient",
+      "text": "L'Ajuntament ha de canviar els contenidors del carrer per un sistema que identifiqui qui hi llença les bosses.",
+      "context": "L'Hospitalet recicla el 30% dels residus, gairebé el pitjor registre dels 24 municipis catalans de més de 50.000 habitants, i pràcticament no ha millorat aquest mandat: 29,98% el 2023 i 30,00% el 2024. La proposta de canviar de model de recollida va caure el setembre del 2025.",
+      "evidencia": "Taxa de recollida selectiva del 30,0% el 2024, percentil 6 de 24 municipis del seu grup, amb una mediana de 40,56% (Agència de Residus de Catalunya, conjunt 69zu-w48s). El ple del 26/09/2025 va rebutjar la moció de L'Hospitalet en Comú Podem-Confluència «per a la implantació d'un nou model de gestió de residus municipals» (punt 27). El ple del 24/03/2026 també va rebutjar la moció per implantar un sistema de rotació dels contenidors (punt 37).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2025/88f9d24d-ad0b-41a0-9f17-443e510b7c46/20250926%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Identificar l'usuari és el que fa pujar el reciclatge i permet pagar per generació, però és car d'implantar en una ciutat de blocs de pisos i pot generar abocaments incontrolats al carrer."
+    },
+    {
+      "tema": "educació",
+      "text": "L'Ajuntament ha de crear una empresa pública que gestioni les escoles bressol municipals.",
+      "context": "Les escoles bressol municipals de l'Hospitalet les gestionen empreses adjudicatàries. El ple ha aprovat dues vegades la municipalització i el govern només s'ha compromès a estudiar-ne la viabilitat; quatre associacions de famílies han demanat la paraula al ple el 2026 per queixar-se del servei i dels retards del plec.",
+      "evidencia": "El ple del 22/04/2024 va aprovar la moció d'ERC-EUiA, PP i L'Hospitalet en Comú per la municipalització de cinc escoles bressol (punt 18) i el del 25/02/2025 va aprovar la moció del Partit Popular per al compliment d'aquella municipalització (punt 36). Segons laciutat.cat (25/02/2026), el govern es va comprometre amb ERC-EUiA a fer «en un termini d'un any un estudi sobre la viabilitat de crear una empresa pública per gestionar la xarxa». Peticions de paraula d'AFA Casa dels Arbres (24/03/2026), AFA la Casa dels Arbres (26/05/2026) i AFA EBM la Casa de la Muntanya (30/06/2026).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2024/3e13e689-0554-4d0e-9df3-800f69b5235e/20240422%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Una empresa pública dona estabilitat a les educadores i control directe sobre el projecte educatiu, però trasllada a l'Ajuntament tot el cost laboral i la rigidesa de la contractació pública."
+    },
+    {
+      "tema": "educació",
+      "text": "L'Ajuntament ha d'integrar a la xarxa municipal les escoles bressol d'iniciativa social que ara subvenciona.",
+      "context": "Cinc escoles bressol sense ànim de lucre funcionen en equipaments municipals amb subvencions de l'Ajuntament i de la Generalitat. Integrar-les a la xarxa municipal fa passar les places públiques de 616 a 985 i el ple ho va autoritzar el febrer del 2026 dividit.",
+      "evidencia": "El ple del 24/02/2026 va aprovar la modificació del servei de la Xarxa d'Escoles Bressol Municipal, el seu reglament i els preus públics (punts 12 i 13, Educació). Segons laciutat.cat (25/02/2026), l'acord fa passar «el nombre de places de la xarxa municipal, que passen de 616 a 985», amb el vot favorable del PSC i d'ERC-EUiA i el rebuig o l'abstenció de PP, VOX i LHECP-C.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2026/693c77cb-fa54-4357-9fd3-087402288413/20260224%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Amplia molt l'oferta pública de 0-3 anys, però obliga l'Ajuntament a assumir el cost d'uns centres que fins ara pagaven en part les famílies i les entitats, i condiciona el projecte educatiu de cada escola."
+    },
+    {
+      "tema": "serveis socials",
+      "text": "L'Ajuntament ha de tornar a oferir servei de menjador als casals municipals de gent gran.",
+      "context": "Els menjadors dels casals de gent gran de l'Hospitalet no han tornat a funcionar com abans i el ple hi ha tornat tres vegades en tres anys, amb resultats diferents cada cop. És una de les reclamacions més repetides de les entitats de gent gran de la ciutat.",
+      "evidencia": "El ple del 22/11/2023 va aprovar la moció d'ERC-EUiA i PP per recuperar el servei de menjador als casals de la gent gran (punt 12); el del 28/01/2025 va rebutjar la moció d'ERC-EUiA «per recuperar de forma urgent els serveis als casals municipals de gent gran» (punt 22); i el del 28/04/2026 va aprovar la moció del Partit Popular «para la recuperación del servicio de comedor en los casales de gente mayor» (punt 37).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2025/b165f4a6-416c-43db-b8bf-1ce59c739275/20250128%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "És un servei de proximitat molt valorat i barat per a l'usuari, però té un cost fix alt per plaça i competeix amb l'atenció domiciliària, en què l'Hospitalet ja gasta 97,27 € per habitant, més del doble de la mediana catalana."
+    },
+    {
+      "tema": "serveis socials",
+      "text": "L'Ajuntament ha d'empadronar sense domicili fix les persones que viuen a la ciutat i no poden acreditar un habitatge.",
+      "context": "El padró és la porta d'entrada a l'escola, al metge i als ajuts, i a l'Hospitalet ha estat un dels temes més votats del mandat. El ple s'hi ha pronunciat quatre vegades: dues rebutjant restriccions, una adherint-s'hi al Pacte pel Padró i una rebutjant-ne una auditoria.",
+      "evidencia": "El ple del 26/09/2025 va aprovar la moció de L'Hospitalet en Comú Podem-Confluència per a l'adhesió al Pacte pel Padró a Catalunya (punt 25). El del 27/05/2025 va rebutjar la moció de VOX «para impedir el empadronamiento de okupas e inmigrantes ilegales» (punt 31), que ja havia quedat sobre la taula el 29/04/2025, i el ple extraordinari del 22/05/2026 va rebutjar la moció de VOX «en pro de una auditoría del padrón municipal» (punt 6).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2025/88f9d24d-ad0b-41a0-9f17-443e510b7c46/20250926%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Empadronar sense domicili dona drets bàsics a qui viu i treballa a la ciutat; els qui hi estan en contra sostenen que infla el padró, distorsiona el finançament per habitant i dificulta controlar qui viu realment a cada pis."
+    },
+    {
+      "tema": "seguretat",
+      "text": "L'Ajuntament ha d'aprovar noves places de Guàrdia Urbana cada any fins al final del mandat.",
+      "context": "La seguretat és el tema amb més mocions d'aquest mandat a l'Hospitalet: n'hi ha hagut més de trenta i dues han estat de reprovació del govern. El govern ha respost ampliant la plantilla de policia local per decret cada any.",
+      "evidencia": "El ple del 29/07/2026 va donar-se per assabentat de la resolució 8528/2026, de 16 de juny, que aprova definitivament la modificació de la plantilla de personal funcionari de classe policia local per a l'any 2026 (punt 18). El ple del 26/09/2025 i el del 26/05/2026 van rebutjar les mocions de reprovació del govern per la inseguretat (punts 24 i 30).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2026/e02d98f9-7bbd-42ac-843f-d97c890e5f0a/20260729%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Més agents és la resposta que demana bona part del ple, però cada plaça és despesa corrent permanent i hi ha qui defensa que els conflictes de convivència de l'Hospitalet es resolen amb educadors de carrer i mediació, no amb policia."
+    },
+    {
+      "tema": "turisme",
+      "text": "L'Ajuntament ha de continuar aportant diners a Fira 2000 per sostenir el recinte firal de la Granvia.",
+      "context": "El recinte de Fira Gran Via ocupa sòl de l'Hospitalet i la ciutat és sòcia de Fira 2000, la societat que el va finançar. El ple ha demanat dues vegades reduir-hi l'aportació municipal i reclamar una compensació, i el govern ha signat en canvi convenis per garantir-ne la viabilitat.",
+      "evidencia": "El ple del 28/04/2026 va aprovar el conveni entre la Generalitat, l'Ajuntament de Barcelona, l'Ajuntament de l'Hospitalet, l'AMB i la Diputació «per garantir la viabilitat econòmica de Fira 2000» (punt 7) i el del 24/02/2026 va autoritzar que la societat esdevingui mitjà propi de l'Ajuntament (punt 6). El 26/09/2025 el ple havia aprovat només parcialment la moció del Partit Popular sobre la reducció de la participació i les aportacions municipals a Fira 2000 (punt 20).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2026/d289e8e2-637b-4e8e-ace0-58c3a79cde30/20260428%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "La Fira genera activitat, hotels i ara recàrrec turístic; però l'Hospitalet hi posa diners i hi cedeix sòl mentre part del ple sosté que el retorn social a la ciutat és petit i que caldria cobrar per l'ús del recinte."
+    },
+    {
+      "tema": "cultura",
+      "text": "L'Ajuntament ha de tornar a obrir l'emissora municipal de ràdio.",
+      "context": "Ràdio l'Hospitalet va deixar d'emetre el 2012 i el ple va aprovar reobrir-la el febrer del 2024. Des de llavors el govern de la ciutat i el ple no s'han posat d'acord sobre el model dels mitjans municipals: el gener del 2026 el ple va tombar el programa d'actuació que el govern proposava per mantenir-los.",
+      "evidencia": "El ple del 26/02/2024 va aprovar la moció d'ERC-EUiA, PP i L'Hospitalet en Comú per a la reobertura de Ràdio l'Hospitalet (punt 11), després d'haver-la deixat sobre la taula el 24/01/2024. El ple del 27/01/2026 va rebutjar la proposta del govern d'aprovar el programa d'actuació transitori per a la continuïtat dels serveis de comunicació municipals que presta La Farga GEM, SA (punt 2). L'entitat Foment de la Informació Crítica ha demanat la paraula sobre aquest assumpte als plens del 26/02/2024, 28/01/2025, 27/01/2026 i 29/07/2026.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2026/57da25e0-b976-481e-bc27-ca8623bdff21/20260127%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Una ràdio municipal dona veu pròpia a una ciutat de 289.510 habitants amb poca premsa local, però és despesa corrent permanent i hi ha qui considera que els mitjans públics locals acaben servint el govern de torn."
+    },
+    {
+      "tema": "cultura",
+      "text": "L'Ajuntament ha de construir a la carretera del Mig un nou auditori i escola municipal de música.",
+      "context": "El desembre del 2025 el govern va portar al ple la modificació urbanística que ha de permetre l'equipament, que inclou escola de música, auditori i centre de convencions. Mentrestant l'oposició reclama equipaments culturals al districte II arran del tancament de l'Auditori de la Torrassa.",
+      "evidencia": "El ple del 19/12/2025 va aprovar inicialment, amb quòrum de majoria absoluta, la modificació puntual del PGM a les parcel·les de la carretera del Mig 6 i 24 «(NOVA ESCOLA MUNICIPAL DE MÚSICA I CENTRE DE LES ARTS -EMMCA-, AUDITORI I CENTRE DE CONVENCIONS)» (punt 3, expedient AJT/99065/2025, Desenvolupament Estratègic). El 24/11/2025 el ple havia aprovat la moció d'ERC-EUiA, PP i LHECP per reclamar equipaments culturals dignes al districte II arran del cessament d'activitat de l'Auditori de la Torrassa (punt 24).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2025/19395024-26a9-4d46-b93c-1dd0ac8c3356/20251219%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "És l'equipament cultural més gran previst del mandat i pot donar retorn amb el centre de convencions; però part del ple sosté que la prioritat són els barris que s'han quedat sense sala, com la Torrassa, i que l'Ajuntament no executa ni una cinquena part de la inversió que pressuposta."
+    },
+    {
+      "tema": "el ple",
+      "text": "L'Ajuntament ha d'ampliar els casos de modificació de crèdit que necessiten l'aprovació del ple.",
+      "context": "L'Hospitalet governa amb el pressupost del 2025 prorrogat i mou els diners a cop de modificació de crèdit: el 2025 en va arribar a la número 43 i el juliol del 2026 ja anava per la 24. Cada any queden sense gastar 65,2 milions del pressupost d'inversions.",
+      "evidencia": "Execució d'inversions del 20,4% el 2025, el lloc 20 de 24 municipis catalans de més de 50.000 habitants, amb una mediana catalana del 45%; 65.228.496 € anuals de mitjana sense executar del pressupost d'inversions (liquidacions via AOC, recurs 81f18313). El ple del 25/03/2025 va aprovar la moció del Partit Popular «para ampliar los supuestos en los que las modificaciones de crédito deban ser aprobadas por el pleno municipal» (punt 35), i el del 24/11/2025 va rebutjar la moció de VOX «para garantizar la transparencia y el rigor en las modificaciones presupuestarias» (punt 36).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2025/4158c808-1e69-4942-b35a-64b5b92638d2/20251124%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Més control del ple dona transparència sobre on van els diners, però alenteix la gestió d'un ajuntament que ja executa poca inversió i que treballa amb el pressupost prorrogat."
+    },
+    {
+      "tema": "el ple",
+      "text": "L'alcaldia no ha de fer servir la qüestió de confiança per aprovar un pressupost que el ple ha rebutjat.",
+      "context": "El 19 de desembre del 2025 el ple va rebutjar el pressupost del 2026. Cinc dies després l'alcaldia hi va vincular una qüestió de confiança, la va perdre, i el pressupost va quedar aprovat automàticament al cap d'un mes perquè no es va presentar cap moció de censura amb candidat alternatiu.",
+      "evidencia": "El ple del 19/12/2025 va rebutjar l'aprovació inicial del pressupost general del 2026 i la plantilla (punt 7). El ple extraordinari del 24/12/2025 va tenir un únic punt: «plantejar la qüestió de confiança vinculada a l'aprovació dels pressupostos per a l'any 2026», amb resultat REBUTJAT. El pressupost de 363,74 milions va quedar aprovat automàticament al gener del 2026 (Metrópoli Abierta, 27/01/2026).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/810170005/2025/0acd21eb-bf74-41db-bbe4-401fb8499e05/20251224%20Extracte%20acords%20del%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El mecanisme és legal i evita la paràlisi d'una ciutat de 289.510 habitants amb un govern de 13 regidors sobre 27; però permet que entri en vigor un pressupost que la majoria del ple ha votat en contra dues vegades."
+    }
+  ],
+  "equilibri": {
+    "acord_amb_govern": 12,
+    "total": 25,
+    "per_tema": "fiscalitat 4, habitatge 3, mobilitat 3, urbanisme 3, cultura 2, educació 2, serveis socials 2, el ple 2, medi ambient 1, neteja 1, seguretat 1, turisme 1"
+  },
+  "notes": "Fonts. L'Hospitalet no publica actes de ple a l'índex de l'AOC: publica «extractes dels acords», que donen el títol de cada punt, l'expedient, el grup que el presenta i el resultat (Aprovat / Rebutjat / Aprovat parcialment), però MAI el vot per grup. He baixat i llegit les 52 sessions publicades del mandat (juny 2023 - juliol 2026), n'he extret 1.128 punts amb resultat i 422 mocions amb el grup proposant. Per tant cap afirmació d'aquest conjunt no compleix encara el criteri de «vot del ple citable per grup» de 01-afirmacions.md: el que sí que és citable és qui va presentar cada moció i si el ple la va aprovar o rebutjar. Per publicar caldria un adaptador propi que llegís les actes completes (seuelectronica.l-h.cat) o la vídeo-acta.\n\nCom he inferit la posició del govern. El PSC té 13 de 27 regidories i l'oposició 14, així que una moció REBUTJADA implica gairebé amb seguretat que el govern no hi era a favor (amb 13 vots a favor del PSC més un sol vot de l'oposició la moció passaria). Per això he fet servir sobretot dos tipus d'evidència: (a) mocions rebutjades, per marcar «desacord»; (b) propostes del mateix govern aprovades pel ple (ordenances fiscals, modificacions del PGM, plans especials, convenis), per marcar «acord». Les mocions APROVADES de l'oposició NO les he fet servir per fixar la posició del govern, perquè amb 14 regidors l'oposició les pot aprovar contra el govern: només les cito com a context. On la posició quedava ambigua he descartat l'afirmació.\n\nEquilibri. 12 de 25 amb el govern al costat de l'«acord» (48%), dins de la forquilla 40-60%. Per arribar-hi he escrit en direcció «a favor» quatre afirmacions que d'entrada havia redactat en direcció contrària (zona verda per barri, ampliació de carrils per a bici i patinet, residències d'estudiants i revisió cadastral): la política és la mateixa, el que canvia és de quin costat cau el «d'acord». Les he mantingut totes quatre amb evidència de la decisió real del govern.\n\nQuè he descartat i per què. (1) Tot el bloc de mocions de política estatal o internacional -amnistia, regularització de migrants, Gaza, llei trans, pacte verd europeu-, que hi és molt present però no és competència del ple. (2) Les mocions de carrer concret (un parc, un pàrquing, una plaça): n'hi ha desenes i no discriminen políticament. (3) El límit de preus del lloguer, els lloguers de temporada, la limitació de la compra especulativa d'habitatge, la unitat antidesnonaments, les càmeres de videovigilància, les patrulles de proximitat i la reducció de l'aportació a Fira 2000: totes tenen mocions aprovades o aprovades parcialment i, sense el vot per grup, no puc dir de quin costat era el govern. (4) La moció per retirar competències a la Comissió Delegada del Ple (aprovada el 26/02/2024): no he pogut comprovar si la delegació es va arribar a revocar. (5) L'autorització d'Interior per instal·lar 32 càmeres a la ciutat (govern.cat, nota 130077): la nota no porta data verificable i no l'he feta servir. (6) La taxa de residus calculada per generació: la vaig substituir per la revisió cadastral per no repetir el tema dels residus tres vegades.\n\nUn aclariment sobre el municipi. L'encàrrec deia que el PSC hi té majoria absoluta; no és així: en té 13 de 27 i en calen 14. Aquesta és justament la clau política del mandat: el 19/12/2025 el ple va rebutjar el pressupost del 2026, el 24/12/2025 l'alcaldia va perdre la qüestió de confiança que hi havia vinculat, i el pressupost va quedar aprovat automàticament al gener perquè no es va presentar cap moció de censura. El ple també ha tombat propostes del govern com el programa dels mitjans municipals (27/01/2026), la modificació de crèdit número 17 (30/06/2026) i, en primera votació, el pla de l'hotel del carrer de les Ciències (29/04/2025)."
+}

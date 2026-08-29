@@ -1,0 +1,236 @@
+{
+ "municipi": "Sabadell",
+ "afirmacions": [
+  {
+   "tema": "fiscalitat",
+   "text": "L'Ajuntament ha de continuar apujant cada any els impostos i les taxes municipals per sobre de l'IPC.",
+   "context": "Les ordenances fiscals són el punt que més divideix el ple de Sabadell: el govern les ha aprovades sol tots els anys del mandat. El 2026 el marge va ser d'un vot.",
+   "evidencia": "Aprovació definitiva de les ordenances fiscals per al 2026, ple del 22-12-2025: 14 vots a favor (tot el govern), 13 en contra, 0 abstencions. Els preus públics es van revisar un 8,5% (IPC del 6,0% més un 2,5% addicional). Les esmenes de la Cambra de Comerç, la Cambra de la Propietat, PIMEC i la Federació d'Associacions Veïnals per limitar la pujada a l'IPC es van desestimar.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2025/cfb458dc-f3cb-4a8c-bb0a-75b0aaaf8e37/13-2025%20Ple%20ordinari%202025-12-22_compressed.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Qui creu que sense ingressos creixents no es poden mantenir serveis com l'atenció domiciliària (143 €/hab, el triple de la mediana catalana) hi dirà que sí; qui veu que Sabadell ja recapta plusvàlua un 117% per sobre de la mediana i que l'estalvi net és del 0%, hi dirà que no."
+  },
+  {
+   "tema": "fiscalitat",
+   "text": "L'Ajuntament ha d'aplicar el recàrrec màxim de l'IBI als pisos buits a partir del tercer any de desocupació.",
+   "context": "Sabadell té recàrrec per habitatge desocupat des de les ordenances del 2024, però creix a poc a poc. Amb el lloguer a 820,9 € i 2.738 contractes el 2025 (eren 3.607 el 2023), quan es prem el propietari d'un pis buit és una decisió amb conseqüències.",
+   "evidencia": "L'article 9.7 de l'ordenança de l'IBI només arriba al recàrrec del 100% als cinc anys de desocupació. L'esmena a les ordenances del 2026 per avançar-lo al tercer any, com permet la llei estatal, es va desestimar; l'ordenança es va aprovar el 22-12-2025 amb 14 vots a favor i 13 en contra.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2025/cfb458dc-f3cb-4a8c-bb0a-75b0aaaf8e37/13-2025%20Ple%20ordinari%202025-12-22_compressed.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Uns hi veuen l'eina fiscal més directa per treure pisos al mercat de lloguer; altres, un impost sobre un patrimoni que sovint està buit per herències, obres o litigis, i difícil de provar."
+  },
+  {
+   "tema": "fiscalitat",
+   "text": "L'Ajuntament ha d'abaixar el coeficient de situació de l'impost d'activitats econòmiques que paguen les empreses.",
+   "context": "Sabadell cobra poc IBI i poques taxes en comparació amb Catalunya, però carrega l'activitat econòmica. És la contradicció fiscal del municipi i surt a cada debat d'ordenances.",
+   "evidencia": "Coeficient màxim de l'IAE de 3,8 el 2025, més del doble de la mediana catalana (1,5); recaptació d'IAE de 38 € per habitant, un 63% per sobre de la mediana, mentre l'IBI (270 €/hab) queda un 22% per sota. Les esmenes de PIMEC i les cambres per crear bonificacions d'IAE es van desestimar el 22-12-2025.",
+   "url_evidencia": "https://quivoto.cat/observatori/m/sabadell/",
+   "posicio_govern": "desacord",
+   "discrimina": "Hi ha qui hi veu una penalització a qui crea llocs de treball en una ciutat amb polígons per desenvolupar, i qui hi veu la manera de no carregar l'habitatge de les famílies."
+  },
+  {
+   "tema": "fiscalitat",
+   "text": "L'Ajuntament ha de cobrar la taxa de residus segons la brossa que genera realment cada habitatge.",
+   "context": "La nova taxa de residus del 2024 va ser la polèmica fiscal més sorollosa del mandat: hi va haver mocions en contra de la federació de veïns i d'associacions de barri. Avui es cobra per trams de renda, no per generació.",
+   "evidencia": "Moció per una taxa d'escombraries que tingui en compte els residus generats, ple del 25-06-2024: 8 vots a favor, 15 en contra, 3 abstencions. El seu punt tercer demanava \"un sistema que pugui calcular la brossa generada de forma individualitzada\". La delegació al Consell Comarcal (11-10-2023) recull que la Llei 7/2022 obliga a taxes que \"tendeixin cap al pagament per generació\".",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2024/3ccc5edc-e529-4a67-af43-faf4d46fc797/8-2024%20Ple%20ordinari%202024-06-25.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "El pagament per generació premia qui recicla i acostaria Sabadell al 40,14% de recollida selectiva que la llei li exigeix superar; però obliga a identificar qui llença cada bossa, i això té cost, control i debat de privacitat."
+  },
+  {
+   "tema": "habitatge",
+   "text": "L'Ajuntament ha d'aturar l'atorgament i la renovació de llicències d'habitatge d'ús turístic.",
+   "context": "Sabadell encara no té un problema de pisos turístics, però creix i el decret llei 3/2023 la inclou entre els municipis amb problemes d'accés a l'habitatge. La pregunta és si cal actuar abans que arribi.",
+   "evidencia": "Moció per aturar l'atorgament i la renovació de llicències d'habitatge d'ús turístic, ple del 22-07-2024: 8 vots a favor, 18 en contra. La moció documenta 73 llicències d'HUT vigents a Sabadell el 2024, davant de 54 el 2019 i 4 el 2014.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2024/925deda1-0c92-4d01-a2c2-382943095fb5/9-2024%20Ple%20ordinari%202024-07-22.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "73 pisos en una ciutat de 225.000 habitants és poquíssim i prohibir-los pot semblar desproporcionat; però qui ha vist què ha passat a Barcelona defensa blindar-ho abans que la xifra creixi."
+  },
+  {
+   "tema": "habitatge",
+   "text": "L'Ajuntament ha de destinar a lloguer per a joves una part dels pisos del complex de la Roureda.",
+   "context": "El complex de la Roureda és la promoció pública d'habitatge més gran del mandat i està plantejada per a més grans de 65 anys. Qui hi ha d'entrar és una decisió del ple, no un tecnicisme.",
+   "evidencia": "Moció per destinar entre el 60% i el 70% del complex de la Roureda a joves de 18 a 35 anys, ple del 22-04-2024: 6 vots a favor, 17 en contra, 3 abstencions.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2024/725d73f4-b5c1-4946-bd1e-df5e09b3010e/5-2024%20Ple%20ordinari%202024-04-22.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Els pisos per a gent gran alliberen habitatge familiar i responen a una llista d'espera real; els joves són els que marxen de la ciutat. Els dos arguments són defensables i el sostre és el mateix."
+  },
+  {
+   "tema": "habitatge",
+   "text": "L'Ajuntament ha de cedir a empreses privades, en dret de superfície, el sòl municipal reservat a habitatge protegit.",
+   "context": "És el model que el govern ha triat per construir habitatge protegit sense endeutar-se: l'Ajuntament conserva el sòl i una empresa hi construeix i el gestiona durant dècades. Al mandat hi ha hagut diversos concursos així.",
+   "evidencia": "Concurs per constituir un dret de superfície sobre el solar del carrer de Costabona 31-33, a la Roureda (2.553,81 m² de sòl i 6.638 m² de sostre d'habitatge protegit en règim de lloguer), aprovat al ple del 05-05-2025 amb 19 vots a favor, 3 en contra i 3 abstencions.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2025/24bde01c-0fcc-41f3-a082-58c98ea4afe3/4-2025%20Ple%20ordinari%202025-05-05_compressed.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Permet construir sense deute i mantenir la propietat del sòl; però qui hi està en contra diu que durant dècades el negoci i el preu els fixa una empresa i que l'Ajuntament perd el control del que hi passa."
+  },
+  {
+   "tema": "habitatge",
+   "text": "L'Ajuntament ha de fer que l'empresa municipal d'habitatge s'endeuti per ampliar el parc de lloguer públic.",
+   "context": "Sabadell té una societat municipal d'habitatge des de fa dècades i un deute municipal baix (211 € per habitant). Fins on l'ha de fer arribar és una decisió política, no comptable.",
+   "evidencia": "Autorització a l'empresa municipal d'habitatge per concertar un crèdit de 960.000 € amb l'Institut Català de Finances a 240 mesos, per rehabilitar un edifici de 20 habitatges al carrer del Comerç 49; ple del 24-03-2025, 18 vots a favor, 0 en contra i 9 abstencions.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2025/a8ff317f-970d-4596-ab7c-f6e66316ce37/3-2025%20Ple%20ordinari%202025-03-24_compressed.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "El deute municipal és baix i els tipus permeten construir; però la càrrega financera de l'Ajuntament és del 17% dels ingressos corrents, la més alta dels 24 municipis catalans de més de 50.000 habitants, i endeutar la societat és endeutar la ciutat."
+  },
+  {
+   "tema": "mobilitat",
+   "text": "L'Ajuntament ha d'estendre la zona de baixes emissions a tota la ciutat abans del 2030.",
+   "context": "Sabadell va aprovar la seva ZBE el 2024 amb un àmbit inicial petit i un calendari llarg. Fins on ha d'arribar i quan és la discussió de mobilitat més transversal de la ciutat.",
+   "evidencia": "Ordenança de les zones de baixes emissions, aprovació definitiva al ple del 28-10-2024: 15 vots a favor, 5 en contra, 6 abstencions. L'al·legació per ampliar la ZBE a tota la ciutat des del principi es va desestimar amb la motivació que \"el calendari d'implantació per arribar a aquest àmbit preveu arribar-hi l'any 2032\".",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2024/7e4c62a8-f6e5-4fb7-8c72-9036e89567dc/14-2024%20Ple%20ordinari%202024-10-28_compressed.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Vuit anys de calendari són molts si l'objectiu és la qualitat de l'aire; però ampliar-ho afecta desenes de milers de vehicles antics de barris amb rendes baixes i sense alternativa de transport."
+  },
+  {
+   "tema": "mobilitat",
+   "text": "L'Ajuntament ha de construir el nou aparcament soterrani sota el passeig de la Plaça Major.",
+   "context": "És la inversió de mobilitat més gran del mandat i arrossega un contenciós antic: l'Ajuntament va comprar a FGC una obra inacabada i n'ha resolt la concessió anterior pagant indemnització.",
+   "evidencia": "Expedient de contractació de la concessió per gestionar l'aparcament soterrani del passeig de la Plaça Major i la plaça del Doctor Robert: 490 places (439 vehicles i 54 motos) i concessió de 40 anys. Aprovat el 28-07-2025 (16 a favor, 8 en contra, 2 abstencions) i el 27-04-2026 (17 a favor, 8 en contra, 2 abstencions).",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2025/c1ca06ea-207e-47de-8846-9774ae299af6/7-2025%20Ple%20ordinari%202025-07-28_compressed.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Concentrar l'aparcament sota terra allibera superfície al centre i és el que diu el pla de mobilitat; però lligar la ciutat 40 anys a una concessió i finançar més places de cotxe va en direcció contrària a la ZBE."
+  },
+  {
+   "tema": "mobilitat",
+   "text": "L'Ajuntament ha d'habilitar com a aparcament els solars municipals sense ús als barris amb més cotxes.",
+   "context": "A Sabadell hi ha descampats municipals que els veïns ja fan servir com a aparcament informal, amb pols, fang i sense senyalització. Regularitzar-ho o no és una decisió del ple.",
+   "evidencia": "Moció per optimitzar i augmentar les places d'aparcament amb un inventari de solars públics sense ús planificat i el seu condicionament al Centre, Gràcia, la Creu Alta, la Concòrdia, Can Rull, Can Llong, Campoamor, Ca n'Oriac, Torre-romeu i els Merinals; ple del 26-01-2026, aprovada amb 18 vots a favor, 5 en contra i 4 abstencions.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2026/023131c0-c4b1-4552-a3ee-aded86ea66eb/1-2026%20Ple%20ordinari%202026-01-26_compressed.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Resol un problema quotidià real i barat; però consolida sòl públic com a aparcament en una ciutat que alhora vol reduir el cotxe i que té barris sense zona verda."
+  },
+  {
+   "tema": "mobilitat",
+   "text": "L'Ajuntament ha de posar en marxa un servei nocturn de transport a la demanda els caps de setmana.",
+   "context": "Sabadell no té bus nocturn i hi ha barris perifèrics amb poques freqüències. Al ple s'hi ha proposat dues vegades i el govern hi ha respost amb abstenció primer i amb el vot en contra després.",
+   "evidencia": "Moció per implantar proves pilot de transport públic a la demanda, ple del 24-11-2025: 3 vots a favor, 17 en contra, 6 abstencions. Demanava una prova de sis mesos divendres i dissabtes de 23 a 3 h per 50.000 €, i taxis subvencionats al Raval d'Amàlia i el Molí de Torelló per 82.000 € l'any.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2025/b43d537a-f77c-47d8-a7bd-50599355b820/12-2025%20Ple%20ordinari%202025-11-24.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Són 132.000 € per un servei que dona seguretat nocturna i cobreix barris mal comunicats; però el transport urbà ja és deficitari i una prova pilot sense demanda demostrada pot acabar sent un cotxe buit."
+  },
+  {
+   "tema": "mobilitat",
+   "text": "L'Ajuntament ha de retirar els carrils bici menys utilitzats per recuperar-hi places d'aparcament.",
+   "context": "Els carrils bici de l'avinguda de la Concòrdia i del passeig de Can Feu són el símbol d'aquest debat a Sabadell: se n'ha demanat l'eliminació al ple amb les xifres del que van costar.",
+   "evidencia": "Moció sobre la millora de la mobilitat, ple del 25-03-2024: 3 vots a favor, 23 en contra. Proposava \"l'eliminació íntegra del carril bici de l'Avinguda Concòrdia i del Passeig Can Feu\" i xifrava el cost del primer en 554.285,56 € i el de la Ronda Ponent en 144.014,20 €.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2024/af45581a-8f5e-4d9b-bcb2-8323cf1635d1/3-2024%20Ple%20ordinari%202024-03-25.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Un carril buit és diners llençats i places perdudes; però una xarxa ciclista només funciona si és contínua, i mesurar-ne l'ús als pocs anys d'obrir-la és discutible."
+  },
+  {
+   "tema": "neteja",
+   "text": "L'Ajuntament ha de recuperar la gestió directa de la neteja viària i la recollida de residus.",
+   "context": "La neteja és el servei que més queixes genera i el que Sabadell paga més car en comparació amb la resta de Catalunya. El contracte és amb una empresa i el ple hi ha tornat diverses vegades.",
+   "evidencia": "Moció per encarregar un estudi de viabilitat de la municipalització del servei de neteja viària i recollida de residus, ple del 27-04-2026: 10 vots a favor, 17 en contra. Segons el cost efectiu del 2024, la neteja viària costa a Sabadell 74,19 € per habitant, davant d'una mediana catalana de 31,97 €, i es presta amb gestió indirecta.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2026/7112a63d-4f8a-49d2-95d2-d1a621990063/4-2026%20Ple%20ordinari%202026-04-27_compressed.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Pagar el doble de la mediana per un servei contractat és un argument fort per internalitzar-lo; però municipalitzar vol dir assumir centenars de treballadors i comprar maquinària amb un estalvi net municipal del 0%."
+  },
+  {
+   "tema": "neteja",
+   "text": "L'Ajuntament ha de deixar el tractament dels residus en mans del Consell Comarcal del Vallès Occidental.",
+   "context": "Sabadell va delegar el tractament de la fracció resta, la voluminosa i l'orgànica al Consell Comarcal a l'inici del mandat. D'aquella delegació en surt també la taxa comarcal que després va provocar mocions de veïns.",
+   "evidencia": "Delegació al Consell Comarcal del Vallès Occidental de les competències municipals de tractament i valorització dels residus de les fraccions resta, voluminosos i orgànica; ple de l'11-10-2023: 16 vots a favor, 6 en contra, 5 abstencions.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2023/c5f7c672-a99a-4c90-93d8-ce1cbe520087/17-2023%20Ple%20extraordinari%202023-10-11.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Un municipi de 225.000 habitants pot tenir prou escala per gestionar-ho ell mateix i controlar-ne el cost; delegar-ho reparteix inversions i risc, però allunya la decisió i la factura del ple que la vota."
+  },
+  {
+   "tema": "seguretat",
+   "text": "L'Ajuntament s'ha de personar com a acusació particular als judicis contra delinqüents reincidents de la ciutat.",
+   "context": "La reincidència ha entrat al ple de Sabadell com a debat propi i ha dividit el ple en dos blocs nets, amb el govern al costat de l'oposició de dretes.",
+   "evidencia": "Moció perquè es prenguin mesures contra la reincidència, ple del 24-03-2025: 19 vots a favor, 8 en contra. El primer acord és que l'Ajuntament \"es personi en els procediments judicials com a acusació particular o popular\" en delictes contra la propietat i les persones comesos al terme municipal.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2025/a8ff317f-970d-4596-ab7c-f6e66316ce37/3-2025%20Ple%20ordinari%202025-03-24_compressed.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Personar-se dona veu a la ciutat davant del jutjat i té un efecte dissuasiu; però costa diners i serveis jurídics i converteix l'Ajuntament en part d'una política penal que no li correspon."
+  },
+  {
+   "tema": "seguretat",
+   "text": "L'Ajuntament ha d'intervenir en els habitatges ocupats quan generin conflictes greus de convivència al veïnat.",
+   "context": "L'ocupació conflictiva apareix repetidament al ple de Sabadell i és un dels pocs temes on el govern vota amb la dreta i contra tota l'esquerra del ple.",
+   "evidencia": "Moció perquè l'Ajuntament intervingui en casos d'ocupacions conflictives, ple del 28-07-2025: 18 vots a favor, 8 en contra.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2025/c1ca06ea-207e-47de-8846-9774ae299af6/7-2025%20Ple%20ordinari%202025-07-28_compressed.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "El veïnat que pateix soroll, amenaces o punxades de llum no té a qui recórrer; però l'Ajuntament no és propietari ni jutge i intervenir-hi pot acabar en desallotjaments de famílies sense alternativa."
+  },
+  {
+   "tema": "seguretat",
+   "text": "L'Ajuntament ha d'obrir expedient sancionador sempre que la policia municipal detecti una infracció de l'ordenança de civisme.",
+   "context": "Sabadell va aprovar una ordenança de civisme i convivència el 2024 amb el ple dividit, i des de llavors la discussió és si s'aplica o queda al calaix.",
+   "evidencia": "Moció per reforçar la lluita contra l'incivisme, ple del 27-10-2025: 20 vots a favor, 3 en contra, 4 abstencions. Demana \"l'inici sistemàtic dels procediments sancionadors\" previstos als articles 34 i següents de l'ordenança, un informe anual de compliment i la posada en marxa de l'Observatori de la Convivència.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2025/eb03e325-2e44-4b69-846a-8eee0b51215b/10-2025%20Ple%20ordinari%202025-10-27_compressed.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Una ordenança que no se sanciona no serveix de res; però multar sistemàticament recau sobre qui no pot pagar i pot substituir la feina educativa i social pel butlletí."
+  },
+  {
+   "tema": "medi ambient",
+   "text": "L'Ajuntament ha de començar a preparar el rescat de la concessió de l'aigua, que dura fins al 2048.",
+   "context": "L'aigua de Sabadell la gestiona una concessionària privada amb contracte fins al 2048. El 2024 el govern va sortir de l'associació de municipis per l'aigua pública, i aquesta és la decisió ambiental i econòmica de més recorregut de la ciutat.",
+   "evidencia": "Baixa voluntària de l'Ajuntament com a membre de l'Associació de Municipis i Entitats per l'Aigua Pública, ple del 26-02-2024: 19 vots a favor, 8 en contra. La motivació que consta a l'expedient és \"el fet concret que l'actual prestació del servei de gestió de l'aigua en règim de concessió té encara una llarga vigència que finalitza l'any 2048\". Una moció per clarificar la gestió de l'aigua es va rebutjar el 22-04-2024 amb 8 vots a favor i 18 en contra.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2024/b4767993-47b3-4225-98cc-9fb0c2d52b76/2-2024%20Ple%20ordinari%202024-02-26.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Vint-i-dos anys és mig segle de servei bàsic en mans privades i preparar-ne el rescat ara evita improvisar; però rescatar una concessió vigent costa una indemnització milionària que avui l'Ajuntament no té."
+  },
+  {
+   "tema": "medi ambient",
+   "text": "L'Ajuntament ha de multar els vehicles sense distintiu ambiental que circulin per la zona de baixes emissions.",
+   "context": "La ZBE de Sabadell té règim sancionador des del 2024, però la seva aplicació efectiva continua sent la línia divisòria entre els grups que la van votar i els que la volien aturar.",
+   "evidencia": "Ordenança de les zones de baixes emissions, aprovació definitiva al ple del 28-10-2024: 15 vots a favor, 5 en contra i 6 abstencions. Les al·legacions per paralitzar-ne la implantació i per aplicar-hi una moratòria fins al 2027 es van desestimar.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2024/7e4c62a8-f6e5-4fb7-8c72-9036e89567dc/14-2024%20Ple%20ordinari%202024-10-28_compressed.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "És l'única manera que una ZBE tingui efecte sobre la qualitat de l'aire; però multa gent que no pot canviar de cotxe i, amb un àmbit inicial petit, el benefici ambiental és discutible."
+  },
+  {
+   "tema": "educació",
+   "text": "L'Ajuntament ha de donar més punts a les famílies on treballin els dos progenitors per entrar a les escoles bressol.",
+   "context": "Les escoles bressol municipals de Sabadell tenen més demanda que places i el barem el fixa el ple. Canviar-ne el pes és decidir a qui es prioritza.",
+   "evidencia": "Moció per prioritzar l'adjudicació de places d'escoles bressol a les famílies treballadores, ple del 26-05-2025: 16 vots a favor, 8 en contra, 2 abstencions. Demana que el criteri complementari que tots dos progenitors treballin passi de 4 a 10 punts.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2025/808bf95e-190c-41b4-9682-d9bbfe96d82d/5-2025%20Ple%20ordinari%202025-05-26.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "L'escola bressol serveix per conciliar i qui treballa la necessita més; però el mateix criteri desplaça els infants de famílies a l'atur, que són els que més es beneficien de l'escolarització primerenca."
+  },
+  {
+   "tema": "educació",
+   "text": "L'Ajuntament ha de congelar els preus de les escoles bressol i de les escoles municipals de música i art.",
+   "context": "Cada curs, el ple de Sabadell vota els preus públics de l'escola bressol, el conservatori, l'escola de música i l'escola d'art, i cada curs es divideix. És un dels pocs punts que es repeteix any rere any.",
+   "evidencia": "Preus públics del curs 2026-2027 de les escoles bressol, del conservatori, de l'Escola Municipal de Música i de l'Escola Municipal d'Art, aprovats al ple del 27-04-2026 amb 14 vots a favor, 4 en contra i 9 abstencions. Els del 2024 s'havien aprovat el 27-05-2024 amb 14 a favor, 3 en contra i 8 abstencions.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2026/7112a63d-4f8a-49d2-95d2-d1a621990063/4-2026%20Ple%20ordinari%202026-04-27_compressed.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Congelar protegeix les famílies en un servei no obligatori i car; però els costos pugen igualment i qui no els repercuteix els paga amb impostos de tota la ciutat, inclosos els que no hi porten cap fill."
+  },
+  {
+   "tema": "serveis socials",
+   "text": "L'Ajuntament ha de prestar amb personal propi el servei d'atenció domiciliària a la gent gran.",
+   "context": "L'atenció domiciliària és el contracte social més gran de Sabadell i la ciutat hi gasta molt més que la mitjana catalana. Qui el presta —una empresa o l'Ajuntament— és una decisió recurrent al ple.",
+   "evidencia": "Adjudicació del contracte del servei d'atenció en l'entorn domiciliari, ple del 23-03-2026: 14 vots a favor, 3 en contra, 10 abstencions; valor estimat del contracte de 28.990.619,31 €. Segons el cost efectiu del 2024, l'atenció social costa a Sabadell 143,07 € per habitant, davant d'una mediana catalana de 43,00 €.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2026/40d39277-8785-4c5c-89b4-5352aefb3da6/3-2026%20Ple%20ordinari%202026-03-23.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Internalitzar milloraria condicions laborals i continuïtat en un servei on la rotació de personal es nota a casa de la gent gran; però suposa incorporar centenars de treballadores a una plantilla que ja s'emporta el 35% dels ingressos corrents."
+  },
+  {
+   "tema": "cultura",
+   "text": "L'Ajuntament ha de crear un espai de memòria permanent dedicat a les persones exiliades de la ciutat.",
+   "context": "Sabadell té una Taula de Memòria Democràtica i el ple hi ha tornat diverses vegades al mandat. És dels pocs temes on la divisió no és entre govern i oposició sinó entre la majoria del ple i la dreta.",
+   "evidencia": "Moció per a la creació d'un espai de memòria en record de les persones exiliades de Sabadell, ple del 26-01-2026: 24 vots a favor, 3 en contra. Preveu un espai permanent, un llistat d'exiliats locals elaborat amb la Taula de Memòria Democràtica i un acte institucional anual.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2026/023131c0-c4b1-4552-a3ee-aded86ea66eb/1-2026%20Ple%20ordinari%202026-01-26_compressed.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Per a uns és reparació deguda i patrimoni de la ciutat; per a altres, despesa en monuments i una lectura de la història que no ha de pagar l'erari municipal."
+  },
+  {
+   "tema": "participació",
+   "text": "L'Ajuntament ha de decidir amb un procés participatiu una part del pressupost municipal d'inversions.",
+   "context": "Sabadell no té pressupostos participatius i executa poc del que pressuposta per invertir. Al ple s'hi ha proposat i s'hi ha votat en contra amb una majoria àmplia.",
+   "evidencia": "Moció per posar en marxa un procés participatiu sobre els pressupostos municipals d'inversió del mandat 2023-2027, ple del 23-10-2023: 8 vots a favor, 19 en contra. Segons les liquidacions, Sabadell executa el 30,4% del pressupost d'inversions i cada any del mandat n'han quedat sense gastar 60.079.326 € de mitjana.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/818780001/2023/c4409a76-f169-4ea1-82c3-0cef502731d0/18-2023%20Ple%20ordinari%202023-10-23.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Si cada any sobren 60 milions d'inversió, deixar-ne triar una part als veïns pot semblar el mínim; però els processos participatius acaben sovint en obres petites i disperses i costen mesos de tramitació."
+  }
+ ],
+ "equilibri": {
+  "acord_amb_govern": 12,
+  "total": 25,
+  "per_tema": "fiscalitat 4, habitatge 4, mobilitat 5, seguretat 3, neteja 2, medi ambient 2, educació 2, serveis socials 1, cultura 1, participació 1. Cap tema per sobre de 5. 24 de les 25 afirmacions estan lligades a una votació nominal del ple d'aquest mandat; la de l'IAE surt de dades obertes fiscals més el debat d'ordenances."
+ },
+ "notes": "Font: 46 actes de Ple del mandat descarregades de l'índex obert de l'AOC (recurs b5d370d0, CODI_ENS 818780001) i llegides amb pdftotext -layout. Sabadell publica el vot nominal de cada regidor a cada votació: n'he extret 660 votacions, 533 no unànimes, i he verificat a mà els recomptes de totes les votacions citades. Descartat per no discriminar: la moció de transparència i obertura dels espais de decisió (27-01-2025) i la del pla director d'il·luminació (27-10-2025), aprovades per unanimitat; la de lloguer públic de bicicletes (22-04-2024, 23-0-3) i la d'obertura de patis escolars (24-02-2025, 25-0-2), gairebé unànimes. Descartat per estar fora de competència municipal o ser gest simbòlic supramunicipal: caserna, Julian Assange, Llei trans, Pacte Verd, regularització d'immigrants, prioritat nacional. Descartat per fallar la prova del desacord raonable: els 37 reconeixements extrajudicials de crèdit i les 17 resolucions de discrepància amb la Intervenció General del mandat —ningú defensa pagar factures objectades—, tot i ser el fet més cridaner dels comptes. No he pogut resoldre amb prou solidesa: la posició del govern sobre la contenció de preus del lloguer (moció del 18-12-2023, aprovada 8-3 amb les 15 abstencions del govern) i sobre el bus nit (02-07-2025, 11-0 amb 15 abstencions); l'abstenció no és una posició i no l'he comptada. Cap tema de comerç no ha entrat: les mocions de comerç del mandat, o són gairebé unànimes o el seu acord és promocional (web i mapa) i no una decisió política amb dos pols. L'única afirmació sense votació de ple darrere és la de l'IAE; la sostenen el coeficient declarat per l'ajuntament (3,8 el 2025, mediana catalana 1,5), la recaptació per habitant i la desestimació de les esmenes de PIMEC i les cambres a les ordenances del 2026."
+}

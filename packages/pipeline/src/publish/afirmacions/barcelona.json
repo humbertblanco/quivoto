@@ -1,0 +1,236 @@
+{
+  "municipi": "Barcelona",
+  "afirmacions": [
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha d'apujar cada any un euro el recàrrec municipal de la taxa turística fins al màxim legal de vuit euros.",
+      "context": "Barcelona aplica un recàrrec municipal propi sobre l'impost d'estades en establiments turístics. El govern el va portar de 4 a 5 euros a les ordenances del 2026 i el vol pujar un euro cada any fins al màxim legal de vuit. És la peça central de la seva política d'ingressos: congela l'IBI i l'impost de vehicles i carrega el creixement sobre el visitant.",
+      "evidencia": "Ordenances fiscals del 2026, aprovades provisionalment al ple del 31 d'octubre del 2025 amb els vots del PSC, Barcelona en Comú i ERC, i el vot contrari de Junts, PP i Vox: congelen impostos a famílies i pimes i apugen un euro cada any el recàrrec turístic fins al màxim legal de vuit euros.",
+      "url_evidencia": "https://www.acn.cat/new/el-ple-de-barcelona-aprova-provisionalment-les-ordenances-fiscals-del-2026-amb-els-vots-del-psc-bcomu-i-erc/texts",
+      "posicio_govern": "acord",
+      "discrimina": "Qui hi està a favor diu que el visitant ha de pagar el cost que genera i que és l'ingrés que no toca la butxaca del veí. Qui hi està en contra diu que és un impost que encareix la destinació, que el paga l'hoteler i el pis de lloguer i que ja s'hi suma el tram de la Generalitat."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de cobrar un recàrrec de l'IBI als habitatges buits dels grans tenidors.",
+      "context": "Barcelona ja recapta 458 euros d'IBI per habitant, un 32% per sobre de la mediana catalana, tot i tenir un tipus urbà del 0,66%, per sota de la mediana (0,7%). Les ordenances del 2026 hi afegeixen el recàrrec sobre pisos buits en mans de grans tenidors, previst per la llei però que molts ajuntaments no apliquen.",
+      "evidencia": "Les ordenances fiscals del 2026 incorporen el recàrrec de l'IBI per als habitatges buits en mans de grans tenidors; aprovades al ple del 31 d'octubre del 2025 amb PSC, Barcelona en Comú i ERC a favor i Junts, PP i Vox en contra. Tipus d'IBI urbà vigent el 2025: 0,66% (mediana catalana 0,7%), font AOC dataset 82ae0ea2.",
+      "url_evidencia": "https://www.barcelona.cat/infobarcelona/ca/tema/economia/saproven-definitivament-les-ordenances-fiscals-del-2026_1596849.html",
+      "posicio_govern": "acord",
+      "discrimina": "Hi ha qui ho veu com l'única manera de treure al mercat pisos que s'estan guardant per especular. I hi ha qui diu que declarar un pis «buit» és arbitrari, que el recàrrec és difícil de gestionar i que penalitza propietaris amb immobles en obres o en litigi."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de rebaixar el coeficient de l'impost d'activitats econòmiques que paguen les empreses grans.",
+      "context": "Barcelona aplica un coeficient de situació de l'IAE de fins a 3,8, molt per sobre de la mediana catalana (1,5), i en recapta 54 euros per habitant, un 128% per sobre de la mediana. És l'impost que paguen les empreses de més d'un milió d'euros de xifra de negoci, i el debat sobre si expulsa seus s'ha repetit cada any d'ordenances.",
+      "evidencia": "Tipus impositius declarats per l'Ajuntament el 2025: coeficient màxim d'IAE 3,8, davant una mediana catalana d'1,5 (AOC, dataset 82ae0ea2). Recaptació d'IAE: 54 euros per habitant, 128% per sobre de la mediana catalana (Generalitat, dataset ytva-5kp3). Les ordenances del 2026 congelen els impostos però no rebaixen l'IAE.",
+      "url_evidencia": "https://quivoto.cat/observatori/m/barcelona/",
+      "posicio_govern": "desacord",
+      "discrimina": "Uns diuen que un coeficient dues vegades i mitja la mediana catalana empeny empreses a marxar a municipis veïns amb la mateixa àrea metropolitana. Altres diuen que Barcelona ofereix uns serveis i una centralitat que les empreses paguen de gust, i que rebaixar-lo és regalar ingressos."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de rebaixar la taxa d'escombraries que paguen els comerços.",
+      "context": "L'ordenança fiscal 3.18 va entrar en vigor l'1 de gener del 2025 per complir la llei estatal 7/2022, que obliga que la taxa cobreixi el 100% del cost del servei. A Barcelona aquest cost és alt: la neteja viària costa 130,92 euros per habitant, quatre vegades la mediana catalana. Els comerços absorbeixen increments progressius durant diversos exercicis.",
+      "evidencia": "Ordenança fiscal 3.18 de l'Ajuntament de Barcelona, en vigor des de l'1 de gener del 2025, d'aplicació progressiva per a llars i activitats econòmiques, per adaptar-se a la Llei 7/2022 de residus. Cost efectiu del 2024: neteja viària 130,92 euros per habitant (mediana catalana 31,97) i recollida d'escombraries 4,26 euros (Ministeri d'Hisenda via AOC, dataset 12c13cdd).",
+      "url_evidencia": "https://www.residusmunicipals.cat/la-taxa-de-residus-a-barcelona-aplica-increments-progressius-per-adaptar-se-a-la-normativa/",
+      "posicio_govern": "desacord",
+      "discrimina": "El comerç de barri diu que paga una taxa calculada per superfície que no té res a veure amb el que llença i que arriba després d'anys de caiguda de vendes. Qui hi és contrari recorda que la llei obliga a cobrir tot el cost i que rebaixar-la als comerços vol dir que la paguin les llars."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de deixar que els pisos turístics amb llicència la conservin després del novembre del 2028.",
+      "context": "El juny del 2024 l'alcalde va anunciar que les 10.101 llicències d'habitatge d'ús turístic de la ciutat s'extingiran el novembre del 2028 i que no es farà cap figura urbanística per allargar-les. És la decisió d'habitatge més gran del mandat i afecta un parc equivalent a un any sencer de contractes de lloguer nous d'un districte.",
+      "evidencia": "Anunci de l'Ajuntament del juny del 2024 d'extingir les 10.101 llicències d'HUT el novembre del 2028; l'alcalde va respondre després a Airbnb que la decisió és «ferma» perquè «Barcelona no es pot permetre tenir habitatges dedicats exclusivament al turisme».",
+      "url_evidencia": "https://beteve.cat/politica/barcelona-eliminara-tots-pisos-turistics-2028/",
+      "posicio_govern": "desacord",
+      "discrimina": "Els partidaris de mantenir les llicències diuen que són drets adquirits, que 10.000 pisos no arreglaran un mercat de 30.789 contractes anuals i que el turisme se n'anirà a pisos il·legals. Els contraris diuen que cada HUT és un habitatge menys i que la llicència era temporal per definició."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de sancionar amb multes de fins a 900.000 euros els promotors que incompleixin la reserva del 30% d'habitatge protegit.",
+      "context": "La reserva del 30% obliga a destinar aquesta part a habitatge protegit en obra nova i grans rehabilitacions. Una inspecció del 2022 va destapar infraccions per valor de 3 milions d'euros en multes no cobrades. El debat és si els incompliments s'han de sancionar per la llei d'habitatge, que arriba a 900.000 euros, o per legalitat urbanística, que es queda en 500.",
+      "evidencia": "Proposició de Barcelona en Comú (M2327/3355) aprovada al Plenari del Consell Municipal del 21 de novembre del 2025 amb 23 vots a favor (PSC, Barcelona en Comú i ERC), 11 abstencions (Junts) i 6 vots en contra (PP i Vox). Acta oficial, pàgines 12-13.",
+      "url_evidencia": "https://ajuntament.barcelona.cat/sites/default/files/2025-12/CPlenari-21-11-25-Acta.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Qui hi està d'acord diu que sense sanció efectiva la norma és paper mullat i que una multa de 500 euros surt a compte a qualsevol promotor. Qui hi està en contra diu que multar amb 900.000 euros acaba d'espantar la poca obra nova que queda i que el problema és la norma, no el càstig."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de deixar de comprar edificis privats exercint el dret de tanteig i retracte.",
+      "context": "L'Ajuntament ha fet servir el tanteig i retracte per quedar-se edificis sencers quan es venen, i el cas de la Casa Orsola, comprada el 2025 per 9,2 milions amb una fundació social, el va tornar a posar al centre. L'oposició diu que és una eina reactiva que respon a la pressió mediàtica en comptes de seguir un pla.",
+      "evidencia": "Proposició de Junts per Barcelona (M2327/3883) que demanava «aturar l'ús del mecanisme de tanteig i retracte com una eina de caràcter mediàtic i reactiu», rebutjada al ple del 27 de març del 2026 amb 24 vots en contra (PSC, Barcelona en Comú i ERC) i 17 a favor (Junts, PP i Vox). Acta oficial, pàgina 13.",
+      "url_evidencia": "https://ajuntament.barcelona.cat/sites/default/files/2026-04/CPlenari-27-03-26-Acta.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Uns diuen que comprar edificis sencers és caríssim per pis obtingut i que aturar un desnonament amb diner públic surt a compte al fons que ven. Altres diuen que és l'única eina que actua a temps quan un bloc sencer canvia de mans i que el parc públic no es fa d'una altra manera."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha d'exigir un mínim d'anys d'empadronament a Barcelona per accedir a l'habitatge protegit municipal.",
+      "context": "El barem del Registre de Sol·licitants d'Habitatge Protegit el fixa l'Ajuntament, i per tant pot decidir quant pesa l'arrelament. Amb un lloguer mitjà de 1.134 euros al mes, el percentil 90 dels municipis catalans de més de 50.000 habitants, qui entra a la llista i en quin ordre és una decisió amb conseqüències reals.",
+      "evidencia": "Proposició de Vox (M2327/4125) que demanava condicionar l'accés a l'HPO a un empadronament «històric i continu» a Barcelona, rebutjada al ple del 29 de maig del 2026 amb 35 vots en contra (Junts, PSC, Barcelona en Comú i ERC) i 6 a favor (PP i Vox). Acta oficial, pàgines 18-20. Lloguer mitjà del 2025: 1.134,61 euros (Agència de l'Habitatge de Catalunya, dataset qww9-bvhh).",
+      "url_evidencia": "https://ajuntament.barcelona.cat/sites/default/files/2026-06/CPlenari-29-05-26-Acta.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Hi ha qui diu que el parc públic el paguen els veïns de Barcelona i que és raonable prioritzar qui hi porta anys. I hi ha qui diu que l'antiguitat al padró premia justament qui ja té una vida estable i deixa fora els que més ho necessiten, i que frega la discriminació."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de deixar de promoure habitatge de lloguer assequible amb empreses privades amb ànim de lucre.",
+      "context": "Habitatge Metròpolis Barcelona és la societat mixta que ha de fer 4.500 pisos de lloguer protegit, la meitat a la ciutat. L'Ajuntament i l'AMB en tenen el 25% cadascun i el 50% és de NICRENT, participada per Neinor i Cevasa. El parc revertiria al sector públic al cap de 75 anys.",
+      "evidencia": "Habitatge Metròpolis Barcelona: accionariat de l'AMB (25%), Ajuntament de Barcelona (25%) i NICRENT Residencial (50%), formada per Neinor Homes i Cevasa al 50%, seleccionada el maig del 2021 com a soci privat de l'operador metropolità de lloguer assequible.",
+      "url_evidencia": "https://ajuntament.barcelona.cat/premsa/2021/05/27/loperador-metropolita-dhabitatge-de-lloguer-assequible-habitatge-metropolis-barcelona-hmb-anuncia-lempresa-cevasa-neinor-com-la-millor-classificada-en-el-proces-obert-de-selecci/",
+      "posicio_govern": "desacord",
+      "discrimina": "Els partidaris de tallar-ho diuen que posar diner públic a generar benefici privat encareix el pis i que 75 anys és mitja vida. Els contraris diuen que sense capital privat no hi ha 4.500 pisos, que l'Ajuntament no té ni el finançament ni la capacitat de construir-los sol."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de deixar entrar a la zona de baixes emissions els vehicles antics que superin la prova d'emissions de la ITV.",
+      "context": "La ZBE de Barcelona cobreix uns 95 km² i des de l'1 de gener del 2026 restringeix també els vehicles amb etiqueta B en episodis de contaminació. El debat és si el criteri ha de ser el distintiu que la DGT assigna per any de matriculació o les emissions reals que el vehicle acredita a la ITV.",
+      "evidencia": "Proposició amb contingut de declaració institucional del PP (M2327/3882) per accedir a la ZBE «basat en les emissions reals acreditades del vehicle», rebutjada al ple del 27 de març del 2026 amb 24 vots en contra (PSC, Barcelona en Comú i ERC), 11 abstencions (Junts) i 6 a favor (PP i Vox). Acta oficial, pàgines 15-16.",
+      "url_evidencia": "https://ajuntament.barcelona.cat/sites/default/files/2026-04/CPlenari-27-03-26-Acta.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Uns diuen que castigar un cotxe per l'any de matrícula quan contamina menys que un de nou és injust i que el pagan els qui no poden canviar de cotxe. Altres diuen que un sistema d'excepcions individuals és inaplicable, que la ITV no mesura el mateix i que buidaria la ZBE de sentit."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de continuar convertint carrers de l'Eixample en eixos verds seguint el model de la superilla.",
+      "context": "Consell de Cent, Rocafort, Comte Borrell i Girona es van transformar en eixos verds el mandat anterior. El govern actual ha descartat repetir aquest model perquè el manteniment li surt deu vegades més car que un carrer normal i prefereix obrir interiors d'illa. És la ruptura urbanística més visible entre els dos mandats.",
+      "evidencia": "El govern municipal descarta repetir el model d'eixos verds de l'Eixample perquè el manteniment costa deu vegades més que el d'un carrer convencional; la primera tinenta d'alcaldia reclama «un model que sigui reproduïble» i xifra en 2,5 milions d'euros la reposició de la protecció dels escocells.",
+      "url_evidencia": "https://beteve.cat/politica/barcelona-descarta-repetir-eixos-verds-model-manteniment-car/",
+      "posicio_govern": "desacord",
+      "discrimina": "Qui vol continuar-hi diu que són els carrers on ha baixat el trànsit i la contaminació i que el manteniment és barat comparat amb el cost sanitari de l'aire. Qui hi és contrari diu que un milió d'euros l'any de sobrecost per quatre carrers no és escalable a l'Eixample sencer."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de tornar a obrir el carril de pujada de la Via Laietana a tots els vehicles.",
+      "context": "Després de més de tres anys d'obres, la Via Laietana ha passat de cinc carrils a tres i el de pujada és només per a transport públic, residents d'uns barris concrets i serveis. Des del 27 d'abril del 2026 les càmeres multen amb 90 euros. Els comerciants parlen de caigudes de facturació i els veïns del Gòtic es queixen de quedar-ne exclosos.",
+      "evidencia": "Des del 27 d'abril del 2026 les càmeres de control d'accés de la Via Laietana multen amb 90 euros els vehicles que circulen pel carril de pujada sense autorització; només hi poden passar transport públic, residents del Gòtic, Sant Pere, Santa Caterina, la Ribera i la Barceloneta, emergències, distribució i mobilitat reduïda.",
+      "url_evidencia": "https://www.metropoliabierta.cat/mobilitat/20260427/oficial-barcelona-comenca-multar-cotxes-circular-concorreguda-via-ple-centre/1003742755856_0.html",
+      "posicio_govern": "desacord",
+      "discrimina": "Qui vol reobrir-lo diu que s'ha estrangulat l'únic eix nord-sud del centre, que el comerç ho paga i que el sistema d'autoritzacions crea veïns de primera i de segona. Qui hi és contrari diu que la reforma s'ha fet precisament per treure trànsit de pas d'un carrer amb voreres impossibles."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de renunciar a impulsar l'ampliació de l'aeroport del Prat.",
+      "context": "L'aeroport no és competència municipal, però el ple de Barcelona s'hi va posicionar i el govern hi ha fet campanya activa demanant connexions directes amb Àsia i els Estats Units «sense escales a Madrid». La qüestió divideix el govern dels seus socis d'investidura i té conseqüències sobre el delta i sobre el turisme de la ciutat.",
+      "evidencia": "El ple del 28 de febrer del 2025 va aprovar que l'Ajuntament «lideri i es comprometi a dur a terme les accions necessàries per impulsar l'ampliació de l'aeroport del Prat», amb els vots del PSC, Junts, PP i Vox, i el vot contrari de Barcelona en Comú i ERC.",
+      "url_evidencia": "https://www.elnacional.cat/ca/barcelona/ple-barcelona-aprova-ajuntament-lideri-ampliacio-aeroport_1372181_102.html",
+      "posicio_govern": "desacord",
+      "discrimina": "Uns diuen que més capacitat vol dir més turisme de massa i més pressió sobre uns espais protegits que la ciutat diu voler conservar. Altres diuen que sense connexions directes l'economia de la ciutat depèn d'escales a Madrid i Frankfurt i que això costa llocs de treball."
+    },
+    {
+      "tema": "turisme",
+      "text": "L'Ajuntament ha de continuar destinant diners públics a promoure Barcelona com a destinació turística.",
+      "context": "El Consorci Turisme de Barcelona rep recursos municipals per captar visitants en una ciutat on el turisme ja és el conflicte polític dominant. La pregunta és si té sentit pagar per atreure'n més mentre s'apuja la taxa turística i s'eliminen els pisos turístics.",
+      "evidencia": "Proposició de Barcelona en Comú (M2327/4134) per «posar fi a les polítiques de promoció turística i de ciutat orientades a captar nous visitants», rebutjada al ple del 29 de maig del 2026 amb 27 vots en contra (Junts, PSC, PP i Vox), 5 abstencions (ERC) i 9 a favor (Barcelona en Comú). Acta oficial, pàgines 16-17.",
+      "url_evidencia": "https://ajuntament.barcelona.cat/sites/default/files/2026-06/CPlenari-29-05-26-Acta.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Qui defensa la promoció diu que serveix per desestacionalitzar, per portar visitants de més despesa i per repartir-los fora del centre, i que si es deixa de fer la decideixen les plataformes. Qui hi està en contra diu que pagar per portar més gent a una ciutat saturada és una contradicció."
+    },
+    {
+      "tema": "turisme",
+      "text": "L'Ajuntament ha de cobrar vint-i-quatre euros de taxa als creueristes que passen menys de dotze hores a la ciutat.",
+      "context": "El 2025 el port va registrar prop de quatre milions de creueristes, rècord històric. L'Ajuntament i el Port han pactat baixar de set a cinc terminals i posar un topall de 3,5 milions de creueristes l'any. L'alcalde vol que els creuers d'escala, els que només hi paren unes hores, desapareguin.",
+      "evidencia": "El 15 de juliol del 2026 el govern municipal es va comprometre a elevar fins als 24 euros la taxa als creueristes d'escala de menys de dotze hores, acceptant una proposta de Barcelona en Comú, i a destinar l'increment a sufragar la meitat del cost dels menjadors escolars. L'acord polític previ del PSC, els comuns i ERC fixava un topall de 3,5 milions de creueristes anuals.",
+      "url_evidencia": "https://www.metropoliabierta.cat/el-pols-de-la-ciutat/20260715/barcelona-compromet-apujar-taxa-creuers-euros-manera-immediata/1003742779951_0.html",
+      "posicio_govern": "acord",
+      "discrimina": "Uns diuen que el creuerista d'escala fa un ús intensiu de l'espai públic i gairebé no deixa diners, i que 24 euros és el que costa reparar-ho. Altres diuen que el port és una indústria amb milers de llocs de treball i que triplicar la taxa és empènyer els vaixells cap a Tarragona o Marsella."
+    },
+    {
+      "tema": "turisme",
+      "text": "L'Ajuntament ha de limitar l'accés dels turistes a les bateries antiaèries del Turó de la Rovira amb reserva prèvia.",
+      "context": "Els búnquers del Carmel s'han convertit en un mirador massificat en un barri residencial de carrers estrets, amb sorolls fins de matinada. La proposta de regular-hi l'accés amb reserva i gestió del museu d'història és el primer cas a la ciutat de tancar amb clau un espai públic a l'aire lliure per raons de convivència.",
+      "evidencia": "Proposició d'ERC (M2327/4133), transaccionada, aprovada al ple del 29 de maig del 2026 amb 24 vots a favor (PSC, Barcelona en Comú i ERC), 15 abstencions (Junts i PP) i 2 vots en contra (Vox): implantar un sistema de regulació d'accés gestionat pel Museu d'Història de Barcelona per limitar l'accés als turistes. Acta oficial, pàgines 17-18.",
+      "url_evidencia": "https://ajuntament.barcelona.cat/sites/default/files/2026-06/CPlenari-29-05-26-Acta.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Qui hi està d'acord diu que el veïnat té dret al descans i que sense control l'espai patrimonial es degrada. Qui hi està en contra diu que és un espai públic i que posar-hi barrera i reserva obre la porta a tancar qualsevol mirador, plaça o platja de la ciutat."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de permetre obrir noves discoteques als carrers amples de Ciutat Vella.",
+      "context": "El nou pla d'usos de Ciutat Vella triplica les activitats regulades, de 55 a 180, prohibeix la venda de souvenirs com a producte complementari i manté suspensions per a manicures i botigues de productes cannàbics. També permet oci nocturn nou en carrers amples, cosa que les entitats veïnals xifren en set discoteques possibles.",
+      "evidencia": "Pla especial urbanístic d'ordenació de les activitats de pública concurrència, comerços alimentaris i serveis turístics de Ciutat Vella (24PL17076), aprovat definitivament al ple del 29 de maig del 2026 amb els vots del PSC i Junts, el vot contrari de Barcelona en Comú, ERC i Vox, i l'abstenció del PP. Acta oficial, pàgina 14.",
+      "url_evidencia": "https://www.elnacional.cat/ca/barcelona/barcelona-aprova-definitivament-pla-usos-ciutat-vella_1647409_102.html",
+      "posicio_govern": "acord",
+      "discrimina": "Uns diuen que l'oci nocturn legal i gran és preferible als locals petits descontrolats i que el districte no pot ser un museu. Altres diuen que Ciutat Vella ja té la densitat d'oci més alta d'Europa i que obrir-hi discoteques noves contradiu tot el discurs de descongestió."
+    },
+    {
+      "tema": "seguretat",
+      "text": "L'Ajuntament ha d'augmentar el nombre d'agents de la Guàrdia Urbana destinats al patrullatge preventiu als barris amb més delictes.",
+      "context": "La Guàrdia Urbana ha arribat als 3.431 efectius, la xifra més alta de la seva història, i el govern reforça l'estiu amb centenars de professionals més. Tot i això, el ple es divideix cada mes sobre si el model ha de ser més presència policial al carrer o més prevenció social.",
+      "evidencia": "Proposició del PP (M2327/4128), que demanava incrementar «el nombre d'agents destinats a patrullatge preventiu i de proximitat» als barris amb més incidència delictiva, rebutjada al ple del 29 de maig del 2026 amb 24 vots en contra (PSC, Barcelona en Comú i ERC) i 17 a favor (Junts, PP i Vox). Acta oficial, pàgina 18. Plantilla: 3.431 efectius el setembre del 2024.",
+      "url_evidencia": "https://ajuntament.barcelona.cat/sites/default/files/2026-06/CPlenari-29-05-26-Acta.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Uns diuen que la percepció d'inseguretat i la multireincidència no es resolen sense agents al carrer i que la plantilla encara és curta per a 1,7 milions d'habitants. Altres diuen que més patrulles no baixen la delinqüència i que els diners rendeixen més en educadors i serveis socials."
+    },
+    {
+      "tema": "seguretat",
+      "text": "L'Ajuntament ha d'instal·lar cinc-centes càmeres de videovigilància més a l'espai públic abans del 2028.",
+      "context": "Barcelona té 186 càmeres de videovigilància operatives i el pla municipal preveu desplegar-ne un centenar el 2026 i arribar a unes 686 el 2027. Els punts triats són els Encants i Fort Pienc, l'Anella Olímpica, el parc de la Pegaso, els búnquers del Carmel i el passeig del Born.",
+      "evidencia": "Pla municipal de desplegament de càmeres: unes 100 càmeres noves el 2026 en cinc emplaçaments i 500 dispositius nous fins al 2027, que portarien la xarxa d'unes 186 càmeres operatives a unes 686. L'Ajuntament el descriu com un model selectiu, sense reconeixement facial.",
+      "url_evidencia": "https://www.metropoliabierta.cat/informacio-municipal/20260811/barcelona-accelera-desplegament-cameres-seguretat-centenar-nous-aparells-vigilaran-punts-estrategics/1003742785991_0.html",
+      "posicio_govern": "acord",
+      "discrimina": "Qui hi està a favor diu que la càmera dissuadeix, ajuda a identificar i costa menys que un agent. Qui hi està en contra diu que multiplicar per tres la xarxa de vigilància en una ciutat és una decisió sobre drets que no s'ha debatut, i que els delictes es desplacen, no desapareixen."
+    },
+    {
+      "tema": "educació",
+      "text": "L'Ajuntament ha de pagar la plaça d'escola bressol privada als infants que es queden sense plaça pública.",
+      "context": "A Barcelona hi ha més de 3.000 infants sense plaça pública de 0 a 3 anys. El govern i els seus socis aposten per ampliar la xarxa municipal, amb dotze escoles bressol noves compromeses per al 2031; l'alternativa és subvencionar directament la plaça privada mentre la xarxa pública no hi arriba.",
+      "evidencia": "Proposició del PP (M2327/3347) que demanava «una subvenció que cobreixi part del cost de les escoles bressol privades per als més de 3.000 infants sense plaça pública», rebutjada al ple del 21 de novembre del 2025 amb 23 vots en contra (PSC, Barcelona en Comú i ERC), 13 abstencions (Junts i Vox) i 4 a favor (PP). Acta oficial, pàgina 13.",
+      "url_evidencia": "https://ajuntament.barcelona.cat/sites/default/files/2025-12/CPlenari-21-11-25-Acta.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Uns diuen que una família sense plaça pública no pot esperar deu anys que s'obri una escola bressol i que el xec resol el problema demà. Altres diuen que finançar la plaça privada consolida un mercat en comptes de construir xarxa pública i que encareix el preu per a tothom."
+    },
+    {
+      "tema": "educació",
+      "text": "L'Ajuntament ha de bonificar la meitat del cost del menjador escolar a totes les famílies.",
+      "context": "La bonificació universal del 50% del menjador de l'educació infantil, primària i especial a partir del 2027 va sortir aprovada del ple amb el govern abstenint-se. Mesos després el govern hi va lligar els diners: l'increment de la taxa als creueristes es destinarà a sufragar la meitat del cost dels menjadors de la ciutat.",
+      "evidencia": "Proposició d'ERC (M2327/3754), transaccionada, aprovada al ple del 27 de febrer del 2026 amb 22 vots a favor (Junts, ERC, PP i Vox) i 19 abstencions (PSC i Barcelona en Comú). Acta oficial, pàgines 9-10. El 15 de juliol del 2026 el govern va acceptar destinar l'increment de la taxa als creuers a sufragar la meitat del cost dels menjadors escolars.",
+      "url_evidencia": "https://ajuntament.barcelona.cat/sites/default/files/2026-03/CPlenari-27-02-26-Acta.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Qui hi està a favor diu que una ajuda universal no estigmatitza, arriba a la classe mitjana ofegada i és més barata de gestionar que un sistema de beques. Qui hi està en contra diu que subvencionar el menjador de qui pot pagar-lo és regressiu i que aquests diners haurien d'anar a cobrir el 100% de les beques."
+    },
+    {
+      "tema": "serveis socials",
+      "text": "L'Ajuntament ha de donar un ajut econòmic per cada naixement a totes les famílies empadronades, sigui quina sigui la seva renda.",
+      "context": "Barcelona destina 293 euros per habitant a protecció i promoció social, un 477% per sobre de la mediana catalana, però ho fa gairebé tot amb ajuts condicionats a la renda. La proposta d'un ajut universal per naixement, de 500 a 1.000 euros segons el nombre de fills, obre el debat sobre si l'ajut ha de ser per a tothom.",
+      "evidencia": "Proposició del PP (M2327/3347) d'un ajut directe universal per naixement o adopció (500 euros pel primer fill, 750 pel segon, 1.000 a partir del tercer) per a famílies amb dos anys d'empadronament, rebutjada al ple del 21 de novembre del 2025 amb 23 vots en contra, 13 abstencions i 4 a favor. Despesa en protecció i promoció social el 2025: 293 euros per habitant (Generalitat, dataset ytva-5kp3).",
+      "url_evidencia": "https://ajuntament.barcelona.cat/sites/default/files/2025-12/CPlenari-21-11-25-Acta.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Uns diuen que tenir un fill a Barcelona és caríssim, que la natalitat cau i que un ajut universal és senzill i no deixa ningú fora. Altres diuen que donar els mateixos diners a qui no els necessita és malgastar-los i que el mateix pressupost dona molt més si va als qui no arriben."
+    },
+    {
+      "tema": "neteja",
+      "text": "L'Ajuntament ha d'estendre la recollida d'escombraries porta a porta a més barris de la ciutat.",
+      "context": "Barcelona recull selectivament el 42,1% dels residus, per sobre de la mediana dels municipis catalans grans però lluny del 60% que la contracta municipal es marca per al 2030 i del que exigeix la normativa europea. El porta a porta és el sistema que més eleva la taxa de reciclatge i el que més canvia el dia a dia del veí.",
+      "evidencia": "La contracta de neteja i recollida de residus 2022-2030 fixa com a objectiu passar del 28% al 60% de recollida selectiva el 2030 i ampliar la recollida porta a porta. Taxa de recollida selectiva de Barcelona el 2024: 42,14% (Agència de Residus de Catalunya, dataset 69zu-w48s), amb una mediana de 40,56% entre els 24 municipis catalans de més de 50.000 habitants.",
+      "url_evidencia": "https://ajuntament.barcelona.cat/neteja-i-residus/ca/presentacio/contracta",
+      "posicio_govern": "acord",
+      "discrimina": "Qui hi està a favor diu que és l'única manera d'arribar als objectius de reciclatge i que qui separa bé acaba pagant menys. Qui hi està en contra diu que obliga a treure la brossa en hores fixes, que en blocs alts i en carrers estrets és inviable i que omple els portals de bosses."
+    },
+    {
+      "tema": "participació",
+      "text": "L'Ajuntament ha de deixar decidir per votació ciutadana una part més gran del pressupost d'inversions.",
+      "context": "Els pressupostos participatius reparteixen 30 milions d'euros entre els deu districtes per a tot el cicle 2024-2027. L'Ajuntament de Barcelona en va invertir 366 euros per habitant només el 2025, uns 634 milions: el que decideix la ciutadania directament és una fracció molt petita del total.",
+      "evidencia": "Pressupostos participatius 2024-2027 de Barcelona: 30 milions d'euros per a projectes d'inversió repartits entre els deu districtes amb criteris d'equitat territorial, demogràfica i socioeconòmica. Inversió liquidada el 2025: 366 euros per habitant (capítol 6, AOC dataset 81f18313), amb una execució del 91,8% del pressupost d'inversions.",
+      "url_evidencia": "https://www.decidim.barcelona/processes/pressupostos2024?locale=ca",
+      "posicio_govern": "desconeguda",
+      "discrimina": "Uns diuen que decidir 30 milions de 634 és testimonial i que la gent s'implica quan la decisió pesa. Altres diuen que la inversió d'una ciutat de 1,7 milions d'habitants necessita planificació tècnica i visió de conjunt, i que votar projectes barri a barri fragmenta la ciutat."
+    },
+    {
+      "tema": "el ple",
+      "text": "L'alcalde ha d'aprovar el pressupost per qüestió de confiança quan el ple el rebutgi.",
+      "context": "Barcelona governa amb 10 regidories de 41 i ha aprovat els pressupostos per aquesta via dues vegades. El 21 de novembre del 2025 el ple va tombar el pressupost del 2026 i el 26 de novembre l'alcalde va perdre la qüestió de confiança, cosa que va permetre que el pressupost entrés en vigor l'1 de gener perquè no es va presentar cap moció de censura.",
+      "evidencia": "Acords del Plenari del Consell Municipal: el pressupost general del 2026 consta com a «NO APROVADA» a la sessió ordinària del 21 de novembre del 2025, i la qüestió de confiança vinculada, plantejada a l'empara de l'article 197 bis de la LOREG, consta com a «NO APROVADA» a la sessió extraordinària del 26 de novembre del 2025.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/801930008/2025/9b41b2bd-ca9f-42d4-b854-5ca4d4a4ddeb/P251121ORD_251126e0%20EXT_Pressupost.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Qui ho defensa diu que és un mecanisme previst per la llei i que una ciutat no pot passar anys amb el pressupost prorrogat perquè ningú es posa d'acord. Qui hi està en contra diu que és aprovar sense majoria, que buida de sentit la votació del ple i que hauria d'obligar a negociar."
+    }
+  ],
+  "equilibri": {
+    "acord_amb_govern": 11,
+    "total": 25,
+    "per_tema": "fiscalitat 4 · habitatge 5 · mobilitat 4 · turisme 3 · seguretat 2 · educació 2 · urbanisme 1 · serveis socials 1 · neteja 1 · participació 1 · el ple 1"
+  },
+  "notes": "Font principal: les actes oficials del Plenari del Consell Municipal, que Barcelona publica amb el vot nominal de cada regidor. N'he baixat i llegit quatre completes (21-11-2025, 27-02-2026, 27-03-2026 i 29-05-2026) i els acords de la sessió extraordinària del 26-11-2025. 14 de les 25 afirmacions surten d'un punt votat i citable amb el detall de vots per grup; la resta, de decisions de govern documentades o de dades obertes. He mapat els noms dels regidors a grups a partir de la capçalera de l'acta del 29-05-2026 (PSC 10, Junts 11, BComú 9, ERC 5, PP 4, Vox 2). NO he pogut resoldre: l'índex d'actes de l'AOC per a Barcelona retorna registres sense els camps DATA_SESSIO, TIPUS_SESSIO ni TITOL (només l'enllaç al PDF), i els PDF que hi penja l'AOC són els 'Acords', que no porten el desglossament de vots; el desglossament només és a les actes que l'Ajuntament publica al seu web, i d'aquestes no hi ha totes les del mandat en línia (les de 24-04-2026, 30-01-2026 i 31-10-2025 tornen 404 amb el patró d'URL habitual). Tampoc no he trobat cap font oficial que confirmi el compromís de 4.000 agents de Guàrdia Urbana que cita el grup de Junts; per això la pregunta de seguretat s'ancora al vot del 29-05-2026 i no a aquesta xifra. HE DESCARTAT, tot i ser molt de Barcelona: (1) la bonificació del 35% de l'ICIO a les obres del Camp Nou, aprovada per unanimitat a la comissió del 11-11-2025 — no discrimina; (2) l'1% del pressupost per a l'Institut Barcelona Esports i les declaracions institucionals de memòria democràtica, aprovades per la Junta de Portaveus sense votació dividida; (3) la reforma de la Rambla (55,6 milions, un sobrecost d'11 milions) perquè no vaig trobar-hi cap decisió futura amb dues bandes defensables i no una simple valoració del passat; (4) la construcció en alçada al 22@, on la posició de l'alcalde està documentada però no vaig trobar cap votació ni document municipal que la concretés en una decisió; (5) tot el bloc de multireincidència i informes d'arrelament (votat el 21-11-2025 i el 27-02-2026), perquè el que es vota és instar l'Estat a reformar el Codi Penal i la LOPJ, fora de competència municipal; (6) la moció de Vox sobre la regularització d'immigrants i l'auditoria del padró, per la mateixa raó i perquè el text barreja diverses proposicions. EQUILIBRI: han quedat 11 afirmacions de 25 amb el govern del costat de l'«acord» (44%), dins la forquilla del 40-60%. Per arribar-hi vaig haver de girar la direcció de sis enunciats que havia escrit primer en la direcció que defensa el govern: els pisos turístics (de 'extingir les llicències el 2028' a 'deixar que les conservin'), el tanteig i retracte, Habitatge Metròpolis Barcelona, la Via Laietana, l'ampliació de l'aeroport i les escoles bressol (de la xarxa pública a la subvenció de la plaça privada). Sense aquest gir el conjunt quedava a 17 de 25, que hauria fet un test amb cara de programa de govern. Una sola afirmació té la posició del govern com a 'desconeguda' (els pressupostos participatius): el govern manté el procés amb 30 milions però no ha dit mai si l'ampliaria, i preferia no inferir-ho. CAP AFIRMACIÓ NO POSA TOTES LES CANDIDATURES AL MATEIX COSTAT: la que menys separa és la dels búnquers del Turó de la Rovira (24 a favor, 15 abstencions, 2 en contra) i la de l'ajut per naixement (4 a favor, 13 abstencions, 23 en contra), i totes dues tenen grups a totes dues bandes."
+}

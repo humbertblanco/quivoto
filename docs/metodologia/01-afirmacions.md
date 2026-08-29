@@ -360,3 +360,47 @@ descriu els límits que ja veiem del mètode que aplicarem.
   quan hàgim processat el primer lot d'actes i sapiguem el ritme de debò; prometre'l ara seria
   inventar-lo. Un municipi sense revisar es quedarà a la radiografia i no sortirà amb
   brúixola: preferim no publicar-ne que publicar-ne de no revisades.
+
+
+## Els sis errors que hem comès, i com els evitarem
+
+**29 d'agost de 2026.** Set agents van redactar les 25 afirmacions de set municipis seguint
+aquest document, i sis crítics les van repassar. Cap dels set conjunts no va resultar
+publicable. Les regles de redacció es complien totes —cap afirmació de més de 25 paraules,
+cap nom propi, cobertura i equilibri correctes—, i tot i així els conjunts fallaven. Els
+errors són aquests, i els afegim aquí perquè no són obvis fins que algú te'ls ensenya.
+L'anàlisi sencera és a [AFIRMACIONS-MOSTRA.md](../AFIRMACIONS-MOSTRA.md).
+
+1. **Els paràmetres exactes de la política que ja s'aplica.** «Un euro l'any fins a vuit»,
+   «vint-i-quatre euros», «cinc anys». Qui ha decidit aquella xifra treu coincidència
+   perfecta i qualsevol altra proposta es converteix en un «no». Una afirmació ha de proposar
+   una **direcció**, no repetir una xifra que ja existeix.
+2. **La versió maximalista de la posició contrària.** «Tot» l'habitatge protegit, «tots» els
+   vehicles, multes de 900.000 €. Si una banda surt caricaturitzada, l'afirmació no mesura la
+   posició del lector: mesura si és raonable.
+3. **Els verbs «continuar» i «mantenir».** Obliguen a saber com estan les coses ara i premien
+   qui mana. Les afirmacions van en futur i sense pressuposar l'statu quo.
+4. **Obvietats amb verb buit**: «garantir», «millorar», «més diners a». El «no» és
+   indefensable en abstracte perquè el cost queda amagat al context.
+5. **La finalitat dins de l'enunciat**: «encara que s'hi perdin places d'aparcament», «per
+   accelerar la substitució de les canonades». L'argument va al context, mai a l'afirmació.
+6. **El vot d'un paquet com a prova de divisió sobre un punt de dins.** Un pressupost, una
+   plantilla o una modificació del planejament s'aproven sencers: que el ple es dividís sobre
+   el paquet no vol dir que es dividís sobre la línia que ens interessa. Una afirmació només
+   es pot lligar a un vot si el punt votat és **aquell** punt.
+
+I una absència que travessava els set municipis: **cap afirmació sobre la mida de l'aparell
+municipal** —organismes dependents, retribucions del cartipàs, personal eventual—, que és un
+tema polític de primer ordre.
+
+### El llistó s'ha de comprovar sol
+
+La lliçó de fons no és cap d'aquests sis errors, sinó que **set agents amb aquest document al
+davant no van complir els mínims que hi són escrits**: cap conjunt no arribava a les cinc
+afirmacions amb cita literal de programa, i dos no arribaven a les vuit lligades a un vot
+citable. Un comprovador automàtic sí que ho hauria vist.
+
+Per tant, cap brúixola municipal no es publica sense passar una comprovació que verifiqui,
+sobre el conjunt ja redactat: el mínim de vots citables, el mínim de programa, l'equilibri
+direccional, la cobertura temàtica, el recompte de paraules i que cap afirmació no repeteixi
+un paràmetre vigent de la política del govern.

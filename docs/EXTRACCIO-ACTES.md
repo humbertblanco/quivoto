@@ -172,7 +172,7 @@ mateixa sessió (Girona, 2 i 3 còpies): deduplicar per CODI_ACTA i data.
 
 | Municipi | Hab. | Situació | Adreça | Viable | Com |
 |---|---|---|---|---|---|
-| Barcelona | 1.731.649 | **Resolt, i millor del que esperàvem.** CSV de totes les votacions del plenari: 814 propostes, 39 sessions, 07/2023–03/2026, columna per grup **i 41 per regidor**; 800/814 (98%) amb vot de grup. `part_acta` aïlla "D) Part d'impuls i control" (200 files, 198 amb vot) = el registre de mocions | `ajuntament.barcelona.cat/sites/default/files/votacions_plenari/votacions_plenari_mandat_actual.csv` | **Sí** | `curl` (200 OK, 1,3 MB). **CSV mal escapat**: el camp `text` conté `;` sense cometes i un `csv.reader` desalinea 242/814 files. Parsejar per posició: 3 camps per l'esquerra, 55 per la dreta. Mandat 2019-2023 a la mateixa ruta. Desfasament ~5 mesos |
+| Barcelona | 1.731.649 | **Resolt, i millor del que esperàvem.** CSV de totes les votacions del plenari: 814 propostes, 39 sessions, 07/2023–03/2026, columna per grup **i 41 per regidor**; 800/814 (98%) amb vot de grup. `part_acta` aïlla "D) Part d'impuls i control" (200 files, 198 amb vot) = el registre de mocions | `ajuntament.barcelona.cat/sites/default/files/votacions_plenari/votacions_plenari_mandat_actual.csv` | **Sí** | `curl` (200 OK, 1,3 MB). **CSV mal escapat**: el camp `text` conté `;` sense cometes i un `csv.reader` desalinea 242/814 files. Ancorar al primer camp amb forma dd/mm/aaaa, no per posició: hi ha files amb tres referències d'expedient dins del mateix camp, 55 per la dreta. Mandat 2019-2023 a la mateixa ruta. Desfasament ~5 mesos |
 | Terrassa | 233.270 | **Sense resoldre.** Únic >100k absent de l'AOC. La seu està darrere d'un repte de Cloudflare (403 "Just a moment...") i no respon a `curl`; només hem recuperat actes de 2017 i 2019 via Wayback | `seuelectronica.terrassa.cat` | **Dubtós** | Cal navegador real o acord amb l'ajuntament. Té VideoActa amb índex de punts, sense votacions. Prioritat alta |
 | Girona | 104.700 | **A l'AOC però inservible**: publica extractes d'acords, no actes; zero dades de vot | índex AOC (72 registres) | **No amb aquesta font** | Provar `sessions.girona.cat` (Acta Digital), sol·licitud de transparència, o substituir-la com a pilot |
 | Sant Adrià de Besòs | 39.323 | Absent de l'AOC; publica al web propi (Plone). Les actes **desglossen per grup** | `www.sant-adria.cat/el-govern/ple-municipal/actes/<any>/` | **Sí** | Scraper de llistat per any + PDF. Patró a §4.3 |
@@ -214,3 +214,30 @@ després `GET /session/sessionDetail/<id>`; l'XML porta `chapterMark`, `desc` i 
    any als 12 municipis ja analitzats**, per veure amb quina freqüència canvia la plantilla dins d'un
    mandat (Vic, canvi en quatre setmanes, és l'amenaça més seriosa); (d) **quants dels 947 municipis fan
    servir esPublico Gestiona**, que decideix si dos parsers cobreixen mig país o una desena part.
+
+
+## Correccions posteriors
+
+**29 d'agost de 2026.** Dues coses d'aquest document han quedat desmentides en implementar-lo,
+i val més corregir-les que deixar-les:
+
+1. **Barcelona no publica el vot de cada regidor**, com deia la taula. Publica el vot de cada
+   **grup**: de 814 propostes, només una té les cel·les nominals plenes (41 cel·les nominals
+   contra 4.800 de grup), i al mandat anterior aquestes columnes ni tan sols existeixen. Segueix
+   sent la millor font que tenim i el conjunt de validació que buscàvem, però per grup.
+2. **La descàrrega massiva d'actes no es farà.** El `robots.txt` de `media.seu-e.cat` prohibeix
+   la ruta de l'acteca i el de `seu-e.cat` prohibeix les rutes d'actes de ple i el recurs del
+   conjunt `agn-ag-actes-de-ple`. Aquest mateix projecte ja ho tenia anotat a
+   [FONTS-AOC.md](FONTS-AOC.md) i ho vam passar per alt. Un projecte que demana als ajuntaments
+   que siguin transparents no pot començar saltant-se el que aquests ajuntaments han dit que no
+   volen: que una informació sigui pública no vol dir que se'n pugui fer una còpia massiva sense
+   preguntar.
+
+   El camí és demanar-ho. L'avís legal de seu-e preveu la «reutilització de documents prèvia
+   sol·licitud» (art. 10 de la Llei 37/2007) i és una petició d'una pàgina. Fins que no hi hagi
+   resposta per escrit, la feina `j12-actes` s'atura sola i només s'executa amb
+   `QUIVOTO_ACTES_AUTORITZAT=1`.
+
+   **Això no atura el projecte**: l'extractor està escrit i provat sobre les actes que ja teníem
+   baixades per fer el calibratge, i Barcelona —el municipi més gran— té conjunt obert amb el vot
+   de cada grup, que sí que és reutilitzable sense demanar res.

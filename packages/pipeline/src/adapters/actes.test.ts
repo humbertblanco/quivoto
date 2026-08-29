@@ -14,6 +14,7 @@ import {
   proposantDeTitol,
   segmentaPunts,
   separaGrups,
+  semblaGrup,
   tipusDePunt,
 } from "./actes";
 
@@ -124,6 +125,14 @@ describe("separaGrups", () => {
     ]);
   });
 
+  it("llegeix «9 (PSC-CP), 2 (ECP)» sense quedar-se els parèntesis (Rubí)", () => {
+    expect(separaGrups("9 (PSC-CP), 2 (ECP) i 5 (ERC)")).toEqual([
+      { grup: "PSC-CP", vots: 9 },
+      { grup: "ECP", vots: 2 },
+      { grup: "ERC", vots: 5 },
+    ]);
+  });
+
   it("accepta una llista sense cap xifra (Blanes)", () => {
     expect(separaGrups("PSC, ERC, JPB, PP i la CUP")).toEqual([
       { grup: "PSC", vots: null },
@@ -230,6 +239,20 @@ describe("extreuVotacio", () => {
     expect(extreuVotacio(text)!.resultat).toBe("rebutjat");
   });
 
+  it("no confon el total amb el recompte del primer grup", () => {
+    // «11 (TSF i GS)» és el total de dos grups; «9 (PSC-CP), 2 (ECP)» és una
+    // llista i el 9 és del PSC. Els dos formats es distingeixen per la coma.
+    const total = extreuVotacio("La proposta s’aprova amb la votació següent:\nVots a favor: 11 (TSF i GS)")!;
+    expect(total.recompte.favor).toBe(11);
+    expect(total.perGrup.map((v) => v.vots)).toEqual([null, null]);
+
+    const llista = extreuVotacio(
+      "La votació dóna el següent resultat:\nVots a favor: 9 (PSC-CP), 2 (ECP) i 5 (ERC)",
+    )!;
+    expect(llista.recompte.favor).toBe(16);
+    expect(llista.perGrup).toContainEqual({ grup: "PSC-CP", sentit: "favor", vots: 9 });
+  });
+
   it("retorna null quan al text no s'hi vota res", () => {
     expect(extreuVotacio("2. Donar compte dels decrets d'alcaldia del mes de maig.")).toBeNull();
   });
@@ -302,5 +325,53 @@ describe("tipusDePunt i proposantDeTitol", () => {
       proposantDeTitol("Moció de la Federació d'Associacions de Veïns, sobre els barris"),
     ).toBe("Federació d'Associacions de Veïns");
     expect(proposantDeTitol("Aprovació del compte general de l'exercici 2025")).toBeNull();
+  });
+});
+
+describe("errors que publicarien un vot fals", () => {
+  it("llegeix les tres etiquetes quan cadascuna va a la seva línia", () => {
+    // El format més corrent de tots. El `\s*` de la xifra s'empassava el salt
+    // de línia, l'etiqueta següent ja no trobava l'àncora de principi de línia
+    // i el recompte a favor s'acabava publicant com a vots en contra.
+    const zona =
+      "Sotmesa la proposta a votació, s'aprova amb el resultat següent:\n" +
+      "Vots a favor: 12\nVots en contra: 9\nAbstencions: 0";
+    const votacio = extreuVotacio(zona);
+    expect(votacio.recompte.favor).toBe(12);
+    expect(votacio.recompte.contra).toBe(9);
+    expect(votacio.recompte.abstencio).toBe(0);
+  });
+
+  it("no accepta un tros de prosa com si fos un grup municipal", () => {
+    for (const fals of [
+      "Resultat: s'aprova per unanimitat",
+      "S'aprova el dictamen",
+      "en contra: 9 Abstencions: 0",
+      "aquest punt es va tractar conjuntament amb el següent",
+    ]) {
+      expect(semblaGrup(fals), fals).toBe(false);
+    }
+  });
+
+  it("continua acceptant els noms de grup de veritat", () => {
+    for (const bo of ["PSC-CP", "ERC-AM", "Junts per Sabadell", "CUP", "Grup Municipal del PP"]) {
+      expect(semblaGrup(bo), bo).toBe(true);
+    }
+  });
+
+  it("no diu unanimitat si hi ha vots en contra", () => {
+    // La paraula «unanimitat» pot sortir en un altre punt dins de la mateixa
+    // finestra de text; el que mana és el recompte.
+    const zona =
+      "S'aprova per unanimitat el punt anterior.\n" +
+      "Sotmesa la proposta a votació, s'aprova amb el resultat següent:\n" +
+      "Vots a favor: 12\nVots en contra: 9";
+    expect(extreuVotacio(zona).unanimitat).toBe(false);
+  });
+
+  it("sí que diu unanimitat quan no hi ha cap vot contrari", () => {
+    const zona =
+      "Sotmesa la proposta a votació, s'aprova per unanimitat dels 21 membres presents.";
+    expect(extreuVotacio(zona)?.unanimitat).toBe(true);
   });
 });

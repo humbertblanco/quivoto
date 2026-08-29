@@ -1,0 +1,236 @@
+{
+  "municipi": "Terrassa",
+  "afirmacions": [
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha d'aplicar cada any el recàrrec del 50% de l'IBI als habitatges que estiguin buits.",
+      "context": "Terrassa és zona de mercat residencial tensat des del març del 2024 i el lloguer mitjà ha passat de 687,70 € (2023) a 755,64 € (2025) mentre els contractes signats queien de 3.978 a 3.017. La ciutat té l'ordenança del recàrrec aprovada, però l'aplica amb retard.",
+      "evidencia": "TV3 (26/02/2026): només 17 municipis de la demarcació de Barcelona cobren el recàrrec de l'IBI dels pisos buits; Terrassa hi és, però «encara està fent cobraments d'anys anteriors». Preu del lloguer: Agència de l'Habitatge de Catalunya, conjunt qww9-bvhh.",
+      "url_evidencia": "https://www.3cat.cat/3catinfo/nomes-17-municipis-de-barcelona-cobren-el-recarrec-de-libi-per-penalitzar-els-habitatges-buits/noticia/3396715/",
+      "posicio_govern": "acord",
+      "discrimina": "Qui hi diu que sí hi veu una eina per treure pisos del calaix en una ciutat amb 5.094 inscrits al registre de sol·licitants. Qui hi diu que no hi veu un impost sancionador sobre la propietat, difícil de provar (cal acreditar la desocupació) i que a Mataró, l'exemple més citat, va afectar 38 pisos i va recaptar 23.400 €."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de destinar més diners a comprar pisos ja construïts per posar-los en lloguer social.",
+      "context": "El parc municipal és de 1.024 habitatges per a una ciutat de 233.270 habitants i 5.094 inscrits al registre de sol·licitants. La compra directa d'habitatge existent és la via que dona pisos aquest any i no el 2028, i és la que el PSC va fer servir per negociar la seva abstenció al pressupost.",
+      "evidencia": "Diari de Terrassa: l'Ajuntament ha invertit uns 4 milions d'euros en la compra directa de 63-64 pisos ja construïts; el parc actual és de 1.024 habitatges municipals i 5.094 sol·licitants inscrits. Al pressupost del 2026 s'hi van afegir 500.000 € més per a compra d'habitatge protegit com a esmena pactada.",
+      "url_evidencia": "https://www.diarideterrassa.com/terrassa/radiografia-de-lhabitatge-public-a-terrassa.html",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: comprar pis fet és l'única manera d'ampliar el parc en mesos. En contra: comprar a preu de mercat en una zona tensada és car per pis i alimenta el preu; amb els mateixos diners es construeix més metre quadrat nou."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de construir directament tot el nou habitatge protegit, en lloc d'encarregar-lo a promotors privats.",
+      "context": "De les promocions d'habitatge protegit en marxa a Terrassa, una part important no la fa l'Ajuntament: la més gran, Can Colomer (258 pisos de lloguer assequible), surt d'un acord amb un grup promotor privat, i hi ha 414 pisos protegits més de promoció privada o publicoprivada.",
+      "evidencia": "Diari de Terrassa: dels 740 habitatges projectats, 414 són de promoció privada o publicoprivada (carretera de Rellinars 85, Sala Badrinas 24, Rambleta del Pare Alegre 42, entre d'altres) i 106 surten d'un concurs de solars municipals. Can Colomer: 258 pisos de lloguer assequible amb Grup SALAS, entre 290 i 600 € al mes.",
+      "url_evidencia": "https://www.diarideterrassa.com/terrassa/radiografia-de-lhabitatge-public-a-terrassa.html",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: el sòl públic no s'ha de cedir i el lloguer protegit gestionat per un privat torna al mercat quan venç el conveni. En contra: la Societat Municipal d'Habitatge no té capacitat financera per fer 740 pisos alhora i el model mixt els posa al carrer anys abans."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de prioritzar la rehabilitació de pisos antics per damunt de la construcció d'habitatge nou.",
+      "context": "Terrassa aposta clarament per l'obra nova: 740 habitatges projectats amb 113,6 milions d'euros i, damunt, una modificació del pla urbanístic al sud que preveu fins a 2.300 habitatges més. El parc antic dels barris consolidats (Ca n'Anglada, la Maurina, Torre-sana) no té un pla d'aquesta escala.",
+      "evidencia": "Diari de Terrassa: 740 habitatges en promocions en marxa amb 113,6 M€ d'inversió pública i publicoprivada. Canal Terrassa: la modificació del POUM a Palau Nord preveu fins a 2.300 habitatges, la meitat protegits, i redueix el sector terciari del 90% al 10%.",
+      "url_evidencia": "https://terrassadigital.cat/el-canvi-del-poum-a-palau-nord-elimina-el-sector-terciari-i-descarta-el-cobriment-de-la-riera/",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: rehabilitar no consumeix sòl, fixa població als barris vells i redueix la factura energètica. En contra: la rehabilitació no crea ni un habitatge nou, i amb 5.094 sol·licitants el problema de Terrassa és de nombre de pisos, no només d'estat."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de construir nous aparcaments soterrats al centre de la ciutat.",
+      "context": "El febrer del 2026 el ple va aprovar el pàrquing soterrat del Portal de Sant Roc —219 places i entre 11 i 13 milions d'euros, gestionat per l'empresa municipal Egarvia— en una votació que va trencar el bloc habitual: el govern hi va sumar PP i Vox, el PSC es va abstenir i ERC hi va votar en contra.",
+      "evidencia": "Món Terrassa, ple del 27 de febrer del 2026: 219 places (180 per a turismes), 11-13 M€, gestió d'Egarvia, obres del primer trimestre del 2026 al 2029. Vots: TxT i Junts, PP i Vox a favor del projecte; PSC abstenció («hi ha més de 4.000 places ja disponibles» al centre); ERC en contra («error històric»).",
+      "url_evidencia": "https://monterrassa.cat/societat/mobilitat/aprovat-parquing-portal-sant-roc-amb-abstencio-psc-i-no-derc-504309/",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: treure cotxes del carrer per posar-los sota terra és el que permet guanyar espai de vianants a la superfície i manté el comerç del centre accessible. En contra: 13 milions per 219 places és gastar en la mobilitat que es vol reduir, en una ciutat que ja té més de 4.000 places al centre."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'autobús urbà ha de continuar gestionat per una empresa amb participació municipal.",
+      "context": "El govern vol treure el bus urbà de la societat d'economia mixta TMESA i licitar-lo com a concessió a una empresa 100% privada. Mentre el canvi no arriba, el contracte s'allarga a cop de pròrroga: el juliol del 2026 ERC va comptar que se n'aprovava la catorzena.",
+      "evidencia": "Món Terrassa: l'Ajuntament vol passar «d'una societat d'economia mixta —amb presència municipal— a ser una modalitat de concessió, és a dir, ser 100% d'una empresa privada», amb l'argument de l'«estabilitat pressupostària». Canal Terrassa, ple del 24/07/2026: ERC denuncia que és «la catorzena» pròrroga i el PSC diu que «la ciutat ha de canviar el model de gestió».",
+      "url_evidencia": "https://monterrassa.cat/societat/mobilitat/servei-transport-urba-terrassa-canviara-mans-370061/",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: el bus és el servei públic més usat i mantenir-hi participació municipal permet decidir freqüències i tarifes sense renegociar un contracte. En contra: la societat mixta ha acabat en catorze pròrrogues i sense flota renovada, i una concessió obliga l'operador a complir uns compromisos escrits."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha d'ampliar la zona de baixes emissions a més barris de la ciutat.",
+      "context": "Terrassa va començar a multar dins la ZBE l'1 de desembre del 2025 i l'ha anat estenent: primer fins a l'avinguda Àngel Sallent i, des del maig del 2026, a l'àmbit que va del parc de Vallparadís als carrers Faraday i Josep Trueta. És la mesura que més ha dividit el ple en matèria de mobilitat.",
+      "evidencia": "Món Terrassa: les sancions dins la ZBE comencen l'1 de desembre del 2025 i l'ordenança s'estén el maig del 2026 de Vallparadís a Faraday i Josep Trueta. Al ple monogràfic de mobilitat del 23/05/2025, Vox va demanar «derogar la Zona de Baixes Emissions»; al ple del 26/09/2025, la proposta del PP d'ampliar les exempcions per a residents va ser rebutjada.",
+      "url_evidencia": "https://monterrassa.cat/general/sancions-a-vehicles-dins-la-zbe-terrassa-comencaran-u-de-desembre-484127/",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: és l'única eina municipal amb efecte mesurable sobre la qualitat de l'aire i la llei l'exigeix als municipis grans. En contra: penalitza qui no pot canviar de cotxe, i a Terrassa el transport públic alternatiu encara arrossega catorze pròrrogues del contracte del bus."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de tornar a obrir la Rambla d'Ègara al trànsit de cotxes.",
+      "context": "La Rambla és tancada al vehicle privat des del 2008, quan van acabar les obres del túnel d'FGC i l'Ajuntament va decidir no reobrir-la. El govern va arribar a proposar obrir-la de 7 a 9 del matí per descongestionar Arquimedes i Galileu, i ho va retirar per manca de consens; el PP ho continua reclamant.",
+      "evidencia": "Món Terrassa: la reobertura de la Rambla d'Ègara al vehicle privat queda descartada per manca de consens. Al ple monogràfic de mobilitat del 23/05/2025 el PP va demanar «reobrir la Rambla» i el govern va presentar en canvi la transformació del carrer Arquimedes i un pacte per la mobilitat sostenible.",
+      "url_evidencia": "https://monterrassa.cat/societat/mobilitat/obertura-rambla-descartada-manca-consens-402150/",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: els carrers Arquimedes i Galileu suporten un trànsit de pas que la Rambla podria absorbir, i el centre s'ha tornat difícil d'arribar-hi en cotxe. En contra: retornar cotxes a l'eix central de la ciutat desfà divuit anys de pacificació i xoca amb la ZBE que passa just pel costat."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de prohibir que les motocicletes aparquin damunt les voreres.",
+      "context": "El ple de Terrassa admet propostes presentades per la ciutadania. El 26 de setembre del 2025 una entitat ciclista en va portar una per prohibir l'estacionament de motos en espais de vianants: de tot el ple, només ERC hi va votar a favor. És una de les votacions més desiguals del mandat.",
+      "evidencia": "Món Terrassa, ple del 26/09/2025: la proposta ciutadana de prohibir l'estacionament de motocicletes a les voreres va ser rebutjada, amb ERC com a únic grup a favor. La mateixa sessió va aprovar per unanimitat la medalla d'honor a la Policia Municipal i va rebutjar l'ampliació d'exempcions a la ZBE que demanava el PP.",
+      "url_evidencia": "https://monterrassa.cat/politica/ple-terrassa-treu-fum-478260/",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: la vorera és de qui camina, i a Terrassa hi ha carrers on la moto deixa menys d'un metre de pas. En contra: sense places alternatives, prohibir-ho és multar per un problema que no ha creat el conductor; i l'espai que ocupa una moto al carrer el treu d'un cotxe."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de congelar tots els impostos i les taxes municipals el proper any.",
+      "context": "Per al 2026 el govern va apujar impostos, taxes i preus públics un 2,5%, per sota de l'IPC previst. Les ordenances van sortir amb l'abstenció del PSC, el vot en contra d'ERC i el rebuig frontal de PP i Vox, que van criticar l'augment de la pressió fiscal. El rebut de l'aigua va quedar congelat com a esmena pactada.",
+      "evidencia": "Diari de Terrassa i Canal Terrassa, ple del 3/11/2025: impostos, taxes i preus públics pugen un 2,5%, «per sota de l'IPC previst que és un 3%». Vots de les ordenances: govern (TxT i Junts) a favor, PSC abstenció, ERC en contra, PP i Vox en contra. El rebut domèstic de Taigua queda congelat.",
+      "url_evidencia": "https://terrassadigital.cat/terrassa-aprova-ordenances-i-pressupost-per-al-2026/",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: congelar és el que fan famílies i empreses quan els sous no segueixen els preus, i Terrassa recapta per IBI un 18% menys que la mediana catalana per habitant sense que els comptes estiguin en perill. En contra: congelar amb inflació és retallar en termes reals uns serveis que ja estan un 35% per sota de la mediana en serveis públics bàsics."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha d'abaixar l'impost d'activitats econòmiques que paguen les empreses.",
+      "context": "Terrassa aplica a l'IAE un coeficient de situació màxim de 3,68 quan la mediana catalana és 1,5, i en recapta 39 € per habitant, un 68% per sobre de la mediana. És l'única figura tributària on Terrassa cobra clarament per sobre de la mitjana: en IBI, taxes i vehicles hi està per sota o a prop.",
+      "evidencia": "Tipus impositius declarats per l'Ajuntament (dades obertes de l'AOC, conjunt 82ae0ea2, exercici 2025): IAE màxim 3,68 contra una mediana catalana d'1,5. Recaptació per habitant (Generalitat, ytva-5kp3): activitats econòmiques 39 €, un 68% per sobre de la mediana catalana. Fitxa completa a l'Observatori de quivoto.",
+      "url_evidencia": "https://quivoto.cat/observatori/m/terrassa/",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: Terrassa competeix pels polígons amb Sabadell i Rubí i és el seu impost més car en termes relatius. En contra: l'IAE només el paguen les empreses que facturen més d'un milió d'euros, i abaixar-lo treu ingressos de qui més pot pagar-los."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "La taxa d'escombraries ha de dependre dels residus que genera cada habitatge.",
+      "context": "Terrassa recicla el 45,3% dels residus i el 2026 ha començat a instal·lar contenidors tancats que s'obren amb targeta a tres barris: la tecnologia que permetria cobrar per generació ja hi és. La taxa, mentrestant, es paga igual la generis o no, i el nou model comarcal l'ha encarida entre 50 i 100 euros per família.",
+      "evidencia": "Agència de Residus de Catalunya (conjunt 69zu-w48s): recollida selectiva del 45,33% el 2024, davant una mediana del 40,56% als municipis catalans de més de 50.000 habitants. Món Terrassa: des del 16/02/2026 els contenidors d'orgànica i resta de Can Palet de Vista Alegre, Vista Alegre i Can Gonteres es tanquen i s'obren amb targeta d'usuari.",
+      "url_evidencia": "https://monterrassa.cat/societat/medi-ambient/installen-primers-contenidors-intelligents-terrassa-502528/",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: qui recicla paga menys i és l'únic sistema que ha fet pujar de debò la selectiva allà on s'ha aplicat. En contra: identificar cada llar és car, obre un problema de dades personals i castiga famílies nombroses i pisos petits sense espai per separar."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de tornar a licitar els contractes que rebin una sola oferta.",
+      "context": "El 52% de les licitacions de l'Ajuntament de Terrassa entre el gener del 2025 i l'agost del 2026 van rebre una única oferta, davant d'una mediana del 40,5% als municipis catalans de més de 50.000 habitants: és el percentil 83. La mitjana és de 2,8 ofertes per licitació sobre 58,2 milions d'euros adjudicats.",
+      "evidencia": "Plataforma de Serveis de Contractació Pública, via dades obertes de l'AOC: 322 licitacions de l'Ajuntament de Terrassa entre l'1/01/2025 i el 21/08/2026, 52% amb una sola oferta (mediana del grup 40,5%; percentil 83), 2,8 ofertes de mitjana i 58,2 M€ de volum. Al ple del juliol del 2025 el PP va demanar una auditoria de la contractació pública.",
+      "url_evidencia": "https://dadesobertes.seu-e.cat/dataset/css-rc-contractes-pscp",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: una sola oferta vol dir que ningú no ha competit pel preu, i repetir la licitació és l'única manera de saber si es paga de més. En contra: repetir endarrereix mesos serveis ja en marxa i en sectors petits o molt especialitzats sovint no hi ha una segona empresa a qui esperar."
+    },
+    {
+      "tema": "medi ambient",
+      "text": "L'Ajuntament ha de continuar recorrent les sentències que l'obliguen a retornar clients a l'empresa privada de l'aigua.",
+      "context": "Terrassa va municipalitzar l'aigua el 2018 amb l'empresa pública TAIGUA. L'abril del 2026 el TSJC va declarar irregular una part d'aquella reversió i va ordenar retornar béns i uns 20.000 clients —prop del 20% dels abonats— a l'antiga concessionària. El govern manté que la xarxa és «100% pública» i litiga.",
+      "evidencia": "Diari de Terrassa i Món Terrassa: sentència del TSJC 532/2026, de 18 d'abril, que ordena restituir en un màxim de tres mesos béns i drets de subministrament al centre històric, Can Parellada i les àrees d'Aigües Calonge, Aigües Reig i Fontcuberta, uns 20.000 clients. L'Ajuntament defensa la gestió pública i al·lega que la concessionària no ha acreditat aquests clients.",
+      "url_evidencia": "https://www.diarideterrassa.com/terrassa/el-tsjc-ordena-retornar-bens-a-mina-i-lajuntament-defensa-la-gestio-publica.html",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: la gestió pública de l'aigua va ser una decisió del ple i cedir-la per una sentència de primera instància la desfaria sense esgotar la via judicial. En contra: allargar el plet acumula anys de costos i el risc d'indemnitzacions milionàries que acabaria pagant el rebut o el pressupost municipal."
+    },
+    {
+      "tema": "medi ambient",
+      "text": "L'Ajuntament ha d'estendre a tota la ciutat els contenidors tancats que només s'obren amb targeta.",
+      "context": "Des del febrer del 2026 tres barris de Terrassa —Can Palet de Vista Alegre, Vista Alegre i Can Gonteres— tenen els contenidors d'orgànica i resta tancats, amb una targeta per llar. És una prova pilot finançada amb fons europeus i la decisió d'estendre-la o no arriba al final d'aquest mandat.",
+      "evidencia": "Món Terrassa i Canal Terrassa: des del 16 de febrer del 2026, els contenidors d'orgànica (marró) i resta (gris) d'aquests tres barris són tancats i cada llar rep una targeta per obrir-los; el projecte es cofinança amb el Pla de Recuperació i els fons NextGenerationEU. La selectiva de la ciutat és del 45,33% (2024).",
+      "url_evidencia": "https://terrassadigital.cat/el-nou-eco-equip-porta-els-contenidors-intelligents-a-tres-barris/",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: és el que separa Terrassa dels objectius europeus i redueix els impropis que encareixen el tractament. En contra: obliga tothom a portar targeta, deixa fora qui la perd o no la sap fer servir i sol multiplicar els abocaments al costat del contenidor els primers mesos."
+    },
+    {
+      "tema": "medi ambient",
+      "text": "El rebut de l'aigua ha de pujar per accelerar la substitució de les canonades de fibrociment.",
+      "context": "TAIGUA ha heretat una xarxa amb més de 200 quilòmetres de canonades de fibrociment i té un pla d'inversió de cinc milions d'euros l'any fins al 2029. Alhora, el rebut domèstic ha quedat congelat per al 2026 com a esmena pactada al pressupost, quan la resta de taxes pujaven un 2,5%.",
+      "evidencia": "Diari de Terrassa: el pla d'inversions de TAIGUA per al 2026-2029 destina cinc milions d'euros anuals a renovar una xarxa amb més de 200 quilòmetres de canonades de fibrociment. Al pressupost del 2026, aprovat el 3/11/2025, el rebut domèstic de l'aigua es congela mentre la resta d'impostos i taxes pugen un 2,5%.",
+      "url_evidencia": "https://www.diarideterrassa.com/terrassa/terrassa-aprova-el-pressupost-de-2026-amb-labstencio-de-psc-i-erc.html",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: el fibrociment és la factura ajornada de trenta anys de concessió i, amb cinc milions l'any, substituir-lo triga dècades. En contra: l'aigua és una despesa que no es pot deixar de pagar, i apujar-la just quan la gestió pública és al jutjat carrega el cost sobre els abonats."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de continuar reclamant la construcció de la Ronda Nord entre Terrassa i Sabadell.",
+      "context": "L'alcaldia de Terrassa reclama amb la de Sabadell que la B-40 no acabi en una rotonda i es prolongui entre les dues ciutats. El Govern ha fixat el 2028 per començar-hi les obres. És la infraestructura que porta quaranta anys dividint el Vallès i té una campanya veïnal en contra que ja l'ha portada als tribunals.",
+      "evidencia": "Ajuntament de Sabadell: reunió de les alcaldies de Sabadell i Terrassa per reclamar conjuntament la Ronda Nord al ministeri. Diari de Terrassa: el president de la Generalitat ratifica el calendari, «és un compromís del Govern començar les obres el 2028». La Campanya Contra el Quart Cinturó va impugnar l'acord per la via contenciosa administrativa el gener del 2025.",
+      "url_evidencia": "https://web.sabadell.cat/noticies-sub/ajuntament/item/la-urgencia-per-assolir-la-ronda-nord-centra-la-reunio-que-avui-han-mantingut-els-alcaldes-de-sabadell-i-terrassa-marta-farres-i-jordi-ballart",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: Terrassa i Sabadell són dues ciutats de més de 200.000 habitants connectades per carreteres locals saturades, i la via trauria trànsit de pas dels barris. En contra: és una autovia projectada fa quaranta anys que travessa sòl protegit i que, segons els qui s'hi oposen, generarà el trànsit que diu que ha de resoldre."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de construir un nou barri de fins a 2.300 habitatges al sud de la ciutat.",
+      "context": "La modificació del pla urbanístic a Palau Nord és l'operació de creixement més gran que té Terrassa sobre la taula: converteix un sector pensat per a oficines i comerç en un barri residencial, amb la meitat dels pisos protegits, i amplia el parc de Vallparadís en una sisena fase.",
+      "evidencia": "Canal Terrassa: la modificació del POUM a Palau Nord preveu fins a 2.300 habitatges, el 50% de protecció oficial; redueix l'ús terciari del 90% al 10% del sector, requalifica 117.000 m² com a zona verda incorporada a l'Anella Verda, amplia el parc de Vallparadís un 25% i descarta cobrir la riera.",
+      "url_evidencia": "https://terrassadigital.cat/el-canvi-del-poum-a-palau-nord-elimina-el-sector-terciari-i-descarta-el-cobriment-de-la-riera/",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: 1.150 pisos protegits d'un sol cop és més del que Terrassa ha fet en tot un mandat, i el sector ja estava classificat per urbanitzar. En contra: és créixer cap enfora quan la ciutat té solars buits a dins, i canviar sòl d'activitat per habitatge treu llocs de treball a una ciutat amb atur alt."
+    },
+    {
+      "tema": "seguretat",
+      "text": "L'Ajuntament ha de permetre pagar les multes de convivència amb treballs en benefici de la comunitat.",
+      "context": "La nova ordenança de convivència, en vigor des del març del 2026, apuja les sancions fins als 3.000 euros i suprimeix la possibilitat de commutar les multes considerades incobrables per treballs comunitaris. El PP hi va presentar una esmena per mantenir-la i li va ser rebutjada.",
+      "evidencia": "Diari de Terrassa, ple del 28/11/2025: s'aprova l'ordenança de bases de convivència democràtica amb TxT, Junts, PSC i ERC a favor i PP i Vox en contra; el PP hi va portar una esmena per mantenir la commutació de sancions «incobrables» per treballs en benefici de la comunitat. Text vigent des del 5/03/2026 (CIDO 1558112).",
+      "url_evidencia": "https://www.diarideterrassa.com/terrassa/terrassa-renova-les-regles-del-joc-a-lespai-public-1200-euros-per-resistir-se-a-la-policia-i-mes-normes-al-bus.html",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: una multa de 1.200 euros a qui no la pot pagar no es cobra mai i no repara res; el treball comunitari sí. En contra: convertir la sanció en una feina voluntària buida l'ordenança d'efecte dissuasiu i crea dues justícies segons la butxaca de cadascú."
+    },
+    {
+      "tema": "seguretat",
+      "text": "Els agents de la policia municipal han de portar càmeres a l'uniforme.",
+      "context": "El nou pla director de la Policia Municipal de Terrassa —un cos amb més de 150 anys d'història i 41 places d'agent convocades— es redacta aquest mandat, i l'alcaldia hi ha proposat incorporar càmeres personals als agents. La ciutat ja hi ha sumat 16 càmeres fixes a entrades de barris i 14 als polígons.",
+      "evidencia": "Ajuntament Impulsa: l'alcalde de Terrassa proposa que el nou Pla Director de la Policia Local incorpori càmeres a l'uniforme dels agents. Canal Terrassa: el ple del 31/05/2024 va aprovar per unanimitat instal·lar 16 càmeres de videovigilància a entrades i sortides de barris i 14 punts més als polígons industrials.",
+      "url_evidencia": "https://www.ajuntamentimpulsa.cat/es/el-alcalde-de-terrassa-propone-que-el-nuevo-plan-director-de-la-policia-local-incorpore-camaras-en-el-uniforme-de-los-agentes.aspx",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: la càmera protegeix igual l'agent d'una denúncia falsa i el ciutadà d'un abús, i acaba amb la paraula contra paraula. En contra: és gravació sistemàtica de gent al carrer, amb un cost i unes garanties de custòdia que l'Ajuntament encara no ha explicat."
+    },
+    {
+      "tema": "seguretat",
+      "text": "L'Ajuntament ha de prohibir la venda d'alcohol a les botigues des de les deu del vespre.",
+      "context": "L'ordenança de convivència aprovada el novembre del 2025 prohibeix la venda d'alcohol als comerços de deu del vespre a vuit del matí, dins d'un paquet de mesures per controlar-ne el consum a l'espai públic. Va sortir amb el vot de govern, PSC i ERC, i amb PP i Vox en contra del conjunt.",
+      "evidencia": "Diari de Terrassa, ple del 28/11/2025: la nova ordenança de convivència prohibeix la venda d'alcohol en comerços de 22 h a 8 h, incorpora mesures de control del consum i sancions de fins a 3.000 euros. Vots: TxT, Junts, PSC i ERC a favor; PP i Vox en contra.",
+      "url_evidencia": "https://monterrassa.cat/politica/entra-en-vigor-nou-codi-convivencia-a-terrassa-sancions-mes-dures-504639/",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: la venda nocturna alimenta el consum al carrer i el soroll als barris, i és l'única palanca que té un ajuntament. En contra: castiga el petit comerç de barri mentre bars i discoteques continuen servint, i trasllada el problema en lloc de resoldre'l."
+    },
+    {
+      "tema": "educació",
+      "text": "Els preus del conservatori municipal de música s'han de calcular segons la renda de cada família.",
+      "context": "L'abril del 2026 el ple va aprovar la tarifació social del conservatori municipal per al curs 2026-2027, amb reduccions per a famílies amb dos fills escolaritzats i revisió de la quota si canvia la situació econòmica durant el curs. És una de les votacions que ha separat més clarament el ple.",
+      "evidencia": "Món Terrassa, ple del 24/04/2026: s'aprova la modificació de la tarifació social del Conservatori Municipal de Música per al curs 2026-2027 amb ERC a favor, PSC abstenció i PP i Vox en contra; el pagament passa de vuit a nou mensualitats i baixa dos trams per a parelles amb dos fills escolaritzats.",
+      "url_evidencia": "https://monterrassa.cat/politica/nova-tarifacio-social-al-conservatori-saprova-amb-labstencio-psc-513172/",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: un conservatori públic pagat amb impostos de tothom no pot tenir el mateix preu per a totes les rendes. En contra: obliga a declarar ingressos per apuntar-se a música, encareix la quota de les rendes mitjanes i complica una gestió que ja costa 215 € per habitant en educació, cultura i esport."
+    },
+    {
+      "tema": "educació",
+      "text": "L'Ajuntament ha de multar les famílies dels alumnes que falten a classe sense justificació.",
+      "context": "L'ordenança de convivència del 2026 incorpora per primera vegada l'absentisme escolar com a infracció, sancionant-ne els responsables legals. És una via poc habitual: la majoria d'ajuntaments hi actuen amb serveis socials i comissions d'absentisme, no amb el règim sancionador.",
+      "evidencia": "Diari de Terrassa, ple del 28/11/2025: la nova ordenança de convivència regula l'absentisme escolar «sancionant els responsables legals», al costat de les molèsties veïnals i el control del consum d'alcohol. En vigor des del 5 de març del 2026 (fitxa CIDO 1558112).",
+      "url_evidencia": "https://cido.diba.cat/normativa_local/1558112",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: sense conseqüència, els casos crònics d'absentisme no es mouen, i la multa és el darrer graó després de mesos d'avisos. En contra: multar una família que ja té problemes econòmics agreuja la causa del problema en lloc de resoldre'l, i l'escolarització la vigila el Departament d'Educació."
+    },
+    {
+      "tema": "esports",
+      "text": "L'Ajuntament ha de dedicar més diners a les instal·lacions esportives municipals.",
+      "context": "Terrassa gasta 17,62 euros per habitant en instal·lacions esportives quan la mediana catalana és de 46,20: menys de la meitat. És una ciutat amb tradició d'hoquei i clubs de referència, i al ple s'hi han portat propostes per potenciar-lo i per obrir les piscines durant les onades de calor.",
+      "evidencia": "Cost efectiu dels serveis del 2024, Ministeri d'Hisenda via dades obertes de l'AOC (conjunt 12c13cdd): instal·lacions esportives 17,62 € per habitant a Terrassa, mediana catalana 46,20 €. Al ple del juliol del 2025 ERC va presentar una proposta per potenciar l'hoquei i el juliol del 2026 per obrir gratuïtament les piscines durant les onades de calor.",
+      "url_evidencia": "https://quivoto.cat/observatori/m/terrassa/",
+      "posicio_govern": "desacord",
+      "discrimina": "A favor: gastar menys de la meitat que la mediana catalana en equipaments esportius es nota en pavellons i piscines envellits d'una ciutat de 233.000 habitants. En contra: cada euro que hi vagi surt d'una altra banda, i Terrassa ja dedica a atenció social gairebé quatre vegades la mediana catalana."
+    },
+    {
+      "tema": "cultura",
+      "text": "L'Ajuntament ha de mantenir la ràdio i la televisió municipals amb diners públics.",
+      "context": "Terrassa té vuit organismes i empreses dependents, i un és la Societat Municipal de Comunicació, que sosté els mitjans locals públics. Alhora, la ciutat gasta en educació, cultura i esport 215 euros per habitant, un 35% menys que la mediana catalana, i la despesa en mitjans propis hi competeix.",
+      "evidencia": "Organismes dependents o vinculats, dades obertes de l'AOC: l'Ajuntament de Terrassa té vuit ens, entre els quals la Societat Municipal de Comunicació de Terrassa, SA. Despesa liquidada del 2025 (Generalitat, ytva-5kp3): educació, cultura i esport, 215 € per habitant, un 35% per sota de la mediana catalana.",
+      "url_evidencia": "https://dadesobertes.seu-e.cat/dataset/iio-ii-organismes-dependents",
+      "posicio_govern": "acord",
+      "discrimina": "A favor: sense mitjans públics locals ningú no explica el ple ni els barris, i la informació municipal deixa de ser accessible. En contra: és una despesa recurrent en un àmbit on ja hi ha mitjans privats a la ciutat, i un mitjà pagat per l'Ajuntament informa de qui el paga."
+    }
+  ],
+  "equilibri": {
+    "acord_amb_govern": 14,
+    "total": 25,
+    "per_tema": "habitatge 4 · mobilitat 5 · fiscalitat 4 · medi ambient 3 · seguretat 3 · educació 2 · urbanisme 2 · esports 1 · cultura 1. Mínims complerts: 3 de fiscalitat, 3 d'habitatge i 3 de mobilitat. Cap tema per sobre de 5 ni per sota d'1. Govern del costat de l'«acord» en 14 de 25 (56%), dins la forquilla del 40-60%."
+  },
+  "notes": "FONTS. Terrassa no té cap acta d'aquest mandat al feed obert de l'AOC: l'índex CKAN (recurs b5d370d0) en té 117, però la més recent és del 22/03/2018 i el mandat comença el 17/06/2023. He intentat baixar les actes del portal municipal i no ha estat possible des d'aquest entorn: seuelectronica.terrassa.cat respon 403 i aoberta.terrassa.cat esgota el temps d'espera. Per tant, CAP de les 25 afirmacions no està lligada a una acta amb el vot desglossat: totes surten de premsa local (Diari de Terrassa, Canal Terrassa/terrassadigital, Món Terrassa), de normativa publicada a CIDO, o de dades obertes (AOC, Generalitat, Ministeri d'Hisenda). Segons la quota de docs/metodologia/01-afirmacions.md això vol dir que Terrassa NO compleix el mínim de 8 afirmacions lligades a un vot citable ni el de 5 lligades a un programa del 2023 (no n'he trobat cap penjat), i per tant aquest conjunt no seria publicable sense obrir abans les actes del portal municipal. Ho deixo dit perquè no s'aprofiti en silenci.\n\nQUÈ HE VERIFICAT I QUÈ NO. Les votacions per grup que cito (ordenances i pressupost del 3/11/2025; ordenança de convivència del 28/11/2025; pàrquing de Sant Roc del 27/02/2026; conservatori del 24/04/2026; ple del 26/09/2025) surten de cròniques de premsa que donen el sentit del vot grup a grup, no de l'acta. La posició del govern a l'afirmació sobre repetir les licitacions amb una sola oferta és una inferència meva del seu comportament (adjudica el 52% de les licitacions amb oferta única), no una declaració seva: és la posició de govern menys sòlida de les 25.\n\nQUÈ HE DESCARTAT. (1) Una afirmació sobre el Teatre Principal: la notícia dels 50 milions d'inversió era del Teatre Principal de Barcelona, no del de Terrassa; ho vaig comprovar i la vaig treure. (2) Una afirmació sobre iniciar la revisió del POUM: la revisió ja està en marxa des del 2025 i amb comissió estratègica pactada per la majoria de grups, o sigui que no discriminaria. (3) Càmeres de videovigilància als barris: aprovat per unanimitat el 31/05/2024, no discrimina; només he conservat la variant de les càmeres a l'uniforme, que sí que és una proposta de part. (4) Habitatges d'ús turístic: no he trobat cap decisió pròpia de Terrassa, només el decret llei de la Generalitat, i sense evidència local no entra. (5) Piscines gratuïtes durant les onades de calor i zona de gossos del Parc del Nord: tinc la proposta però no el vot per grup, i no volia afegir una posició de govern inventada. (6) Turisme, comerç, neteja, serveis socials i participació s'han quedat fora per manca d'evidència local prou sòlida, tot i que serveis socials tenia una xifra molt potent (atenció social a 168,78 € per habitant contra una mediana catalana de 43 €): no he trobat cap desacord documentat al ple sobre aquesta despesa i una afirmació sense les dues bandes defensables no val.\n\nEQUILIBRI. Primera versió: 16 de 25 amb el govern del costat de l'«acord» (64%), fora de forquilla. Vaig invertir la redacció de l'afirmació sobre habitatge protegit —de «cedir solars a promotors privats» (govern a favor) a «construir-lo directament» (govern en contra)—, amb la mateixa evidència de Can Colomer i dels 414 pisos de promoció privada, i vaig substituir dues afirmacions més febles (endeutar-se per invertir; piscines a les onades de calor) per la del rebut de l'aigua i la de la ràdio i televisió municipals. Amb això queda 14 de 25 (56%)."
+}

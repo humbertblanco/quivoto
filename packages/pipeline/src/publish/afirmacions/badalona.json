@@ -1,0 +1,236 @@
+{
+ "municipi": "Badalona",
+ "afirmacions": [
+  {
+   "tema": "fiscalitat",
+   "text": "L'Ajuntament ha de congelar el tipus de l'impost sobre béns immobles durant tot el proper mandat.",
+   "context": "L'IBI és la principal font d'ingressos propis de Badalona i el punt fiscal que més divideix el ple. El tipus urbà general és del 0,79%, per sobre de la mediana catalana (0,70%), i el govern l'ha apujat dos anys seguits.",
+   "evidencia": "Ple del 27/10/2025: s'aprova incrementar un 2,4% els tipus de l'IBI per al 2026, amb 17 vots a favor (PP) i 9 en contra (Guanyem, BeCP, ERC i PSC). El 18/10/2024 el tipus urbà general ja havia passat del 0,769% al 0,792% amb 21 a favor, 3 en contra i 1 abstenció.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/64b00b33-64ad-43a1-b1e0-2c42b8ca9dfe/Acta_15_Ple_27-10-2025.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Qui vol sostenir despesa corrent i inversió sense endeutar-se defensa la pujada; qui creu que la pressió fiscal ofega famílies i comerç en un municipi amb 342 milions de romanent sense gastar defensa congelar-la."
+  },
+  {
+   "tema": "fiscalitat",
+   "text": "L'Ajuntament ha de declarar desocupats els pisos buits dels grans propietaris per aplicar-los el recàrrec de l'IBI.",
+   "context": "L'ordenança fiscal número 1 de Badalona ja preveu el recàrrec de l'IBI als habitatges desocupats que permet l'article 72.4 de la llei d'hisendes locals, però no s'ha arribat a cobrar mai. L'oposició el va proposar com a alternativa a la pujada general del 2026.",
+   "evidencia": "Informe municipal de resolució d'al·legacions aprovat al ple del 24/12/2025: «A la data d'emissió del present informe, no consta que l'Ajuntament de Badalona hagi declarat cap immoble com a desocupat de manera permanent i, en conseqüència, no s'ha meritat ni ingressat cap import corresponent a aquest concepte tributari». L'al·legació es desestima.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/b29ddf14-d018-49ea-9215-043671b3c8cf/Acta_20_Ple_24-12-2025.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Declarar un immoble desocupat exigeix un expedient per habitatge i és jurídicament litigiós; a l'altra banda, és l'única eina fiscal municipal per pressionar els pisos buits en una ciutat declarada de mercat residencial tensionat."
+  },
+  {
+   "tema": "fiscalitat",
+   "text": "L'Ajuntament ha d'aprovar un recàrrec municipal sobre l'impost de les estades en establiments turístics.",
+   "context": "La Llei 2/2026 habilita els ajuntaments a aprovar per ordenança un recàrrec propi sobre l'impost d'estades turístiques, exigible fora de Barcelona a partir de l'1 d'octubre de 2026. Badalona té platja, creixement de pisos turístics i encara no l'ha regulat.",
+   "evidencia": "Ple del 04/05/2026: moció per elaborar l'ordenança del recàrrec municipal i un pla anual de destinació dels ingressos, rebutjada amb 8 vots a favor i 18 en contra (PP).",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2026/55b18f26-d714-4441-96f8-87ef7d4805ae/ACTA_09_Ple%2004-05-2026.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "És un ingrés nou finalista per a habitatge i serveis, però encareix l'allotjament en una ciutat que competeix amb Barcelona i afegeix una figura tributària més."
+  },
+  {
+   "tema": "fiscalitat",
+   "text": "L'Ajuntament ha de gastar aquest mandat els diners acumulats al romanent de tresoreria en obres de manteniment.",
+   "context": "Badalona és el municipi català de més de 50.000 habitants amb més estalvi net i, alhora, el que menys executa el seu pressupost d'inversions. La discussió sobre què fer amb aquests diners travessa tot el mandat.",
+   "evidencia": "Moció presentada al ple del 04/05/2026 amb dades de la liquidació del 2025: 342.057.410,81 € de romanent immobilitzat i un 5,48% d'execució d'inversions reals; rebutjada amb 3 vots a favor, 18 en contra i 4 abstencions. Segons el Ministeri d'Hisenda, el 2024 Badalona va executar el 4,6% del pressupost d'inversions, l'últim dels 24 municipis catalans de més de 50.000 habitants.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2026/55b18f26-d714-4441-96f8-87ef7d4805ae/ACTA_09_Ple%2004-05-2026.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Gastar de cop el romanent es pot llegir com a prudència perduda i com a despesa mal planificada; no gastar-lo, com a paràlisi mentre carrers i equipaments es degraden."
+  },
+  {
+   "tema": "fiscalitat",
+   "text": "L'Ajuntament ha de finançar les inversions demanant crèdit als bancs.",
+   "context": "Badalona té un deute molt baix (108 € per habitant, el 9,7% dels ingressos corrents) i marge legal per endeutar-se. El govern hi ha recorregut de manera repetida per finançar l'annex d'inversions, i part de l'oposició s'hi ha oposat.",
+   "evidencia": "Ple de l'01/12/2025: aprovada la concertació de tres operacions d'endeutament de 20 milions d'euros cadascuna amb 17 vots a favor, 5 en contra i 4 abstencions. Ple del 02/06/2025: aprovada una operació de crèdit de 31.079.155,43 € amb 23 vots a favor, 1 en contra i 3 abstencions.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/102e06db-8300-4e27-93dd-589ffdea6f91/Acta_17_Ple_01-12-2025.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Endeutar-se permet fer obra ara i repartir-ne el cost, però compromet pressupostos futurs en un ajuntament que ja té centenars de milions sense gastar."
+  },
+  {
+   "tema": "habitatge",
+   "text": "L'Ajuntament ha de prohibir els habitatges d'ús turístic a tot el terme municipal.",
+   "context": "Badalona està declarada zona de mercat residencial tensionat i el lloguer mitjà ha passat de 848,91 € el 2023 a 964,67 € el 2025 (+13,6%), el percentil 85 dels 24 municipis catalans de més de 50.000 habitants. El govern va optar per regular els pisos turístics per zones, no per prohibir-los.",
+   "evidencia": "Ple del 07/07/2025: moció per a la regulació i limitació dels habitatges d'ús turístic, rebutjada 9-18. Ple del 02/03/2026: moció per prohibir-los a tota la ciutat a partir de l'octubre del 2028, rebutjada de nou amb 9 vots a favor i 18 en contra.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2026/6fb28919-82bb-4720-9c22-769aae94dcf8/ACTA_04_Ple_02-03-2026.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Prohibir-los retorna pisos al lloguer residencial, però elimina una activitat econòmica legal i afecta propietaris amb llicència; regular-los per zones és la via que defensa el govern."
+  },
+  {
+   "tema": "habitatge",
+   "text": "L'Ajuntament ha d'obrir un equipament propi d'allotjament per a persones sense llar obert tot l'any.",
+   "context": "Badalona no té un recurs residencial municipal permanent per a persones sense llar: l'anomenada operació hivern només s'activa en episodis de fred. L'oposició hi ha tornat diverses vegades i el ple ho ha rebutjat cada cop.",
+   "evidencia": "Ple del 06/05/2024: moció sobre recursos d'emergència residencial per a persones sense llar, rebutjada amb 9 vots a favor i 18 en contra. Ple de l'01/12/2025: moció per reactivar l'operació hivern i impulsar una política contra el sensellarisme, rebutjada 8-17.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2024/7b9c309b-396f-4d5b-93a8-379f760e5353/Acta_06_Ple_06-05-2024.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Un equipament permanent és car i genera debat sobre on ubicar-lo i sobre l'efecte crida; sense ell, l'atenció depèn de recursos temporals i d'entitats."
+  },
+  {
+   "tema": "habitatge",
+   "text": "L'Ajuntament ha de cedir més sòl municipal a l'Àrea Metropolitana perquè hi construeixi habitatge de lloguer.",
+   "context": "Badalona ha començat a traspassar solars propis a l'AMB i a l'Impsòl perquè hi promoguin habitatge protegit i dotacional de lloguer, en lloc de promoure'l ella mateixa o de vendre'l. És la principal via de creixement del parc públic a la ciutat.",
+   "evidencia": "Ple de l'01/12/2025: aprovada la minuta del conveni amb l'AMB i l'Impsòl per a la cessió gratuïta de la finca del carrer Perú 13 i la mutació demanial de les finques de Gènova 13 i 16 i Alps 8, destinades a habitatge protegit i dotacional, amb 23 vots a favor i 3 abstencions.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/102e06db-8300-4e27-93dd-589ffdea6f91/Acta_17_Ple_01-12-2025.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Cedir sòl accelera la construcció d'habitatge públic però treu patrimoni i control a l'Ajuntament, que perd la decisió sobre qui hi accedeix i a quin preu."
+  },
+  {
+   "tema": "habitatge",
+   "text": "L'Ajuntament ha de crear un servei propi d'inspecció per perseguir els pisos turístics il·legals.",
+   "context": "La moratòria de noves llicències d'habitatge d'ús turístic aprovada el març del 2025 acabava el març del 2026, i l'oposició denuncia que no hi ha control municipal ni de les llicències ni dels lloguers de temporada que encobreixen pisos turístics.",
+   "evidencia": "Ple del 02/03/2026: la moció rebutjada (9 a favor, 18 en contra) demanava «un pla municipal de control i inspecció dels pisos turístics, amb una dotació pressupostària específica, la incorporació de personal inspector i la definició d'un règim sancionador clar i eficaç».",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2026/6fb28919-82bb-4720-9c22-769aae94dcf8/ACTA_04_Ple_02-03-2026.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Un cos d'inspecció costa diners i personal i xoca amb la competència sancionadora de la Generalitat; sense ell, la regulació aprovada depèn de la denúncia veïnal."
+  },
+  {
+   "tema": "mobilitat",
+   "text": "Quan l'Ajuntament renovi el clavegueram d'un carrer, hi ha de refer també les voreres.",
+   "context": "Al barri del Progrés, l'Ajuntament va licitar obres per substituir el clavegueram i reasfaltar tres carrers sense tocar-ne les voreres, que l'associació de veïns considera inaccessibles. El projecte veïnal alternatiu portava més de 4.000 signatures.",
+   "evidencia": "Ple del 19/01/2026: moció per paralitzar i reformular les obres dels carrers Sagunt, Güell i Ferrer i Príncep de Bergara, rebutjada amb 9 vots a favor i 18 en contra. La moció compara el cost del projecte municipal (132 €/m²) amb el de la reurbanització integral feta als carrers Latrilla i Guixeres (218 €/m²).",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2026/041dcf67-5f41-4a30-9252-680e65776fdd/ACTA_02_Ple_19-01-2026.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "La reurbanització integral costa gairebé el doble per metre quadrat i arriba a menys carrers cada any; fer només clavegueram i asfalt cobreix més ciutat però deixa les voreres com estan."
+  },
+  {
+   "tema": "mobilitat",
+   "text": "L'Ajuntament ha d'apujar el preu de la zona blava.",
+   "context": "La zona blava i la grua de Badalona les gestiona l'empresa municipal Engestur des del 1992. El govern n'ha unificat i apujat la tarifa, i tota l'oposició hi ha votat en contra.",
+   "evidencia": "Ple del 24/12/2025: modificació de l'ordenança fiscal número 25 per fixar una tarifa única d'1,75 €/hora a tot el terme municipal i suprimir les tarifes de temporada d'estiu; aprovada amb 17 vots a favor (PP) i 8 en contra (tota l'oposició present).",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/b29ddf14-d018-49ea-9215-043671b3c8cf/Acta_20_Ple_24-12-2025.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Encarir l'aparcament allibera places i finança el servei, però és un cost directe per a qui hi va a comprar o a treballar i per als veïns sense pàrquing."
+  },
+  {
+   "tema": "mobilitat",
+   "text": "L'Ajuntament ha de permetre l'entrada a la zona de baixes emissions als conductors afectats per les avaries de Rodalies.",
+   "context": "Badalona té zona de baixes emissions amb càmeres finançades amb fons europeus. Davant les incidències repetides de Rodalies, l'alcaldia ha anat signant autoritzacions excepcionals d'accés per als vehicles afectats.",
+   "evidencia": "Decrets d'alcaldia 2026002873 (10/03/2026) i 2026003546 (19/03/2026), «Autorització excepcional d'accés de vehicles a la Zona de Baixes Emissions (ZBE) com a conseqüència de les irregularitats en la prestació del servei ferroviari de Rodalies», dels quals es va donar compte al ple del 04/05/2026. El Síndic de Greuges té oberta una actuació d'ofici sobre la implantació de les ZBE (AO-00002/2025).",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2026/55b18f26-d714-4441-96f8-87ef7d4805ae/ACTA_09_Ple%2004-05-2026.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Obrir excepcions dona sortida a qui es queda sense tren, però buida de sentit una restricció aprovada per salut pública i finançada amb fons europeus."
+  },
+  {
+   "tema": "mobilitat",
+   "text": "S'han de convertir en zona de vianants més carrers del centre encara que s'hi perdin places d'aparcament.",
+   "context": "L'Ajuntament té en marxa la pacificació del carrer de Francesc Layret, l'eix comercial del centre, i un contracte d'obres per pacificar 41 entorns escolars. La pèrdua de places d'aparcament és el punt de fricció amb el comerç.",
+   "evidencia": "Decret de 07/07/2025 de pagament de l'encàrrec a Engestur del projecte de pacificació de Francesc Layret, i licitació del contracte d'obres per a la pacificació de 41 entorns escolars (decrets de maig a octubre del 2025), tots donats compte al ple. Al ple de l'01/12/2025 es va rebutjar (2 a favor, 19 en contra, 5 abstencions) una moció que demanava aparcament gratuït associat a les compres per compensar-ne l'efecte.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/53ed7727-a487-4e3b-88bc-2bcaca4a6ab4/Acta_13_Ple_06-10-2025.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Guanyar espai per als vianants millora l'aire i el comerç a peu, però treu places en barris on molta gent depèn del cotxe i no té pàrquing propi."
+  },
+  {
+   "tema": "urbanisme",
+   "text": "L'Ajuntament ha de comprar o permutar el sòl edificable del parc de Can Solei i Ca l'Arnús.",
+   "context": "El planejament vigent manté dues parcel·les edificables (UP-1 i UP-2) dins el conjunt històric del parc. La Generalitat n'ha iniciat la declaració com a bé cultural d'interès nacional i el projecte d'urbanització aprovat l'abril del 2026 va rebre més de 100 registres d'al·legacions.",
+   "evidencia": "Ple del 06/05/2024: moció per demanar la permuta o expropiació de les finques edificables del parc, rebutjada amb 9 vots a favor i 18 en contra. Ple del 04/05/2026: moció per aturar el projecte d'urbanització i requalificar UP-1 i UP-2 com a verd no urbanitzable, rebutjada amb 8 vots a favor, 17 en contra i 1 abstenció.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2026/55b18f26-d714-4441-96f8-87ef7d4805ae/ACTA_09_Ple%2004-05-2026.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Expropiar o permutar costa diners públics i pot generar indemnitzacions; deixar-hi l'edificabilitat vigent estalvia aquest cost però construeix dins un jardí històric protegit."
+  },
+  {
+   "tema": "urbanisme",
+   "text": "El nou parc de la neteja municipal s'ha de construir al barri de Pomar.",
+   "context": "El nou contracte de neteja i recollida de residus necessita una base d'operacions. El govern l'ha situada a l'avinguda del Guix, al costat de Pomar, i el veïnat i part de l'oposició ho rebutgen per soroll, trànsit i manca de consulta prèvia.",
+   "evidencia": "Ple del 23/12/2024: aprovació provisional del pla especial urbanístic de l'avinguda del Guix número 29, amb 17 vots a favor i 8 abstencions. Ple del 03/02/2025: moció de rebuig al projecte rebutjada (9-16-2) i moció del govern a favor del parc de neteja aprovada (16-9-2).",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/c1d36832-ba31-4b11-adea-612f90bfbe49/Acta_02_Ple_03-02-2025.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "L'equipament ha d'anar en algun lloc de la ciutat i endarrerir-lo endarrereix el nou servei de neteja; per al veïnat de Pomar és una instal·lació pesada decidida sense audiència pública."
+  },
+  {
+   "tema": "neteja",
+   "text": "L'Ajuntament ha de prohibir les bufadores en les tasques de neteja viària.",
+   "context": "Badalona gasta 75,17 € per habitant en neteja viària, més del doble de la mediana catalana (31,97 €), i el servei el presta una empresa contractada. Les bufadores són l'eina de discussió recurrent per soroll, pols i partícules.",
+   "evidencia": "Ple del 05/05/2025: moció per restringir l'ús de bufadores en la neteja viària, rebutjada amb 7 vots a favor, 18 en contra i 2 abstencions. La moció es va traslladar a l'empresa adjudicatària del contracte de neteja.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/8efa848e-b11b-424d-9c28-883fcc8a7918/Acta_06_Ple_05-05-2025.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Sense bufadores calen més hores i més personal per netejar la mateixa superfície; amb elles, el soroll i la pols afecten veïns i treballadors."
+  },
+  {
+   "tema": "neteja",
+   "text": "El contracte de neteja ha de reservar una part dels llocs de treball a persones residents a Badalona.",
+   "context": "El contracte de neteja urbana, recollida de residus i deixalleries és el més gran de l'Ajuntament, dividit en cinc lots. El govern hi ha incorporat un protocol per afavorir la contractació de persones empadronades a la ciutat.",
+   "evidencia": "«Protocol relatiu a la promoció de la contractació de persones residents a Badalona per als lots 1 i 4 del contracte de serveis de neteja urbana, recollida i transport de residus i servei de deixalleries», publicat al registre d'ordenances i reglaments locals amb data 14/07/2026.",
+   "url_evidencia": "https://cido.diba.cat/normativa_local/21929347",
+   "posicio_govern": "acord",
+   "discrimina": "Lligar llocs de treball al padró reté ocupació a la ciutat, però xoca amb el principi d'igualtat d'accés i pot ser impugnat pels licitadors i pels treballadors de fora."
+  },
+  {
+   "tema": "seguretat",
+   "text": "L'Ajuntament ha d'ampliar la xarxa de càmeres de videovigilància als carrers de la ciutat.",
+   "context": "La seguretat és l'eix central del discurs del govern municipal. El 2025 va destinar-hi la modificació pressupostària més gran del mandat en un sol concepte no obligatori, amb informe desfavorable de la intervenció municipal.",
+   "evidencia": "Ple del 02/06/2025: modificació del pressupost de 12.000.000,00 € per a la xarxa de videovigilància amb infraestructura pròpia 5G, aprovada amb 22 vots a favor (PP i PSC) i 5 en contra (Guanyem, BeCP i ERC), amb informe desfavorable de la intervenció que advertia que empitjorava la necessitat de finançament fins a 112 milions d'euros.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/b671500a-56cc-44e2-ae1b-2109148680c4/Acta_07_Ple_02-06-2025.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Les càmeres donen prova i sensació de seguretat; per a qui hi vota en contra són 12 milions en vigilància que no es dediquen a agents, prevenció ni manteniment."
+  },
+  {
+   "tema": "seguretat",
+   "text": "L'Ajuntament ha de convertir la Guàrdia Urbana en una policia de barri i de proximitat.",
+   "context": "Badalona registra 64,36 infraccions penals per cada 1.000 habitants segons les dades del Ministeri de l'Interior difoses pel mateix alcalde el 2026. El debat no és si cal seguretat, sinó quin model de policia.",
+   "evidencia": "Ple del 02/02/2026: moció per impulsar un nou model de seguretat urbana basat en la proximitat, amb un pla municipal de seguretat comunitària i la convocatòria del Consell de Prevenció i Seguretat Ciutadana, rebutjada amb 9 vots a favor i 18 en contra. Al ple de l'01/06/2026 va caure (9-17) una altra moció que demanava convocar el mateix consell.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2026/51f8b74c-9fac-4d36-8aed-0ae3b19e3ece/ACTA_03_Ple_02-02-2026.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "La policia de proximitat treu agents de la resposta ràpida i dona resultats a llarg termini; per als seus defensors és l'única manera de baixar el delicte a barris on la patrulla no arriba."
+  },
+  {
+   "tema": "seguretat",
+   "text": "La Guàrdia Urbana ha d'intervenir de manera immediata en les ocupacions d'habitatges que detecti.",
+   "context": "Badalona va ser un dels primers ajuntaments catalans a dotar-se d'un protocol propi de la policia local davant l'ocupació d'immobles, un dels temes que més ha marcat la política local.",
+   "evidencia": "Ple del 12/03/2024: aprovat el Protocol d'actuació de la Guàrdia Urbana de Badalona davant l'ocupació il·legal d'immobles, amb 21 vots a favor (PP i PSC) i 5 abstencions (Guanyem, BeCP i ERC).",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2024/4d17beff-b05e-452f-bc28-b09f9c1c6441/Acta_04_Ple_12-03-2024.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "La intervenció immediata evita ocupacions consolidades, però la policia local actua sobre situacions residencials sense resolució judicial i pot deixar famílies al carrer sense alternativa."
+  },
+  {
+   "tema": "cultura",
+   "text": "L'Ajuntament ha de garantir que totes les biblioteques municipals obrin tot l'any.",
+   "context": "Badalona gasta 12,89 € per habitant en biblioteques, per sota de la mediana catalana (15,78 €). Les biblioteques de Sant Roc i de Llefià han tancat per calor a l'estiu i per fred a l'hivern, i la de Can Casacuberta ha estat afectada per obres de coberta.",
+   "evidencia": "Ple del 19/01/2026: moció per la reobertura de les biblioteques Can Casacuberta, Llefià i Sant Roc, rebutjada amb 9 vots a favor i 18 en contra. El 03/03/2025 el ple havia aprovat 74.209,11 € per a les obres de la coberta de Can Casacuberta.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2026/041dcf67-5f41-4a30-9252-680e65776fdd/ACTA_02_Ple_19-01-2026.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Climatitzar i obrir tot l'any exigeix inversió i personal en equipaments antics; deixar-les tancar en episodis extrems estalvia diners però treu de servei el refugi climàtic més accessible dels barris."
+  },
+  {
+   "tema": "cultura",
+   "text": "Els actes de les festes de la ciutat i la cavalcada de Reis s'han de fer en català.",
+   "context": "La llengua dels actes municipals és una de les fractures més estables del ple de Badalona: cinc mocions sobre l'ús del català en àmbits municipals han caigut durant el mandat amb el mateix repartiment de vots.",
+   "evidencia": "Ple de l'01/12/2025: moció per garantir l'ús vehicular del català a la cavalcada de Reis i als grans esdeveniments de ciutat, rebutjada amb 8 vots a favor, 17 en contra i 1 abstenció. Ple del 04/05/2026: moció per garantir-ne l'ús al tardeig jove i a les Festes de Maig, rebutjada 8-18.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/102e06db-8300-4e27-93dd-589ffdea6f91/Acta_17_Ple_01-12-2025.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "En una ciutat amb un pes molt alt del castellà, fixar el català com a llengua dels actes es defensa com a normalització i s'ataca com a imposició al públic majoritari."
+  },
+  {
+   "tema": "esports",
+   "text": "L'Ajuntament ha de garantir l'ús d'instal·lacions municipals als clubs esportius amateurs dels barris del sud.",
+   "context": "Badalona destina 16,53 € per habitant a instal·lacions esportives, un terç de la mediana catalana (46,20 €). Els clubs de base de Sant Roc i del sud de la ciutat reclamen conveni i seguretat sobre els camps on juguen des de fa anys.",
+   "evidencia": "Ple del 06/10/2025: moció de suport a l'Associació Esportiva Young Talent Badalona Sud, que demanava garantir que aquest club i tres més poguessin continuar usant les instal·lacions on fan l'activitat i signar-hi un conveni com el d'altres clubs; rebutjada amb 9 vots a favor i 17 en contra.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/53ed7727-a487-4e3b-88bc-2bcaca4a6ab4/Acta_13_Ple_06-10-2025.pdf",
+   "posicio_govern": "desacord",
+   "discrimina": "Garantir l'ús a clubs concrets consolida drets sobre equipaments escassos i limita el marge per reordenar-los; negar-ho deixa els clubs de base dels barris amb menys renda sense estabilitat."
+  },
+  {
+   "tema": "esports",
+   "text": "L'Ajuntament ha de continuar pagant per portar grans esdeveniments de bàsquet a la ciutat.",
+   "context": "Badalona té adscrita la Fundació Badalona Capital Europea del Bàsquet i finança l'organització d'esdeveniments com la Final Four. Al mateix temps és el municipi gran català que menys gasta per habitant en instal·lacions esportives.",
+   "evidencia": "Ple del 18/06/2026: modificació del pressupost del 2026 per incrementar en 60.740,00 € l'aplicació d'organització de la Final Four 2026, finançada amb romanent líquid de tresoreria; aprovada amb 16 vots a favor (PP) i 8 abstencions de tota l'oposició.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2026/a6cc0774-bd40-4925-9518-dc01e717081d/ACTA_13_Ple_18-06-2026.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Els grans esdeveniments donen projecció i activitat econòmica; l'oposició s'hi absté perquè considera que els mateixos diners farien més falta als equipaments de barri."
+  },
+  {
+   "tema": "serveis socials",
+   "text": "El consorci que presta serveis als barris de Badalona Sud s'ha de dissoldre.",
+   "context": "El Consorci Badalona Sud és un ens compartit amb la Generalitat creat per atendre els barris amb més exclusió social de la ciutat. La seva dissolució s'ha intentat, s'ha aturat i s'ha reprès diverses vegades des del 2022.",
+   "evidencia": "Ple del 19/12/2025: ratificació de l'acord de dissolució, liquidació i extinció del Consorci Badalona Sud, amb 15 vots a favor, 7 en contra (PSC, Guanyem i BeCP) i 2 abstencions; l'acord preveu que l'Ajuntament n'assumeixi els serveis, se subrogui els contractes i absorbeixi el personal.",
+   "url_evidencia": "https://media.seu-e.cat/acteca/801550006/2025/2f49c753-9fbc-497e-89e9-3c34f228b255/Acta_19_Ple_19-12-2025.pdf",
+   "posicio_govern": "acord",
+   "discrimina": "Dissoldre'l simplifica la gestió i la fa responsabilitat directa de l'Ajuntament; mantenir-lo assegura el compromís econòmic de la Generalitat i una estructura dedicada només a aquests barris."
+  }
+ ],
+ "equilibri": {
+  "acord_amb_govern": 11,
+  "total": 25,
+  "per_tema": "fiscalitat: 5; habitatge: 4; mobilitat: 4; seguretat: 3; urbanisme: 2; neteja: 2; cultura: 2; esports: 2; serveis socials: 1"
+ },
+ "notes": "Font principal: 52 actes de Ple de Badalona descarregades de l'índex obert de l'AOC (recurs b5d370d0, CODI_ENS 801550006) i llegides amb pdftotext -layout, de gener del 2024 al 18 de juny del 2026. Les actes de Badalona desglossen el vot regidor a regidor: he identificat 407 blocs de votació, 267 no unànimes. Totes les afirmacions surten d'un punt votat, d'un decret donat compte al ple o d'un indicador del nostre observatori; cap surt només de premsa. Equilibri: 11 de 25 tenen el govern al costat de l'«acord» (44%). Per arribar-hi vaig haver de moure tres coses respecte del primer esborrany, que sortia 8/25: (1) l'IBI el vaig formular com a «congelar» en lloc de «apujar», cosa que hi deixa el govern en desacord, i per compensar hi vaig afegir tres decisions pròpies del govern que l'oposició va votar en contra —el preu de la zona blava (17-8), la xarxa de videovigilància de 12 milions (22-5) i les operacions de crèdit de 60 milions (17-5-4)—; (2) vaig substituir l'afirmació sobre el consell de seguretat, que era una tercera de desacord, per la del consorci de Badalona Sud, on el govern hi és a favor; (3) vaig canviar l'afirmació de mobilitat sobre l'aparcament gratuït al centre (rebutjada 2-19-5, o sigui gairebé tothom en contra: no discriminava) per la de vianalitzar més carrers del centre, on el govern hi és a favor perquè està executant la pacificació de Francesc Layret. Descartat per no discriminar (aprovat per unanimitat o amb l'oposició al mateix costat): pla de pacificació de Dalt de la Vila, bicicleta pública metropolitana, regulació dels usos comercials a zones tensionades, façanes comercials, retirada d'amiant, pla de xoc d'equipaments esportius, nou CAP de Sant Crist, SAED, delimitació de la trama urbana consolidada supramunicipal, platges sense fum (el govern s'hi va abstenir) i totes les mocions de commemoració. Descartat per estar fora de la competència municipal: Rodalies, reducció de la jornada laboral, tancament de línies escolars, Gaza i armes nuclears, Via Laietana. Descartat per manca d'evidència sobre la posició del govern, tot i ser temes reals: recollida porta a porta o taxa d'escombraries per generació (Badalona recicla el 33,2%, percentil 10 dels 24 municipis catalans de més de 50.000 habitants), municipalització de la neteja, i si l'habitatge protegit en sòl públic ha de ser de lloguer o de venda —el govern ha aprovat les dues coses el mateix trimestre. Limitacions: no he pogut consultar cap programa electoral del 2023 ni cap hemeroteca (sense accés a cerca web en aquesta sessió), de manera que el mínim metodològic de 5 afirmacions amb cita literal de programa NO es compleix; totes 25 estan lligades a documentació municipal. Tampoc no he comprovat les vídeo-actes: on l'acta recull una abstenció, la posició del grup queda oberta i caldrà completar-la amb la intervenció al vídeo (l'enllaç consta a cada punt de l'acta). Dues afirmacions descansen en abstencions de l'oposició i per tant discriminen menys del que sembla: la del protocol d'ocupacions (21-0-5) i la dels grans esdeveniments de bàsquet (16-0-8); si en la inferència de posicions les abstencions es queden sense valor, són les dues primeres candidates a substitució."
+}
