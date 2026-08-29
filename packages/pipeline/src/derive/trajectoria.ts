@@ -56,6 +56,22 @@ export type Ratxa = {
   aproximat: boolean;
   /** Cert si la ratxa arriba fins a la primera legislatura que consta. */
   ininterromput: boolean;
+  /**
+   * Legislatures que la ratxa travessa **sense cap alcalde registrat**.
+   *
+   * Sense això, Torroella de Fluvià publicava «el PSC porta 47 anys a
+   * l'alcaldia, ininterromput» quan a la font no hi ha ningú per al 1983-1987
+   * ni per al 1995-1999. Arribar a la primera fila que tenim no és el mateix
+   * que no haver-se interromput mai.
+   */
+  forats: string[];
+  /**
+   * Cert quan la ratxa s'ha aturat perquè el pas anterior no diu de quin partit
+   * era. `sameForce` és prudent i davant del dubte diu que és la mateixa força,
+   * cosa que va bé per no inventar alternances però que aquí allargava la ratxa
+   * cap enrere dins d'un mandat del qual no sabem res.
+   */
+  aturadaPerDesconegut: boolean;
 };
 
 export type Alternanca = { legislatura: string; de: string | null; a: string | null };
@@ -139,7 +155,20 @@ function ratxaDes(
   // censura no hi és des del juny.
   const aMigMandat = primerIndex > 0 && passos[primerIndex - 1]!.legislatura === legislatura;
   const desDe = primer.desDe ?? (aMigMandat ? null : inicis.get(legislatura) ?? `${anyInici}${CONSTITUCIO_PER_DEFECTE}`);
-  const legislatures = new Set(passos.slice(primerIndex).map((p) => p.legislatura)).size;
+  const presents = new Set(passos.slice(primerIndex).map((p) => p.legislatura));
+  const legislatures = presents.size;
+
+  // Legislatures que hi hauria d'haver entre l'inici de la ratxa i avui, i que
+  // la font no registra: la ratxa hi passa per sobre sense saber què hi va
+  // haver, i això s'ha de dir.
+  // Les municipals són cada quatre anys des del 1979, així que l'etiqueta de
+  // cada legislatura es pot construir: 1979-1983, 1983-1987, i així fins avui.
+  const forats: string[] = [];
+  for (let any = anyInici; any < avui.getUTCFullYear(); any += 4) {
+    const esperada = `${any}-${any + 4}`;
+    if (!presents.has(esperada)) forats.push(esperada);
+  }
+
   return {
     desDeLegislatura: legislatura,
     desDeAny: anyInici,
@@ -147,7 +176,9 @@ function ratxaDes(
     anys: desDe === null ? avui.getUTCFullYear() - anyInici : anysComplets(desDe, avui),
     legislatures,
     aproximat: primer.desDe === null,
-    ininterromput: primerIndex === 0,
+    ininterromput: primerIndex === 0 && forats.length === 0,
+    forats,
+    aturadaPerDesconegut: primerIndex > 0 && passos[primerIndex - 1]!.sigles === null,
   };
 }
 
@@ -174,8 +205,20 @@ export function continuitatDe(
 
   const actual = passos[passos.length - 1]!;
 
+  // La ratxa del partit s'atura al primer pas del qual no sabem les sigles.
+  // `sameForce(null, X)` torna cert a propòsit —davant del dubte no afirmem que
+  // hi hagi hagut canvi—, però aquí allargava la ratxa cap enrere a través de
+  // mandats sense partit i publicava anys de govern que la font no diu:
+  // Susqueda hi sortia amb «ERC-AM, 23 anys» quan la legislatura per la qual
+  // començava la ratxa és precisament la que no té partit.
   let inicPartit = passos.length - 1;
-  while (inicPartit > 0 && sameForce(passos[inicPartit - 1]!.sigles, actual.sigles)) inicPartit -= 1;
+  while (
+    inicPartit > 0 &&
+    passos[inicPartit - 1]!.sigles !== null &&
+    sameForce(passos[inicPartit - 1]!.sigles, actual.sigles)
+  ) {
+    inicPartit -= 1;
+  }
 
   let inicPersona = passos.length - 1;
   while (inicPersona > 0 && mateixaPersona(passos[inicPersona - 1]!.nom, actual.nom)) inicPersona -= 1;

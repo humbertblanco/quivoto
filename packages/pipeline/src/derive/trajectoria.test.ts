@@ -199,3 +199,42 @@ describe("votPerdutDe", () => {
     expect(votPerdutDe(2023, { cens: 0, votants: 0, nuls: 0, blancs: 0, votsCandidatures: 0, votsValids: 0 }, [])).toBeNull();
   });
 });
+
+describe("ratxes amb forats o amb partits desconeguts", () => {
+  it("no diu «ininterromput» si la font no té alcalde en alguna legislatura", () => {
+    // Cas real: Torroella de Fluvià publicava «47 anys ininterromput» quan a la
+    // font no hi ha ningú per al 1983-1987 ni per al 1995-1999.
+    const passos = [
+      { legislatura: "1979-1983", nom: "A", sigles: "PSC-PSOE", desDe: "1979-04-19" },
+      { legislatura: "1987-1991", nom: "B", sigles: "PSC-PSOE", desDe: "1987-06-30" },
+      { legislatura: "2023-2027", nom: "C", sigles: "PSC-CP", desDe: "2023-06-17" },
+    ];
+    const c = continuitatDe(passos, new Map(), new Date("2026-08-29T00:00:00Z"));
+    expect(c.partit!.ininterromput).toBe(false);
+    expect(c.partit!.forats.length).toBeGreaterThan(0);
+  });
+
+  it("no allarga la ratxa a través d'un mandat sense partit conegut", () => {
+    // Susqueda sortia amb «ERC-AM, 23 anys» quan la legislatura per la qual
+    // començava la ratxa és justament la que no té partit.
+    const passos = [
+      { legislatura: "2015-2019", nom: "A", sigles: "ERC-AM", desDe: "2015-06-13" },
+      { legislatura: "2019-2023", nom: "B", sigles: null, desDe: null },
+      { legislatura: "2023-2027", nom: "C", sigles: "ERC-AM", desDe: "2023-06-17" },
+    ];
+    const c = continuitatDe(passos, new Map(), new Date("2026-08-29T00:00:00Z"));
+    expect(c.partit!.desDeLegislatura).toBe("2023-2027");
+    expect(c.partit!.aturadaPerDesconegut).toBe(true);
+  });
+
+  it("una ratxa sencera i sense forats sí que es pot afirmar", () => {
+    const passos = [
+      { legislatura: "2015-2019", nom: "A", sigles: "PSC-CP", desDe: "2015-06-13" },
+      { legislatura: "2019-2023", nom: "A", sigles: "PSC-CP", desDe: "2019-06-15" },
+      { legislatura: "2023-2027", nom: "A", sigles: "PSC-CP", desDe: "2023-06-17" },
+    ];
+    const c = continuitatDe(passos, new Map(), new Date("2026-08-29T00:00:00Z"));
+    expect(c.partit!.ininterromput).toBe(true);
+    expect(c.partit!.forats).toEqual([]);
+  });
+});

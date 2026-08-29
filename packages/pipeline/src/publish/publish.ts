@@ -7,6 +7,8 @@ import { INDEXABLE, SITE } from "./config";
 import { loadComarques, renderComarca } from "./comarques";
 import { loadComparador, renderComparador } from "./comparador";
 import { renderDadesIndex, writeDownloads } from "./dades";
+import { loadCandidatures, renderCandidatura } from "./candidatura";
+import { writeOgImages } from "./og";
 import { slugify } from "../lib/text";
 import { withRun } from "../lib/run";
 
@@ -71,6 +73,16 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     );
     run.say(`sitemap amb ${urls.length} adreces · ${INDEXABLE ? "indexable" : "encara amb noindex"}`);
 
+    // Una pàgina per candidatura amb representació: és el subjecte que la
+    // brúixola compararà, i qui busca un partit al seu poble hi arriba directe.
+    const totes = await loadCandidatures(db);
+    for (const candidatura of totes) {
+      const dir = `${OUT_DIR}${candidatura.municipality.slug}/${candidatura.slug}`;
+      await mkdir(dir, { recursive: true });
+      await writeFile(`${dir}/index.html`, renderCandidatura(candidatura, generatedAt), "utf8");
+    }
+    run.say(`${totes.length} pàgines de candidatura`);
+
     // Pàgines de comarca: «qui mana a la meva comarca» no ho respon ningú.
     const comarques = await loadComarques(db);
     for (const comarca of comarques) {
@@ -96,6 +108,11 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       "utf8",
     );
     run.say(`${downloads.files} fitxers de dades (${Math.round(downloads.bytes / 1024)} kB)`);
+
+    // Una imatge social per municipi: amb la mateixa per a tots, res del que es
+    // comparteix diu de quin poble parla.
+    const og = await writeOgImages(db, `${OUT_DIR}../og`, all ? undefined : done);
+    run.say(`${og.images} imatges socials (${Math.round(og.bytes / 1024)} kB)`);
 
     // «Els 947»: l'índex de tot Catalunya, amb el que en sabem de cadascun.
     const index947 = await loadEls947(db);

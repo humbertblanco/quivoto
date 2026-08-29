@@ -184,12 +184,13 @@ function renderHemicycle(candidatures: readonly CandidatureShare[], totalSeats: 
 </figure>`;
 }
 
-function renderLegend(candidatures: readonly CandidatureShare[]): string {
+function renderLegend(candidatures: readonly CandidatureShare[], slugPer: (sigles: string) => string): string {
   return `<ul class="llegenda">${candidatures
     .filter((c) => c.seats > 0)
     .map(
       (c) => `<li><span class="mostra" style="--c:${colorOf(c)}"></span>
-      <b>${escape(c.sigles)}</b> <span class="xifra">${c.seats} ${c.seats === 1 ? "regidoria" : "regidories"}</span>
+      <b><a href="${escape(slugPer(c.sigles))}/">${escape(c.sigles)}</a></b>
+      <span class="xifra">${c.seats} ${c.seats === 1 ? "regidoria" : "regidories"}</span>
       <span class="secundari">${number(c.votes)} vots · ${percent(c.share)}</span></li>`,
     )
     .join("")}</ul>`;
@@ -857,7 +858,9 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
 <meta property="og:title" content="${escape(m.name)} — Observatori municipal">
 <meta property="og:description" content="${escape(summarySentence(data).replace(/<[^>]+>/g, "") || description)}">
 <meta property="og:url" content="${SITE}/observatori/m/${escape(m.slug)}/">
-<meta property="og:image" content="${SITE}/assets/og.png">
+<meta property="og:image" content="${SITE}/observatori/og/${escape(m.slug)}.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <style>${RADIOGRAFIA_CSS}</style>
 </head>
@@ -942,7 +945,7 @@ ${data.finances && data.finances.mandates.length > 0 && renderMandate(data.finan
 ${current ? `<section class="bloc" id="ple">
   <h2>El ple del mandat 2023-2027</h2>
   ${renderHemicycle(current.candidatures, totalSeats, majority)}
-  ${renderLegend(current.candidatures)}
+  ${renderLegend(current.candidatures, (sigles) => slugify(sigles))}
   <p class="nota">Partits efectius al ple: ${government ? government.effectiveParties.toString().replace(".", ",") : "—"}.
   És una mesura de fragmentació: 1 vol dir un ple d'un sol color; ${totalSeats}, un de tan repartit com sigui possible.</p>
 </section>` : ""}

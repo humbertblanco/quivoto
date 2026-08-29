@@ -14,6 +14,7 @@ import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
 import { deriveFinances } from "./derive/finances";
 import { deriveCouncilChanges } from "./derive/council-changes";
+import { deriveTrajectoria } from "./derive/trajectoria";
 import { report } from "./report";
 import { publish } from "./publish/publish";
 
@@ -33,6 +34,7 @@ const COMMANDS = {
   alcaldies: deriveMayorChanges,
   comptes: deriveFinances,
   ple: deriveCouncilChanges,
+  trajectoria: deriveTrajectoria,
   report,
   publica: publish,
 } as const;
@@ -42,7 +44,7 @@ type Command = keyof typeof COMMANDS;
 // J5 va abans que J2: la participació i el sistema electoral condicionen el recompte.
 const ORDER: Command[] = [
   "j1", "j5", "j2", "j3", "j4", "j6", "j7", "j8", "j9", "j10",
-  "derive", "alcaldies", "comptes", "ple", "report", "publica",
+  "derive", "alcaldies", "comptes", "ple", "trajectoria", "report", "publica",
 ];
 
 async function main(): Promise<void> {

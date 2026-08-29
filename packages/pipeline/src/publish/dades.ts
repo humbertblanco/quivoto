@@ -300,6 +300,7 @@ const BLOCS: readonly Bloc[] = [
       { clau: "servei_clavegueram", etiqueta: "Clavegueram", unitat: "€/habitant", font: "costEfectiu", descripcio: "Cost efectiu del clavegueram, per habitant." },
       { clau: "servei_enllumenat", etiqueta: "Enllumenat públic", unitat: "€/habitant", font: "costEfectiu", descripcio: "Cost efectiu de l'enllumenat públic, per habitant." },
       { clau: "servei_parcs", etiqueta: "Parcs i jardins", unitat: "€/habitant", font: "costEfectiu", descripcio: "Cost efectiu del manteniment de parcs i jardins, per habitant." },
+      { clau: "servei_tractament_residus", etiqueta: "Tractament de residus", unitat: "€/habitant", font: "costEfectiu", descripcio: "Cost efectiu del tractament de residus, per habitant. És una partida diferent de la recollida." },
       { clau: "servei_atencio_social", etiqueta: "Atenció social", unitat: "€/habitant", font: "costEfectiu", descripcio: "Cost efectiu dels serveis socials, per habitant." },
       { clau: "servei_biblioteca", etiqueta: "Biblioteca", unitat: "€/habitant", font: "costEfectiu", descripcio: "Cost efectiu del servei de biblioteca, per habitant." },
       { clau: "servei_esports", etiqueta: "Instal·lacions esportives", unitat: "€/habitant", font: "costEfectiu", descripcio: "Cost efectiu de les instal·lacions esportives, per habitant." },
@@ -569,6 +570,7 @@ function indicadorsDe(fitxa: Fitxa): Fila[] {
   // --- què costa cada servei
   const serveis: Record<string, string> = {
     "Aigua potable": "servei_aigua", "Recollida d'escombraries": "servei_escombraries",
+    "Tractament de residus": "servei_tractament_residus",
     "Neteja viària": "servei_neteja_viaria", Clavegueram: "servei_clavegueram",
     "Enllumenat públic": "servei_enllumenat", "Parcs i jardins": "servei_parcs",
     "Atenció social": "servei_atencio_social", Biblioteca: "servei_biblioteca",

@@ -97,6 +97,18 @@ export type Variacio = {
   diferencia: number;
   /** Variació relativa en %, o `null` quan el punt de partida és zero. */
   percentual: number | null;
+  /**
+   * Anys que cobreix la variació.
+   *
+   * El mandat en curs sovint només té un exercici i l'anterior en té quatre.
+   * Posar «+2 punts» al costat de «+9 punts» com si fossin xifres del mateix
+   * tipus fa que el mandat actual sembli sempre més tranquil pel sol fet de ser
+   * més curt. **`diferencia` i `percentual` no es poden comparar entre mandats
+   * de durada diferent: per a això hi ha les xifres anuals.**
+   */
+  anys: number;
+  diferenciaAnual: number;
+  percentualAnual: number | null;
 };
 
 export function arrodoneix(valor: number, decimals: number): number {

@@ -451,12 +451,16 @@ export function tipusDePunt(titol: string): TipusPunt {
  * es desa el text literal i no s'intenta encaixar-lo en cap llista de grups.
  */
 const PROPOSANT =
-  /moci(?:ó|ons|o)\s+(?:conjunta\s+)?(?:que\s+presenten?\s+)?(?:de(?:l|ls)?|d[’']|presentada\s+pe(?:l|ls|r))\s*(?:grups?\s+municipals?\s+)?(?:de(?:l|ls)?\s+|d[’'])?([^,.\n:;]{2,80}?)(?=\s*(?:,|:|\.|;|\n|\s+(?:per|per\s+a|referent|relatiu|relativa|de\s+suport|sobre|en\s+relaci|amb\s+motiu|contra|a\s+favor|per\s+la|per\s+al|perqu)\b))/i;
+  /moci(?:ó|ons|o)\s+(?:conjunta\s+)?(?:que\s+(?:presenta|presenten|presentaren)\s+)?(?:de(?:l|ls)?|d[’']|presentada\s+pe(?:l|ls|r)|la|el|els|les)?\s*(?:grups?\s+municipals?\s+)?(?:de(?:l|ls)?\s+|d[’'])?([^,.\n:;]{2,80}?)(?=\s*(?:,|:|\.|;|\n|\s+(?:per|per\s+a|referent|relatiu|relativa|de\s+suport|sobre|en\s+relaci|amb\s+motiu|contra|a\s+favor|per\s+la|per\s+al|perqu)\b))/i;
 
 export function proposantDeTitol(titol: string): string | null {
   const m = titol.match(PROPOSANT);
   if (!m) return null;
-  const net = m[1]!.trim().replace(/^(?:grups?\s+municipals?\s+)?(?:de(?:l|ls)?\s+|d[’'])/i, "").trim();
+  const net = m[1]!
+    .trim()
+    .replace(/^(?:la|el|els|les)\s+/i, "")
+    .replace(/^(?:grups?\s+municipals?\s+)?(?:de(?:l|ls)?\s+|d[’'])/i, "")
+    .trim();
   return net.length >= 2 && net.length <= 80 ? net : null;
 }
 
@@ -505,10 +509,6 @@ const SEMBLA_PERSONA =
   /^(?:sr|sra|sres|srs|senyor|senyora|senyors|senyores)\b|^(?:el|la|les|els)\s+senyor|\b(?:regidor|regidora|alcalde|alcaldessa)\b/i;
 
 /**
- * Els noms de grup tenen sigles i majúscules; les frases de farciment, no.
- * Sense aquesta condició s'hi cola qualsevol tros de prosa.
- */
-/**
  * Paraules que només surten en noms de candidatura. Són l'escapatòria del filtre
  * de persones: «Sitges Grup Independent» té la mateixa forma que «Elena López
  * Luján» —tres mots amb majúscula inicial— i sense aquesta llista es perdria.
@@ -550,6 +550,9 @@ const netejaNomGrup = (nom: string): string => {
     .replace(/^(?:de(?:l|ls)?|d[’']|la|les|el|els)\s+/i, "")
     .replace(/\s{2,}/g, " ")
     .trim();
+  // «9 (PSC-CP)» (Rubí) deixa el nom sencer dins d'un parèntesi.
+  const embolcallat = net.match(/^\((.+)\)$/);
+  if (embolcallat && !embolcallat[1]!.includes("(")) net = embolcallat[1]!.trim();
   // Parèntesis desaparellats que ha deixat la partició de la llista.
   if (net.includes(")") && !net.includes("(")) net = net.replace(/\)/g, "").trim();
   if (net.includes("(") && !net.includes(")")) net = net.replace(/\(/g, "").trim();
@@ -614,8 +617,6 @@ export function separaGrups(cua: string): { grup: string; vots: number | null }[
 
   for (const soroll of SOROLL_DE_GRUP) net = net.replace(soroll, " ");
   net = net.replace(/\s{2,}/g, " ").trim();
-  // El total final entre parèntesis («… 4 ERC-AM (19)») no és un grup.
-  net = net.replace(/\(\s*\d+\s*\)\s*$/, "");
 
   // Si tota la cua és un parèntesi, el parèntesi ÉS la llista de grups
   // («4 abstencions (1VOX, 1Primer El Vendrell, 1Fem Vendrell)»).
@@ -724,6 +725,11 @@ const EMPAT = /hi\s+ha\s+empat|es\s+produeix\s+un\s+empat|empat\s+a\s+vots/i;
  */
 const UNANIMITAT = /per\s+unanimitat(?!\s*at[eè]s\s+el\s+resultat)|Unanimitat\/Assentiment|per\s+assentiment/i;
 
+/**
+ * On comença un bloc de votació. Aquesta llista és la peça que sosté tot el
+ * fitxer: el títol d'un punt es reconeix malament i el vot es reconeix bé, així
+ * que ancorem aquí i pugem cap enrere fins al títol, i no a l'inrevés.
+ */
 const ANCORES: ReadonlyArray<RegExp> = [
   /Tipus\s+de\s+votaci(?:ó|o)/i,
   /(?:sotmes|sotmès|sotmesa|sotmeses|posat|posada|posats)[^.\n]{0,120}?vota(?:ció|cio|r)/i,
@@ -742,14 +748,14 @@ const citaDe = (text: string): string => text.replace(/\s+/g, " ").trim().slice(
  * Troba la finestra de text on es decideix el punt. Ancorem al bloc de votació
  * —que és fiable— i no al títol, tal com recomana la mesura empírica.
  */
-function finestraDeVotacio(segment: string): { finestra: string; inici: number } | null {
+function finestraDeVotacio(segment: string): string | null {
   let millor = -1;
   for (const ancora of ANCORES) {
     const m = segment.match(ancora);
     if (m && m.index !== undefined && (millor === -1 || m.index < millor)) millor = m.index;
   }
   if (millor === -1) return null;
-  return { finestra: segment.slice(millor, millor + 2500), inici: millor };
+  return segment.slice(millor, millor + 2500);
 }
 
 function recompteBuit(): Record<SentitVot, number | null> {
@@ -774,9 +780,8 @@ function afegeix(
  * dona, encara pot retornar el resultat global, que ja val per si sol.
  */
 export function extreuVotacio(segment: string): Votacio | null {
-  const finestra = finestraDeVotacio(segment);
-  if (!finestra) return null;
-  const zona = finestra.finestra;
+  const zona = finestraDeVotacio(segment);
+  if (zona === null) return null;
 
   const recompte = recompteBuit();
   const perGrup: VotGrup[] = [];
@@ -784,20 +789,44 @@ export function extreuVotacio(segment: string): Votacio | null {
 
   // ── Lectura 1: blocs etiquetats. El format més net i el més freqüent.
   BLOC_ETIQUETA.lastIndex = 0;
-  const marques: { sentit: SentitVot; xifra: number | null; fi: number }[] = [];
+  const marques: { sentit: SentitVot; xifra: number | null; enParentesi: boolean; fi: number }[] = [];
   let m: RegExpExecArray | null;
   while ((m = BLOC_ETIQUETA.exec(zona)) !== null) {
     const sentit = sentitDEtiqueta(m[1]!);
     if (!sentit) continue;
-    marques.push({ sentit, xifra: aNombre(m[2]?.replace(/[()]/g, "")), fi: m.index + m[0].length });
+    marques.push({
+      sentit,
+      xifra: aNombre(m[2]?.replace(/[()]/g, "")),
+      enParentesi: (m[2] ?? "").includes("("),
+      fi: m.index + m[0].length,
+    });
   }
   for (const [i, marca] of marques.entries()) {
     const limit = Math.min((marques[i + 1]?.fi ?? zona.length) - marca.fi, 600);
     let cua = cuaDEtiqueta(zona.slice(marca.fi), Math.max(0, limit));
-    // «Vots a favor: 3. Dels grups VOX i PP.» — la xifra encapçala la cua.
     let n = marca.xifra;
+
+    // «A FAVOR: 6 NMC, 2 PSC…» (Cambrils): el 6 no és el total de la votació,
+    // és el recompte del primer grup. Es distingeix perquè just després hi ha
+    // una sigla i no un signe de puntuació ni un parèntesi.
+    let xifraDelPrimerGrup = false;
+    // «9 (PSC-CP), 2 (ECP)…» (Rubí): el parèntesi seguit de coma vol dir que
+    // som dins d'una llista i que la xifra és d'aquest grup; «11 (TSF i GS)»,
+    // sense coma al darrere, és el total de la votació.
+    const llistaEntreParentesis = /^\(\s*[^)]{1,40}\)\s*[,;]/.test(cua.trimStart());
+    if (
+      n !== null &&
+      !marca.enParentesi &&
+      (/^[A-ZÀ-ÚÇ]/.test(cua.trimStart()) || llistaEntreParentesis)
+    ) {
+      cua = `${n} ${cua.trimStart()}`;
+      n = null;
+      xifraDelPrimerGrup = true;
+    }
+
+    // «Vots a favor: 3. Dels grups VOX i PP.» — aquí sí que la xifra és el total.
     const xifraCua = cua.match(/^\s*(\d+|[a-zà-úï·]+)\s*(?:\(\s*\d+\s*\))?\s*[.:,-]?\s*([\s\S]*)$/i);
-    if (n === null && xifraCua) {
+    if (n === null && xifraCua && !xifraDelPrimerGrup && !/^[A-ZÀ-ÚÇ]/.test(cua.trimStart())) {
       const provat = aNombre(xifraCua[1]!);
       if (provat !== null) {
         n = provat;
@@ -805,8 +834,20 @@ export function extreuVotacio(segment: string): Votacio | null {
       }
     }
     if (n === null && /^\s*(?:cap|ningú|ninguna|cap\.)/i.test(cua)) n = 0;
+
+    const files = cua.trim() ? separaGrups(cua) : [];
+    // El total pot venir al final («… 4 ERC-AM (19)») o no venir gens, i llavors
+    // el calculem sumant els grups. Sense total no es pot validar la suma, i
+    // sense validar la suma no es detecta una extracció truncada.
+    if (n === null) {
+      const cloenda = cua.match(/\(\s*(\d+)\s*\)\s*$/);
+      if (cloenda) n = Number.parseInt(cloenda[1]!, 10);
+      else if (files.length > 0 && files.every((f) => f.vots !== null)) {
+        n = files.reduce((suma, f) => suma + (f.vots ?? 0), 0);
+      }
+    }
     if (n !== null && recompte[marca.sentit] === null) recompte[marca.sentit] = n;
-    if (cua.trim()) afegeix(perGrup, marca.sentit, separaGrups(cua));
+    if (files.length) afegeix(perGrup, marca.sentit, files);
   }
   const etiquetes = marques.length;
   if (perGrup.length > 0) patro = "etiquetes";
@@ -956,16 +997,17 @@ export function extreuActa(textCru: string): ActaExtreta {
     avisos.push("ni ordre del dia ni cap bloc de votació");
   }
 
-  type Tram = { pos: number; numero: string | null; titol: string; text: string; vota: boolean };
+  type Tram = { pos: number; numero: string | null; titol: string; text: string };
   const trams: Tram[] = [];
+  const capçaleresAlRevés = [...candidats].reverse();
 
   for (const [i, pos] of esdeveniments.entries()) {
     const anterior = i === 0 ? -1 : esdeveniments[i - 1]!;
     // El títol és l'última capçalera abans del bloc. Si no n'hi ha cap de nova
     // des de la votació anterior, és que el punt en té més d'una (una esmena,
     // una segona volta per empat) i el títol es repeteix a consciència.
-    const propia = [...candidats].reverse().find((c) => c.pos <= pos && c.pos > anterior);
-    const heretada = propia ?? [...candidats].reverse().find((c) => c.pos <= pos);
+    const propia = capçaleresAlRevés.find((c) => c.pos <= pos && c.pos > anterior);
+    const heretada = propia ?? capçaleresAlRevés.find((c) => c.pos <= pos);
     const inici = propia ? propia.pos : Math.max(0, anterior === -1 ? pos - 2000 : anterior);
     const fi = Math.min(esdeveniments[i + 1] ?? text.length, pos + 3000);
     trams.push({
@@ -973,7 +1015,6 @@ export function extreuActa(textCru: string): ActaExtreta {
       numero: propia?.numero ?? null,
       titol: heretada?.titol ?? "(punt sense títol identificat)",
       text: text.slice(inici, fi),
-      vota: true,
     });
   }
 
@@ -987,7 +1028,6 @@ export function extreuActa(textCru: string): ActaExtreta {
       numero: segment.numero,
       titol: segment.titol,
       text: segment.text,
-      vota: false,
     });
   }
 
