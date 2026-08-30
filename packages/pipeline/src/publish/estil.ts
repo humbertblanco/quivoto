@@ -517,6 +517,39 @@ details.nota > :not(summary){font-size:.92rem;color:var(--ink-suau);max-width:70
   .diners .regle b span{display:none}
 }
 
+/* --- el repartiment en quadres ------------------------------------------
+   Cada quadre és una part del total i ocupa el que li toca: l'IBI deixa de ser
+   «la barra més llarga» i passa a ser el 57 % de tot el que entra, que és el
+   que sis regles paral·leles no poden dir. Els requadres van en percentatges,
+   de manera que el dibuix s'estira amb la columna sense cap JavaScript.
+
+   El to el posa qui el fa servir: lavanda el que entra, menta el que surt. Dins
+   d'un to, cada tros s'aclareix segons l'ordre —el més gran, el més ple— i per
+   això la tinta va sempre fosca: sobre el més clar de la família, el blanc no
+   s'hi llegiria. */
+.quadres{position:relative;width:100%;aspect-ratio:2/1;margin:var(--e2) 0 var(--e3);
+  border:2.5px solid var(--ink);border-radius:var(--r-m);overflow:hidden;box-shadow:var(--ombra)}
+@media (max-width:560px){ .quadres{aspect-ratio:1/1} }
+.quadre{position:absolute;left:var(--x);top:var(--y);width:var(--w);height:var(--h);
+  border-right:2px solid var(--paper);border-bottom:2px solid var(--paper);
+  padding:7px 9px;overflow:hidden;display:flex;flex-direction:column;gap:1px;
+  color:#1E1B2E;line-height:1.15;container-type:size}
+/* El degradat s'atura al 60 %: si cada tros s'aclarís igual fins al final, el
+   sisè seria el color del paper i semblaria un forat, no una partida petita. */
+.quadres[style*="lavanda"] .quadre{background:color-mix(in oklab,#C9C4F2 calc(100% - min(var(--n) * 12%,60%)),#FBF7EE)}
+.quadres[style*="menta"] .quadre{background:color-mix(in oklab,#BFE8D2 calc(100% - min(var(--n) * 12%,60%)),#FBF7EE)}
+/* Qui decideix què hi cap és la mida real del requadre i no un tant per cent
+   calculat en generar la pàgina: el mateix 11 % són 90 px en un ordinador i 36
+   en un telèfon. */
+.quadre b,.quadre i,.quadre em{display:none}
+@container (min-width:74px) and (min-height:34px){ .quadre b{display:block} }
+@container (min-width:96px) and (min-height:56px){ .quadre i{display:block} }
+@container (min-width:110px) and (min-height:78px){ .quadre em{display:block} }
+.quadre b{font-size:.78rem;font-weight:800;letter-spacing:-.01em;overflow-wrap:anywhere}
+.quadre i{font-family:var(--display);font-weight:900;font-size:1.15rem;font-style:normal;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.quadre em{font-size:.7rem;font-style:normal;font-weight:800;opacity:.66}
+
 /* --- serveis --- */
 .serveis{list-style:none;margin:0 0 var(--e2);padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
 .serveis li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:3px}

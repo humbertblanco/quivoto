@@ -513,6 +513,8 @@ async function escriuRegidors(
           actesLlegides: dades.mocions?.actes.llegides ?? 0,
           assistencia: assistenciaDe(dades, carrec.nom),
           adreca: adreces.get(carrec)!,
+          governConegut: carrecs.some((c) => c.equipGovern),
+          publicaDeLaPersona: publicaDe(dades, carrec.nom),
           ...retribucionsDe(dades, carrec.nom),
         },
         generatedAt,
@@ -524,6 +526,35 @@ async function escriuRegidors(
   return escrites;
 }
 
+
+/**
+ * Què publica l'ajuntament del càrrec d'aquesta persona.
+ *
+ * Ja hi era desat i no ho llegia ningú: la mètrica de transparència de
+ * retribucions porta una fila per persona amb si hi consta la xifra, la
+ * declaració de béns i la resta. S'aparella pel nom normalitzat i, com sempre,
+ * si el nom lliga amb més d'una persona no s'hi posa res.
+ */
+function publicaDe(
+  dades: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>,
+  nom: string,
+): ContextRegidor["publicaDeLaPersona"] {
+  const t = dades.transparenciaRetribucions;
+  if (!t) return null;
+  const clau = normalizePersonName(nom);
+  const iguals = t.carrecs.filter((c) => normalizePersonName(c.nom) === clau);
+  if (iguals.length !== 1) return null;
+  const seu = iguals[0]!;
+  return {
+    retribucio: seu.retribucio,
+    declaracioBens: seu.declaracioBens,
+    dietes: seu.dietes,
+    indemnitzacions: seu.indemnitzacions,
+    altresRetribucions: seu.altresRetribucions,
+    fitxa: seu.fitxa,
+    font: { nom: t.font, url: t.url, consultat: t.consultat },
+  };
+}
 
 /**
  * Els càrrecs d'aquesta persona en un altre ens, i què en cobra.

@@ -54,6 +54,8 @@ const CONTEXT = {
   ],
   actesLlegides: 12,
   adreca: "marta-alarcon-pujol",
+  governConegut: true,
+  publicaDeLaPersona: null,
     altresCarrecs: [],
     avisRetribucions: null,
   assistencia: { hi: 11, de: 12 },
@@ -159,5 +161,41 @@ describe("el canònic no es recalcula: és l'adreça amb què s'ha escrit", () =
     expect(una).toContain('regidor/marta-alarcon-pujol/"');
     expect(altra).toContain('regidor/marta-alarcon-pujol-2/"');
     expect(altra).not.toContain('regidor/marta-alarcon-pujol/"');
+  });
+});
+
+/**
+ * `equipGovern` és un booleà i no té manera de dir «no consta». A onze
+ * ajuntaments —Barcelona entre ells— la seu electrònica no marca ningú, i el
+ * fals sortia escrit com «a l'oposició» a les 163 persones del ple. Vuit
+ * d'aquells ajuntaments tenen l'alcaldia identificada: vuit alcaldes publicats
+ * a l'oposició del seu propi govern.
+ */
+describe("qui és a l'equip de govern, i quan no se sap", () => {
+  const alcalde = { ...REGIDORA, nom: "Jaume Collboni", carrec: "Alcalde", equipGovern: false };
+
+  it("qui té l'alcaldia hi és per definició, encara que la font no ho marqui", () => {
+    const html = renderRegidor(alcalde, { ...CONTEXT, governConegut: false }, "2026-08-29");
+    expect(html).toContain("a l'equip de govern");
+    expect(html).not.toContain("a l'oposició");
+  });
+
+  it("sense ningú marcat al ple, no es diu que estigui a l'oposició", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, equipGovern: false },
+      { ...CONTEXT, governConegut: false },
+      "2026-08-29",
+    );
+    expect(html).not.toContain("a l'oposició");
+    expect(html).toContain("no diu qui és a l'equip de govern");
+  });
+
+  it("amb algú marcat, el fals dels altres sí que vol dir oposició", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, equipGovern: false },
+      { ...CONTEXT, governConegut: true },
+      "2026-08-29",
+    );
+    expect(html).toContain("a l'oposició");
   });
 });

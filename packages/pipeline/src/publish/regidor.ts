@@ -91,6 +91,19 @@ export type ContextRegidor = {
    */
   adreca: string;
   /**
+   * Si la fitxa d'aquest ajuntament marca qui és a l'equip de govern.
+   *
+   * `equipGovern` és un booleà i un booleà no té manera de dir «no consta»: a
+   * onze ajuntaments —Barcelona entre ells— la seu electrònica no marca ningú,
+   * i el fals sortia escrit com **«a l'oposició»** a les 163 persones del ple,
+   * l'alcalde inclòs. No és un matís: és publicar el contrari del que passa a
+   * la pàgina que porta el seu nom al títol.
+   *
+   * Quan ningú del ple no hi consta marcat, la dada no hi és i no es diu res.
+   * Quan n'hi ha algun, el fals dels altres sí que vol dir oposició.
+   */
+  governConegut: boolean;
+  /**
    * Els càrrecs que aquesta persona ocupa en un altre ens, amb el que en cobra
    * quan qui la paga ho publica.
    *
@@ -112,6 +125,26 @@ export type ContextRegidor = {
   }[];
   /** L'avís de la font sobre què és i què no és cadascun d'aquests imports. */
   avisRetribucions: string | null;
+  /**
+   * Què en publica el seu propi ajuntament: si hi consta la retribució, la
+   * declaració de béns, les dietes.
+   *
+   * **No és el que cobra.** El camp de la seu electrònica no porta cap import
+   * aprofitable —a Rubí l'alcaldessa hi consta amb 17.027 € quan en cobra
+   * 90.940 més de la Diputació, perquè només recull la part que paga
+   * l'ajuntament— i publicar-lo seria publicar una xifra que exculpa. El que
+   * sí que es pot dir, i és una dada de debò, és si l'ajuntament ho publica o
+   * no: això no depèn de la persona però sí del ple que hi seu.
+   */
+  publicaDeLaPersona: {
+    retribucio: "xifra" | "sense-xifra" | "cap" | null;
+    declaracioBens: boolean;
+    dietes: boolean;
+    indemnitzacions: boolean;
+    altresRetribucions: boolean;
+    fitxa: string | null;
+    font: { nom: string; url: string; consultat: string } | null;
+  } | null;
 };
 
 export const slugRegidor = (nom: string): string => slugify(nom);
@@ -161,6 +194,10 @@ const CSS = `
 .etiquetes .grup{background:var(--c,var(--paper-2));color:var(--t,inherit)}
 .etiquetes .govern{background:var(--menta);color:#1E1B2E}
 .etiquetes .oposicio{background:transparent}
+/* «No consta» no és una tercera posició política: és una absència, i per això
+   va amb el gris de la lletra petita i sense pastilla. */
+.etiquetes .sense-govern{background:transparent;border-style:dashed;color:var(--ink-suau);
+  font-weight:700;text-transform:none;letter-spacing:0}
 .vots{list-style:none;padding:0;margin:var(--e3) 0 0}
 .vots li{border-top:2.5px solid var(--ink);padding:var(--e2) 0;display:flex;gap:var(--e2);
   align-items:baseline;flex-wrap:wrap}
@@ -266,7 +303,15 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
         }.</p>
         <div class="etiquetes">
           ${r.grup ? `<span class="grup" style="--c:${color};--t:${tinta(color)}">${escape(r.sigles ?? r.grup)}</span>` : ""}
-          <span class="${r.equipGovern ? "govern" : "oposicio"}">${r.equipGovern ? "a l'equip de govern" : "a l'oposició"}</span>
+          ${
+            // Qui té l'alcaldia és a l'equip de govern per definició, i això no
+            // depèn que la font ho marqui: no és una deducció, és el càrrec.
+            /alcald/i.test(r.carrec) || r.equipGovern
+              ? '<span class="govern">a l\'equip de govern</span>'
+              : ctx.governConegut
+                ? '<span class="oposicio">a l\'oposició</span>'
+                : '<span class="sense-govern">la seu electrònica no diu qui és a l\'equip de govern</span>'
+          }
           ${r.posicioLlista !== null ? `<span>número ${r.posicioLlista} de la llista</span>` : ""}
           ${r.entradaTardana ? `<span>va entrar a mig mandat</span>` : ""}
         </div>
@@ -328,6 +373,52 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
       ctx.avisRetribucions ? `<p class="nota oberta">${escape(ctx.avisRetribucions)}</p>` : ""
     }
   </section>`
+  }
+
+  ${
+    !ctx.publicaDeLaPersona
+      ? ""
+      : (() => {
+          const p = ctx.publicaDeLaPersona;
+          const fila = (hi: boolean, text: string): string =>
+            `<li class="${hi ? "hi-es" : "no-hi-es"}"><span class="senyal" aria-hidden="true">${
+              hi ? "✓" : "✕"
+            }</span><span class="nom">${escape(text)}</span></li>`;
+          return `<section class="bloc">
+    <h2>Què en publica el seu ajuntament</h2>
+    <p class="entrada-bloc">Del seu càrrec, què consta a la seu electrònica del mateix ajuntament.
+    <b>No és el que cobra</b>: és què se'n pot saber.</p>
+    <ul class="transparencia">
+      ${fila(p.retribucio === "xifra", "La retribució del càrrec, amb import")}
+      ${fila(p.declaracioBens, "La declaració de béns i activitats")}
+      ${fila(p.dietes, "Les dietes")}
+      ${fila(p.indemnitzacions, "Les indemnitzacions")}
+      ${
+        // Quan sí que en sabem un d'altre ens, la creu del costat diria el
+        // contrari del bloc de sobre si es llegís de pressa: aquí no vol dir
+        // que no en tingui, vol dir que el seu ajuntament no ho publica —i qui
+        // ho publica és qui el paga.
+        ctx.altresCarrecs.length > 0 && !p.altresRetribucions
+          ? `<li class="no-hi-es"><span class="senyal" aria-hidden="true">✕</span><span class="nom">Les
+             retribucions d'altres ens <b>—però en té ${
+               ctx.altresCarrecs.length === 1 ? "una" : ctx.altresCarrecs.length
+             }, i qui la paga sí que la publica: és al bloc de sobre</b></span></li>`
+          : fila(p.altresRetribucions, "Les retribucions d'altres ens")
+      }
+    </ul>
+    ${
+      p.fitxa
+        ? `<p class="nota oberta"><a href="${escape(p.fitxa)}" rel="noopener nofollow">La seva fitxa a la seu electrònica</a>.</p>`
+        : `<p class="nota oberta">D'aquest ajuntament no hem pogut obrir la fitxa de cap càrrec, i per
+           tant no en podem dir ni que publiqui ni que no publiqui res. Les creus de sobre volen dir
+           això i no una altra cosa.</p>`
+    }
+    <details class="nota"><summary>La lletra petita</summary>De l'import que hi publiquen els ajuntaments no se n'agafa cap euro:
+    només recull la part que paga l'ajuntament i deixa fora el que la persona cobri d'una altra
+    administració, de manera que una xifra baixa exculpa. El que sí que és comprovable és si hi
+    consta o no.${p.font ? ` ${escape(p.font.nom)}, consultat el ${escape(p.font.consultat)}.` : ""}</details>
+  </section>`;
+        })()
   }
 
   <section class="bloc">

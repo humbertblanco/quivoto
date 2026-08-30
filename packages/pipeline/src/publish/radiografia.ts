@@ -6,6 +6,7 @@ import {
 import { BRANDS_BY_ID, PARTY_BRANDS, sameForce, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { sobreColor } from "./contrast";
+import { quadres } from "./quadres";
 import type { MedianaGrup, MedianesMunicipi } from "./medianes";
 import { distribucioGrup, serieTemporal } from "./grafics";
 import type { SeriesMunicipi } from "./series-grup";
@@ -1301,12 +1302,48 @@ function scaleFor(values: readonly number[], medians: Record<string, number | nu
   return highest === 0 ? 1 : highest * 1.06;
 }
 
+/**
+ * El repartiment d'un total, dibuixat. Va damunt de la llista i no en lloc seu:
+ * el mapa diu quina part és cada cosa i la llista diu si aquella xifra és molta
+ * o poca comparada amb els municipis de la mateixa mida, que és una altra
+ * pregunta i la que costa més de respondre.
+ */
+function mapaDeQuadres(
+  trossos: readonly { etiqueta: string; valor: number }[],
+  total: number,
+  euros: (v: number) => string,
+  to: string,
+): string {
+  const caixes = quadres(trossos, total);
+  if (caixes.length < 3) return "";
+  return `<div class="quadres" style="--to:${to}" role="img"
+    aria-label="${caixes.map((c) => `${c.etiqueta}, ${euros(c.valor)}, ${Math.round(c.part)} %`).join("; ")}.">${caixes
+    .map((c, i) => {
+      // El text hi va sempre i qui decideix si es veu és el CSS, mirant la mida
+      // real del requadre: decidir-ho aquí voldria dir saber quants píxels
+      // ocuparà un tant per cent, i això depèn de l'amplada de la columna i del
+      // telèfon de qui llegeix. El nom també va al títol i a la llista de sota.
+      return `<span class="quadre" style="--x:${c.x.toFixed(2)}%;--y:${c.y.toFixed(2)}%;--w:${c.w.toFixed(2)}%;--h:${c.h.toFixed(2)}%;--n:${i}"
+        title="${escape(c.etiqueta)}: ${euros(c.valor)} · ${Math.round(c.part)} %"><b>${escape(
+          c.etiqueta,
+        )}</b><i>${euros(c.valor)}</i><em>${Math.round(c.part)} %</em></span>`;
+    })
+    .join("")}</div>`;
+}
+
 function renderRevenue(revenue: RevenueMetric): string {
   const medianes = revenue.medianesGrup ?? revenue.medians;
   const grup = revenue.grup?.etiqueta ?? null;
   const scale = scaleFor(revenue.figures.map((f) => f.perHead), medianes);
   const propis = revenue.figures.reduce((a, f) => a + f.perHead, 0);
-  return `<ul class="diners">${revenue.figures
+  const totalPropi = revenue.propis?.perHabitant ?? Math.round(propis);
+  return `${mapaDeQuadres(
+    revenue.figures.map((f) => ({ etiqueta: f.label, valor: f.perHead })),
+    totalPropi,
+    (v) => `${number(Math.round(v))} €`,
+    "lavanda",
+  )}
+  <ul class="diners">${revenue.figures
     .map((figure) => moneyRow(figure.label, figure.perHead, medianes[figure.label], scale, grup))
     .join("")}</ul>
   <p class="entrada-bloc"><b>${number(revenue.propis?.perHabitant ?? Math.round(propis))} € per
@@ -1369,7 +1406,13 @@ function renderSpending(spending: SpendingMetric): string {
          <p class="nota oberta">Com més baixa és aquesta proporció, més depèn el pressupost del poble de
          decisions que no es prenen al seu ple. No diu si l'ajuntament ho fa bé o malament: diu
          d'on surten els diners.</p>`;
-  return `${frase}${fraseAuto}<ul class="diners">${spending.areas
+  return `${frase}${fraseAuto}${mapaDeQuadres(
+    spending.areas.map((a) => ({ etiqueta: a.label, valor: a.perHead })),
+    spending.totalPerHead,
+    (v) => `${number(Math.round(v))} €`,
+    "menta",
+  )}
+  <ul class="diners">${spending.areas
     .map((area) => moneyRow(area.label, area.perHead, medianes[area.label], scale, grup))
     .join("")}</ul>
   <details class="nota"><summary>La lletra petita</summary>Liquidat el ${spending.year}. Les àrees són les de la classificació per
