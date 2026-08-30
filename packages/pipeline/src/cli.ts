@@ -24,6 +24,8 @@ import { j22Retribucions } from "./jobs/j22-retribucions";
 import { j23Riquesa } from "./jobs/j23-riquesa";
 import { j24Diputacions } from "./jobs/j24-diputacions";
 import { j26ImatgesMunicipi } from "./jobs/j26-imatges-municipi";
+import { j27CapsDeLlista } from "./jobs/j27-caps-de-llista";
+import { j28FotosExalcaldes } from "./jobs/j28-fotos-exalcaldes";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
 import { deriveFinances } from "./derive/finances";
@@ -58,6 +60,10 @@ const COMMANDS = {
   j23: (db: Parameters<typeof j23Riquesa>[0]) => j23Riquesa(db),
   j24: (db: Parameters<typeof j24Diputacions>[0]) => j24Diputacions(db),
   j26: (db: Parameters<typeof j26ImatgesMunicipi>[0]) => j26ImatgesMunicipi(db),
+  // J27 va a mà, com J21 però pel nom: `pnpm ingest j27`. No és a `ORDER`.
+  j27: j27CapsDeLlista,
+  // J28 també a mà i després de J21: baixa retrats de Commons d'exalcaldes.
+  j28: (db: Parameters<typeof j28FotosExalcaldes>[0]) => j28FotosExalcaldes(db),
   derive: deriveMetrics,
   alcaldies: deriveMayorChanges,
   comptes: deriveFinances,
@@ -101,9 +107,21 @@ type Command = keyof typeof COMMANDS;
  * descàrrega, però el rebut d'IBI de l'Idescat només es pot demanar municipi a
  * municipi —el seu paràmetre d'any no fa res— i són 947 peticions amb pausa.
  * S'executa a mà: `pnpm ingest j19`.
+ *
+ * J23 (la renda de l'INE) va **just després de J18** i no al final: llegeix la
+ * mètrica `poblacioEnllacos` que J18 escriu per citar l'Idescat, i abans de J18
+ * la trobaria buida i deixaria els 947 sense enllaç. J24 (el segon sou: el que
+ * paga cada diputació als seus diputats) va just després de J22 (el primer:
+ * el del ple, de l'inventari del Ministeri), perquè els dos sous es llegeixin
+ * de seguit i en aquest ordre. Cap dels dos no baixa fitxa a fitxa: J23 són
+ * uns quants fulls de l'INE per a tot Catalunya, i J24 quatre pàgines de
+ * diputació i una consulta al conjunt de plens de la Generalitat.
+ *
+ * J25 i J26 no hi són: baixen imatges municipi a municipi i van a mà, com J11.
  */
 const ORDER: Command[] = [
-  "j1", "j5", "j2", "j3", "j4", "j6", "j7", "j8", "j9", "j15", "j10", "j16", "j17", "j18", "j20", "j21", "j22",
+  "j1", "j5", "j2", "j3", "j4", "j6", "j7", "j8", "j9", "j15", "j10", "j16", "j17", "j18", "j23", "j20", "j21",
+  "j22", "j24",
   "derive", "alcaldies", "comptes", "ple", "trajectoria", "report", "publica",
 ];
 

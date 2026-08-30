@@ -1,6 +1,9 @@
 import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
-import { desc, eq, isNotNull } from "drizzle-orm";
-import { municipalities, municipalityMetrics, type Db } from "@quivoto/db";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
+import {
+  candidacies, candidatures, councilTerms, councillorMandates, electionResults, municipalities,
+  municipalityMetrics, people, type Db,
+} from "@quivoto/db";
 import { loadRadiografia, renderRadiografia } from "./radiografia";
 import { carregaMedianes } from "./medianes";
 import { escriuCerca, escriuCercaElectes } from "./cerca";
@@ -8,15 +11,17 @@ import { carregaSeriesGrup } from "./series-grup";
 import { loadEls947, renderEls947 } from "./els947";
 import { INDEXABLE, SITE } from "./config";
 import { loadComarques, renderComarca } from "./comarques";
+import { renderComarquesIndex, type ComarcaFila } from "./comarques-index";
 import { loadAmb, renderAmb } from "./amb";
 import { loadTrajectoriaElectes, renderTrajectoriaElectes } from "./trajectoria-electes";
 import { loadComparador, renderComparador } from "./comparador";
 import { renderDadesIndex, writeDownloads } from "./dades";
-import { loadCandidatures, renderCandidatura } from "./candidatura";
+import { clau, loadCandidatures, renderCandidatura } from "./candidatura";
 import { loadPartits, renderPartit } from "./partit";
 import { renderPartitsIndex } from "./partits-index";
 import { fixaXifresPeu, XIFRES_PEU } from "./peu";
 import { KIND as KIND_TRAJECTORIA, type FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
+import { ELECCIO as ELECCIO_CAPS, KIND as KIND_CAPS, type FitxaCapsDeLlista } from "../jobs/j27-caps-de-llista";
 import { writeOgImages } from "./og";
 import type { PuntMapa } from "./mapa";
 import { carregaPreguntes, renderIndexPreguntes, renderPreguntes } from "./preguntes";
@@ -24,10 +29,14 @@ import { renderProva } from "./prova";
 import { verifica } from "./verificacio";
 import { renderPortada } from "./portada";
 import { renderMapaCatalunya } from "./mapa-catalunya";
+import { loadVotsPartit } from "./vots-partit";
+import { loadPortadaMostra } from "./portada-mostra";
 import { encaixa, type Grup } from "./posicions";
-import { adrecesRegidors, renderRegidor, trajectoriaDePersona, type ContextRegidor, type Regidor } from "./regidor";
+import {
+  adrecesRegidors, quiEsDeWikidata, renderRegidor, trajectoriaDePersona, type ContextRegidor, type Regidor,
+} from "./regidor";
 import { sameForce } from "@quivoto/shared-schemas/brands";
-import { normalizePersonName, slugify } from "../lib/text";
+import { normalize, normalizePersonName, slugify } from "../lib/text";
 import { withRun } from "../lib/run";
 
 /**
@@ -132,7 +141,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
      */
     const seriesGrup = await carregaSeriesGrup(db);
     await mkdir(`${OUT_DIR}../mapa`, { recursive: true });
-    await writeFile(`${OUT_DIR}../mapa/index.html`, renderMapaCatalunya(carregats, generatedAt), "utf8");
+    await writeFile(`${OUT_DIR}../mapa/index.html`, renderMapaCatalunya(carregats, generatedAt, await loadVotsPartit(db)), "utf8");
     run.say(`mapa de Catalunya amb ${carregats.length} municipis`);
     // L'índex del cercador, al costat del mapa i pel mateix motiu: es fa amb
     // la consulta dels 947 acabada de llegir i no la torna a demanar.
@@ -178,6 +187,33 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       ).map((f) => [f.municipalityId, f.data as FitxaTrajectoria]),
     );
 
+    /*
+     * I les de J27, pel mateix motiu: qui era cada cap de llista del 2023
+     * segons Wikidata. Va a la pàgina de la persona només quan J21 no en sap
+     * res, que és el cas de tothom que no és alcalde.
+     */
+    const capsPerMunicipi = new Map<number, FitxaCapsDeLlista>(
+      (
+        await db
+          .select({ municipalityId: municipalityMetrics.municipalityId, data: municipalityMetrics.data })
+          .from(municipalityMetrics)
+          .where(eq(municipalityMetrics.kind, KIND_CAPS))
+      ).map((f) => [f.municipalityId, f.data as FitxaCapsDeLlista]),
+    );
+    /*
+     * Les candidatures proclamades del 2023, que cap pàgina no llegia: és el
+     * que permet dir de cada persona del ple amb quin número hi anava i, de
+     * qui encapçalava una llista, què va treure aquella llista.
+     */
+    const candidatures2023 = await carregaCandidatures2023(db);
+    /*
+     * I el pas de cadascú pels plens i per les llistes de totes les municipals
+     * ingerides: és el que permet dir «tercer mandat seguit» quan hi ha més
+     * d'una municipal al registre, i callar quan només n'hi ha una.
+     */
+    const historialMandats = await carregaHistorialMandats(db);
+    run.say(`candidatures del 2023 de ${candidatures2023.size} municipis · fitxes de caps de llista de ${capsPerMunicipi.size}`);
+
     let regidorsEscrits = 0;
     for (const slug of wanted) {
       const data = await loadRadiografia(db, slug, generatedAt);
@@ -199,6 +235,9 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         slug,
         generatedAt,
         trajectoriaPerMunicipi.get(data.municipality.id) ?? null,
+        capsPerMunicipi.get(data.municipality.id) ?? null,
+        candidatures2023.get(data.municipality.id),
+        historialMandats.get(data.municipality.id),
       );
       if (!all) run.say(`${data.municipality.name} → observatori/m/${slug}/ (${Math.round(html.length / 1024)} kB)`);
       done.push(slug);
@@ -271,11 +310,24 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
 
     // Pàgines de comarca: «qui mana a la meva comarca» no ho respon ningú.
     const comarques = await loadComarques(db);
+    // Les files de l'índex es recullen al mateix bucle perquè el slug de cada
+    // fila sigui el del directori que s'acaba d'escriure, i no un de calculat
+    // dues vegades que un dia podria divergir.
+    const filesComarques: ComarcaFila[] = [];
     for (const comarca of comarques) {
       const slug = slugify((comarca as { name?: string; nom?: string }).name ?? (comarca as { nom?: string }).nom ?? "");
       if (!slug) continue;
       await mkdir(`${OUT_DIR}../c/${slug}`, { recursive: true });
       await writeFile(`${OUT_DIR}../c/${slug}/index.html`, renderComarca(comarca, generatedAt), "utf8");
+      filesComarques.push({
+        slug,
+        name: comarca.name,
+        municipis: comarca.municipis.length,
+        habitants: comarca.habitants,
+        forces: comarca.forces,
+        pacte: comarca.pacte,
+        canvisAlcaldia: comarca.canvisAlcaldia,
+      });
     }
     run.say(`${comarques.length} pàgines de comarca`);
 
@@ -292,6 +344,23 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       // Sense J17 no hi ha composició, i una llista inventada seria pitjor que cap.
       run.say("sense pàgina de l'AMB: cap municipi marcat com a metropolità (falta J17)");
     }
+
+    /*
+     * L'índex de les comarques. Les 43 pàgines existien i no hi havia índex, de
+     * manera que el peu i la portada enviaven al Barcelonès com si fos l'única.
+     * Va després de l'AMB perquè l'enllaça amb el que en sabem —quants
+     * municipis, de quantes comarques— i només si s'ha publicat.
+     */
+    await writeFile(
+      `${OUT_DIR}../c/index.html`,
+      renderComarquesIndex(
+        filesComarques,
+        generatedAt,
+        amb ? { municipis: amb.municipis.length, comarques: amb.comarques.length } : null,
+      ),
+      "utf8",
+    );
+    run.say(`índex de les ${filesComarques.length} comarques`);
 
     /*
      * D'on surten els que manen.
@@ -386,7 +455,8 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       `${SITE}/observatori/partit/`,
       ...partits.map((p) => `${SITE}/observatori/partit/${p.id}/`),
       ...(amb ? [`${SITE}/observatori/amb/`] : []),
-      ...comarques.map((c) => `${SITE}/observatori/c/${slugify((c as { name?: string; nom?: string }).name ?? (c as { nom?: string }).nom ?? "")}/`),
+      `${SITE}/observatori/c/`,
+      ...filesComarques.map((c) => `${SITE}/observatori/c/${c.slug}/`),
       ...publicades.map((slug) => `${SITE}/observatori/m/${slug}/`),
     ];
     await writeFile(
@@ -404,7 +474,9 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     run.say(`sitemap amb ${urls.length} adreces · ${INDEXABLE ? "indexable" : "encara amb noindex"}`);
 
     // La portada de l'Observatori: es genera amb la resta perquè els números que
-    // hi surten siguin els que s'acaben de publicar.
+    // hi surten siguin els que s'acaben de publicar, i la mostra (municipis
+    // grans, partits, mini-mapa) surt de la mateixa base que les pàgines.
+    const mostra = await loadPortadaMostra(db);
     await writeFile(
       `${OUT_DIR}../index.html`,
       renderPortada(
@@ -415,6 +487,8 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
           fitxersDades: downloads.files,
           conjuntsPreguntes: preguntes.length,
           amb: amb?.municipis.length ?? null,
+          partits: partits.length,
+          trajectoria: trajectoria?.persones.length ?? null,
           exemple: preguntes[0]
             ? { slug: preguntes[0].slug, nom: preguntes[0].municipi }
             : null,
@@ -423,6 +497,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
             : null,
         },
         generatedAt,
+        mostra,
       ),
       "utf8",
     );
@@ -524,6 +599,9 @@ async function escriuRegidors(
   slug: string,
   generatedAt: string,
   fitxaTrajectoria: FitxaTrajectoria | null = null,
+  fitxaCaps: FitxaCapsDeLlista | null = null,
+  llistes2023: readonly Candidatura2023[] | undefined = undefined,
+  historial: HistorialMunicipi | undefined = undefined,
 ): Promise<number> {
   /*
    * Qui seu al ple, i d'on ho sabem.
@@ -635,6 +713,16 @@ async function escriuRegidors(
     const clau = normalizePersonName(carrec.nom);
     const delRegistre = perNom.get(clau) ?? null;
     const canvi = canvis.get(clau) ?? null;
+    /*
+     * La candidatura amb què es va presentar el 2023. El número de llista
+     * surt d'aquí i no del número d'ordre del registre d'electes, que és
+     * l'ordre del ple sencer: a Barcelona feia sortir la cap de llista d'ERC
+     * com a «número 32 de la llista».
+     */
+    const candidatura = candidatura2023De(llistes2023, carrec.nom, {
+      nom: dades.municipality.mayorName ?? dades.government?.mayorName ?? null,
+      sigles: dades.government?.mayorSigles ?? null,
+    });
     const regidor: Regidor = {
       nom: carrec.nom,
       carrec: carrec.carrec,
@@ -644,7 +732,7 @@ async function escriuRegidors(
       equipGovern: carrec.equipGovern,
       foto: carrec.foto ?? carrec.fotoPetita,
       fitxaOficial: carrec.fitxa,
-      posicioLlista: delRegistre?.orderNum ?? null,
+      posicioLlista: candidatura?.posicio ?? null,
       entradaTardana: canvi?.kind === "substitucio",
       canviDeGrup:
         canvi?.kind === "canvi-de-grup" ? { de: canvi.electedFor, a: canvi.nowWith } : null,
@@ -670,7 +758,18 @@ async function escriuRegidors(
           // de ningú: si ha estat al Parlament, al Congrés o al Govern, i què feia
           // abans de la política. Si el nom lliga amb més d'una persona del ple,
           // no s'hi posa res, que és la regla de sempre.
-          trajectoria: trajectoriaDePersona(fitxaTrajectoria, carrec.nom),
+          // Els alcaldes surten a totes dues fitxes i mana la de J21, que lliga
+          // amb el nostre historial oficial; la de J27 omple els altres.
+          trajectoria:
+            trajectoriaDePersona(fitxaTrajectoria, carrec.nom) ?? quiEsDeWikidata(fitxaCaps, carrec.nom),
+          capDeLlista: candidatura,
+          mandats: mandatsDe(historial, carrec.nom),
+          // El que cobra, de cada pagador que ho publica i sense sumar res:
+          // l'ajuntament amb nom i cognoms (Barcelona), l'ajuntament via el
+          // Ministeri (l'alcaldia), i els altres ens (diputacions, J14).
+          retribucio: souDelAjuntamentDe(dades.retribucions?.ajuntament ?? null, carrec.nom),
+          alcaldiaSegonsMinisteri: alcaldiaSegonsMinisteriDe(dades, carrec),
+          fontVots: fontDelsVots(dades.mocions),
           ...retribucionsDe(dades, carrec.nom),
         },
         generatedAt,
@@ -725,23 +824,428 @@ function retribucionsDe(
   dades: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>,
   nom: string,
 ): { altresCarrecs: ContextRegidor["altresCarrecs"]; avisRetribucions: string | null } {
-  const acumulats = dades.carrecsAcumulats;
-  if (!acumulats) return { altresCarrecs: [], avisRetribucions: null };
   const clau = normalizePersonName(nom);
-  const igual = acumulats.persones.filter((p) => normalizePersonName(p.nom) === clau);
-  if (igual.length !== 1) return { altresCarrecs: [], avisRetribucions: null };
-  const altres = igual[0]!.altres.map((a) => ({
-    ens: a.ens,
-    carrec: a.carrec,
-    anualBrut: a.retribucio?.anualBrut ?? null,
-    concepte: a.retribucio?.concepte ?? null,
-    dedicacio: a.retribucio?.dedicacio ?? null,
-    motiuSenseImport: a.senseRetribucioPublicada?.motiu ?? null,
-    font: a.retribucio?.font ?? a.senseRetribucioPublicada?.font ?? null,
-  }));
+  const altres: ContextRegidor["altresCarrecs"] = [];
+  const ensVistos = new Set<string>();
+  let avis: string | null = null;
+
+  /*
+   * Primer el que publica la diputació que paga (J24): és qui paga qui ho diu,
+   * amb l'import anual o amb el motiu de no tenir-ne. El «màxim per
+   * assistències» hi viatja com a sostre i mai com a import.
+   */
+  const diputacions = dades.sousDiputacions;
+  if (diputacions) {
+    const seves = diputacions.persones.filter((p) => normalizePersonName(p.nom) === clau);
+    if (seves.length === 1) {
+      const d = seves[0]!.diputacio;
+      altres.push({
+        ens: d.ens,
+        carrec: d.carrec,
+        anualBrut: d.retribucioAnualBruta,
+        concepte: d.retribucioAnualBruta === null ? null : "retribució anual bruta",
+        dedicacio: d.dedicacio,
+        motiuSenseImport: d.motiu,
+        sostreAssistencies: d.maximPerAssistencies,
+        font: { nom: d.font.nom, url: d.font.url, llicencia: d.font.llicencia ?? null, consultat: d.font.consultat ?? null },
+      });
+      ensVistos.add(normalize(d.ens));
+      avis = diputacions.advertiment;
+    }
+  }
+
+  /*
+   * Després, la resta de càrrecs acumulats (J14). Si la diputació ja ha dit el
+   * seu, la fila de J14 del mateix ens no es repeteix: serien dues targetes del
+   * mateix pagador, i la segona sense l'import que la primera sí que porta.
+   */
+  const acumulats = dades.carrecsAcumulats;
+  if (acumulats) {
+    const igual = acumulats.persones.filter((p) => normalizePersonName(p.nom) === clau);
+    if (igual.length === 1) {
+      for (const a of igual[0]!.altres) {
+        if (ensVistos.has(normalize(a.ens))) continue;
+        altres.push({
+          ens: a.ens,
+          carrec: a.carrec,
+          anualBrut: a.retribucio?.anualBrut ?? null,
+          concepte: a.retribucio?.concepte ?? null,
+          dedicacio: a.retribucio?.dedicacio ?? null,
+          motiuSenseImport: a.senseRetribucioPublicada?.motiu ?? null,
+          font: a.retribucio?.font ?? a.senseRetribucioPublicada?.font ?? null,
+        });
+        avis ??= acumulats.advertiment;
+      }
+    }
+  }
+  return { altresCarrecs: altres, avisRetribucions: altres.length > 0 ? avis : null };
+}
+
+/** El que el fitxer de Barcelona desa de cada persona (J22), retallat al que llegim. */
+type ElecteAmbSou = {
+  nom: string;
+  euros: number | null;
+  importAmbigu: boolean;
+  observacio: string | null;
+  grauOcupacio: string | null;
+  plenaDedicacio: boolean;
+  declaracioBens: string | null;
+};
+type AjuntamentAmbSous = {
+  consultat: string;
+  electes: ElecteAmbSou[];
+  font: { nom: string; organisme: string; portal: string; llicencia: string; consultat?: string };
+};
+
+/** La forma que J22 desa a `retribucions.ajuntament`, que la fitxa del municipi té com a `unknown`. */
+function esAjuntamentAmbSous(x: unknown): x is AjuntamentAmbSous {
+  if (typeof x !== "object" || x === null) return false;
+  const a = x as Partial<AjuntamentAmbSous>;
+  return Array.isArray(a.electes) && typeof a.font?.organisme === "string" && typeof a.font?.llicencia === "string";
+}
+
+/**
+ * El que l'ajuntament que paga publica del sou d'aquesta persona, amb nom i
+ * cognoms. Avui només Barcelona ho fa (J22), i és l'única xifra per persona de
+ * tot el projecte: per això va amb `abast: "tot"` i es compara amb el salari
+ * mínim... quan té any, que el fitxer no en porta. Sense any, sense comparació.
+ *
+ * El mateix aparellament que la resta: nom normalitzat, i si lliga amb més
+ * d'una persona no es diu res. Un zero és el que l'Ajuntament declara pagar,
+ * i no s'amaga: el text de la font que l'explica hi va al costat.
+ */
+export function souDelAjuntamentDe(ajuntament: unknown, nom: string): ContextRegidor["retribucio"] {
+  if (!esAjuntamentAmbSous(ajuntament)) return null;
+  const clau = normalizePersonName(nom);
+  const iguals = ajuntament.electes.filter((e) => normalizePersonName(e.nom) === clau);
+  if (iguals.length !== 1) return null;
+  const e = iguals[0]!;
   return {
-    altresCarrecs: altres,
-    avisRetribucions: altres.length > 0 ? acumulats.advertiment : null,
+    anualBrut: e.importAmbigu ? null : e.euros,
+    abast: "tot",
+    paga: ajuntament.font.organisme,
+    // El grau d'ocupació ve com a text («100.00»): si és un número es diu com
+    // un percentatge, i si no, tal com la font l'escriu.
+    dedicacio: e.plenaDedicacio
+      ? "plena dedicació"
+      : e.grauOcupacio
+        ? Number.isFinite(Number(e.grauOcupacio))
+          ? `dedicació del ${Number(e.grauOcupacio).toLocaleString("ca-ES")} %`
+          : `grau d'ocupació ${e.grauOcupacio}`
+        : null,
+    any: null,
+    motiuSenseImport: e.importAmbigu
+      ? "les files de la font no diuen el mateix import per a aquesta persona, i no en triem cap"
+      : e.euros === null
+        ? "qui el paga no hi escriu cap import per a aquest càrrec"
+        : null,
+    font: {
+      nom: `${ajuntament.font.nom}, dades obertes de l'${ajuntament.font.organisme}`,
+      url: ajuntament.font.portal,
+      llicencia: ajuntament.font.llicencia,
+      consultat: ajuntament.font.consultat ?? ajuntament.consultat ?? null,
+    },
+    declaracioBens: e.declaracioBens,
+    avis: e.observacio,
+  };
+}
+
+/**
+ * El que l'ajuntament declara al Ministeri de la seva alcaldia (J22), només a
+ * la pàgina de qui la té.
+ *
+ * El full del Ministeri no porta el nom de l'alcalde: porta el total que
+ * l'ajuntament diu haver pagat a l'alcaldia aquell exercici. Per penjar-lo
+ * d'una persona calen dues coses: que el càrrec d'aquesta pàgina sigui
+ * l'alcaldia —«alcald…» al davant, i no una tinència, que també ho conté— i
+ * que, si sabem qui és l'alcalde pel registre, sigui la mateixa persona. I
+ * encara així, si l'alcaldia ha canviat de mans dins del mandat, el total de
+ * l'any és de dues persones i no s'atribueix: es diu que no s'atribueix.
+ */
+export function alcaldiaSegonsMinisteriDe(
+  dades: {
+    retribucions: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>["retribucions"];
+    mayors: { currentTermChange: unknown } | null;
+    municipality: { mayorName: string | null };
+  },
+  carrec: { nom: string; carrec: string },
+): ContextRegidor["alcaldiaSegonsMinisteri"] {
+  const ministeri = dades.retribucions?.ministeri ?? null;
+  if (!ministeri || !ministeri.alcaldia) return null;
+  if (!/^alcald/i.test(carrec.carrec.trim())) return null;
+  const alcalde = dades.municipality.mayorName;
+  if (alcalde && normalizePersonName(alcalde) !== normalizePersonName(carrec.nom)) return null;
+  return {
+    any: ministeri.any,
+    euros: ministeri.alcaldia.euros,
+    regim: ministeri.alcaldia.regim,
+    mena: ministeri.alcaldia.mena,
+    canviDAlcaldia: dades.mayors?.currentTermChange !== null && dades.mayors?.currentTermChange !== undefined,
+    font: {
+      nom: ministeri.font.nom,
+      organisme: ministeri.font.organisme,
+      url: ministeri.font.pagina,
+      llicencia: ministeri.font.llicencia,
+      consultat: ministeri.font.consultat,
+    },
+    avis: ministeri.advertiment,
+  };
+}
+
+/**
+ * D'on surten els vots que ensenya la pàgina, per citar-ho al costat.
+ *
+ * La forma de `mocions` és la de J12 —una font i un URL— i J16 hi afegeix, per
+ * a Barcelona, la llicència sencera i la data de descàrrega: aquí es llegeixen
+ * si hi són i no s'inventen si no hi són.
+ */
+function fontDelsVots(
+  mocions: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>["mocions"],
+): ContextRegidor["fontVots"] {
+  if (!mocions) return null;
+  const extra = mocions as {
+    llicencia?: { nom?: string; url?: string } | string | null;
+    descarregatEl?: string | null;
+  };
+  const llicencia =
+    typeof extra.llicencia === "string"
+      ? { nom: extra.llicencia, url: null }
+      : extra.llicencia && typeof extra.llicencia === "object"
+        ? { nom: extra.llicencia.nom ?? null, url: extra.llicencia.url ?? null }
+        : null;
+  return {
+    nom: mocions.font,
+    url: mocions.fontUrl ?? null,
+    llicencia: llicencia?.nom ?? null,
+    llicenciaUrl: llicencia?.url ?? null,
+    consultat: extra.descarregatEl ?? null,
+  };
+}
+
+/** Una candidatura del 2023 amb la seva gent, tal com la llegeix `carregaCandidatures2023()`. */
+export type Candidatura2023 = {
+  sigles: string;
+  vots: number;
+  regidories: number;
+  persones: { nom: string; clau: string; posicio: number; capDeLlista: boolean }[];
+};
+
+/**
+ * Les candidatures proclamades del 2023, per municipi, amb vots i regidories.
+ *
+ * Es llegeixen totes de cop —43.710 files— i no municipi a municipi: són
+ * quatre camps per fila i hi caben a la memòria; 947 consultes no. Només els
+ * titulars: els suplents també porten número, però és el d'una altra llista.
+ */
+async function carregaCandidatures2023(db: Db): Promise<Map<number, Candidatura2023[]>> {
+  const files = await db
+    .select({
+      municipalityId: candidatures.municipalityId,
+      candidatureId: candidatures.id,
+      sigles: candidatures.sigles,
+      vots: electionResults.votes,
+      regidories: electionResults.seats,
+      nom: people.fullName,
+      posicio: candidacies.listPosition,
+      capDeLlista: candidacies.isHead,
+    })
+    .from(candidacies)
+    .innerJoin(candidatures, eq(candidatures.id, candidacies.candidatureId))
+    .innerJoin(electionResults, eq(electionResults.candidatureId, candidatures.id))
+    .innerJoin(people, eq(people.id, candidacies.personId))
+    .where(and(eq(candidatures.electionId, ELECCIO_CAPS), eq(candidacies.kind, "Titular")));
+
+  const perCandidatura = new Map<number, Candidatura2023 & { municipalityId: number }>();
+  for (const f of files) {
+    let llista = perCandidatura.get(f.candidatureId);
+    if (llista === undefined) {
+      llista = { municipalityId: f.municipalityId, sigles: f.sigles, vots: f.vots, regidories: f.regidories, persones: [] };
+      perCandidatura.set(f.candidatureId, llista);
+    }
+    llista.persones.push({ nom: f.nom, clau: normalizePersonName(f.nom), posicio: f.posicio, capDeLlista: f.capDeLlista });
+  }
+  const perMunicipi = new Map<number, Candidatura2023[]>();
+  for (const { municipalityId, ...llista } of perCandidatura.values()) {
+    llista.persones.sort((a, b) => a.posicio - b.posicio);
+    const grup = perMunicipi.get(municipalityId);
+    if (grup === undefined) perMunicipi.set(municipalityId, [llista]);
+    else grup.push(llista);
+  }
+  return perMunicipi;
+}
+
+/**
+ * La candidatura amb què aquesta persona es va presentar el 2023, si l'hem
+ * pogut lligar, i el que en surt: quants vots, quantes regidories, quina força
+ * va ser i si té l'alcaldia.
+ *
+ * Pel nom normalitzat dins de les llistes del municipi, i si el nom lliga amb
+ * més d'una candidatura no es diu res: a una pàgina que porta el nom al títol
+ * no s'hi penja la llista d'un homònim. L'alcaldia es resol primer per la
+ * persona —l'alcalde que dona el registre és a quina llista— i, si no, per
+ * les sigles que dona la mètrica de govern; quan cap de les dues no ho diu,
+ * queda `null` i la pàgina no ho afirma ni ho nega.
+ */
+export function candidatura2023De(
+  llistes: readonly Candidatura2023[] | undefined,
+  nom: string,
+  alcaldia: { nom: string | null; sigles: string | null },
+): ContextRegidor["capDeLlista"] {
+  if (!llistes || llistes.length === 0) return null;
+  const clauNom = normalizePersonName(nom);
+  const trobades = llistes.flatMap((llista) =>
+    llista.persones.filter((p) => p.clau === clauNom).map((persona) => ({ llista, persona })),
+  );
+  if (trobades.length !== 1) return null;
+  const { llista, persona } = trobades[0]!;
+
+  let teAlcaldia: boolean | null = null;
+  const clauAlcalde = alcaldia.nom ? normalizePersonName(alcaldia.nom) : null;
+  if (clauAlcalde !== null) {
+    const ambElAlcalde = llistes.filter((l) => l.persones.some((p) => p.clau === clauAlcalde));
+    if (ambElAlcalde.length === 1) teAlcaldia = ambElAlcalde[0] === llista;
+  }
+  if (teAlcaldia === null && alcaldia.sigles) {
+    const perSigles = llistes.filter((l) => clau(l.sigles) === clau(alcaldia.sigles!));
+    if (perSigles.length === 1) teAlcaldia = perSigles[0] === llista;
+  }
+
+  return {
+    es: persona.capDeLlista,
+    posicio: persona.posicio,
+    sigles: llista.sigles,
+    vots: llista.vots,
+    regidories: llista.regidories,
+    forca: 1 + llistes.filter((l) => l.vots > llista.vots).length,
+    forces: llistes.length,
+    vaGuanyar: !llistes.some((l) => l.vots > llista.vots),
+    teAlcaldia,
+  };
+}
+
+/** L'any d'unes municipals a partir de la seva clau: «M20191» → 2019. */
+const anyDeLEleccio = (electionId: string): number | null => {
+  const m = /^M(\d{4})/.exec(electionId);
+  return m ? Number(m[1]) : null;
+};
+
+/**
+ * El pas de cada persona pels plens i per les llistes d'un municipi, de totes
+ * les municipals que tenim ingerides.
+ *
+ * `eleccions` són les municipals de les quals aquest municipi té el ple al
+ * registre: sense això no es pot dir de ningú que sigui el seu primer mandat,
+ * perquè el silenci d'un mandat no ingerit no és una absència.
+ */
+export type HistorialMunicipi = {
+  eleccions: number[];
+  /** Per nom normalitzat, els anys de les municipals després de les quals ha segut al ple. */
+  mandats: Map<string, number[]>;
+  /** Per nom normalitzat, els anys de les municipals en què ha anat en una llista com a titular. */
+  llistes: Map<string, number[]>;
+};
+
+/**
+ * Tot l'historial de plens i de llistes, un sol cop per a les 947 fitxes.
+ *
+ * Avui el registre d'electes i les candidatures només porten el mandat
+ * 2023-2027 (comprovat el 30-08-2026: `councillor_mandates` i `candidacies`
+ * tenen només files de M20231), de manera que d'aquí no en surt cap frase:
+ * amb una sola elecció ingerida no es pot dir de ningú si és el primer mandat
+ * o el tercer. El dia que J3 i J4 ingereixin el 2015 i el 2019, aquesta funció
+ * no ha de canviar.
+ */
+async function carregaHistorialMandats(db: Db): Promise<Map<number, HistorialMunicipi>> {
+  const perMunicipi = new Map<number, HistorialMunicipi>();
+  const de = (municipalityId: number): HistorialMunicipi => {
+    let h = perMunicipi.get(municipalityId);
+    if (h === undefined) {
+      h = { eleccions: [], mandats: new Map(), llistes: new Map() };
+      perMunicipi.set(municipalityId, h);
+    }
+    return h;
+  };
+  const afegeix = (map: Map<string, number[]>, clau: string, any: number): void => {
+    const anys = map.get(clau) ?? [];
+    if (!anys.includes(any)) anys.push(any);
+    map.set(clau, anys);
+  };
+
+  const mandats = await db
+    .select({
+      municipalityId: councillorMandates.municipalityId,
+      electionId: councilTerms.electionId,
+      nom: people.fullName,
+    })
+    .from(councillorMandates)
+    .innerJoin(councilTerms, eq(councilTerms.id, councillorMandates.termId))
+    .innerJoin(people, eq(people.id, councillorMandates.personId));
+  for (const m of mandats) {
+    const any = anyDeLEleccio(m.electionId);
+    if (any === null) continue;
+    const h = de(m.municipalityId);
+    if (!h.eleccions.includes(any)) h.eleccions.push(any);
+    afegeix(h.mandats, normalizePersonName(m.nom), any);
+  }
+
+  const llistes = await db
+    .select({
+      municipalityId: candidatures.municipalityId,
+      electionId: candidatures.electionId,
+      nom: people.fullName,
+    })
+    .from(candidacies)
+    .innerJoin(candidatures, eq(candidatures.id, candidacies.candidatureId))
+    .innerJoin(people, eq(people.id, candidacies.personId))
+    .where(eq(candidacies.kind, "Titular"));
+  for (const l of llistes) {
+    const any = anyDeLEleccio(l.electionId);
+    if (any === null) continue;
+    afegeix(de(l.municipalityId).llistes, normalizePersonName(l.nom), any);
+  }
+
+  for (const h of perMunicipi.values()) {
+    h.eleccions.sort((a, b) => a - b);
+    for (const anys of h.mandats.values()) anys.sort((a, b) => a - b);
+    for (const anys of h.llistes.values()) anys.sort((a, b) => a - b);
+  }
+  return perMunicipi;
+}
+
+/**
+ * Quants mandats porta aquesta persona en aquest ple, i des de quan.
+ *
+ * Només es diu quan el municipi té al registre **més d'una** municipal: amb
+ * una de sola, «primer mandat» seria confondre el que no hem ingerit amb el
+ * que no ha passat, i a tots els plens hi ha gent que hi és des de molt abans.
+ * `seguits` és cert quan els mandats són les últimes municipals sense cap
+ * forat, i `desDe` només afirma un inici quan la municipal anterior a la
+ * primera també és al registre: si el registre comença el 2015 i la persona
+ * hi és des del 2015, no sabem si hi era el 2011.
+ */
+export function mandatsDe(historial: HistorialMunicipi | undefined, nom: string): ContextRegidor["mandats"] {
+  if (!historial || historial.eleccions.length < 2) return null;
+  const clau = normalizePersonName(nom);
+  const anys = historial.mandats.get(clau) ?? [];
+  if (anys.length === 0) return null;
+  const eleccions = historial.eleccions;
+  // Si l'últim mandat que li consta no és el de l'última municipal, alguna
+  // cosa no lliga —un nom escrit diferent en un dels registres— i val més no
+  // dir res que comptar malament.
+  if (anys[anys.length - 1] !== eleccions[eleccions.length - 1]) return null;
+  const primer = anys[0]!;
+  const ultimes = eleccions.slice(eleccions.length - anys.length);
+  const seguits = ultimes.length === anys.length && ultimes.every((a, i) => a === anys[i]);
+  const iniciConegut = eleccions.some((e) => e < primer);
+  const llistesSenseEntrar = (historial.llistes.get(clau) ?? []).filter((a) => !anys.includes(a));
+  return {
+    anys,
+    primer,
+    quants: anys.length,
+    seguits,
+    iniciConegut,
+    cobertesDesDe: eleccions[0]!,
+    llistesSenseEntrar,
   };
 }
 
