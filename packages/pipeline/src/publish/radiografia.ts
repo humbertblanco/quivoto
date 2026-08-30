@@ -21,6 +21,7 @@ import { INDEXABLE, SITE } from "./config";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * Radiografia d'un municipi: una pàgina feta només amb dades obertes i càlculs
@@ -3442,7 +3443,16 @@ function renderUllada(data: RadiografiaData, medianes?: MedianesMunicipi): strin
       <span class="dibuix" aria-hidden="true">${icona(p.tema)}</span>
       <span class="etq">${escape(p.etq)}</span>
       <span class="xifra">${p.xifra}</span>
-      ${p.part === null ? "" : `<span class="on"><i style="--w:${Math.max(0, Math.min(100, p.part)).toFixed(0)}%"></i></span>`}
+      ${
+        // La barra hi va SEMPRE, encara que sigui buida. Ometre-la quan no hi
+        // ha percentil treia una fila de la graella només a algunes pastilles,
+        // i llavors el peu d'aquelles quedava cinc píxels més amunt que el de
+        // la del costat: era el descuadre de la graella de sis xifres, i no es
+        // veia d'on venia perquè el que faltava no es veu.
+        p.part === null
+          ? `<span class="on buida" aria-hidden="true"></span>`
+          : `<span class="on"><i style="--w:${Math.max(0, Math.min(100, p.part)).toFixed(0)}%"></i></span>`
+      }
       <span class="peu">${escape(p.peu)}</span>
     </a></li>`,
     )
@@ -4059,10 +4069,8 @@ ${data.parity ? (() => {
 </section>
 
 </main>
+${peu("../../", data.generatedAt)}
 
-<footer class="peu">
-  <p>quivoto · pàgina generada el ${escape(data.generatedAt)} · esborrany intern, no indexat</p>
-</footer>
 ${SEGUIDOR_INDEX}
 </body>
 </html>`;

@@ -10,6 +10,7 @@ import { SITE } from "./config";
 import { nomLlegible, slugify } from "../lib/text";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * «Els 947» — l'índex de tots els municipis de Catalunya amb el que en sabem.
@@ -676,11 +677,8 @@ ${llista}
   de la resta. El judici és de qui llegeix.</p>
 </section>
 </main>
+${peu("./", generatedAt)}
 
-<footer class="peu">
-  <p>quivoto · Observatori municipal · pàgina generada el ${escape(generatedAt)} ·
-  esborrany intern, no indexat</p>
-</footer>
 
 <script>
 const norm = ${clauCerca.toString()};

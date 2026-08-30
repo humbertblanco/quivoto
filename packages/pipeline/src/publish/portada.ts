@@ -3,6 +3,7 @@ import { SITE } from "./config";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * La portada de l'Observatori.
@@ -141,10 +142,8 @@ ${cercador("./")}
     respondre és <b>«què han fet aquests quatre anys al meu poble i què m'hi jugo»</b>, no
     «quantes taules estadístiques som capaços de publicar». Una dada que no ajuda a decidir
     un vot no entra, per bona que sigui.</p>
-    <p class="nota">Generat el ${escape(generatedAt)}. Fonts: Generalitat de Catalunya, Consorci
-    AOC, Ministeri d'Hisenda i Síndic de Greuges, cadascuna citada a la pàgina on s'utilitza.
-    Esborrany intern, encara no indexat.</p>
   </section>
 </main>
+${peu("./", generatedAt)}
 </body></html>`;
 }

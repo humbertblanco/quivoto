@@ -6,6 +6,7 @@ import type { Els947Row } from "./els947";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * El mapa dels 947, pintat per indicador.
@@ -373,8 +374,8 @@ ${cercador("../")}
     </ul>
   </section>
 </main>
+${peu("../", generatedAt)}
 
-<footer class="peu"><p>quivoto · Observatori municipal · generat el ${escape(generatedAt)}</p></footer>
 
 <script>
 var CAPES = ${JSON.stringify(

@@ -9,6 +9,7 @@ import { icona } from "./icones";
 import type { ComarcaData, ComarcaMunicipi } from "./comarques";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * L'Àrea Metropolitana de Barcelona: un ens propi, al costat de les comarques.
@@ -1054,10 +1055,8 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
 </section>
 
 </main>
+${peu("../", generatedAt)}
 
-<footer class="peu">
-  <p>quivoto · Àrea Metropolitana de Barcelona · pàgina generada el ${escape(generatedAt)} · esborrany intern, no indexat</p>
-</footer>
 </body>
 </html>`;
 }

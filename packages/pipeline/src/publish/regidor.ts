@@ -4,6 +4,7 @@ import { SITE } from "./config";
 import { de, slugify } from "../lib/text";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * Una pàgina per a cada persona que seu al ple.
@@ -488,7 +489,7 @@ ${cercador("../../../../")}
     }, i la retirem a la primera petició de la persona, sense demanar-ne el motiu.</p>
   </section>
 </main>
+${peu("../../../../", generatedAt)}
 
-<footer class="peu"><p>quivoto · Observatori municipal · generat el ${escape(generatedAt)}</p></footer>
 </body></html>`;
 }

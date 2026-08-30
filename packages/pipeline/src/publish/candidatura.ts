@@ -12,6 +12,7 @@ import { de, normalizePersonName, slugify } from "../lib/text";
 import { adrecesRegidors } from "./regidor";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * La pàgina d'**una candidatura a un municipi**.
@@ -620,10 +621,8 @@ ${mostraSerie(data) ? `<section class="bloc" id="serie">
 </section>
 
 </main>
+${peu("../../../", generatedAt)}
 
-<footer class="peu">
-  <p>quivoto · ${escape(data.sigles)} a ${escape(m.name)} · pàgina generada el ${escape(generatedAt)} · esborrany intern, no indexat</p>
-</footer>
 </body>
 </html>`;
 }

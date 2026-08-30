@@ -1,4 +1,5 @@
 import { GRAFICS_CSS } from "./grafics";
+import { PEU_CSS } from "./peu";
 
 /**
  * Estil de la radiografia. Els tokens són els mateixos que la landing i que
@@ -186,26 +187,86 @@ main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
    que l'explica. Va sense contorn ni ombra a propòsit: és un índex amb números
    i no una targeta més de dades, i si pesés com les de sota competiria amb
    elles en comptes de deixar-hi anar. */
-.ullada{margin:var(--e3) 0 0;border-top:2.5px solid var(--ink);padding-top:var(--e2)}
-.ullada ul{list-style:none;margin:0;padding:0;display:grid;gap:2px var(--e3);
-  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start}
+/* --- la graella de sis xifres ------------------------------------------
+   Tres coses la deixaven descuadrada, i totes tres es veien alhora.
+
+   L'ajust automàtic amb un mínim de 230px repartia quatre columnes i dues, o tres i
+   tres, segons l'amplada: a les mides del mig quedaven dues pastilles òrfenes
+   sota d'una fila de quatre. Ara les columnes són fixes a cada tram —tres, dues
+   o una— i el rectangle no es trenca mai.
+
+   La separació de 2px vertical contra els 24 horitzontals feia que l'espai entre
+   files i el de entre columnes no s'assemblessin gens. Ara no n'hi ha cap: els
+   separadors són filets de debò, i el que hi ha entre pastilles és el mateix
+   coixí per tots costats.
+
+   I les files internes eren automàtiques, de manera que una pastilla sense
+   percentil —que es quedava sense barra— pujava el seu peu cinc píxels respecte
+   de la del costat. Ara les quatre files són fixes i la barra hi és sempre. */
+.ullada{margin:var(--e3) 0 0;border-top:2.5px solid var(--ink)}
+.ullada ul{list-style:none;margin:0;padding:0;display:grid;gap:0;
+  grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:880px){ .ullada ul{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:560px){ .ullada ul{grid-template-columns:minmax(0,1fr)} }
+.ullada li{border-top:1.5px solid var(--vora);border-left:1.5px solid var(--vora)}
+/* La primera fila ja té el filet de tinta del bloc a sobre, i la primera
+   columna la vora del contingut: repetir-los-hi faria una doble ratlla. */
+.ullada li:nth-child(3n+1){border-left:0}
+.ullada li:nth-child(-n+3){border-top:0}
+@media (max-width:880px){
+  .ullada li:nth-child(3n+1){border-left:1.5px solid var(--vora)}
+  .ullada li:nth-child(-n+3){border-top:1.5px solid var(--vora)}
+  .ullada li:nth-child(2n+1){border-left:0}
+  .ullada li:nth-child(-n+2){border-top:0}
+}
+@media (max-width:560px){
+  .ullada li{border-left:0}
+  .ullada li:nth-child(-n+2){border-top:1.5px solid var(--vora)}
+  .ullada li:first-child{border-top:0}
+}
 /* La icona del tema al davant de cada xifra: és el que fa que el resum es
    reculli d'una ullada en comptes de llegir-se etiqueta per etiqueta. Va a
    l'esquerra i no a sobre perquè la columna de dibuixos guiï la vista avall. */
+/* Files fixes: etiqueta, xifra, barra i peu. Amb alçada automàtica la pastilla sense
+   percentil desalineava el seu peu respecte de la del costat; amb una alçada
+   demanada per a la barra, totes quatre comencen a la mateixa línia. */
 .ullada a{display:grid;grid-template-columns:26px minmax(0,1fr);column-gap:11px;
-  text-decoration:none;color:inherit;padding:11px 0;border-radius:8px}
+  grid-template-rows:auto auto 5px auto;align-content:start;min-height:124px;
+  text-decoration:none;color:inherit;padding:var(--e2) var(--e2) var(--e2) var(--e2)}
+.ullada li:nth-child(3n+1) a{padding-left:0}
+@media (max-width:880px){
+  .ullada li:nth-child(3n+1) a{padding-left:var(--e2)}
+  .ullada li:nth-child(2n+1) a{padding-left:0}
+}
+@media (max-width:560px){ .ullada a{padding-left:0;min-height:0} }
 .ullada .dibuix{grid-row:1 / span 4;align-self:start;margin-top:2px}
 .ullada .dibuix .icona{width:26px;height:26px;display:block}
 .ullada .etq,.ullada .xifra,.ullada .on,.ullada .peu{grid-column:2}
 .ullada a:hover .xifra{color:var(--coral-text)}
+/* Dues línies sempre, tant si el nom n'ocupa una com si n'ocupa dues.
+   «ESTALVI NET» en fa una i «ÒRGANS DE GOVERN, PER HABITANT» en fa dues, i
+   sense una alçada demanada la xifra de la primera començava una línia més
+   amunt que la de la segona: la fila sencera quedava escapçada. */
 .ullada .etq{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--ink-suau);line-height:1.25}
+  color:var(--ink-suau);line-height:1.25;min-height:2.5em;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media (max-width:560px){ .ullada .etq{min-height:0} }
 .ullada .xifra{font-family:var(--display);font-weight:900;font-size:1.9rem;line-height:1.05;
   letter-spacing:-.03em;font-variant-numeric:tabular-nums;transition:color .12s ease}
-.ullada .on{display:block;height:5px;background:var(--vora);border-radius:var(--r-max);margin:3px 0 1px}
+.ullada .on{display:block;height:5px;background:var(--vora);border-radius:var(--r-max);
+  align-self:center}
+/* Sense percentil no hi ha res a marcar, i marcar-hi el zero seria dir que el
+   municipi és l'últim de tots. Ocupa el lloc perquè la graella no es desmunti,
+   però no pot ser una canaleta plena: al costat d'una barra de debò, una ratlla
+   sencera de vora a vora es llegeix com un cent per cent. De punts, es llegeix
+   com el que és: aquí no hi ha mesura. */
+.ullada .on.buida{background:none;border-bottom:2px dotted var(--vora);height:0;
+  align-self:center;opacity:.8}
 .ullada .on i{display:block;height:100%;width:var(--w);min-width:4px;background:var(--lavanda);
   border-radius:var(--r-max)}
-.ullada .peu{font-size:.74rem;color:var(--ink-suau);line-height:1.3}
+/* Dues línies i para: un peu de tres estirava tota la fila de la graella. */
+.ullada .peu{font-size:.74rem;color:var(--ink-suau);line-height:1.3;margin-top:7px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 @media (prefers-reduced-motion:reduce){.ullada .xifra{transition:none}}
 
 /* --- una persona amb cara i partit --------------------------------------
@@ -1046,4 +1107,4 @@ details.compta > summary:hover{color:var(--coral-text);text-decoration-color:cur
 .prova-enllac{display:inline-flex;align-items:center;min-height:44px;margin-top:6px;font-weight:800;font-size:.85rem;
   border:2px solid var(--ink);border-radius:var(--r-max);padding:0 16px;text-decoration:none}
 .prova-enllac:hover{background:var(--presec);color:#1E1B2E}
-${GRAFICS_CSS}`;
+${GRAFICS_CSS}${PEU_CSS}`;

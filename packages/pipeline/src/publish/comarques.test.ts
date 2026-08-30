@@ -105,6 +105,9 @@ describe("renderComarca", () => {
     expect(html.startsWith("<!doctype html>")).toBe(true);
     expect(html).toContain("<title>Priorat — Observatori municipal de quivoto</title>");
     expect(html).toContain("--paper:#FBF7EE");
-    expect(html).toContain("pàgina generada el 2026-08-29");
+    // El peu compartit escriu la data amb les seves paraules; el que ha de ser
+    // cert és que la pàgina digui de quin dia és.
+    expect(html).toContain('<footer class="peu">');
+    expect(html).toContain("2026-08-29");
   });
 });

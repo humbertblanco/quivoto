@@ -5,6 +5,7 @@ import { buildPeerGroups, percentileOf } from "../derive/peers";
 import type { RadiografiaData } from "./radiografia";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * La descàrrega de dades.
@@ -1297,6 +1298,7 @@ quivoto.cat/observatori/dades/m/<b>barcelona</b>.json</code></pre>
 </div>
 
 </main>
+${peu("../", generatedAt)}
 </body>
 </html>`;
 }

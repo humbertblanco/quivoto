@@ -8,6 +8,7 @@ import { dataCurta, slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * Les 43 comarques: qui mana a la meva comarca.
@@ -866,10 +867,8 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
 </section>
 
 </main>
+${peu("../../", generatedAt)}
 
-<footer class="peu">
-  <p>quivoto · ${escape(data.name)} · pàgina generada el ${escape(generatedAt)} · esborrany intern, no indexat</p>
-</footer>
 </body>
 </html>`;
 }

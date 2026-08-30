@@ -32,13 +32,18 @@
  * | `m/<slug>/regidor/<persona>/`     | `../../../../`  |
  */
 
-export type Destí = "portada" | "947" | "mapa" | "comparador" | "dades" | "cap";
+export type Destí = "portada" | "947" | "mapa" | "comparador" | "partits" | "dades" | "cap";
 
+/**
+ * Les descàrregues **no hi són**, i no és un oblit: qui es baixa 1.897 fitxers
+ * de CSV no hi arriba per un menú, hi arriba perquè el busca, i el peu i la
+ * portada l'hi porten. Un menú de consulta ha de dur als llocs on es mira una
+ * cosa, no als llocs on se'n treu una còpia.
+ */
 const DESTINS: ReadonlyArray<{ clau: Destí; text: string; on: string }> = [
   { clau: "947", text: "Els 947", on: "els947.html" },
   { clau: "mapa", text: "Mapa", on: "mapa/" },
   { clau: "comparador", text: "Comparador", on: "comparador/" },
-  { clau: "dades", text: "Dades", on: "dades/" },
 ];
 
 const escape = (t: string): string =>

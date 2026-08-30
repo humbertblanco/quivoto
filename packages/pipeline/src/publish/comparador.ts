@@ -7,6 +7,7 @@ import { buildPeerGroups, percentileOf } from "../derive/peers";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * El comparador: de dos a quatre municipis, un al costat de l'altre.
@@ -894,10 +895,8 @@ ${cercador("../")}
   càlculs nostres i es poden repetir amb el codi del projecte.</p>
 </section>
 </main>
+${peu("../", generatedAt)}
 
-<footer class="peu">
-  <p>quivoto · pàgina generada el ${escape(generatedAt)} · esborrany intern, no indexat</p>
-</footer>
 
 <script>
 const DADES = ${jsonSegur(dades)};
