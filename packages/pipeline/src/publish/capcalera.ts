@@ -10,11 +10,17 @@
  *
  * El logotip diu **quivoto**, que és el nom del web, i no «Observatori», que és
  * el nom d'una secció: qui arriba a la pàgina d'un regidor per un enllaç ha de
- * poder saber a casa de qui és. L'Observatori hi va al costat, com a rastre, i
- * porta a la seva portada.
+ * poder saber a casa de qui és. La secció, en canvi, és la primera entrada del
+ * menú.
  *
  * El menú és curt a propòsit: quatre destins i cap desplegable. Amb això s'hi
  * arriba a tot el que és una pàgina de debò, i el que no hi cap no hi ha de ser.
+ *
+ * La portada de l'Observatori hi va com a primera entrada i no com a etiqueta al
+ * costat del logotip: escrita al costat semblava un rètol i no un enllaç, i el
+ * primer destí del menú es deia «Els 947» quan la portada es diu «Els 947
+ * municipis». Dues coses amb el mateix nom i només una clicable. Ara la portada
+ * és «Observatori» i la taula filtrable és «La llista», que és el que és.
  *
  * ## `base`
  *
@@ -41,7 +47,8 @@ export type Destí = "portada" | "947" | "mapa" | "comparador" | "partits" | "da
  * cosa, no als llocs on se'n treu una còpia.
  */
 const DESTINS: ReadonlyArray<{ clau: Destí; text: string; on: string }> = [
-  { clau: "947", text: "Els 947", on: "els947.html" },
+  { clau: "portada", text: "Observatori", on: "" },
+  { clau: "947", text: "La llista", on: "els947.html" },
   { clau: "mapa", text: "Mapa", on: "mapa/" },
   { clau: "comparador", text: "Comparador", on: "comparador/" },
 ];
@@ -63,11 +70,6 @@ export function capcalera(base: string, actual: Destí = "cap", etiqueta = "esbo
   ).join("");
   return `<header class="capcalera">
   <a class="logo" href="${escape(arrel(base))}">quivoto</a>
-  ${
-    actual === "portada"
-      ? `<span class="seccio ara" aria-current="page">Observatori</span>`
-      : `<a class="seccio" href="${escape(base)}">Observatori</a>`
-  }
   <nav class="menu" aria-label="Seccions de l'Observatori">${menu}</nav>
   <span class="ranura-cerca"></span>
   <span class="etiqueta">${escape(etiqueta)}</span>
