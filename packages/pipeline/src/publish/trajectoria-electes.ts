@@ -4,11 +4,13 @@ import { dataCurta, normalizePersonName } from "../lib/text";
 import { serieTemporal } from "./grafics";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
-import { capcalera } from "./capcalera";
+import { capcalera, tipografia } from "./capcalera";
 import { adrecesRegidors } from "./regidor";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { FAMILIES, KIND, type Familia, type FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
+import { KIND as KIND_FOTOS, type FitxaFotosExalcaldes } from "../jobs/j28-fotos-exalcaldes";
+import { FOTOS_WIKIMEDIA_CSS, creditRetrat, retratWikimedia, type Retrat } from "./fotos-wikidata";
 
 /**
  * D'on surten els que manen: l'alcaldia com a primer esglaó.
@@ -102,6 +104,12 @@ export type SaltPersona = {
   fitxa: string | null;
   /** El retrat que publica el seu ajuntament, quan encara seu al ple. */
   foto: string | null;
+  /**
+   * El retrat de Wikimedia Commons que J28 ha baixat, quan és un exalcalde
+   * amb fotografia lliure a Wikidata. Va darrere de l'oficial: la política de
+   * fotografies el reserva per a quan no n'hi ha cap altre.
+   */
+  retrat: Retrat | null;
 };
 
 /**
@@ -350,6 +358,17 @@ export function ocupacions(
 
 const anyDe = (iso: string | null): string => (iso === null ? "" : iso.slice(0, 4));
 
+/** Les dues primeres inicials, com a la resta de l'Observatori. */
+export function inicials(nom: string): string {
+  const lletres = nom
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
+  return lletres || "?";
+}
+
 /**
  * El pas d'una persona: d'on venia i on va arribar.
  *
@@ -381,10 +400,23 @@ export function fitxaPersona(p: SaltPersona): string {
     p.fitxa === null
       ? `<b>${escape(p.nom)}</b>`
       : `<b><a href="${escape(p.fitxa)}">${escape(p.nom)}</a></b>`;
+  /*
+   * La cara, per aquest ordre: el retrat oficial de l'ajuntament quan encara
+   * seu al ple; si no, el de Wikimedia Commons que J28 ha baixat, amb el
+   * crèdit al peu de la targeta; i si no hi ha cap dels dos, les inicials,
+   * amb la mateixa mida i la mateixa vora. No és el forat que queda quan falta
+   * una foto: és l'altra manera d'ensenyar una persona, la que ja fa servir la
+   * resta de l'Observatori.
+   */
   const retrat =
-    p.foto === null
-      ? ""
-      : `<img class="retrat" src="${escape(p.foto)}" alt="" width="56" height="56" loading="lazy" decoding="async">`;
+    p.foto !== null
+      ? `<img class="retrat" src="${escape(p.foto)}" alt="" width="56" height="56" loading="lazy" decoding="async">`
+      : p.retrat !== null
+        ? retratWikimedia(p.retrat, 56)
+        : `<span class="retrat inicials" aria-hidden="true">${escape(inicials(p.nom))}</span>`;
+  // El crèdit va on la llicència el demana: a la vista, al peu de la mateixa
+  // targeta que ensenya la cara, i mai darrere d'un «title».
+  const credit = p.foto === null && p.retrat !== null ? ` · ${creditRetrat(p.retrat)}` : "";
   const anys =
     p.primerAny === 0 ? "" : p.ultimAny > p.primerAny ? `${p.primerAny}–${p.ultimAny}` : `${p.primerAny}`;
   return `<li class="persona" data-families="${escape(p.families.join(" "))}">
@@ -397,7 +429,7 @@ export function fitxaPersona(p: SaltPersona): string {
     p.viquipedia === null
       ? ""
       : ` · <a href="${escape(p.viquipedia)}" rel="noopener">Viquipedia</a>`
-  }${p.aparellat ? "" : " · no lliga amb el nostre historial"}</p>
+  }${p.aparellat ? "" : " · no lliga amb el nostre historial"}${credit}</p>
 </li>`;
 }
 
@@ -455,6 +487,10 @@ export const TRAJECTORIA_CSS = `
 .persona .cap{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
 .persona .retrat{width:56px;height:56px;flex:0 0 auto;border-radius:var(--r-s);
   border:2px solid var(--ink);object-fit:cover;background:var(--paper-2)}
+/* Les inicials de qui no té cap retrat: la mateixa mida i la mateixa vora,
+   amb el lavanda de la casa a dins i no un gris esvaït. No hi ha partit a
+   les targetes, i per això no porten el color de cap. */
+.persona .retrat.inicials{--c:var(--lavanda);--t:var(--ink);font-size:1.1rem}
 .persona .qui{margin:0;line-height:1.3}
 .persona .qui b{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.02em}
 .persona .qui a{color:inherit}
@@ -476,6 +512,13 @@ export const TRAJECTORIA_CSS = `
   background:var(--paper-2);color:var(--ink);border:2px solid var(--ink);
   border-radius:var(--r-max);padding:7px 14px;min-height:38px}
 .filtra button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+/* «.gent > li» d'estil.ts posa display:flex a cada targeta i, com que és una
+   regla nostra, guanya al [hidden]{display:none} del navegador: el filtre
+   canviava l'atribut i no s'amagava cap targeta. La caixa dels botons té el
+   mateix problema al revés: neix amagada i el seu display:flex la ensenyava
+   sense JavaScript. Les dues regles s'escriuen aquí perquè el [hidden] valgui. */
+.gent > .persona[hidden],.filtra[hidden]{display:none}
+.quants-gent{margin:var(--e2) 0 0;font-size:.86rem;color:var(--ink-suau);font-weight:700}
 `;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -489,16 +532,29 @@ const FILTRE = `
   // ha cap botó que no faci res, i la llista surt sencera, que és el correcte.
   var caixa = document.querySelector(".filtra");
   var gent = document.querySelector(".gent");
+  var quants = document.querySelector(".quants-gent");
   if (!caixa || !gent) return;
   caixa.hidden = false;
-  var botons = caixa.querySelectorAll("button");
+  var botons = caixa.querySelectorAll("button[data-familia]");
+  var targetes = gent.querySelectorAll(".persona[data-families]");
   botons.forEach(function(b){
     b.addEventListener("click", function(){
       var clau = b.getAttribute("data-familia");
+      var visibles = 0;
       botons.forEach(function(o){ o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
-      [].forEach.call(gent.children, function(li){
-        li.hidden = clau !== "tots" && (li.getAttribute("data-families") || "").indexOf(clau) === -1;
+      targetes.forEach(function(li){
+        // Famílies senceres i no un tros de text: «senat» no ha de trobar res
+        // dins de cap altra clau, ara ni quan se n'afegeixi una.
+        var families = (li.getAttribute("data-families") || "").split(" ");
+        var amaga = clau !== "tots" && families.indexOf(clau) === -1;
+        li.hidden = amaga;
+        if (!amaga) visibles += 1;
       });
+      if (quants) {
+        quants.textContent = clau === "tots"
+          ? "Es mostren les " + visibles + " persones."
+          : "Es mostren " + visibles + " de " + targetes.length + " persones.";
+      }
     });
   });
 })();
@@ -526,6 +582,9 @@ export function renderTrajectoriaElectes(data: TrajectoriaData, generatedAt: str
   const gent = [...data.persones].sort(
     (a, b) => b.primerAny - a.primerAny || a.nom.localeCompare(b.nom, "ca"),
   );
+  // Els que ensenyen la cara de Commons: els que no tenen retrat oficial i sí
+  // que en tenen un de lliure a Wikidata. La frase d'entrada ho diu amb xifra.
+  const ambRetrat = gent.filter((p) => p.foto === null && p.retrat !== null).length;
 
   const botons = [
     `<button type="button" data-familia="tots" aria-pressed="true">Tots (${nombre(data.persones.length)})</button>`,
@@ -545,12 +604,13 @@ export function renderTrajectoriaElectes(data: TrajectoriaData, generatedAt: str
 <meta name="robots" content="noindex, nofollow">
 <title>${escape(title)}</title>
 <meta name="description" content="Quants alcaldes catalans han arribat al Parlament, al Congrés, al Senat, a una diputació o al Govern: ${escape(cobertura)} dels que Wikidata coneix des del 1979, de quins municipis surten i què feien abans de la política.">
-<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${TRAJECTORIA_CSS}</style>
+${tipografia("../")}
+<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${FOTOS_WIKIMEDIA_CSS}${TRAJECTORIA_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
 
-${capcalera("../", "cap")}
+${capcalera("../", "trajectoria")}
 ${cercador("../")}
 
 <main id="contingut">
@@ -638,8 +698,15 @@ ${cercador("../")}
   <h2>Qui són</h2>
   <p class="entrada-bloc">Els ${nombre(data.persones.length)}, del salt més recent al més antic.
   <b>El nom porta a la seva fitxa</b> quan encara seu al ple, i si no, a l'historial d'alcaldies
-  del seu municipi. Cada targeta porta l'enllaç a l'ítem de Wikidata d'on surt.</p>
+  del seu municipi. Cada targeta porta l'enllaç a l'ítem de Wikidata d'on surt.${
+    ambRetrat === 0
+      ? ""
+      : ` La cara és el retrat que publica el seu ajuntament quan encara hi seu; ${nombre(ambRetrat)}
+  porten un retrat de <b>Wikimedia Commons</b>, amb l'autor i la llicència al peu de la targeta;
+  la resta, les inicials.`
+  }</p>
   <div class="filtra" hidden>${botons}</div>
+  <p class="quants-gent" aria-live="polite">Es mostren les ${nombre(data.persones.length)} persones.</p>
   <ul class="gent">${gent.map(fitxaPersona).join("")}</ul>
 </section>
 
@@ -659,7 +726,11 @@ ${cercador("../")}
 
 </main>
 
-${peu("../", generatedAt, [{ text: "El mapa dels 947", on: "../mapa/" }])}
+${
+  // El mapa ja és al peu de totes les pàgines; el que aquesta té de propi és
+  // que la gent que hi surt és de partits, i els partits no són al peu.
+  peu("../", generatedAt, [{ text: "Els partits", on: "../partit/" }])
+}
 ${FILTRE}
 </body>
 </html>`;
@@ -740,6 +811,23 @@ export async function loadTrajectoriaElectes(db: Db): Promise<TrajectoriaData | 
       });
     }
     fitxesDelPle.set(fila.municipalityId, perNom);
+  }
+
+  /*
+   * Els retrats de Wikimedia Commons que J28 ha baixat dels exalcaldes, per
+   * QID: qui ha manat a dos pobles és a les dues fitxes amb el mateix fitxer,
+   * i amb un se'n té prou. Si J28 no s'ha executat no n'hi ha cap i les
+   * targetes porten inicials, que és el correcte.
+   */
+  const retrats = new Map<string, Retrat>();
+  const fotos = await db
+    .select({ data: municipalityMetrics.data })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, KIND_FOTOS));
+  for (const fila of fotos) {
+    const llista = (fila.data as FitxaFotosExalcaldes | null)?.persones;
+    if (!Array.isArray(llista)) continue;
+    for (const p of llista) if (!retrats.has(p.qid)) retrats.set(p.qid, p);
   }
 
   const persones = new Map<string, SaltPersona>();
@@ -837,6 +925,7 @@ export async function loadTrajectoriaElectes(db: Db): Promise<TrajectoriaData | 
           aparellat: p.aparellat,
           fitxa,
           foto,
+          retrat: retrats.get(p.qid) ?? null,
         });
       } else {
         // Segon municipi de la mateixa persona: s'hi afegeix el poble i

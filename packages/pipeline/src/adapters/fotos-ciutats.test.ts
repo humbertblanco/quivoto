@@ -2,15 +2,19 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  CopiaDesadaAbsentError,
   FONTS,
   LlicenciaDenegadaError,
   MATARO_GRUPS,
+  clauFotoTerrassa,
   fotosDe,
+  nomsCompatibles,
   parseBarcelona,
   parseHospitalet,
   parseLleida,
   parseMataro,
   parseTarragona,
+  parseTerrassa,
   urlMataro,
 } from "./fotos-ciutats";
 
@@ -18,6 +22,10 @@ import {
  * Totes les fixtures són retalls **literals** del HTML i del JSON que van
  * respondre els servidors el 29 d'agost de 2026. No s'han netejat: si un lector
  * només funciona amb HTML endreçat, val més saber-ho aquí que en producció.
+ *
+ * La de Terrassa és l'excepció que confirma la regla: el servidor no respon a
+ * cap client HTTP, i el retall és el DOM de la pàgina oberta amb el navegador
+ * el 30 d'agost de 2026, transcrit element a element (ho explica ella mateixa).
  */
 const fixture = (nom: string) => readFileSync(join(__dirname, "__fixtures__", nom), "utf8");
 
@@ -185,6 +193,129 @@ describe("parseHospitalet", () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+describe("parseTerrassa", () => {
+  const carrecs = parseTerrassa(fixture("terrassa-consistori.html"));
+
+  it("aparella cada retrat amb el nom de la fila de sota, columna per columna", () => {
+    expect(carrecs.map((c) => c.nom)).toEqual([
+      "Jordi Ballart i Pastor",
+      "Patrícia Reche Martínez",
+      "Meritxell Lluís i Vall",
+      "Montserrat Caupena i Mas",
+      "Carles Lázaro Hernando",
+      "Marc Armengol Puig",
+      "Ona Martínez Viñas",
+      "Josep Forn Cadafalch",
+      "Marta Giménez Arcusa",
+      "Maria del Carmen Vaya López",
+    ]);
+    expect(carrecs[0]!.foto).toBe(
+      "https://www.terrassa.cat/documents/12006/62063442/Jordi+Ballart+Pastor+TXT.jpg/5efeb063-171a-49b7-ad0a-a0affc19ab11?t=1687246991283",
+    );
+    expect(carrecs[1]!.foto).toContain("Patr%C3%ADcia+Reche");
+    expect(carrecs.every((c) => c.foto !== null)).toBe(true);
+  });
+
+  it("llegeix el càrrec tal com l'escriu la pàgina, línia a línia", () => {
+    expect(carrecs[0]!.carrec).toBe("Alcalde");
+    expect(carrecs[1]!.carrec).toBe("Regidora · 1a.Tinenta d'Alcalde");
+    expect(carrecs[2]!.carrec).toBe("Regidora · 3a.Tinenta d'Alcalde");
+    // Josep Forn té el càrrec en un paràgraf a part, i no s'ha de perdre.
+    expect(carrecs[7]!.carrec).toBe("Regidor");
+  });
+
+  it("treu el grup del logo que encapçala cada tanda, també el d'abans de la taula", () => {
+    expect(carrecs.map((c) => c.grup)).toEqual([
+      "Tot per Terrassa",
+      "Tot per Terrassa",
+      "Junts per Terrassa",
+      "Junts per Terrassa",
+      "Partit Socialistes Terrassa",
+      "Partit Socialistes Terrassa",
+      "Esquerra Republicana de Terrassa",
+      "Esquerra Republicana de Terrassa",
+      "Partit Popular de Terrassa",
+      "Partit Popular de Terrassa",
+    ]);
+  });
+
+  it("sap qui governa perquè la pàgina separa l'«Oposició»", () => {
+    expect(carrecs.slice(0, 4).every((c) => c.equipGovern === true)).toBe(true);
+    expect(carrecs.slice(4).every((c) => c.equipGovern === false)).toBe(true);
+  });
+
+  it("no s'inventa qui governa si la pàgina no separa l'oposició", () => {
+    const html = fixture("terrassa-consistori.html").replace("<strong>Oposició </strong>", "");
+    expect(parseTerrassa(html).every((c) => c.equipGovern === undefined)).toBe(true);
+  });
+
+  it("qui no té enllaç de fitxa es queda sense fitxa, no amb el de l'agenda", () => {
+    const carles = carrecs.find((c) => c.nom === "Carles Lázaro Hernando")!;
+    expect(carles.fitxa).toBeNull();
+    expect(carles.foto).toContain("Carles+L%C3%A1zaro+Hernando.jpg");
+    expect(carrecs[0]!.fitxa).toBe("https://www.terrassa.cat/jordi-ballart-pastor");
+  });
+
+  it("amb la còpia de Chrome, la foto apunta a la carpeta _files i la clau no canvia", () => {
+    /*
+     * Chrome desa cada imatge amb l'últim tram de la URL —a Liferay, l'id de la
+     * imatge— més l'extensió, i reescriu el `src`. La clau ha de sortir igual
+     * que de la web, si no cada còpia nova refaria totes les miniatures.
+     */
+    const html = fixture("terrassa-consistori.html").replace(
+      /src="\/documents\/[^"]*\/([0-9a-f-]{36})[^"]*"/g,
+      'src="./Consistori - Ajuntament de Terrassa_files/$1.jpg"',
+    );
+    const desada = parseTerrassa(html, "file:///tmp/copies/terrassa/Consistori%20-%20Ajuntament%20de%20Terrassa.html");
+    expect(desada[0]!.foto).toBe(
+      "file:///tmp/copies/terrassa/Consistori%20-%20Ajuntament%20de%20Terrassa_files/5efeb063-171a-49b7-ad0a-a0affc19ab11.jpg",
+    );
+    expect(carrecs[0]!.fotoClau).toBe("terrassa/5efeb063-171a-49b7-ad0a-a0affc19ab11");
+    expect(desada[0]!.fotoClau).toBe(carrecs[0]!.fotoClau);
+    // Els enllaços de fitxa són de la web, encara que la còpia sigui al disc.
+    expect(desada[0]!.fitxa).toBe("https://www.terrassa.cat/jordi-ballart-pastor");
+  });
+
+  it("el vet del nom: un retrat que no casa amb la casella no es desa", () => {
+    // Si un dia la pàgina desplacés una fila, el retrat de sota seria d'un altre.
+    const html = fixture("terrassa-consistori.html").replace(
+      'alt="fotografia oficial Jordi Ballart alcalde"',
+      'alt="fotografia oficial de Noel Duque regidor"',
+    );
+    const c = parseTerrassa(html);
+    expect(c[0]!.nom).toBe("Jordi Ballart i Pastor");
+    expect(c[0]!.foto).toBeNull();
+    expect(c[0]!.fotoClau).toBeUndefined();
+    expect(c[1]!.foto).not.toBeNull();
+  });
+
+  it("nomsCompatibles tolera els descuits reals de la pàgina i prou", () => {
+    expect(nomsCompatibles("fotografia oficial de Patri Reche regidora", "Patrícia Reche Martínez")).toBe(true);
+    expect(nomsCompatibles("Fotografia oficial de Ruth Ibernón", "Ruth Hibernón Martín")).toBe(true);
+    expect(nomsCompatibles("fotografia oficial d'Alberto Muñoz regidor", "Alberto Muñoz Salmerón")).toBe(true);
+    expect(nomsCompatibles("fotografia oficial de Marta Giméne regidora", "Marta Giménez Arcusa")).toBe(true);
+    expect(nomsCompatibles("fotografia oficial de Noel Duque regidor", "Jordi Ballart i Pastor")).toBe(false);
+    expect(nomsCompatibles("", "Jordi Ballart i Pastor")).toBe(false);
+  });
+
+  it("clauFotoTerrassa és l'id de Liferay, tant amb cache i sense extensió com a l'inrevés", () => {
+    expect(
+      clauFotoTerrassa(
+        "/documents/12006/62063442/Jordi+Ballart+Pastor+TXT.jpg/5efeb063-171a-49b7-ad0a-a0affc19ab11?t=1687246991283",
+      ),
+    ).toBe("terrassa/5efeb063-171a-49b7-ad0a-a0affc19ab11");
+    expect(clauFotoTerrassa("./Consistori - Ajuntament de Terrassa_files/5efeb063-171a-49b7-ad0a-a0affc19ab11.jpg")).toBe(
+      "terrassa/5efeb063-171a-49b7-ad0a-a0affc19ab11",
+    );
+  });
+
+  it("es queda sense res davant d'una pàgina sense la taula", () => {
+    expect(parseTerrassa("<html><body><p>Just a moment...</p></body></html>")).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 describe("llicències", () => {
   it("Barcelona és l'única font oberta", () => {
     const obertes = Object.values(FONTS).filter((f) => f.llicencia === "oberta");
@@ -210,6 +341,14 @@ describe("llicències", () => {
   });
 
   it("no baixa res d'un municipi que no tenim declarat", async () => {
-    await expect(fotosDe("Terrassa")).rejects.toThrow(/No hi ha cap font/);
+    await expect(fotosDe("Reus")).rejects.toThrow(/No hi ha cap font/);
+  });
+
+  it("Terrassa és l'única que necessita còpia desada, i sense còpia no fa cap petició", async () => {
+    const tancades = Object.values(FONTS).filter((f) => f.nomesCopiaDesada);
+    expect(tancades.map((f) => f.municipi)).toEqual(["Terrassa"]);
+    expect(FONTS.Terrassa!.llicencia).toBe("no-comercial");
+    await expect(fotosDe("Terrassa")).rejects.toThrow(CopiaDesadaAbsentError);
+    await expect(fotosDe("Terrassa")).rejects.toThrow(/navegador/);
   });
 });

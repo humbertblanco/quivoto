@@ -33,11 +33,13 @@ function mostra(canvis: Partial<CandidaturaData> = {}): CandidaturaData {
     historyMismatch: false,
     recent: [{ year: 2019, sigles: "PSC-CP", votes: 9200, seats: 11 }],
     councillors: [
-      { name: "Eduard Sanz García", role: "Alcalde President", match: "grup", foto: null, fitxa: null },
-      { name: "Montserrat Zamora Angulo", role: "1a Tinent d'Alcalde", match: "grup", foto: null, fitxa: null },
+      { name: "Eduard Sanz García", role: "Alcalde President", match: "grup", foto: null, fitxa: null, capDeLlista: false, posicioLlista: null },
+      { name: "Montserrat Zamora Angulo", role: "1a Tinent d'Alcalde", match: "grup", foto: null, fitxa: null, capDeLlista: false, posicioLlista: null },
     ],
     unattached: 0,
     siblings: [{ slug: "erc-am", sigles: "ERC-AM", seats: 3, color: "#ffb232" }],
+    nomsSeu: [],
+    capDeLlista: null,
     ...canvis,
   };
 }
@@ -112,7 +114,7 @@ describe("renderCandidatura", () => {
 
   it("no publica cap dada de contacte", () => {
     const html = renderCandidatura(
-      mostra({ councillors: [{ name: "Eduard Sanz García", role: "Alcalde President", match: "grup", foto: null, fitxa: null }] }),
+      mostra({ councillors: [{ name: "Eduard Sanz García", role: "Alcalde President", match: "grup", foto: null, fitxa: null, capDeLlista: false, posicioLlista: null }] }),
       "2026-08-29",
     );
     // La font oberta porta el correu de cada regidor. Aquí no hi ha de sortir mai.
@@ -229,6 +231,8 @@ describe("les fotografies del ple", () => {
       match: "grup" as const,
       foto: i < ambFoto ? `../regidor/nom-cognom${i}/foto.jpg` : null,
       fitxa: null,
+      capDeLlista: false,
+      posicioLlista: null,
     }));
 
   it("ensenya les cares que hi ha encara que no les tingui tothom", () => {
@@ -364,5 +368,102 @@ describe("renderCandidatura, la resta", () => {
     // la taula quan no n'hi ha.
     const html = renderCandidatura(mostra({ recent: [] }), "2026-08-29");
     expect(html).not.toContain("Com s'ha dit abans");
+  });
+
+  it("enllaça les tipografies de la marca des de la seva profunditat", () => {
+    // Som a /observatori/m/<municipi>/<llista>/: el full és quatre nivells amunt,
+    // i va abans de l'estil perquè el navegador el demani com més aviat millor.
+    const html = renderCandidatura(mostra(), "2026-08-30");
+    expect(html).toContain('href="../../../../assets/fonts.css"');
+    expect(html.indexOf("fonts.css")).toBeLessThan(html.indexOf("<style>"));
+  });
+});
+
+/**
+ * El mateix nom, escrit igual a les dues pàgines que s'enllacen: el registre
+ * d'electes dona «Marta Farres Falgueras» i la seu electrònica de Sabadell,
+ * «Marta Farrés Falgueras». La fitxa de la persona ja escrivia la segona; aquí
+ * s'escrivia la primera, just a l'enllaç que hi porta.
+ */
+describe("una sola manera d'escriure cada nom", () => {
+  const sabadell = mostra({
+    councillors: [
+      {
+        name: "Marta Farres Falgueras", role: "Alcaldessa", match: "grup", foto: null,
+        fitxa: "../regidor/marta-farres-falgueras/", capDeLlista: false, posicioLlista: null,
+      },
+    ],
+    mayorName: "Marta Farres Falgueras",
+    nomsSeu: ["Marta Farrés Falgueras", "Pol Gibert Horcas"],
+  });
+
+  it("el nom porta l'accent de la seu electrònica", () => {
+    const html = renderCandidatura(sabadell, "2026-08-30");
+    // A la taula del ple i a la frase de l'alcaldia: les dues.
+    expect([...html.matchAll(/Marta Farrés Falgueras/g)]).toHaveLength(2);
+    expect(html).not.toContain("Farres Falgueras");
+  });
+
+  it("i sense fitxa a la seu, queda el del registre", () => {
+    const html = renderCandidatura({ ...sabadell, nomsSeu: [] }, "2026-08-30");
+    expect(html).toContain("Marta Farres Falgueras");
+  });
+
+  it("un nom que lliga amb dues fitxes de la seu no agafa l'accent de cap", () => {
+    // Dues «Marta Farrés» a la seu i no sabem quina és aquesta: val més el
+    // nom sense accent que l'accent d'una altra persona.
+    const html = renderCandidatura(
+      { ...sabadell, nomsSeu: ["Marta Farrés Falgueras", "Marta Farrés Falgueras"] },
+      "2026-08-30",
+    );
+    expect(html).toContain("Marta Farres Falgueras");
+    expect(html).not.toContain("Marta Farrés Falgueras");
+  });
+});
+
+describe("el cap de llista al ple", () => {
+  const ambCap = mostra({
+    councillors: [
+      {
+        name: "Eduard Sanz García", role: "Alcalde President", match: "grup", foto: null, fitxa: null,
+        capDeLlista: true, posicioLlista: 1,
+      },
+      {
+        name: "Montserrat Zamora Angulo", role: "1a Tinent d'Alcalde", match: "grup", foto: null, fitxa: null,
+        capDeLlista: false, posicioLlista: 2,
+      },
+    ],
+    capDeLlista: "Eduard Sanz García",
+  });
+
+  it("es marca amb totes les lletres, i els altres porten el número amb què hi anaven", () => {
+    const html = renderCandidatura(ambCap, "2026-08-30");
+    expect(html).toContain(">cap de llista</span>");
+    expect(html).toContain("núm. 2 de la llista");
+    // El cap porta la pastilla i no el número: dir «cap de llista» i «núm. 1»
+    // de la mateixa persona seria dir el mateix dues vegades.
+    expect(html).not.toContain("núm. 1 de la llista");
+  });
+
+  it("quan qui encapçalava ja no seu al ple, es diu en comptes de deixar la llista sense cap", () => {
+    // Ada Colau va encapçalar Barcelona en Comú el 2023 i va deixar el ple el 2024.
+    const html = renderCandidatura(mostra({ capDeLlista: "Ada Colau Ballano" }), "2026-08-30");
+    expect(html).toContain("Ada Colau Ballano");
+    expect(html).toContain("no surt a la taula");
+  });
+
+  it("sense candidatures proclamades no s'inventa cap cap de llista ni cap número", () => {
+    const html = renderCandidatura(mostra(), "2026-08-30");
+    expect(html).not.toContain(">cap de llista</span>");
+    expect(html).not.toContain("de la llista</span>");
+    expect(html).not.toContain("no surt a la taula");
+  });
+});
+
+describe("les sortides de dalt", () => {
+  it("el poble del títol i la fila de pastilles porten al municipi i al seu ple", () => {
+    const html = renderCandidatura(mostra(), "2026-08-30");
+    expect(html).toContain('<span class="cand-a-on"><a href="../">a Esplugues de Llobregat</a></span>');
+    expect(html).toContain('href="../#regidors"');
   });
 });

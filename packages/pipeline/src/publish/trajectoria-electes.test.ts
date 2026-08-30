@@ -6,6 +6,7 @@ import {
   decades,
   fitxaPersona,
   graellaDeCent,
+  inicials,
   mapaOrigen,
   ocupacions,
   percent,
@@ -14,6 +15,7 @@ import {
   type SaltPersona,
   type TrajectoriaData,
 } from "./trajectoria-electes";
+import type { Retrat } from "./fotos-wikidata";
 
 /**
  * Les xifres d'aquestes proves són les de l'extracció real del 30-08-2026:
@@ -43,8 +45,21 @@ const persona = (extra: Partial<SaltPersona> = {}): SaltPersona => ({
   aparellat: true,
   fitxa: "../m/granollers/regidor/josep-pujadas-i-maspons/",
   foto: "/observatori/fotos/160/8096.webp",
+  retrat: null,
   ...extra,
 });
+
+/** El retrat de Commons d'un exalcalde, tal com J28 el desa. */
+const RETRAT: Retrat = {
+  nom: "Josep Pujadas i Maspons",
+  cami: "/observatori/fotos/wikimedia/Q76350582.jpg",
+  fitxer: "File:Josep Pujadas.jpg",
+  paginaFitxer: "https://commons.wikimedia.org/wiki/File:Josep_Pujadas.jpg",
+  autor: "Davidpar",
+  llicencia: { nom: "CC BY-SA 4.0", url: "https://creativecommons.org/licenses/by-sa/4.0" },
+  amplada: 240,
+  alcada: 320,
+};
 
 const municipi = (i: number, ambSalt: number): MunicipiTrajectoria => ({
   slug: `poble-${i}`,
@@ -243,6 +258,37 @@ describe("fitxaPersona", () => {
     const html = fitxaPersona(persona({ nom: 'Anna <b>"Rius"</b> & Puig', viquipedia: null }));
     expect(html).toContain("Anna &lt;b&gt;&quot;Rius&quot;&lt;/b&gt; &amp; Puig");
   });
+
+  /**
+   * La política de fotografies, feta codi: primer el retrat oficial, després
+   * el de Wikimedia Commons amb el crèdit a la vista, i si no, les inicials.
+   */
+  it("sense retrat oficial surt el de Commons, amb el crèdit al peu de la targeta", () => {
+    const html = fitxaPersona(persona({ foto: null, retrat: RETRAT }));
+    expect(html).toContain('src="/observatori/fotos/wikimedia/Q76350582.jpg"');
+    expect(html).toContain('class="retrat retrat-wikimedia"');
+    expect(html).toContain('width="56" height="56"');
+    expect(html).toContain("Foto: Davidpar, ");
+    expect(html).toContain('rel="license noopener nofollow">CC BY-SA 4.0</a>');
+    expect(html).toContain('href="https://commons.wikimedia.org/wiki/File:Josep_Pujadas.jpg"');
+    // El crèdit és text de la targeta, no un «title» que només surt amb el ratolí.
+    expect(html).not.toContain('title="');
+  });
+
+  it("el retrat oficial mana sobre el de Commons, i llavors no hi ha crèdit de Commons", () => {
+    const html = fitxaPersona(persona({ retrat: RETRAT }));
+    expect(html).toContain('src="/observatori/fotos/160/8096.webp"');
+    expect(html).not.toContain("wikimedia");
+    expect(html).not.toContain("Foto:");
+  });
+
+  it("sense cap retrat hi van les inicials, amb la mateixa classe que la cara", () => {
+    const html = fitxaPersona(persona({ foto: null, retrat: null }));
+    expect(html).toContain('<span class="retrat inicials" aria-hidden="true">JP</span>');
+    expect(html).not.toContain("<img");
+    expect(inicials("Maria del Carme Roig")).toBe("MD");
+    expect(inicials("  ")).toBe("?");
+  });
 });
 
 describe("llistaDestins", () => {
@@ -317,6 +363,69 @@ describe("renderTrajectoriaElectes", () => {
     expect(html).toContain('data-familia="tots"');
     expect(html).toContain('data-families="parlament"');
     expect(html).toContain('data-families="senat"');
+  });
+
+  /**
+   * El filtre no anava: «.gent > li» d'estil.ts posa display:flex a cada
+   * targeta i guanya al [hidden] del navegador, de manera que el guió canviava
+   * l'atribut i no s'amagava res. Aquesta prova lliga les tres peces —el guió,
+   * els atributs de les targetes i la regla que fa valer el [hidden]— perquè
+   * no es tornin a separar.
+   */
+  it("el guió del filtre toca exactament els atributs que porten les targetes i els botons", () => {
+    const guio = html.slice(html.lastIndexOf("<script>"));
+    expect(guio).toContain('querySelectorAll("button[data-familia]")');
+    expect(guio).toContain('querySelectorAll(".persona[data-families]")');
+    expect(guio).toContain('getAttribute("data-familia")');
+    expect(guio).toContain('getAttribute("data-families")');
+    expect(guio).toContain("li.hidden = amaga");
+    expect(html).toContain('<li class="persona" data-families="parlament">');
+    expect(html).toContain('<button type="button" data-familia="parlament" aria-pressed="false">');
+    // «Tots» torna a ensenyar-ho tot: la clau és la mateixa al botó i al guió.
+    expect(html).toContain('data-familia="tots" aria-pressed="true"');
+    expect(guio).toContain('clau !== "tots"');
+  });
+
+  it("el [hidden] de les targetes i de la caixa val de debò, encara que estil.ts els posi display", () => {
+    expect(TRAJECTORIA_CSS).toContain(".gent > .persona[hidden],.filtra[hidden]{display:none}");
+    // Les famílies es comparen senceres: «senat» no es busca dins de cap altre text.
+    expect(html).toContain('split(" ")');
+    expect(html).toContain("families.indexOf(clau) === -1");
+  });
+
+  it("el compte de la llista neix amb totes i el guió el refà a cada clic", () => {
+    expect(html).toContain('<p class="quants-gent" aria-live="polite">Es mostren les 2 persones.</p>');
+    const guio = html.slice(html.lastIndexOf("<script>"));
+    expect(guio).toContain('querySelector(".quants-gent")');
+    expect(guio).toContain('"Es mostren " + visibles + " de " + targetes.length + " persones."');
+    expect(guio).toContain('"Es mostren les " + visibles + " persones."');
+  });
+
+  it("el menú marca «Trajectòries» com la pàgina actual", () => {
+    expect(html).toContain('<span class="ara" aria-current="page">Trajectòries</span>');
+    expect(html).not.toContain('href="../trajectoria/">Trajectòries</a>');
+  });
+
+  it("diu quantes cares vénen de Commons, i no ho diu si cap", () => {
+    expect(html).not.toContain("porten un retrat de");
+    const ambRetrat = renderTrajectoriaElectes(
+      { ...DADES, persones: [persona({ foto: null, retrat: RETRAT }), persona({ qid: "Q9999", foto: null })] },
+      "30 d'agost del 2026",
+    );
+    expect(ambRetrat).toContain("1\n  porten un retrat de <b>Wikimedia Commons</b>");
+    expect(ambRetrat).toContain("Foto: Davidpar");
+  });
+
+  it("enllaça les tipografies des d'un nivell avall, abans del full d'estil", () => {
+    expect(html).toContain('href="../../assets/fonts.css"');
+    expect(html.indexOf("fonts.css")).toBeLessThan(html.indexOf("<style>"));
+  });
+
+  it("el peu porta als partits, que és el que no hi ha a totes les pàgines", () => {
+    expect(html).toContain('<a class="propi" href="../partit/">Els partits</a>');
+    // El mapa ja hi és pel menú i pel peu de sempre: no cal repetir-lo com a propi.
+    expect(html).not.toContain("El mapa dels 947");
+    expect(html).not.toContain('class="propi" href="../mapa/"');
   });
 
   it("el full d'estil hi va sencer", () => {

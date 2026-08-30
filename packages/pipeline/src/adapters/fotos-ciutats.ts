@@ -16,6 +16,11 @@ import { sleep } from "../lib/http";
  * cinc HTML que no s'assemblen en res només amagaria on es trenca cada cop que
  * un ajuntament redissenyi el web.
  *
+ * Terrassa és el cas a part: la pàgina existeix, té els 27 retrats i la
+ * llicència ho permet, però **cap client HTTP no hi arriba** (vegeu la secció
+ * de Terrassa). El lector és el mateix que per a les altres; el que canvia és
+ * que el HTML l'ha de desar una persona amb el navegador.
+ *
  * ─────────────────────────────────────────────────────────────────────────────
  * La llicència mana més que el HTML
  * ─────────────────────────────────────────────────────────────────────────────
@@ -43,10 +48,24 @@ export type CarrecCiutat = {
   carrec: string;
   /** Grup municipal; `null` quan la font no el separa del càrrec. */
   grup: string | null;
-  /** URL absoluta de la fotografia, o `null` si aquesta persona no en té. */
+  /**
+   * URL absoluta de la fotografia, o `null` si aquesta persona no en té.
+   * Pot ser `file://` quan la font es llegeix d'una còpia desada (Terrassa).
+   */
   foto: string | null;
+  /**
+   * Clau estable de la foto per a les fonts on la URL no ho és: la mateixa
+   * imatge llegida de la web i d'una còpia desada al disc ha de donar el
+   * mateix identificador de fitxer. Quan falta, la clau és la URL.
+   */
+  fotoClau?: string;
   /** Fitxa de detall a la web municipal, quan n'hi ha. */
   fitxa: string | null;
+  /**
+   * Si la pàgina separa govern i oposició, qui és de l'equip de govern.
+   * `undefined` quan la font no ho diu: no s'inventa.
+   */
+  equipGovern?: boolean;
 };
 
 /**
@@ -73,6 +92,11 @@ export type Font = {
   citacio: string;
   /** On s'ha llegit la citació. Buit quan no s'ha trobat avís legal. */
   urlAvisLegal: string | null;
+  /**
+   * Per què la pàgina no es pot llegir amb un client HTTP i cal una còpia
+   * desada amb el navegador. Només les fonts que ho necessiten ho porten.
+   */
+  nomesCopiaDesada?: string;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -368,6 +392,186 @@ export function parseHospitalet(html: string): CarrecCiutat[] {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Terrassa — una taula, i una còpia desada perquè el servidor no obre la porta
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TER_URL = "https://www.terrassa.cat/consistori";
+
+/*
+ * Terrassa no és a seu-e (404 als tres slugs raonables) i al seu web sí que hi
+ * és tot: la pàgina «Consistori» porta els 27 retrats oficials a 600×798, amb
+ * nom, càrrec i fitxa de cadascú, i les condicions d'ús ho permeten citant la
+ * font. Però **tot el domini `terrassa.cat`** —www, seuelectronica, governobert,
+ * opendata, agendes— respon 403 amb `cf-mitigated: challenge` a qualsevol
+ * client que no sigui un navegador: `curl`, el `fetch` de Node i qualsevol
+ * capçalera que se li posi (comprovat el 30 d'agost de 2026). No és un canvi de
+ * format ni una URL que s'ha mogut: és un repte de Cloudflare que només supera
+ * un navegador de debò. I burlar-lo no és el camí (`portals-municipals.ts` ho
+ * deixa dit per a les actes de la mateixa ciutat).
+ *
+ * La sortida honesta és que una persona desi la pàgina amb el navegador
+ * («Desa com a… › Pàgina web, completa») i el lector la llegeixi del disc. El
+ * HTML desat és el mateix DOM; l'única diferència és que les imatges apunten a
+ * la carpeta `_files` del costat, i per això `parseTerrassa` accepta una `base`
+ * que pot ser un `file://`. Qui llegeix la carpeta és J13, no aquest fitxer.
+ *
+ * L'estructura de la pàgina és una taula de dues columnes on les files van de
+ * dues en dues: una fila amb dos retrats i, just a sota, una fila amb els dos
+ * noms. Entre grups hi ha una fila amb el logo del partit, i «Oposició» separa
+ * l'equip de govern de la resta. El retrat i la persona, doncs, **no són al
+ * mateix bloc** com a Tarragona o a Mataró: s'aparellen per posició —mateixa
+ * columna, fila següent—, que és com ho llegeix una persona mirant la pàgina.
+ * Com que és una aparellada geomètrica i no de bloc, hi ha un vet a sobre: el
+ * nom de pila que porta l'`alt` del retrat («fotografia oficial de Patri
+ * Reche…») ha de ser compatible amb el nom de la casella, i si no ho és la
+ * foto es descarta. Val més una fitxa sense cara que la cara d'algú altre.
+ */
+
+/** «logo Partit Municipal Junts per Terrassa» → «Junts per Terrassa». */
+function grupDelLogo(alt: string): string | null {
+  const net = textNet(alt).replace(/^logo\s+(del\s+|de\s+)?(partit\s+municipal\s+)?/i, "").trim();
+  return net || null;
+}
+
+/**
+ * Clau estable d'una foto de Terrassa: l'últim tram del camí, que a Liferay és
+ * l'identificador de la imatge (`…/Nom+Cognoms+TXT.jpg/5efeb063-…`). Chrome
+ * desa el fitxer amb aquest mateix nom i l'extensió al darrere, així que la
+ * clau coincideix tant si es llegeix la web com la còpia.
+ */
+export function clauFotoTerrassa(src: string): string {
+  const cami = decodeEntities(src).split(/[?#]/)[0]!.replace(/\/+$/, "");
+  let tram = cami.slice(cami.lastIndexOf("/") + 1);
+  try {
+    tram = decodeURIComponent(tram);
+  } catch {
+    // Un percentatge solt no és motiu per perdre la clau: es deixa tal qual.
+  }
+  return `terrassa/${tram.replace(/\.(jpe?g|png|webp|gif)$/i, "")}`;
+}
+
+/** Els fragments de nom que porta l'`alt` del retrat, sense el preàmbul. */
+function trossosDeNom(text: string): string[] {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 3);
+}
+
+/**
+ * El vet de l'aparellada: el primer nom de l'`alt` ha de casar amb algun tros
+ * del nom de la casella. «Patri» val per «Patrícia» i «Ruth Ibernón» per «Ruth
+ * Hibernón Martín», que és com de lluny arriba el descuit a la pàgina real.
+ */
+export function nomsCompatibles(alt: string, nom: string): boolean {
+  const senseProleg = alt.replace(/^\s*fotografia\s+oficial\s*(de\s+|d['’]\s*)?/i, "");
+  const primer = trossosDeNom(senseProleg)[0];
+  if (!primer) return false;
+  return trossosDeNom(nom).some((t) => t.startsWith(primer) || primer.startsWith(t));
+}
+
+type Retrat = { src: string; alt: string };
+
+/** La taula amb els retrats: la primera que porta un `<img>` amb «fotografia oficial». */
+function taulaDelConsistori(html: string): { inici: number; cos: string } | null {
+  const re = /<table\b[\s\S]*?<\/table>/gi;
+  let m: RegExpExecArray | null;
+  let primera: { inici: number; cos: string } | null = null;
+  while ((m = re.exec(html)) !== null) {
+    if (/fotografia\s+oficial/i.test(m[0])) return { inici: m.index, cos: m[0] };
+    // Si cap `alt` no ho diu, val la primera taula amb files de només imatges.
+    if (!primera && /<td[^>]*>\s*<img[^>]*>\s*<\/td>/i.test(m[0])) primera = { inici: m.index, cos: m[0] };
+  }
+  return primera;
+}
+
+/** Línies visibles d'una casella, tallades per `<br>` i per paràgraf. */
+function liniesDeCela(cela: string): string[] {
+  return cela
+    .replace(/<br\s*\/?>|<\/?p\b[^>]*>|<\/?div\b[^>]*>/gi, "\n")
+    .split("\n")
+    .map((l) => textNet(l))
+    .filter((l) => l && !/^(veure|vegeu)\s+l['’]agenda/i.test(l) && !/obre en (pestanya|finestra)/i.test(l));
+}
+
+export function parseTerrassa(html: string, base: string = TER_URL): CarrecCiutat[] {
+  const taula = taulaDelConsistori(html);
+  if (!taula) return [];
+
+  // El grup de la primera tanda és el logo que hi ha just abans de la taula
+  // («Logo Partit Municipal Tot per Terrassa»); els altres van dins.
+  const abans = html.slice(0, taula.inici);
+  const logosAbans = [...abans.matchAll(/<img[^>]*\salt="([^"]*\blogo\b[^"]*)"/gi)];
+  let grup = logosAbans.length ? grupDelLogo(logosAbans.at(-1)![1]!) : null;
+
+  // Només si la pàgina separa «Oposició» sabem qui governa; si no, no es diu.
+  const hiHaOposicio = /<strong[^>]*>\s*Oposici[oó]/i.test(taula.cos);
+  let govern: boolean | undefined = hiHaOposicio ? true : undefined;
+
+  const out: CarrecCiutat[] = [];
+  let pendents: (Retrat | null)[] | null = null;
+
+  for (const fila of taula.cos.match(/<tr\b[\s\S]*?<\/tr>/gi) ?? []) {
+    const celes = [...fila.matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)].map((c) => c[1]!);
+    if (celes.length === 0) continue;
+
+    const logo = fila.match(/<img[^>]*\salt="([^"]*\blogo\b[^"]*)"/i);
+    if (logo) {
+      grup = grupDelLogo(logo[1]!);
+      pendents = null;
+      continue;
+    }
+    if (/<strong[^>]*>\s*Oposici[oó]/i.test(fila) || /^Oposici[oó]$/i.test(textNet(fila))) {
+      govern = false;
+      pendents = null;
+      continue;
+    }
+
+    const retrats = celes.map((c): Retrat | null => {
+      const img = c.match(/<img\b[^>]*>/i);
+      if (!img) return null;
+      const src = img[0].match(/\ssrc="([^"]+)"/i);
+      const alt = img[0].match(/\salt="([^"]*)"/i);
+      return src ? { src: src[1]!, alt: alt ? decodeEntities(alt[1]!) : "" } : null;
+    });
+    const esFilaDeRetrats = retrats.some(Boolean) && celes.every((c) => !liniesDeCela(c).length);
+    if (esFilaDeRetrats) {
+      pendents = retrats;
+      continue;
+    }
+
+    for (const [i, cela] of celes.entries()) {
+      const linies = liniesDeCela(cela);
+      const nom = linies[0];
+      if (!nom) continue;
+
+      const retrat = pendents?.[i] ?? null;
+      const compatible = retrat !== null && nomsCompatibles(retrat.alt, nom);
+      const fitxa = [...cela.matchAll(/<a[^>]*\shref="([^"]+)"/gi)]
+        .map((m) => m[1]!)
+        .find((href) => !/agendes\.terrassa\.cat/i.test(href));
+
+      out.push({
+        nom,
+        carrec: linies.slice(1).join(" · "),
+        grup,
+        foto: compatible ? absolut(retrat.src, base) : null,
+        ...(compatible ? { fotoClau: clauFotoTerrassa(retrat.src) } : {}),
+        // Els enllaços de la fitxa són de la web, no de la còpia: es resolen
+        // contra la pàgina i no contra el `file://`.
+        fitxa: fitxa ? absolut(fitxa, TER_URL) : null,
+        ...(govern === undefined ? {} : { equipGovern: govern }),
+      });
+    }
+    pendents = null;
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Les fonts i la seva llicència
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -396,6 +600,24 @@ export const FONTS: Readonly<Record<string, Font>> = Object.freeze({
       "amb fins comercials, llevat que es compti amb l'autorització del titular dels " +
       "corresponents drets o això resulti legalment permès",
     urlAvisLegal: "https://www.tarragona.cat/avis-legal",
+  },
+  /*
+   * Terrassa té la mateixa llicència que Tarragona: reproducció permesa citant
+   * la font, amb la reserva comercial. El que la fa diferent és l'accés, no el
+   * dret: cap client HTTP no passa del repte de Cloudflare, i per això la font
+   * duu `nomesCopiaDesada` i `fotosDe` es nega a fer cap petició.
+   */
+  Terrassa: {
+    municipi: "Terrassa",
+    url: TER_URL,
+    llicencia: "no-comercial",
+    citacio:
+      "S'autoritza la reproducció dels continguts textuals i gràfics, excepte amb " +
+      "finalitats comercials, sempre que se citi la font",
+    urlAvisLegal: "https://www.terrassa.cat/protecciodades",
+    nomesCopiaDesada:
+      "tot el domini terrassa.cat respon 403 amb «cf-mitigated: challenge» a " +
+      "qualsevol client que no sigui un navegador (30-08-2026)",
   },
   Lleida: {
     municipi: "Lleida",
@@ -444,6 +666,24 @@ export class LlicenciaDenegadaError extends Error {
 // Descàrrega
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** El que necessita una font que no es pot llegir per HTTP (Terrassa). */
+export class CopiaDesadaAbsentError extends Error {
+  constructor(readonly font: Font) {
+    super(
+      `${font.municipi}: cal una còpia de ${font.url} desada amb el navegador; ` +
+        `${font.nomesCopiaDesada ?? "no s'hi arriba amb un client HTTP"}`,
+    );
+    this.name = "CopiaDesadaAbsentError";
+  }
+}
+
+export type CopiaDesada = {
+  /** El HTML tal com l'ha desat el navegador. */
+  html: string;
+  /** `file://` del HTML desat, per resoldre-hi les imatges de la carpeta `_files`. */
+  base: string;
+};
+
 export type OpcionsFotos = {
   /** Pausa entre peticions. Només Mataró en fa més d'una. */
   delayMs?: number;
@@ -452,6 +692,11 @@ export type OpcionsFotos = {
    * dins del producte; existeix perquè els tests puguin recórrer el lector.
    */
   ignoraLlicencia?: boolean;
+  /**
+   * Còpia desada amb el navegador, per a les fonts amb `nomesCopiaDesada`. Si
+   * falta, la font no es llegeix: no es fa cap petició que sabem que fallarà.
+   */
+  copiaDesada?: CopiaDesada;
 };
 
 /**
@@ -477,6 +722,12 @@ export async function fotosDe(
     case "Barcelona": {
       const { html } = await fetchText(font.url);
       return parseBarcelona(html);
+    }
+    case "Terrassa": {
+      // Cap petició: el servidor no obre la porta a res que no sigui un
+      // navegador, i insistir-hi només és soroll al seu registre.
+      if (!options.copiaDesada) throw new CopiaDesadaAbsentError(font);
+      return parseTerrassa(options.copiaDesada.html, options.copiaDesada.base);
     }
     case "Tarragona": {
       const { html } = await fetchText(font.url);

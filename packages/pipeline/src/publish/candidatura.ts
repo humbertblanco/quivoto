@@ -1,6 +1,6 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import {
-  candidatures, councilTerms, councillorMandates, electionResults, municipalities,
+  candidacies, candidatures, councilTerms, councillorMandates, electionResults, municipalities,
   municipalityMetrics, people, politicalGroups, type Db,
 } from "@quivoto/db";
 import { BRANDS_BY_ID, PARTY_BRANDS, siglesFamily } from "@quivoto/shared-schemas/brands";
@@ -8,9 +8,9 @@ import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { INDEXABLE, SITE } from "./config";
 import { sobreColor, tintaSobre as tintaDeContrast } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
-import { de, normalizePersonName, slugify } from "../lib/text";
+import { de, nomPreferit, nomsOficials, normalizePersonName, slugify } from "../lib/text";
 import { adrecesRegidors } from "./regidor";
-import { capcalera } from "./capcalera";
+import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 
@@ -63,6 +63,16 @@ export type RegidorPle = {
   foto: string | null;
   /** L'adreça de la nostra fitxa d'aquesta persona. */
   fitxa: string | null;
+  /**
+   * Si va encapçalar aquesta llista el 2023: l'alcaldable.
+   *
+   * Surt de les candidatures proclamades (`candidacies.is_head`), creuades
+   * pel nom normalitzat amb el registre d'electes. Un nom que lligui amb dues
+   * persones de la mateixa llista no s'hi marca, com sempre.
+   */
+  capDeLlista: boolean;
+  /** El número amb què hi anava, de la mateixa font. `null` si no l'hem lligat. */
+  posicioLlista: number | null;
 };
 
 export type GermanaPle = { slug: string; sigles: string; seats: number; color: string };
@@ -135,6 +145,24 @@ export type CandidaturaData = {
   /** Regidors del ple que no hem pogut lligar amb cap llista. */
   unattached: number;
   siblings: GermanaPle[];
+  /**
+   * Els noms tal com els escriu la seu electrònica del municipi.
+   *
+   * Els regidors d'aquesta pàgina vénen del registre d'electes, que els dona
+   * sense accents («Marta Farres Falgueras»); la fitxa de cada persona, de la
+   * seu electrònica, que els accentua. Són les mateixes fitxes d'on surten les
+   * fotografies, i serveixen per escriure aquí cada nom exactament com a la
+   * pàgina que l'enllaç del costat obre (`nomPreferit`).
+   */
+  nomsSeu: string[];
+  /**
+   * Qui encapçalava aquesta llista el 2023, tal com el dona la font electoral.
+   *
+   * Sol ser algú de la taula del ple, i llavors hi surt marcat. Quan no hi és
+   * —va plegar, o el registre l'escriu d'una manera que no lliga—, es diu, en
+   * comptes de deixar que la llista sembli que no en tenia.
+   */
+  capDeLlista: string | null;
 };
 
 // ------------------------------------------------------------------- format
@@ -280,8 +308,13 @@ function renderSerie(data: CandidaturaData): string {
 </figure>`;
 }
 
-/** El ple d'ara: nom, càrrec i grup. Cap dada de contacte, mai. */
-function renderRegidors(data: CandidaturaData): string {
+/**
+ * El ple d'ara: nom, càrrec i grup. Cap dada de contacte, mai.
+ *
+ * Cada nom s'escriu com a la fitxa de la persona que l'enllaç obre: la seu
+ * electrònica mana sobre el registre, que ve sense accents (`nomPreferit`).
+ */
+function renderRegidors(data: CandidaturaData, oficials: ReadonlyMap<string, string>): string {
   if (data.councillors.length === 0) {
     return `<p class="nota feble">No hem pogut lligar cap regidor del ple d'ara amb aquesta llista.
     La font escriu les sigles en text lliure i aquí no hi encaixen amb prou seguretat; abans que
@@ -309,27 +342,53 @@ function renderRegidors(data: CandidaturaData): string {
    * falten quatre no igualava ningú: buidava la pàgina.
    */
   const rows = data.councillors
-    .map(
-      (regidor) => `<tr>
+    .map((regidor) => {
+      const nom = nomPreferit(oficials, regidor.name);
+      return `<tr>
       <th scope="row">${
         regidor.foto
           ? `<img class="cara-cand" src="${escape(regidor.foto)}" alt="" width="36" height="36" loading="lazy">`
-          : `<span class="cara-cand inicials" aria-hidden="true">${escape(inicials(regidor.name))}</span>`
+          : `<span class="cara-cand inicials" aria-hidden="true">${escape(inicials(nom))}</span>`
       }<span class="qui-cand">${
-        regidor.fitxa
-          ? `<a href="${escape(regidor.fitxa)}">${escape(regidor.name)}</a>`
-          : escape(regidor.name)
+        regidor.fitxa ? `<a href="${escape(regidor.fitxa)}">${escape(nom)}</a>` : escape(nom)
+      }${
+        // L'alcaldable, dit amb totes les lletres al costat del nom: és la
+        // persona per qui es va votar aquesta llista, i la taula no ho deia.
+        // Els altres porten el número amb què hi anaven, en cos petit i dins
+        // de la mateixa cel·la: la taula ha de continuar tenint dues columnes
+        // per plegar-se bé a 320 px.
+        regidor.capDeLlista
+          ? ' <span class="cap-llista">cap de llista</span>'
+          : regidor.posicioLlista === null
+            ? ""
+            : ` <span class="num-llista">núm. ${regidor.posicioLlista} de la llista</span>`
       }</span></th>
       <td>${escape(regidor.role ?? "Regidoria")}</td>
-    </tr>`,
-    )
+    </tr>`;
+    })
     .join("");
+
+  /*
+   * Qui encapçalava la llista i no és a la taula. Passa: a Barcelona, Ada Colau
+   * va encapçalar la llista de Barcelona en Comú el 2023 i va deixar el ple el
+   * 2024. Sense aquesta línia, la taula d'aquella llista semblaria que no
+   * havia tingut mai cap de llista. Però un nom que no lliga pot ser també un
+   * registre que l'escriu diferent, i per això es diuen les dues coses.
+   */
+  const capNoHiEs =
+    data.capDeLlista !== null && !data.councillors.some((r) => r.capDeLlista)
+      ? `<p class="nota">Qui encapçalava aquesta llista el 2023, <b>${escape(
+          nomPreferit(oficials, data.capDeLlista),
+        )}</b>, no surt a la taula: o ja no seu al ple, o el registre d'electes escriu el nom d'una
+        manera que no hem sabut lligar amb la llista. Abans d'afirmar que ha plegat, ho deixem així.</p>`
+      : "";
 
   return `<table class="cand-ple">
     <caption class="nomes-lectors">Regidors d'aquesta candidatura al ple 2023-2027</caption>
-    <thead><tr><th>Nom</th><th>Càrrec</th></tr></thead>
+    <thead><tr><th>Nom</th><th>Càrrec</th><th>A la llista</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
+  ${capNoHiEs}
   ${
     ambFoto > 0
       ? `<p class="nota">Les fotografies les publica el mateix ajuntament al seu portal de
@@ -353,7 +412,9 @@ function renderRegidors(data: CandidaturaData): string {
     : ""}</p>`;
 }
 
-function renderAlcaldia(data: CandidaturaData): string {
+function renderAlcaldia(data: CandidaturaData, oficials: ReadonlyMap<string, string>): string {
+  // Qui té l'alcaldia, escrit com a la seva fitxa i com a la taula de sobre.
+  const alcalde = data.mayorName ? nomPreferit(oficials, data.mayorName) : null;
   if (data.hasMayoralty === null) {
     return `<p class="veredicte">No sabem de quina llista és l'alcaldia.</p>
     <p class="nota">La font que publica la composició del ple no diu quin és el partit de
@@ -361,7 +422,7 @@ function renderAlcaldia(data: CandidaturaData): string {
   }
   if (data.hasMayoralty) {
     const solitud = data.seats >= data.majority;
-    return `<p class="veredicte">Aquesta llista té l'alcaldia${data.mayorName ? `: <b>${escape(data.mayorName)}</b>` : ""}.</p>
+    return `<p class="veredicte">Aquesta llista té l'alcaldia${alcalde ? `: <b>${escape(alcalde)}</b>` : ""}.</p>
     <p class="nota">${solitud
       ? `Amb ${data.seats} de ${data.totalSeats} regidories tenia la majoria absoluta (${data.majority}), així que <b>no li va caldre pactar amb ningú</b>.`
       : `Amb ${data.seats} de ${data.totalSeats} regidories no arribava a la majoria absoluta, que són ${data.majority}: <b>va caldre un pacte</b>, o com a mínim que algú s'abstingués.${
@@ -372,7 +433,7 @@ function renderAlcaldia(data: CandidaturaData): string {
   <p class="nota">${data.isWinner
     ? `Va ser <b>la llista més votada</b> i tot i així no governa: vol dir que la resta del ple va pactar.`
     : `És a l'oposició del mandat 2023-2027.`}${
-      data.mayorName ? ` L'alcaldia és de ${escape(data.mayorName)}.` : ""
+      alcalde ? ` L'alcaldia és de ${escape(alcalde)}.` : ""
     }</p>`;
 }
 
@@ -514,6 +575,22 @@ const CANDIDATURA_CSS = `
    sigles continuïn sent el que es veu primer. */
 .cand-a-on{display:block;font-family:var(--display);font-weight:900;letter-spacing:-.02em;
   font-size:clamp(1.1rem,3.4vw,1.6rem);line-height:1.15;color:var(--ink-suau);margin-top:2px}
+/* El poble del títol és un enllaç que no ho sembla fins que s'hi passa per
+   sobre: el mateix color que el text, i el subratllat només en passar-hi. */
+.cand-a-on a{color:inherit;text-decoration:none}
+.cand-a-on a:hover,.cand-a-on a:focus-visible{text-decoration:underline;text-decoration-thickness:2.5px;
+  text-underline-offset:5px}
+/* Les sortides de dalt: la mateixa fila de pastilles que la del final, sense
+   el marge de sobre que allà les separa del text i sense els punts de llista. */
+.cand-sortides.dalt{list-style:none;padding:0;margin-top:var(--e2)}
+.cand-sortides.dalt .cand-fitxa{margin-top:0}
+/* El cap de llista i el número de llista, al costat del nom a la taula del ple:
+   la pastilla en lavanda per a qui encapçalava, i el número en cos petit i
+   gris per als altres. Cap dels dos no trenca la línia del nom en un mòbil. */
+.cap-llista{display:inline-block;background:var(--lavanda);color:#1E1B2E;border:2px solid var(--ink);
+  border-radius:var(--r-max);padding:1px 10px;font-size:.72rem;font-weight:800;white-space:nowrap;
+  vertical-align:middle;margin-left:4px}
+.num-llista{font-size:.76rem;font-weight:700;color:var(--ink-suau);white-space:nowrap;margin-left:4px}
 
 /* Les cares dels regidors a la taula del ple. Van dins de la mateixa cel·la que
    el nom perquè la taula continuï tenint dues columnes i es plegui bé en un
@@ -565,6 +642,9 @@ export function renderCandidatura(data: CandidaturaData, generatedAt: string): s
   // El fons i la tinta de les inicials de qui no té retrat publicat, calculats
   // un sol cop: és el color de la llista, mogut només si no s'hi llegiria.
   const inicial = sobreColor(colorSegur(data.color));
+  // Els noms de la seu electrònica, indexats un sol cop per a la taula del ple
+  // i la frase de l'alcaldia: un nom que lliga amb dues fitxes no hi entra.
+  const oficials = nomsOficials(data.nomsSeu);
   const title = `${data.sigles} a ${m.name} — Observatori municipal de quivoto`;
   const description = `Què va treure ${data.sigles} a ${m.name} el 2023, com li ha anat des del 1979, qui la representa al ple i si té l'alcaldia. Només amb dades obertes.`;
 
@@ -596,6 +676,7 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
 <meta property="og:url" content="${SITE}/observatori/m/${escape(m.slug)}/${escape(data.slug)}/">
 <meta property="og:image" content="${SITE}/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
+${tipografia("../../../")}
 <style>${RADIOGRAFIA_CSS}${CANDIDATURA_CSS}</style>
 </head>
 <body style="--accent:${colorSegur(data.color)};--accent-tinta:${tintaSobre(data.color)};--accent-esvait:${ESVAIT(colorSegur(data.color))};--inicial-fons:${colorSegur(inicial.fons)};--inicial-tinta:${inicial.tinta}">
@@ -614,8 +695,11 @@ ${cercador("../../../")}
        «PSC-CP» de Vic del de Reus: ni per a qui hi arriba des d'un cercador ni
        per a qui la llegeix amb un lector de pantalla, que sovint només en sent
        el primer encapçalament. -->
+  <!-- El nom del poble al títol porta a la seva fitxa. Des d'aquesta pàgina
+       només s'hi arribava pel micro-enllaç de dalt i pel botó del final, i
+       «a Sabadell» és el que qui llegeix vol clicar. -->
   <h1><span class="cand-sigles">${escape(data.sigles)}</span>
-    <span class="cand-a-on">a ${escape(m.name)}</span></h1>
+    <span class="cand-a-on"><a href="../">a ${escape(m.name)}</a></span></h1>
   ${data.denominacio && data.denominacio !== data.sigles
     ? `<p class="cand-denominacio">${escape(data.denominacio)}</p>`
     : ""}
@@ -628,7 +712,17 @@ ${cercador("../../../")}
       : "<span>sense marca supramunicipal</span>"}</li>
     <li><span class="etq">Color oficial</span>
       <span class="mostra-color"><i></i>${escape(data.color.toUpperCase())}</span></li>
-    <li><span class="etq">Municipi</span><span>${escape(m.name)}${m.population !== null ? ` · ${number(m.population)} hab.` : ""}</span></li>
+    <li><span class="etq">Municipi</span><span><a href="../">${escape(m.name)}</a>${m.population !== null ? ` · ${number(m.population)} hab.` : ""}</span></li>
+  </ul>
+  <!-- Les tres sortides, just sota del titular: la fitxa del municipi, qui
+       seu al seu ple i la marca a tot Catalunya. Són les mateixes pastilles
+       del final de la pàgina, aquí perquè es vegin sense haver-hi d'arribar. -->
+  <ul class="cand-sortides dalt">
+    <li><a class="cand-fitxa" href="../">La fitxa ${escape(de(m.name))} →</a></li>
+    <li><a class="cand-fitxa buida" href="../#regidors">Qui seu al ple</a></li>
+    ${capAlPartit
+      ? `<li><a class="cand-fitxa buida" href="${escape(capAlPartit)}">${escape(siglesMarca)} a tot Catalunya</a></li>`
+      : ""}
   </ul>
 </section>
 
@@ -699,12 +793,12 @@ ${mostraSerie(data) ? `<section class="bloc" id="serie">
 
 <section class="bloc" id="ple">
   <h2>Qui la representa al ple ara</h2>
-  ${renderRegidors(data)}
+  ${renderRegidors(data, oficials)}
 </section>
 
 <section class="bloc" id="alcaldia">
   <h2>L'alcaldia</h2>
-  ${renderAlcaldia(data)}
+  ${renderAlcaldia(data, oficials)}
   ${data.unattached > 0
     ? `<p class="nota">D'aquest ple hi ha ${data.unattached}
        ${data.unattached === 1 ? "regidor que no hem pogut lligar" : "regidors que no hem pogut lligar"}
@@ -744,6 +838,8 @@ ${mostraSerie(data) ? `<section class="bloc" id="serie">
   <ul>
     <li>Vots, regidories, denominació i color de la candidatura: Generalitat de Catalunya, <code>ntc4-rnwr</code>.</li>
     <li>Composició del ple i càrrecs: Generalitat de Catalunya, <code>nm3n-uhk3</code>.</li>
+    <li>Cap de llista i número de cada persona a la llista: candidatures proclamades,
+      Generalitat de Catalunya, <code>xnfg-weec</code>.</li>
     <li>Resultats de les dotze eleccions municipals des del 1979: Consorci AOC, <code>3539f7e6</code>.</li>
     <li>Padró i dades de l'ens: Generalitat de Catalunya, <code>6nei-4b44</code>.</li>
   </ul>
@@ -841,6 +937,30 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
     })
     .from(councillorMandates)
     .innerJoin(people, eq(people.id, councillorMandates.personId));
+
+  /*
+   * Les candidatures proclamades del 2023: qui encapçalava cada llista i amb
+   * quin número hi anava cadascú. Només els titulars, que els suplents també
+   * porten número però és el d'una altra llista. Un nom repetit dins de la
+   * mateixa llista no pot dir quin número és, i es deixa en blanc.
+   */
+  const proclamats = await db
+    .select({
+      candidatureId: candidacies.candidatureId, nom: people.fullName,
+      posicio: candidacies.listPosition, capDeLlista: candidacies.isHead,
+    })
+    .from(candidacies)
+    .innerJoin(candidatures, eq(candidatures.id, candidacies.candidatureId))
+    .innerJoin(people, eq(people.id, candidacies.personId))
+    .where(and(eq(candidatures.electionId, ELECCIO), eq(candidacies.kind, "Titular")));
+  const llistaPerCandidatura = new Map<number, { cap: string | null; posicions: Map<string, number | null> }>();
+  for (const p of proclamats) {
+    const entrada = llistaPerCandidatura.get(p.candidatureId) ?? { cap: null, posicions: new Map() };
+    const clauNom = normalizePersonName(p.nom);
+    entrada.posicions.set(clauNom, entrada.posicions.has(clauNom) ? null : p.posicio);
+    if (p.capDeLlista) entrada.cap = p.nom;
+    llistaPerCandidatura.set(p.candidatureId, entrada);
+  }
 
   const metriques = await db
     .select({
@@ -956,6 +1076,8 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
       if (fotoPerPersona.has(clauNom)) fotoPerPersona.set(clauNom, null);
       else fotoPerPersona.set(clauNom, carrec.fotoPetita ?? carrec.foto ?? null);
     }
+    // Els mateixos noms, per escriure'ls a la pàgina com a la fitxa de cada persona.
+    const nomsSeu = (fitxaSeu?.carrecs ?? []).map((c) => c.nom);
     const adreces = adrecesRegidors(fitxaSeu?.carrecs ?? []);
     const fitxaPerPersona = new Map<string, string>();
     for (const [carrec, adreca] of adreces) {
@@ -978,15 +1100,24 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
         continue;
       }
       const llista = regidorsPerCandidatura.get(candidatureId) ?? [];
+      const clauNom = normalizePersonName(mandat.fullName);
+      const proclamada = llistaPerCandidatura.get(candidatureId) ?? null;
+      const posicioLlista = proclamada?.posicions.get(clauNom) ?? null;
       llista.push({
         name: mandat.fullName,
         role: mandat.role,
         match: directe !== null ? "grup" : perSigles !== null ? "sigles" : "agrupacio",
-        foto: fotoPerPersona.get(normalizePersonName(mandat.fullName)) ?? null,
+        foto: fotoPerPersona.get(clauNom) ?? null,
         fitxa: (() => {
-          const a = fitxaPerPersona.get(normalizePersonName(mandat.fullName));
+          const a = fitxaPerPersona.get(clauNom);
           return a ? `../regidor/${a}/` : null;
         })(),
+        // Cap de llista només si el nom és inequívoc dins de la llista: un
+        // número en blanc vol dir dos noms iguals, i llavors tampoc no es marca.
+        capDeLlista:
+          proclamada?.cap !== null && proclamada !== undefined && proclamada !== null &&
+          normalizePersonName(proclamada.cap) === clauNom && posicioLlista !== null,
+        posicioLlista,
       });
       regidorsPerCandidatura.set(candidatureId, llista);
     }
@@ -1107,6 +1238,8 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
               ? l.color.trim()
               : BRANDS_BY_ID.get(l.brandId ?? "")?.color) ?? "#8b8b8b",
           })),
+        nomsSeu,
+        capDeLlista: llistaPerCandidatura.get(llista.id)?.cap ?? null,
       });
     }
   }

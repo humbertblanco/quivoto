@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { adrecesRegidors, renderRegidor, slugRegidor, trajectoriaDePersona } from "./regidor";
+import {
+  adrecesRegidors, quiEsDeWikidata, renderRegidor, slugRegidor, trajectoriaDePersona,
+  type ContextRegidor,
+} from "./regidor";
 
 describe("adrecesRegidors", () => {
   it("dona una adreça diferent a dues persones que es diuen igual", () => {
@@ -617,14 +620,446 @@ describe("l'exemple que explica la xifra parcial", () => {
   });
 });
 
-describe("quan no s'ha llegit cap acta, no es compta res sobre zero", () => {
-  it("no diu «de 0 actes llegides»", () => {
+/**
+ * La majoria de les 4.834 persones que seuen a un ple: cap sou publicat, cap
+ * acta amb el vot desglossat, cap fitxa a Wikidata, cap llista d'assistents.
+ * La pàgina els escrivia tres blocs que deien tots tres «no ho sabem», i ara
+ * ho diu un sol cop —sense deixar de dir cap de les tres coses.
+ */
+describe("una persona de qui no sabem res", () => {
+  const BUIT = { ...CONTEXT, votsDelGrup: [], actesLlegides: 0, assistencia: null };
+  const h2 = (html: string): number => (html.match(/<h2>/g) ?? []).length;
+
+  it("té un sol bloc en comptes de tres", () => {
+    const buit = renderRegidor(REGIDORA, BUIT, "2026-08-30");
+    const ple = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
+    expect(buit).toContain("<h2>Què en sabem</h2>");
+    expect(buit).not.toContain("<h2>Què cobra</h2>");
+    expect(buit).not.toContain("<h2>El seu pas pel ple</h2>");
+    expect(buit).not.toContain("<h2>Què ha votat</h2>");
+    expect(h2(ple) - h2(buit)).toBe(2);
+  });
+
+  it("però cada absència continua dita amb el seu motiu", () => {
+    const html = renderRegidor(REGIDORA, BUIT, "2026-08-30");
+    expect(html).toContain("no vol dir que no en cobri");
+    expect(html).toContain("encara no n'hem pogut llegir cap acta");
+    expect(html).toContain("a quants plens ha anat");
+    // I no es compta res sobre zero.
+    expect(html).not.toContain("de 0 actes");
+  });
+
+  it("distingeix no haver llegit actes de que cap no desglossi el vot", () => {
+    const html = renderRegidor(REGIDORA, { ...BUIT, actesLlegides: 12 }, "2026-08-30");
+    expect(html).toContain("De les 12 actes");
+    expect(html).toContain("cap no desglossa el vot per grup");
+    expect(html).toContain("Cap de les actes que hem llegit no porta la llista");
+  });
+
+  it("amb massa poques llistes d'assistents, diu quantes i per què no compta", () => {
     const html = renderRegidor(
       REGIDORA,
-      { ...CONTEXT, votsDelGrup: [], actesLlegides: 0, assistencia: null },
+      { ...BUIT, actesLlegides: 12, assistencia: { hi: 3, de: 4 } },
       "2026-08-30",
     );
-    expect(html).not.toContain("de 0 actes llegides");
-    expect(html).toContain("encara no n'hem pogut llegir cap acta");
+    expect(html).toContain("Només 4 actes porten");
+    expect(html).not.toContain("3 de 4");
+  });
+
+  it("i porta quant fa que hi seu, que és l'única xifra que sí que tenim", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...BUIT, mandat: { constitucio: "2023-06-17", nom: "2023-2027" } },
+      "2026-08-30",
+    );
+    expect(html).toContain("Fa que hi seu");
+    expect(html).toContain("3 anys i 2 mesos");
+  });
+
+  it("el que sí que publica el seu ajuntament s'hi continua dient", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...BUIT,
+        publicaDeLaPersona: {
+          retribucio: "xifra", declaracioBens: true, dietes: false, indemnitzacions: false,
+          altresRetribucions: false, fitxa: "https://seu-e.cat/fitxa",
+          font: { nom: "seu-e.cat", url: "https://seu-e.cat/", consultat: "2026-08-30" },
+        },
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("<h2>Què en publica el seu ajuntament</h2>");
+    expect(html).toContain("només recull la part que paga ell mateix");
+  });
+
+  it("amb una sola dada de debò, tornen els tres blocs", () => {
+    // Un sou publicat, cinc llistes d'assistents o una fitxa de Wikidata:
+    // qualsevol és una dada, i llavors cada bloc té alguna cosa a dir i es diu
+    // al seu lloc, amb les absències dels altres al costat.
+    const ambSou = renderRegidor(REGIDORA, { ...BUIT, retribucio: SOU_BARCELONA }, "2026-08-30");
+    expect(ambSou).toContain("<h2>Què cobra</h2>");
+    expect(ambSou).not.toContain("<h2>Què en sabem</h2>");
+    expect(
+      renderRegidor(REGIDORA, { ...BUIT, assistencia: { hi: 5, de: 6 } }, "2026-08-30"),
+    ).toContain("<h2>El seu pas pel ple</h2>");
+    expect(
+      renderRegidor(
+        REGIDORA,
+        { ...BUIT, trajectoria: trajectoriaDePersona(FITXA_J21, REGIDORA.nom) },
+        "2026-08-30",
+      ),
+    ).toContain("<h2>Què ha votat</h2>");
+  });
+
+  it("una fitxa de la seu sense import no és no saber-ne res: té font i motiu", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...BUIT,
+        retribucio: { ...SOU_BARCELONA, anualBrut: null, motiuSenseImport: "la font no en dona cap import" },
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("<h2>Què cobra</h2>");
+    expect(html).toContain("la font no en dona cap import");
+  });
+});
+
+describe("les tipografies de la marca", () => {
+  it("s'enllacen des de la profunditat d'aquesta pàgina, abans de l'estil", () => {
+    // Som a /observatori/m/<municipi>/regidor/<nom>/: cinc nivells amunt.
+    const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
+    expect(html).toContain('href="../../../../../assets/fonts.css"');
+    expect(html.indexOf("fonts.css")).toBeLessThan(html.indexOf("<style>"));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// El cap de llista, el perfil de Wikidata (J27), els sous de cada pagador,
+// la font dels vots i la frase dels mandats.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CAP: NonNullable<ContextRegidor["capDeLlista"]> = {
+  es: true,
+  posicio: 1,
+  sigles: "ERC-AM",
+  vots: 9_000,
+  regidories: 5,
+  forca: 2,
+  forces: 6,
+  vaGuanyar: false,
+  teAlcaldia: false,
+};
+
+describe("cap de llista", () => {
+  it("porta la pastilla i el bloc amb les xifres de la seva llista", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, posicioLlista: 1 },
+      { ...CONTEXT, capDeLlista: CAP },
+      "2026-08-30",
+    );
+    expect(html).toContain("cap de llista el 2023");
+    expect(html).toContain("<h2>Com a cap de llista</h2>");
+    expect(html).toContain("9.000 vots");
+    expect(html).toContain("5 regidories");
+    expect(html).toContain("segona força");
+    expect(html).toContain("No va aconseguir l'alcaldia");
+    expect(html).toContain("número 1 de la llista");
+    // I torna a la pàgina de la seva candidatura.
+    expect(html).toContain('href="../../erc-am/"');
+  });
+
+  it("qui no encapçalava només porta el número, sense bloc", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, posicioLlista: 2 },
+      { ...CONTEXT, capDeLlista: { ...CAP, es: false, posicio: 2 } },
+      "2026-08-30",
+    );
+    expect(html).toContain("número 2 de la llista");
+    expect(html).not.toContain("Com a cap de llista");
+  });
+
+  it("l'alcaldia es diu segons qui la té, i quan no se sap no es diu res", () => {
+    const alcaldessa = renderRegidor(
+      { ...REGIDORA, carrec: "Alcaldessa" },
+      { ...CONTEXT, capDeLlista: { ...CAP, teAlcaldia: true } },
+      "2026-08-30",
+    );
+    expect(alcaldessa).toContain("I té l'alcaldia");
+    // La llista la té, però l'ocupa algú altre: passa quan el cap de llista
+    // cedeix l'alcaldia o quan qui la té va entrar més avall de la llista.
+    const cedida = renderRegidor(REGIDORA, { ...CONTEXT, capDeLlista: { ...CAP, teAlcaldia: true } }, "2026-08-30");
+    expect(cedida).toContain("l'ocupa una altra persona");
+    const guanyada = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, capDeLlista: { ...CAP, vaGuanyar: true, forca: 1 } },
+      "2026-08-30",
+    );
+    expect(guanyada).toContain("Va guanyar les eleccions i no té l'alcaldia");
+    const desconeguda = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, capDeLlista: { ...CAP, teAlcaldia: null } },
+      "2026-08-30",
+    );
+    expect(desconeguda).toContain("<h2>Com a cap de llista</h2>");
+    expect(desconeguda).not.toContain("té l'alcaldia");
+    expect(desconeguda).not.toContain("aconseguir l'alcaldia");
+  });
+
+  it("una tinència d'alcaldia no és l'alcaldia: la seva frase és la de la llista", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, carrec: "1a Tinent d'Alcalde" },
+      { ...CONTEXT, capDeLlista: { ...CAP, teAlcaldia: false } },
+      "2026-08-30",
+    );
+    expect(html).not.toContain("I té l'alcaldia");
+    expect(html).toContain("No va aconseguir l'alcaldia");
+  });
+});
+
+const FITXA_J27 = {
+  font: "Wikidata (wikidata.org)",
+  url: "https://query.wikidata.org/sparql",
+  llicenciaDades: "CC0 1.0",
+  consultat: "2026-08-30",
+  ine5: "08077",
+  eleccio: "M20231",
+  buscats: 2,
+  capsDeLlista: 1,
+  trobats: 1,
+  persones: [
+    {
+      nom: "Marta Alarcon Puerto",
+      normalitzat: "marta alarcon puerto",
+      sigles: "ERC-AM",
+      capDeLlista: false,
+      qid: "Q42",
+      url: "https://www.wikidata.org/wiki/Q42",
+      etiqueta: "Marta Alarcón i Puerto",
+      naixement: 1985,
+      ocupacio: ["periodista"],
+      partit: "Esquerra Republicana de Catalunya",
+      carrecs: [
+        { qid: "Q600", nom: "diputada al Parlament de Catalunya", inici: "2017-12-21", fi: "2021-03-12", alMunicipi: false },
+      ],
+      article: { ca: "https://ca.wikipedia.org/wiki/Marta_Alarc%C3%B3n", es: null },
+      motiu: "carrec-al-municipi" as const,
+    },
+  ],
+  descartats: [],
+};
+
+describe("qui és, segons Wikidata (J27)", () => {
+  it("quiEsDeWikidata troba la persona pel nom normalitzat i no confon homònims", () => {
+    const t = quiEsDeWikidata(FITXA_J27, "MARTA ALARCÓN I PUERTO");
+    expect(t?.qid).toBe("Q42");
+    expect(t?.origen).toBe("caps-de-llista");
+    expect(t?.naixement).toBe(1985);
+    expect(quiEsDeWikidata(FITXA_J27, "Pere Coll")).toBe(null);
+    expect(quiEsDeWikidata(null, "Marta Alarcon Puerto")).toBe(null);
+    const dos = { ...FITXA_J27, persones: [...FITXA_J27.persones, FITXA_J27.persones[0]!] };
+    expect(quiEsDeWikidata(dos, "Marta Alarcon Puerto")).toBe(null);
+  });
+
+  it("el bloc «Qui és» diu l'any, l'ofici, el partit, els càrrecs i el perquè del lligam", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, trajectoria: quiEsDeWikidata(FITXA_J27, "Marta Alarcon Puerto") },
+      "2026-08-30",
+    );
+    expect(html).toContain("<h2>Qui és</h2>");
+    expect(html).toContain("1985");
+    expect(html).toContain("periodista");
+    expect(html).toContain("Esquerra Republicana de Catalunya");
+    expect(html).toContain("diputada al Parlament de Catalunya");
+    expect(html).toContain("CC0 1.0");
+    expect(html).toContain("càrrec en aquest mateix municipi");
+    // El bloc dels alcaldes de J21 és un altre i no s'ha de barrejar.
+    expect(html).not.toContain("Més enllà de l'ajuntament");
+  });
+
+  it("una fitxa de J27 sense res a dir no escriu cap bloc", () => {
+    const buida = {
+      ...FITXA_J27,
+      persones: [{
+        ...FITXA_J27.persones[0]!,
+        naixement: null, ocupacio: [], partit: null, carrecs: [], article: { ca: null, es: null },
+      }],
+    };
+    expect(quiEsDeWikidata(buida, "Marta Alarcon Puerto")).toBe(null);
+  });
+});
+
+describe("el sou que publica el pagador, amb la data i el zero dits com toca", () => {
+  it("la targeta porta la llicència i el dia que la font es va consultar", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        retribucio: { ...SOU_BARCELONA, any: null, font: { ...SOU_BARCELONA.font, consultat: "2026-08-30" } },
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("CC BY 4.0");
+    expect(html).toContain("consultat el 30 d'agost del 2026");
+  });
+
+  it("un zero publicat és qui paga dient que no paga res, amb l'explicació de la font al costat", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        retribucio: {
+          ...SOU_BARCELONA, anualBrut: 0, any: null,
+          avis: "Percep les retribucions com a diputada al Parlament de Catalunya.",
+        },
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("0 €");
+    expect(html).toContain("declara que no li paga res");
+    expect(html).toContain("Percep les retribucions com a diputada");
+    expect(html).not.toContain("salari mínim");
+  });
+});
+
+describe("el que l'alcaldia declara al Ministeri", () => {
+  const MINISTERI: NonNullable<ContextRegidor["alcaldiaSegonsMinisteri"]> = {
+    any: 2024,
+    euros: 104_000,
+    regim: "Exclusiva",
+    mena: "sou",
+    canviDAlcaldia: false,
+    font: {
+      nom: "Inventari de retribucions dels membres de les corporacions locals (ISPA 2025)",
+      organisme: "Ministeri per a la Transformació Digital i de la Funció Pública",
+      url: "https://digital.gob.es/",
+      llicencia: "Avís legal del portal del Ministeri (reutilització segons la Llei 37/2007). No és Creative Commons.",
+      consultat: "2026-08-30",
+    },
+    avis: null,
+  };
+
+  it("un sou de debò es compara amb el salari mínim del seu any", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, carrec: "Alcaldessa" },
+      { ...CONTEXT, alcaldiaSegonsMinisteri: MINISTERI },
+      "2026-08-30",
+    );
+    expect(html).toContain("104.000 €");
+    expect(html).toContain("vegades</b> el salari mínim");
+    expect(html).toContain("Ministeri");
+  });
+
+  it("les assistències no són un sou i no es comparen amb res", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, carrec: "Alcalde" },
+      {
+        ...CONTEXT,
+        alcaldiaSegonsMinisteri: { ...MINISTERI, euros: 180, mena: "assistencies", regim: "Sin dedicación" },
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("180 €");
+    expect(html).toContain("assistències");
+    expect(html).not.toContain("salari mínim");
+  });
+
+  it("qui no cobra res ho té dit, i un any amb canvi d'alcaldia no s'atribueix a ningú", () => {
+    const cap = renderRegidor(
+      { ...REGIDORA, carrec: "Alcalde" },
+      { ...CONTEXT, alcaldiaSegonsMinisteri: { ...MINISTERI, mena: "cap", euros: 0 } },
+      "2026-08-30",
+    );
+    expect(cap).toContain("no cobra res de l'ajuntament");
+    const canvi = renderRegidor(
+      { ...REGIDORA, carrec: "Alcalde" },
+      { ...CONTEXT, alcaldiaSegonsMinisteri: { ...MINISTERI, canviDAlcaldia: true } },
+      "2026-08-30",
+    );
+    expect(canvi).toContain("ha canviat de mans");
+    expect(canvi).not.toContain("104.000 €");
+  });
+});
+
+describe("la font dels vots", () => {
+  const FONT_BCN = {
+    nom: "Votacions del Plenari del Consell Municipal, Ajuntament de Barcelona",
+    url: "https://ajuntament.barcelona.cat/ca/organitzacio-municipal/consell-municipal",
+    llicencia: "Avís legal de l'Ajuntament de Barcelona",
+    llicenciaUrl: "https://ajuntament.barcelona.cat/ca/avis-legal",
+    consultat: "2026-08-30",
+  };
+
+  it("se cita al peu de la llista amb la llicència que la font declara, no una de suposada", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, fontVots: FONT_BCN }, "2026-08-30");
+    expect(html).toContain("Font dels vots");
+    expect(html).toContain("Votacions del Plenari");
+    expect(html).toContain("Avís legal de l'Ajuntament de Barcelona");
+    expect(html).not.toContain("CC BY");
+  });
+
+  it("i sense cap vot a la llista no s'escriu, que citaria una font que no s'usa", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, votsDelGrup: [], fontVots: FONT_BCN }, "2026-08-30");
+    expect(html).not.toContain("Font dels vots");
+  });
+});
+
+describe("la frase dels mandats", () => {
+  const TRES: NonNullable<ContextRegidor["mandats"]> = {
+    anys: [2015, 2019, 2023],
+    primer: 2015,
+    quants: 3,
+    seguits: true,
+    iniciConegut: false,
+    cobertesDesDe: 2015,
+    llistesSenseEntrar: [],
+  };
+
+  it("tercer mandat seguit, dit amb la cobertura del registre i no com un inici", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, mandats: TRES }, "2026-08-30");
+    expect(html).toContain("tercer mandat");
+    expect(html).toContain("Al ple des del <b>2015</b>");
+    expect(html).toContain("fins on arriba el registre");
+  });
+
+  it("el primer mandat només s'afirma dins del que el registre cobreix", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        mandats: {
+          anys: [2023], primer: 2023, quants: 1, seguits: true, iniciConegut: true,
+          cobertesDesDe: 2015, llistesSenseEntrar: [2015, 2019],
+        },
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("primer mandat");
+    expect(html).toContain("des d'almenys el 2015");
+    expect(html).toContain("els anys 2015 i 2019 sense entrar al ple");
+  });
+
+  it("amb un forat no es diu «seguit»: es diu quin és i quan va ser el primer", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, mandats: { ...TRES, anys: [2015, 2023], quants: 2, seguits: false, iniciConegut: false } },
+      "2026-08-30",
+    );
+    expect(html).toContain("segon mandat");
+    expect(html).toContain("el primer, el del 2015");
+    expect(html).not.toContain("seguit");
+  });
+
+  it("sense historial no s'escriu res, i la frase també surt a la pàgina de qui no en sabem res", () => {
+    expect(renderRegidor(REGIDORA, CONTEXT, "2026-08-30")).not.toContain('class="mandats"');
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, votsDelGrup: [], assistencia: null, mandats: TRES },
+      "2026-08-30",
+    );
+    expect(html).toContain("<h2>Què en sabem</h2>");
+    expect(html).toContain("tercer mandat");
   });
 });
