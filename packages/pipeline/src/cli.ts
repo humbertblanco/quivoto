@@ -18,6 +18,7 @@ import { j16BarcelonaPlenari } from "./jobs/j16-barcelona-plenari";
 import { j17Amb } from "./jobs/j17-amb";
 import { j18Poblacio } from "./jobs/j18-poblacio";
 import { j19Preus } from "./jobs/j19-preus";
+import { j20Wikidata } from "./jobs/j20-wikidata";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
 import { deriveFinances } from "./derive/finances";
@@ -46,6 +47,7 @@ const COMMANDS = {
   j17: j17Amb,
   j18: j18Poblacio,
   j19: j19Preus,
+  j20: (db: Parameters<typeof j20Wikidata>[0]) => j20Wikidata(db),
   derive: deriveMetrics,
   alcaldies: deriveMayorChanges,
   comptes: deriveFinances,
@@ -79,13 +81,19 @@ type Command = keyof typeof COMMANDS;
  * desades. Les dades, que és el que canvia cada any, són una dotzena llarga de
  * crides per als 947 alhora. Una reingesta normal no torna a demanar cap fitxa.
  *
+ * J20 sí que hi és, i no és cap excepció a la regla sinó un cas que no hi cau:
+ * és **una** consulta SPARQL per als 947 municipis alhora i una trentena de
+ * crides a Commons el primer cop, per llegir la llicència de cada imatge. Les
+ * llicències ja llegides queden desades, així que una reingesta normal no en
+ * torna a demanar cap. Va després de J18 perquè necessita els municipis ingerits.
+ *
  * J19 tampoc hi és, i per la mateixa raó: el preu de l'aigua és una sola
  * descàrrega, però el rebut d'IBI de l'Idescat només es pot demanar municipi a
  * municipi —el seu paràmetre d'any no fa res— i són 947 peticions amb pausa.
  * S'executa a mà: `pnpm ingest j19`.
  */
 const ORDER: Command[] = [
-  "j1", "j5", "j2", "j3", "j4", "j6", "j7", "j8", "j9", "j15", "j10", "j16", "j17", "j18",
+  "j1", "j5", "j2", "j3", "j4", "j6", "j7", "j8", "j9", "j15", "j10", "j16", "j17", "j18", "j20",
   "derive", "alcaldies", "comptes", "ple", "trajectoria", "report", "publica",
 ];
 
