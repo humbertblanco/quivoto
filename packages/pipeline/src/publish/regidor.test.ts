@@ -343,7 +343,9 @@ describe("el que es llegeix a sobre de tot", () => {
     // `.grup` a l'estil compartit és la targeta desplegable d'un grup municipal:
     // reutilitzar-ne el nom aquí aixafava «PSC-CP» fins a 31px d'ample.
     const html = renderRegidor(alcalde, CONTEXT, "2026-08-30");
-    expect(html).toContain('<span class="sigla" style="--c:');
+    // Ara la pastilla és un enllaç a la pàgina del partit: la classe és la
+    // mateixa i el que canvia és que porta on ha de portar.
+    expect(html).toMatch(/<a class="sigla" style="--c:[^"]*" href="\.\.\/\.\.\/\.\.\/\.\.\/partit\//);
     expect(html).not.toContain('<span class="grup"');
   });
 });
