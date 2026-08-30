@@ -214,9 +214,18 @@ export function serieTemporal(punts: readonly PuntSerie[], opcions: OpcionsSerie
   const ultim = serie[serie.length - 1]!;
   const primer = serie[0]!;
 
-  // --- l'equivalent en text, que no és una nota al peu sinó la mateixa dada
+  /**
+   * L'equivalent en text, que no és una nota al peu sinó la mateixa dada.
+   *
+   * Va dins d'un div i la classe d'amagar la porta el div, no la taula. Amagada
+   * amb la classe posada a sobre seu, la taula es quedava a 649 px d'ample —una
+   * taula no es creu l'amplada d'un píxel— i, tot i ser invisible, allargava
+   * l'amplada de desplaçament del document: a 555 px de finestra la fitxa en
+   * feia 673 i lliscava de costat sense que es veiés res que l'empenyés. I n'hi
+   * ha una per gràfica.
+   */
   const capBanda = banda.length >= 2;
-  const taula = `<table class="nomes-lectors">
+  const taula = `<div class="nomes-lectors"><table>
     <caption>${escape(opcions.titol)}${opcions.grup ? `, amb la meitat central dels municipis ${escape(opcions.grup)}` : ""}</caption>
     <thead><tr><th scope="col">Any</th><th scope="col">${escape(opcions.titol)}</th>
     ${capBanda ? "<th scope=\"col\">Mediana del grup</th>" : ""}</tr></thead>
@@ -226,7 +235,7 @@ export function serieTemporal(punts: readonly PuntSerie[], opcions: OpcionsSerie
         return `<tr><th scope="row">${p.any}</th><td>${escape(opcions.format(p.valor))}</td>
         ${capBanda ? `<td>${b ? escape(opcions.format(b.p50)) : "sense dada"}</td>` : ""}</tr>`;
       })
-      .join("")}</tbody></table>`;
+      .join("")}</tbody></table></div>`;
 
   const resum = `${escape(opcions.titol)}: de ${escape(opcions.format(primer.valor))} el ${primer.any} a ${escape(
     opcions.format(ultim.valor),

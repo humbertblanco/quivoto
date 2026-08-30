@@ -101,7 +101,7 @@ describe("serieTemporal", () => {
     const html = serieTemporal(punts, {
       titol: "Deute per habitant", format: euros, banda, grup: "de més de 50.000 habitants",
     });
-    expect(html).toContain('<table class="nomes-lectors">');
+    expect(html).toContain('<div class="nomes-lectors"><table>');
     expect(html).toContain("<th scope=\"row\">2015</th>");
     expect(html).toContain("1.204 €");
     expect(html).toContain("<th scope=\"col\">Mediana del grup</th>");

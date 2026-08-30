@@ -1,7 +1,7 @@
 import { tintaSobre } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { slugify } from "../lib/text";
+import { de, slugify } from "../lib/text";
 
 /**
  * Una pàgina per a cada persona que seu al ple.
@@ -190,8 +190,21 @@ const CSS = `
   box-shadow:var(--ombra);display:flex;align-items:center;justify-content:center;
   font-family:var(--display);font-weight:900;font-size:2.6rem;background:var(--c,var(--paper-2));color:var(--t,inherit)}
 .etiquetes{display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--e2)}
-.etiquetes span{border:2px solid var(--ink);border-radius:var(--r-max);padding:4px 14px;font-size:.8rem;font-weight:800}
-.etiquetes .grup{background:var(--c,var(--paper-2));color:var(--t,inherit)}
+/* La pastilla de les sigles es deia «grup», i a l'estil compartit aquest nom ja
+   és una altra cosa: la targeta desplegable d'un grup municipal al ple, amb vora
+   esquerra de 10px i display de bloc. La pastilla d'aquesta pàgina n'heretava la
+   caixa i «PSC-CP» sortia com una taca rodona de 31 px amb dues lletres a dins:
+   feia de logotip deformat del partit a la pàgina de cada alcalde i de cada
+   regidor, i no era cap problema de responsive sinó una col·lisió de noms.
+   Ara fa servir «sigla», que és la mateixa pastilla que la fitxa del municipi i
+   la de la candidatura: el mateix component i no una còpia. */
+.etiquetes span:not(.sigla){border:2px solid var(--ink);border-radius:var(--r-max);padding:4px 14px;
+  font-size:.8rem;font-weight:800;flex:none;white-space:nowrap;max-width:100%}
+.etiquetes .sigla{flex:none;font-size:.86rem;padding:3px 12px}
+/* L'alcaldia és el càrrec que fa mirar la pàgina: va en coral, que és l'accent
+   de la casa, i és l'única pastilla plena de la fila que no depèn del partit. */
+.etiquetes .alcaldia-etiqueta{background:var(--coral);color:#FBF7EE;text-transform:uppercase;
+  letter-spacing:.08em;font-size:.68rem}
 .etiquetes .govern{background:var(--menta);color:#1E1B2E}
 .etiquetes .oposicio{background:transparent}
 /* «No consta» no és una tercera posició política: és una absència, i per això
@@ -278,7 +291,7 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>${escape(r.nom)} · ${escape(ctx.municipi)} — Observatori municipal de quivoto</title>
-<meta name="description" content="${escape(r.carrec)} de ${escape(ctx.municipi)}${
+<meta name="description" content="${escape(r.carrec)} ${escape(de(ctx.municipi))}${
     r.grup ? ` pel grup ${escape(r.grup)}` : ""
   }: de quina llista va sortir, si és a l'equip de govern i què ha votat el seu grup al ple.">
 <link rel="canonical" href="${SITE}/observatori/m/${escape(ctx.slug)}/regidor/${escape(ctx.adreca)}/">
@@ -298,11 +311,16 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
     <div class="persona">
       ${retrat}
       <div>
-        <p class="entrada" style="margin:0">${escape(r.carrec)} de ${escape(ctx.municipi)}${
+        <p class="entrada" style="margin:0">${escape(r.carrec)} ${escape(de(ctx.municipi))}${
           r.grup ? `, pel grup <b>${escape(r.grup)}</b>` : ""
         }.</p>
         <div class="etiquetes">
-          ${r.grup ? `<span class="grup" style="--c:${color};--t:${tinta(color)}">${escape(r.sigles ?? r.grup)}</span>` : ""}
+          ${r.grup ? `<span class="sigla" style="--c:${color};--t:${tinta(color)}">${escape(r.sigles ?? r.grup)}</span>` : ""}
+          ${
+            // Qui té l'alcaldia hi surt dit amb totes les lletres i no només
+            // dins de la frase: és el càrrec pel qual s'entra en aquesta pàgina.
+            /alcald/i.test(r.carrec) ? '<span class="alcaldia-etiqueta">alcaldia</span>' : ""
+          }
           ${
             // Qui té l'alcaldia és a l'equip de govern per definició, i això no
             // depèn que la font ho marqui: no és una deducció, és el càrrec.
@@ -447,7 +465,7 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
   <section class="bloc anar">
     <h2>Segueix estirant</h2>
     <ul class="destins">
-      <li><a href="../../"><b>La fitxa de ${escape(ctx.municipi)}</b>
+      <li><a href="../../"><b>La fitxa ${escape(de(ctx.municipi))}</b>
         <span>El ple sencer, qui governa, els comptes i les dotze eleccions des del 1979</span></a></li>
       ${
         r.sigles

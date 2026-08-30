@@ -199,3 +199,41 @@ describe("qui és a l'equip de govern, i quan no se sap", () => {
     expect(html).toContain("a l'oposició");
   });
 });
+
+/**
+ * Dues coses que es veien a la pàgina publicada de cada alcalde i que cap prova
+ * no mirava: la preposició davant del nom del municipi i la pastilla del grup.
+ */
+describe("el que es llegeix a sobre de tot", () => {
+  const alcalde = { ...REGIDORA, nom: "Eduard Sanz García", carrec: "Alcalde", sigles: "PSC-CP" };
+
+  it("apostrofa el nom del municipi a totes les frases, no només a la primera", () => {
+    const html = renderRegidor(alcalde, { ...CONTEXT, municipi: "Esplugues de Llobregat" }, "2026-08-30");
+    expect(html).toContain("Alcalde d'Esplugues de Llobregat");
+    expect(html).toContain("La fitxa d'Esplugues de Llobregat");
+    // «de Esplugues» és el que escrivia abans, i no ha de tornar enlloc del cos.
+    expect(html.slice(html.indexOf("<main"))).not.toContain("de Esplugues");
+  });
+
+  it("i respecta l'article quan el municipi en porta", () => {
+    const html = renderRegidor(alcalde, { ...CONTEXT, municipi: "el Prat de Llobregat" }, "2026-08-30");
+    expect(html).toContain("Alcalde del Prat de Llobregat");
+  });
+
+  it("qui té l'alcaldia ho porta escrit a la fila d'etiquetes, no només a la frase", () => {
+    const html = renderRegidor(alcalde, CONTEXT, "2026-08-30");
+    expect(html).toContain('<span class="alcaldia-etiqueta">');
+    // El CSS de la pastilla hi és sempre; el que no hi ha de ser és el <span>.
+    expect(renderRegidor({ ...REGIDORA, carrec: "Regidora" }, CONTEXT, "2026-08-30")).not.toContain(
+      '<span class="alcaldia-etiqueta">',
+    );
+  });
+
+  it("les sigles fan servir la pastilla compartida i no la classe del ple", () => {
+    // `.grup` a l'estil compartit és la targeta desplegable d'un grup municipal:
+    // reutilitzar-ne el nom aquí aixafava «PSC-CP» fins a 31px d'ample.
+    const html = renderRegidor(alcalde, CONTEXT, "2026-08-30");
+    expect(html).toContain('<span class="sigla" style="--c:');
+    expect(html).not.toContain('<span class="grup"');
+  });
+});

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  assignaSlugs, clau, de, renderCandidatura, tintaSobre, type CandidaturaData,
+  assignaSlugs, clau, renderCandidatura, tintaSobre, type CandidaturaData,
 } from "./candidatura";
+import { de } from "../lib/text";
 
 /** Una candidatura de mostra amb prou dades per rendir la pàgina sencera. */
 function mostra(canvis: Partial<CandidaturaData> = {}): CandidaturaData {

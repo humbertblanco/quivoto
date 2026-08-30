@@ -8,7 +8,7 @@ import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { INDEXABLE, SITE } from "./config";
 import { tintaSobre as tintaDeContrast } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
-import { normalizePersonName, slugify } from "../lib/text";
+import { de, normalizePersonName, slugify } from "../lib/text";
 import { adrecesRegidors } from "./regidor";
 
 /**
@@ -174,21 +174,6 @@ const colorSegur = (color: string): string => (/^#[0-9a-f]{6}$/i.test(color) ? c
  * i és el mateix a totes les pàgines de l'observatori.
  */
 export const tintaSobre = (color: string): string => tintaDeContrast(colorSegur(color));
-
-/**
- * «de» davant del nom d'un municipi. Els noms catalans porten l'article
- * («l'Hospitalet de Llobregat», «el Prat de Llobregat», «els Omells de na
- * Gaia») i la preposició s'hi contrau. Sense això la pàgina diu «la fitxa de
- * Abrera» i «al ple de el Prat», que és com escriu una màquina.
- */
-export function de(name: string): string {
-  if (/^l['\u2019]/i.test(name)) return `de ${name}`;
-  if (/^els\s/i.test(name)) return `dels ${name.slice(4)}`;
-  if (/^el\s/i.test(name)) return `del ${name.slice(3)}`;
-  if (/^(la|les|sa|ses)\s/i.test(name) || /^s['\u2019]/i.test(name)) return `de ${name}`;
-  if (/^[aeiouàèéíòóúüh]/i.test(name)) return `d'${name}`;
-  return `de ${name}`;
-}
 
 const ESVAIT = (color: string): string => `${color}2e`;
 

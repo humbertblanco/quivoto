@@ -48,7 +48,19 @@ a{color:inherit;text-underline-offset:3px}
 :focus-visible{outline:3px solid var(--coral-text);outline-offset:3px;border-radius:4px}
 .salta{position:absolute;left:-9999px;background:var(--ink);color:var(--paper);padding:var(--e1) var(--e2);z-index:9}
 .salta:focus{left:0}
-.nomes-lectors{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* Amagar a la vista i deixar-ho per a qui llegeix amb veu.
+ *
+ * Va bé per a tot **menys per a una taula**: una taula no es creu l'amplada
+ * d'un píxel i creix fins al seu contingut, i ni la disposició fixa la hi fa
+ * respectar. Per això la taula que acompanya cada gràfica de sèrie temporal va
+ * dins d'un div amb aquesta classe i no la porta ella mateixa: un div sí que
+ * s'encongeix i retalla. Vegeu la nota de grafics.ts, que és on es dibuixa.
+ *
+ * El retall per forma és el rellevat de l'antic, que va de baixa; el marge i el
+ * farciment a zero eviten que la caixa d'un píxel n'ocupi tres.
+ */
+.nomes-lectors{position:absolute;width:1px;height:1px;overflow:hidden;
+  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px;padding:0;border:0}
 
 .capcalera{display:flex;justify-content:space-between;align-items:center;gap:var(--e2);max-width:var(--ample);margin:0 auto;padding:var(--e3)}
 /* Els objectius de toc que van sols (no els enllaços dins d'una frase) han de

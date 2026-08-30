@@ -184,3 +184,25 @@ export function delDia(iso: string | null): string {
   if (!iso) return "";
   return Number(iso.slice(8, 10)) === 1 ? `de l'${dataCurta(iso)}` : `del ${dataCurta(iso)}`;
 }
+
+/**
+ * «de» davant del nom d'un municipi, amb l'article contret.
+ *
+ * Els noms catalans porten l'article —«l'Hospitalet de Llobregat», «el Prat de
+ * Llobregat», «els Omells de na Gaia»— i la preposició s'hi contrau. Sense
+ * això la pàgina diu «la fitxa de Abrera» i «al ple de el Prat», que és com
+ * escriu una màquina.
+ *
+ * Vivia a `candidatura.ts`, que és on va fer falta primer, i la fitxa de
+ * regidor no la feia servir: publicava **«Alcalde de Esplugues»** a la pàgina
+ * que porta el nom de la persona al títol. És el mateix cas que `dataCurta()`,
+ * i per això va al mateix lloc: aquí, on qui escriu una frase nova la troba.
+ */
+export function de(nom: string): string {
+  if (/^l['’]/i.test(nom)) return `de ${nom}`;
+  if (/^els\s/i.test(nom)) return `dels ${nom.slice(4)}`;
+  if (/^el\s/i.test(nom)) return `del ${nom.slice(3)}`;
+  if (/^(la|les|sa|ses)\s/i.test(nom) || /^s['’]/i.test(nom)) return `de ${nom}`;
+  if (/^[aeiouàèéíòóúüh]/i.test(nom)) return `d'${nom}`;
+  return `de ${nom}`;
+}
