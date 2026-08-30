@@ -295,6 +295,19 @@ describe("les files noves, sobre una base sembrada", () => {
         },
       },
       {
+        kind: "criminalitat",
+        data: {
+          darrerAny: 2025,
+          total: {
+            clau: "total",
+            serie: [{ any: 2023, fets: 600 }, { any: 2025, fets: 640 }],
+            perMil: [{ any: 2023, valor: 46.9 }, { any: 2025, valor: 50 }],
+            canviMandat: { desDe: 2023, fins: 2025, abs: 40, pct: 6.7 },
+          },
+          ranquing: { posicio: 42, de: 70, any: 2025 },
+        },
+      },
+      {
         kind: "despesaProgrames",
         data: {
           programes: [
@@ -351,6 +364,12 @@ describe("les files noves, sobre una base sembrada", () => {
       volatilitat_mitjana: [21.4, null, "3539f7e6"],
       vot_perdut_2023_pct: [11.6, 2023, "ntc4-rnwr"],
       vot_perdut_regidories: [1.9, 2023, "ntc4-rnwr"],
+      fets_penals: [640, 2025, "DatosBalanceAnt"],
+      fets_penals_any: [2025, null, "DatosBalanceAnt"],
+      fets_penals_per_mil: [50, 2025, "DatosBalanceAnt"],
+      fets_penals_canvi_mandat_pct: [6.7, 2025, "DatosBalanceAnt"],
+      fets_penals_posicio: [42, 2025, "DatosBalanceAnt"],
+      fets_penals_municipis_amb_dada: [70, 2025, "DatosBalanceAnt"],
     };
     for (const [clau, [valor, any, font]] of Object.entries(esperats)) {
       const fila = un(abrera, clau);
@@ -377,7 +396,7 @@ describe("les files noves, sobre una base sembrada", () => {
   });
 
   it("el municipi sense dades no en té les files, i el rebut no publicable no hi surt", () => {
-    for (const clau of ["rebut_ibi_mitja", "renda_neta_persona", "renda_any", "poblacio_estrangera_pct", "vot_perdut_pct", "despesa_programa"]) {
+    for (const clau of ["rebut_ibi_mitja", "renda_neta_persona", "renda_any", "poblacio_estrangera_pct", "vot_perdut_pct", "despesa_programa", "fets_penals", "fets_penals_posicio"]) {
       expect(per(clot, clau), clau).toHaveLength(0);
     }
     // Sí que sabem que no és de l'AMB: J17 ha desat els que hi són.
@@ -401,7 +420,7 @@ describe("les files noves, sobre una base sembrada", () => {
   it("el fitxer global du les columnes noves i les diu igual que el del municipi", () => {
     const capcalera = global[0]!;
     expect(capcalera).toHaveLength(CAMPS_CATALUNYA);
-    for (const clau of ["poblacio_estrangera_pct", "renda_neta_persona", "cost_govern_habitant", "amb_membre", "alcaldia_forca_anys", "vot_perdut_2023_pct"]) {
+    for (const clau of ["poblacio_estrangera_pct", "renda_neta_persona", "cost_govern_habitant", "amb_membre", "alcaldia_forca_anys", "vot_perdut_2023_pct", "fets_penals_per_mil", "fets_penals_posicio"]) {
       expect(capcalera, clau).toContain(clau);
     }
     const fila = global.find((f) => f[1] === "abrera")!;

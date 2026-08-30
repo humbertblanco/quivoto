@@ -25,6 +25,7 @@ import { j23Riquesa } from "./jobs/j23-riquesa";
 import { j24Diputacions } from "./jobs/j24-diputacions";
 import { j26ImatgesMunicipi } from "./jobs/j26-imatges-municipi";
 import { j27CapsDeLlista } from "./jobs/j27-caps-de-llista";
+import { j29Criminalitat } from "./jobs/j29-criminalitat";
 import { j28FotosExalcaldes } from "./jobs/j28-fotos-exalcaldes";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
@@ -62,6 +63,7 @@ const COMMANDS = {
   j26: (db: Parameters<typeof j26ImatgesMunicipi>[0]) => j26ImatgesMunicipi(db),
   // J27 va a mà, com J21 però pel nom: `pnpm ingest j27`. No és a `ORDER`.
   j27: j27CapsDeLlista,
+  j29: j29Criminalitat,
   // J28 també a mà i després de J21: baixa retrats de Commons d'exalcaldes.
   j28: (db: Parameters<typeof j28FotosExalcaldes>[0]) => j28FotosExalcaldes(db),
   derive: deriveMetrics,
@@ -117,11 +119,16 @@ type Command = keyof typeof COMMANDS;
  * uns quants fulls de l'INE per a tot Catalunya, i J24 quatre pàgines de
  * diputació i una consulta al conjunt de plens de la Generalitat.
  *
+ * J29 (la criminalitat: el balanç del Ministeri de l'Interior) va després de
+ * J24 i no baixa fitxa a fitxa: són setze peticions per a tot Catalunya —vuit
+ * índexs i vuit CSV anuals—. Llegeix el padró que J18 desa per fer les taxes
+ * per 1.000 habitants, així que ha d'anar després de J18.
+ *
  * J25 i J26 no hi són: baixen imatges municipi a municipi i van a mà, com J11.
  */
 const ORDER: Command[] = [
   "j1", "j5", "j2", "j3", "j4", "j6", "j7", "j8", "j9", "j15", "j10", "j16", "j17", "j18", "j23", "j20", "j21",
-  "j22", "j24",
+  "j22", "j24", "j29",
   "derive", "alcaldies", "comptes", "ple", "trajectoria", "report", "publica",
 ];
 

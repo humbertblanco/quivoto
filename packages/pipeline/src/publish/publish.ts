@@ -6,6 +6,9 @@ import {
 } from "@quivoto/db";
 import { loadRadiografia, renderRadiografia } from "./radiografia";
 import { carregaMedianes } from "./medianes";
+import { mitjanesPerGrup } from "./criminalitat";
+import { carregaMetriques } from "./metriques";
+import { buildPeerGroups } from "../derive/peers";
 import { escriuCerca, escriuCercaElectes } from "./cerca";
 import { carregaSeriesGrup } from "./series-grup";
 import { loadEls947, renderEls947 } from "./els947";
@@ -20,6 +23,7 @@ import { clau, loadCandidatures, renderCandidatura } from "./candidatura";
 import { loadPartits, renderPartit } from "./partit";
 import { renderPartitsIndex } from "./partits-index";
 import { fixaXifresPeu, XIFRES_PEU } from "./peu";
+import type { CriminalitatMetric } from "../jobs/j29-criminalitat";
 import { KIND as KIND_TRAJECTORIA, type FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
 import { ELECCIO as ELECCIO_CAPS, KIND as KIND_CAPS, type FitxaCapsDeLlista } from "../jobs/j27-caps-de-llista";
 import { writeOgImages } from "./og";
@@ -140,6 +144,21 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
      * any per any, i per saber-la cal haver llegit els 947.
      */
     const seriesGrup = await carregaSeriesGrup(db);
+    /**
+     * I la seguretat, pel mateix motiu que les medianes: la mediana del grup i
+     * el «quants tenen dada» del rànquing només es poden saber havent llegit
+     * tots els municipis que el Ministeri publica. Els que no hi són reben el
+     * bloc igualment —amb el buit dit clar—, i per això a cada fitxa li arriba
+     * el grup i el compte, no la mètrica d'un altre.
+     */
+    const filesCriminalitat = await carregaMetriques(db, ["criminalitat"]);
+    const grupsMida = buildPeerGroups(
+      await db.select({ id: municipalities.id, population: municipalities.population }).from(municipalities),
+    );
+    const medianesCriminalitat = mitjanesPerGrup(
+      filesCriminalitat.map((f) => ({ municipalityId: f.municipalityId, data: f.data as CriminalitatMetric })),
+      grupsMida,
+    );
     await mkdir(`${OUT_DIR}../mapa`, { recursive: true });
     await writeFile(`${OUT_DIR}../mapa/index.html`, renderMapaCatalunya(carregats, generatedAt, await loadVotsPartit(db)), "utf8");
     run.say(`mapa de Catalunya amb ${carregats.length} municipis`);
@@ -227,6 +246,10 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         preguntesPerSlug,
         medianes.get(data.municipality.id),
         seriesGrup.get(data.municipality.id),
+        {
+          grup: medianesCriminalitat.get(grupsMida.get(data.municipality.id)?.key ?? "") ?? null,
+          coberts: filesCriminalitat.length > 0 ? filesCriminalitat.length : null,
+        },
       );
       await mkdir(`${OUT_DIR}${slug}`, { recursive: true });
       await writeFile(`${OUT_DIR}${slug}/index.html`, html, "utf8");

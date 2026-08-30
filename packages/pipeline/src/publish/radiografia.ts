@@ -6,6 +6,8 @@ import {
 import { BRANDS_BY_ID, PARTY_BRANDS, sameForce, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { sobreColor } from "./contrast";
+import { renderCriminalitat, type GrupCriminalitat } from "./criminalitat";
+import type { CriminalitatMetric } from "../jobs/j29-criminalitat";
 import type { MedianaGrup, MedianesMunicipi } from "./medianes";
 import { barresDivergents, distribucioGrup, escalaDivergent, serieTemporal, type FilaDivergent } from "./grafics";
 import type { SeriesMunicipi } from "./series-grup";
@@ -2136,6 +2138,8 @@ export type RadiografiaData = {
   poblacio: PoblacioMetric | null;
   /** La renda de la gent (J23). Context també: l'ajuntament no la decideix. */
   riquesa: RiquesaMetric | null;
+  /** Els fets penals coneguts del balanç del Ministeri de l'Interior (J29). */
+  criminalitat: CriminalitatMetric | null;
   /** El preu de l'aigua del full de l'ACA (J19). */
   preuAigua: PreuAiguaMetric | null;
   /** El rebut mitjà d'IBI urbà de l'Idescat (J19). */
@@ -4497,6 +4501,12 @@ export function renderRadiografia(
   preguntes: ReadonlyMap<string, { jugable: boolean; quantes: number }> = new Map(),
   medianes?: MedianesMunicipi,
   seriesGrup?: SeriesMunicipi,
+  /**
+   * La comparació de seguretat, calculada un sol cop per a totes les fitxes:
+   * la mediana del grup de mida i quants municipis tenen la dada. Sense això
+   * el bloc surt igualment, amb la frase del rànquing i sense la mediana.
+   */
+  seguretat?: { grup: GrupCriminalitat | null; coberts: number | null } | null,
 ): string {
   const m = data.municipality;
   const current = data.results.M20231;
@@ -4833,6 +4843,18 @@ export function renderRadiografia(
           : "",
       },
       {
+        // Mai buida: els 877 municipis que el Ministeri no publica hi veuen el
+        // buit dit clar, i tots hi llegeixen que la policia no és municipal.
+        id: "seguretat",
+        titol: "Com ha anat la seguretat",
+        curt: "Seguretat",
+        html: renderCriminalitat(data.criminalitat, {
+          grup: seguretat?.grup ?? null,
+          poblacio: m.population,
+          coberts: seguretat?.coberts ?? null,
+        }),
+      },
+      {
         id: "diners",
         titol: ambDiners ? "Els diners: quants són, d'on surten i on van" : "D'on surten i on van els diners",
         curt: "Els diners",
@@ -5057,6 +5079,7 @@ export async function loadRadiografia(db: Db, slug: string, generatedAt: string)
     habitatge: (byKind.get("habitatge") ?? null) as HabitatgeMetric | null,
     poblacio: (byKind.get("poblacio") ?? null) as PoblacioMetric | null,
     riquesa: (byKind.get("riquesa") ?? null) as RiquesaMetric | null,
+    criminalitat: (byKind.get("criminalitat") ?? null) as CriminalitatMetric | null,
     preuAigua: (byKind.get("preuAigua") ?? null) as PreuAiguaMetric | null,
     rebutIbi: (byKind.get("rebutIbi") ?? null) as RebutIbiMetric | null,
     despesaProgrames: (byKind.get("despesaProgrames") ?? null) as DespesaProgramesMetric | null,

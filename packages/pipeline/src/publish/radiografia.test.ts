@@ -16,6 +16,9 @@ import {
   renderTrajectoria,
   type RadiografiaData,
 } from "./radiografia";
+import {
+  LLICENCIA_INTERIOR, NOTA_COMPETENCIES, NOTA_FETS_CONEGUTS, NOTA_LLINDAR,
+} from "../jobs/j29-criminalitat";
 
 /**
  * Els blocs nous de la fitxa, provats amb dades inventades però amb la forma
@@ -513,7 +516,7 @@ function fitxa(over: Partial<RadiografiaData> = {}): RadiografiaData {
     taxes: null, transparency: null, singleList: false, revenue: null, spending: null,
     services: null, councilChanges: null, councillors: [], carrecs: null, mocions: null,
     residus: residus(), habitatge: null,
-    poblacio: poblacio(), riquesa: null, preuAigua: aigua(), rebutIbi: ibi(), despesaProgrames: despesa(),
+    poblacio: poblacio(), riquesa: null, criminalitat: null, preuAigua: aigua(), rebutIbi: ibi(), despesaProgrames: despesa(),
     costGovern: null, transparenciaRetribucions: null, carrecsAcumulats: null, contractacio: null,
     retribucions: null, sousDiputacions: null, imatges: null,
     continuitat: null, votPerdut: null, ordenances: null, cartipas: null, organismes: null,
@@ -2325,5 +2328,71 @@ describe("què en sabem: la transparència en recompte", () => {
     expect(html).not.toContain("El que hi consta publicat</h3>");
     // La llista només diu el que hi consta com a publicat: mai acusa.
     expect(html).not.toContain("Agenda");
+  });
+});
+
+describe("com ha anat la seguretat", () => {
+  const crim = (): NonNullable<RadiografiaData["criminalitat"]> => ({
+    font: {
+      nom: "Balanç de criminalitat (4t trimestre: any sencer)",
+      organisme: LLICENCIA_INTERIOR.organisme,
+      url: "https://estadisticasdecriminalidad.ses.mir.es/publico/portalestadistico/balances",
+      llicencia: LLICENCIA_INTERIOR,
+      consultat: "2026-08-30",
+      balancos: [
+        { any: 2025, trimestre: 4, fitxer: "1509012.px", titol: "Municipios mayores de 20.000", llindar: 20_000, url: "https://x" },
+      ],
+    },
+    cobertura: "mes-de-20000",
+    llindar: { habitants: 20_000, nota: NOTA_LLINDAR },
+    context: { decideixLAjuntament: false, nota: NOTA_COMPETENCIES },
+    mandat: { desDe: 2023 },
+    anys: [2023, 2024, 2025],
+    darrerAny: 2025,
+    poblacio: [{ any: 2025, habitants: CENS_2025, anyPadro: 2025 }],
+    total: {
+      clau: "total", nom: "Total d'infraccions penals", nivell: 1, fitxa: true,
+      serie: [{ any: 2023, fets: 12_000 }, { any: 2024, fets: 12_500 }, { any: 2025, fets: 13_000 }],
+      perMil: [{ any: 2023, valor: 53.6 }, { any: 2024, valor: 55.8 }, { any: 2025, valor: 58 }],
+      canviUltimAny: { desDe: 2024, fins: 2025, abs: 500, pct: 4 },
+      canviMandat: { desDe: 2023, fins: 2025, abs: 1_000, pct: 8.3 },
+    },
+    tipus: [],
+    ranquing: {
+      posicio: 9, de: 70, any: 2025,
+      criteri: "fets penals coneguts per 1.000 habitants (total d'infraccions penals)",
+      ordre: "el 1r és el que en té més per 1.000 habitants",
+    },
+    nota: NOTA_FETS_CONEGUTS,
+  });
+
+  it("la secció hi és, surt a l'índex, i la frase va abans que cap taula", () => {
+    const html = renderRadiografia(fitxa({ criminalitat: crim() }));
+    expect(html).toContain('id="seguretat"');
+    expect(html).toContain("Com ha anat la seguretat");
+    expect(html).toContain('href="#seguretat"');
+    expect(html).toContain("El 2025 es van conèixer <b>13.000</b> fets penals");
+    // El rànquing mai sense el denominador.
+    expect(html).toContain("el <b>9è</b> dels <b>70</b> municipis catalans amb dada");
+  });
+
+  it("la mediana del grup i el compte de coberts arriben pel paràmetre nou", () => {
+    const html = renderRadiografia(fitxa({ criminalitat: crim() }), [], new Map(), undefined, undefined, {
+      grup: { nom: "de més de 100.000 habitants", quants: 10, medianaPerMil: { total: 61.2 } },
+      coberts: 70,
+    });
+    expect(html).toContain("61,2");
+    expect(html).toContain("entre els 10 de la seva mida amb dada");
+    expect(html).toContain("els de la seva mida");
+  });
+
+  it("el municipi que no és al balanç no perd el bloc: el buit s'ha de dir", () => {
+    const html = renderRadiografia(fitxa(), [], new Map(), undefined, undefined, { grup: null, coberts: 70 });
+    expect(html).toContain('id="seguretat"');
+    expect(html).toContain("més de 20.000 habitants");
+    expect(html).toContain("70 a Catalunya");
+    // Sabadell passa del llindar: la fitxa diu que el forat és de la font.
+    expect(html).toContain("hauria de formar part");
+    expect(html).toContain("Mossos");
   });
 });

@@ -172,6 +172,16 @@ const FONTS = {
     // El catàleg de l'operació, que és d'on J23 treu les quatre taules provincials.
     url: "https://servicios.ine.es/wstempus/js/ES/TABLAS_OPERACION/ADRH",
   },
+  /*
+   * L'avís legal del portal del Ministeri permet reutilitzar amb fins
+   * comercials i no comercials, amb la citació feta i literal. No és cap CC.
+   */
+  interiorBalanc: {
+    id: "DatosBalanceAnt", titol: "Balanç de criminalitat (4t trimestre: any sencer)",
+    portal: "Ministeri de l'Interior · estadisticasdecriminalidad.ses.mir.es",
+    llicencia: "Reutilització lliure amb citació obligada i literal: «Origen de los datos: Portal Estadístico de Criminalidad»",
+    url: "https://estadisticasdecriminalidad.ses.mir.es/publico/portalestadistico/balances",
+  },
 } as const satisfies Record<string, Font>;
 
 type ClauFont = keyof typeof FONTS;
@@ -438,6 +448,27 @@ const BLOCS: readonly Bloc[] = [
     ],
   },
   {
+    titol: "La seguretat",
+    nota:
+      "Fets penals coneguts, del Balanç de criminalitat del Ministeri de l'Interior. Només hi són els " +
+      "municipis de més de 20.000 habitants: el fitxer diu el buit, no l'amaga. I res d'això no ho " +
+      "decideix l'ajuntament: la seguretat és sobretot dels Mossos d'Esquadra.",
+    camps: [
+      { clau: "fets_penals", etiqueta: "Fets penals coneguts", unitat: "fets", font: "interiorBalanc", global: true,
+        descripcio: "Total d'infraccions penals conegudes el darrer any sencer publicat. Fets coneguts, no comesos: una pujada pot ser més fets o més denúncies." },
+      { clau: "fets_penals_any", etiqueta: "Any dels fets penals", unitat: "any", font: "interiorBalanc", global: true,
+        descripcio: "L'any a què es refereixen les xifres de fets penals, repetit al fitxer global perquè hi càpiga." },
+      { clau: "fets_penals_per_mil", etiqueta: "Fets penals per 1.000 habitants", unitat: "per 1.000 hab.", font: "interiorBalanc", global: true, propi: true,
+        descripcio: "El total de fets coneguts dividit pel padró de l'any corresponent, per mil." },
+      { clau: "fets_penals_canvi_mandat_pct", etiqueta: "Canvi de fets penals des del 2023", unitat: "%", font: "interiorBalanc", global: true, propi: true,
+        descripcio: "Variació del total de fets coneguts entre el 2023 i el darrer any publicat. Buida quan el 2023 no és a la sèrie del municipi." },
+      { clau: "fets_penals_posicio", etiqueta: "Posició en fets per 1.000 habitants", unitat: "posició", font: "interiorBalanc", global: true, propi: true,
+        descripcio: "1 vol dir el municipi amb més fets per 1.000 habitants d'entre els que tenen dada. No es publica mai sense la columna de quants en tenen." },
+      { clau: "fets_penals_municipis_amb_dada", etiqueta: "Municipis amb dada de fets penals", unitat: "municipis", font: "interiorBalanc", global: true, propi: true,
+        descripcio: "El denominador de la posició: quants municipis catalans surten al balanç." },
+    ],
+  },
+  {
     titol: "Transparència",
     nota: "Emplenament del portal de transparència, tal com el mesura l'AOC. Mesura si els apartats estan plens, no si el que hi ha és bo.",
     camps: [
@@ -551,6 +582,7 @@ type Fitxa = Pick<
   amb: { member: boolean } | null;
   poblacio: PoblacioResum | null;
   riquesa: RiquesaResum | null;
+  criminalitat: CriminalitatResum | null;
   despesaProgrames: ProgramesResum | null;
 };
 
@@ -574,6 +606,16 @@ type RiquesaResum = {
   valor: number | null;
   any: number | null;
   taules: { provincia: string; urlTaula: string; actualitzada: string | null }[];
+};
+
+/** El total i el rànquing de J29: el que publiquem, projectat del JSON amb `jsonb`. */
+type CriminalitatResum = {
+  fets: number | null;
+  perMil: number | null;
+  any: number | null;
+  canviMandatPct: number | null;
+  posicio: number | null;
+  de: number | null;
 };
 
 /** Els programes de J15, cadascun amb només l'últim exercici i la variació al mandat. */
@@ -779,6 +821,19 @@ function indicadorsDe(fitxa: Fitxa): Fila[] {
   if (fitxa.riquesa?.any != null) {
     afegeix(files, "renda_neta_persona", fitxa.riquesa.valor, fitxa.riquesa.any);
     if (fitxa.riquesa.valor != null) afegeix(files, "renda_any", fitxa.riquesa.any, null);
+  }
+
+  // --- la seguretat: fets coneguts, no comesos, i mai la posició sense el denominador
+  const crim = fitxa.criminalitat;
+  if (crim) {
+    afegeix(files, "fets_penals", crim.fets, crim.any);
+    if (crim.fets != null && crim.any != null) afegeix(files, "fets_penals_any", crim.any, null);
+    afegeix(files, "fets_penals_per_mil", crim.perMil, crim.any);
+    afegeix(files, "fets_penals_canvi_mandat_pct", crim.canviMandatPct, crim.any);
+    if (crim.posicio != null && crim.de != null) {
+      afegeix(files, "fets_penals_posicio", crim.posicio, crim.any);
+      afegeix(files, "fets_penals_municipis_amb_dada", crim.de, crim.any);
+    }
   }
 
   // --- què es paga aquí, segona part
@@ -1259,6 +1314,26 @@ async function carregaFitxes(db: Db): Promise<Fitxa[]> {
     riquesaPer.set(fila.municipalityId, { valor: numero(fila.valor), any: numero(fila.any), taules: fila.taules ?? [] });
   }
 
+  const criminalitatPer = new Map<number, CriminalitatResum>();
+  for (const fila of await db
+    .select({
+      municipalityId: municipalityMetrics.municipalityId,
+      any: sql<string | null>`${data}->>'darrerAny'`,
+      // La sèrie del total va ordenada per any i l'últim element és el darrerAny.
+      fets: sql<string | null>`${data}->'total'->'serie'->-1->>'fets'`,
+      perMil: sql<string | null>`${data}->'total'->'perMil'->-1->>'valor'`,
+      canviMandatPct: sql<string | null>`${data}->'total'->'canviMandat'->>'pct'`,
+      posicio: sql<string | null>`${data}->'ranquing'->>'posicio'`,
+      de: sql<string | null>`${data}->'ranquing'->>'de'`,
+    })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "criminalitat"))) {
+    criminalitatPer.set(fila.municipalityId, {
+      fets: numero(fila.fets), perMil: numero(fila.perMil), any: numero(fila.any),
+      canviMandatPct: numero(fila.canviMandatPct), posicio: numero(fila.posicio), de: numero(fila.de),
+    });
+  }
+
   const programesPer = new Map<number, ProgramesResum>();
   for (const fila of await db
     .select({
@@ -1304,6 +1379,7 @@ async function carregaFitxes(db: Db): Promise<Fitxa[]> {
       amb: get<"amb">("amb") ?? (hiHaAmb ? { member: false } : null),
       poblacio: poblacioPer.get(municipality.id) ?? null,
       riquesa: riquesaPer.get(municipality.id) ?? null,
+      criminalitat: criminalitatPer.get(municipality.id) ?? null,
       despesaProgrames: programesPer.get(municipality.id) ?? null,
       participation: participacioPer.get(municipality.id) ?? [],
       issues: incidenciesPer.get(municipality.id) ?? [],
