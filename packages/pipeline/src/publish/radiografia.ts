@@ -883,12 +883,22 @@ function reglePercentatge(valor: number, mediana: number | null, etiqueta: boole
  * percentatge: dir «un 7 % més» quan es passa del 56 % al 60 % és el gènere
  * d'error que fa que dues fonts diguin coses diferents del mateix número.
  */
-function fraseMediana(valor: number, m: MedianaGrup | null, unitat: string): string {
+/**
+ * @param curta Diu la diferència i prou, sense tornar a nomenar el grup.
+ *
+ * Qui és el grup de comparació no canvia entre les files d'una mateixa llista, i
+ * escriure'l a cadascuna vol dir repetir «dels 46 municipis de 20.001 a 50.000
+ * habitants» tres vegades seguides: seixanta caràcters que no aporten res la
+ * segona vegada i que són el gruix del bloc. És la mateixa regla que ja seguia
+ * l'etiqueta «mediana» del regle, aplicada també a la frase.
+ */
+function fraseMediana(valor: number, m: MedianaGrup | null, unitat: string, curta = false): string {
   if (!m) return "";
   const diferencia = Math.round(10 * (valor - m.mediana)) / 10;
   const on = diferencia === 0
     ? "just a la mediana"
     : `${punts(diferencia)} ${unitat} ${diferencia > 0 ? "per sobre" : "per sota"} de la mediana`;
+  if (curta) return `<span class="comparativa">${on} (${percent(m.mediana)})</span>`;
   return `<span class="comparativa">${on} dels ${m.quants} municipis ${escape(m.etiqueta)}
     (${percent(m.mediana)})</span>`;
 }
@@ -909,34 +919,23 @@ function renderTurnout(
     return `<li><b>${ELECTION_YEAR[row.electionId]}</b>
       <span class="gran">${pct === null ? "—" : percent(pct)}</span>
       ${pct === null ? "" : reglePercentatge(pct, m?.mediana ?? null, etiqueta)}
-      ${pct === null ? "" : fraseMediana(pct, m, "punts")}
+      ${pct === null ? "" : fraseMediana(pct, m, "punts", !etiqueta)}
       <span class="secundari">${number(row.voters ?? 0)} de ${number(row.censusSize ?? 0)} · ${number(row.blankVotes ?? 0)} en blanc</span></li>`;
   });
 
   /*
-   * La forma del grup, un sol cop i per a l'última elecció.
+   * L'histograma del grup ja no hi és.
    *
-   * El regle amb la marca de la mediana diu on queda aquest municipi; no diu si
-   * el grup està atapeït o partit en dos, i això canvia què vol dir quedar-hi
-   * per sobre. Es dibuixa només per al 2023 —la que decideix el ple d'ara— i no
-   * per a les tres: tres histogrames seguits del mateix serien tres vegades el
-   * mateix dibuix amb la marca moguda.
+   * Dibuixava com queda repartida la participació dels 46 municipis de la mida
+   * d'aquest, amb la marca on cau ell. És una bona idea i estava ben feta, però
+   * al costat de tres regles que ja porten la mediana marcada explicava una
+   * segona vegada el que la llista ja diu, i era la peça més alta d'un bloc que
+   * havia de ser curt. La dada no es perd: el regle continua dient on queda
+   * respecte de la mediana, i qui vulgui la distribució sencera la té a
+   * `dades/`. Si algun dia torna, que sigui a un lloc on sigui l'única cosa
+   * que hi ha, i no la tercera manera de dir el mateix.
    */
-  const darrera = ordered.find((r) => r.electionId === "M20231");
-  const m2023 = medianes?.participacio.M20231 ?? null;
-  const pct2023 =
-    darrera?.censusSize && darrera.voters ? (100 * darrera.voters) / darrera.censusSize : null;
-  const forma =
-    m2023 && pct2023 !== null
-      ? distribucioGrup(m2023.valors, pct2023, {
-          format: (v) => percent(v),
-          titol: "Participació del 2023",
-          grup: m2023.etiqueta,
-          unitat: "de participació el 2023",
-        })
-      : "";
-
-  return `<ul class="participacio">${items.join("")}</ul>${forma}`;
+  return `<ul class="participacio">${items.join("")}</ul>`;
 }
 
 /** Una xifra amb la seva unitat. La fan servir l'indicador i la seva mediana. */
@@ -3666,6 +3665,7 @@ ${renderUllada(data, medianes)}
 
 <nav class="index" aria-label="Seccions d'aquesta pàgina">
   ${data.finances && data.finances.mandates.some((m) => m.id === "2023-2027" && m.years.length > 1) ? '<a href="#balanc">Balanç del mandat</a>' : ""}
+  ${renderMandat(data) ? '<a href="#mandat">Com ha anat</a>' : ""}
   ${current ? '<a href="#ple">El ple</a>' : ""}
   ${data.councillors.length > 0 ? '<a href="#regidors">Qui hi seu</a>' : ""}
   ${data.history && data.history.series.length > 3 ? '<a href="#historia">Elecció a elecció</a>' : ""}
@@ -3696,6 +3696,12 @@ ${"" /* Aquest </nav> hi faltava, i no era un detall de validador: sense ell tot
 ${data.finances && data.finances.mandates.length > 0 && renderMandate(data.finances, Boolean(data.mayors?.currentTermChange)) ? `<section class="bloc" id="balanc">
   <h2>El balanç del mandat</h2>
   ${renderMandate(data.finances, Boolean(data.mayors?.currentTermChange))}
+</section>` : ""}
+${renderMandat(data) ? `<section class="bloc" id="mandat">
+  <h2>Com ha anat aquests quatre anys</h2>
+  <p class="entrada-bloc">El que ha canviat des del començament del mandat, i el mateix canvi
+  als municipis de la seva mida.</p>
+  ${renderMandat(data)}
 </section>` : ""}
 
 ${current ? `<section class="bloc" id="ple">
@@ -3829,12 +3835,6 @@ ${renderEscombraries(data.despesaProgrames, data.residus) ? `<section class="blo
   ${renderEscombraries(data.despesaProgrames, data.residus)}
 </section>` : ""}
 
-${renderMandat(data) ? `<section class="bloc" id="mandat">
-  <h2>Com ha anat aquests quatre anys</h2>
-  <p class="entrada-bloc">El que ha canviat des del començament del mandat, i el mateix canvi
-  als municipis de la seva mida.</p>
-  ${renderMandat(data)}
-</section>` : ""}
 
 ${data.finances && renderComQueda(data.finances.comparison, data.finances.group) ? `<section class="bloc" id="com-queda">
   <h2>Com queda respecte dels seus</h2>
