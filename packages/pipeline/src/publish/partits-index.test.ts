@@ -56,6 +56,20 @@ describe("renderPartitsIndex", () => {
     expect(html).toContain("</html>");
   });
 
+  it("enllaça les tipografies des d'un nivell avall, abans del full d'estil", () => {
+    expect(html).toContain('href="../../assets/fonts.css"');
+    expect(html.indexOf("fonts.css")).toBeLessThan(html.indexOf("<style>"));
+  });
+
+  /**
+   * «D'on surten els que manen» no és al menú ni al peu de sempre: hi porten
+   * la portada i les pàgines de partit. Sense això, la pàgina de trajectòria
+   * només es trobava des de la portada.
+   */
+  it("el peu porta a d'on surten els que manen", () => {
+    expect(html).toContain('<a class="propi" href="../trajectoria/">D\'on surten els que manen</a>');
+  });
+
   it("enllaça cada marca a la seva pàgina, que penja d'aquest mateix directori", () => {
     expect(html).toContain('href="erc/"');
     expect(html).toContain('href="psc/"');

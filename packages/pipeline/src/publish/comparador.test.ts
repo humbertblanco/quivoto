@@ -127,9 +127,74 @@ describe("renderComparador", () => {
 
   it("cap fila no es publica sense dir d'on surt", () => {
     const html = renderComparador(rows, "2026-08-29");
-    for (const font of ["6nei-4b44", "irrv-2mfc", "34db8dc5", "81f18313", "eecca986", "82ae0ea2", "xnfg-weec", "1a9c1ede"]) {
+    for (const font of [
+      "6nei-4b44", "irrv-2mfc", "34db8dc5", "81f18313", "eecca986", "82ae0ea2", "xnfg-weec", "1a9c1ede",
+      // Les cinc files noves: el capítol de govern, l'aigua, l'IBI, la renda i el cens.
+      "8squ-bk4r", "ACA, Observatori del preu de l&#039;aigua".replace("&#039;", "'"),
+      "Idescat, IBI urbà (taula 173)", "INE, ADRH", "Idescat, cens de població",
+    ]) {
       expect(html).toContain(font);
     }
+    // I el glossari en porta l'any quan les files en tenen un.
+    const glossari = renderComparador(
+      rows.map((r) => ({ ...r, valors: { ...r.valors, renda: 15_000 }, anys: { renda: 2023 } })),
+      "2026-08-29",
+    );
+    expect(glossari).toContain("<code>INE, ADRH</code> · 2023");
+  });
+
+  it("el glossari va plegat i s'obre amb el títol de sempre", () => {
+    const html = renderComparador(rows, "2026-08-29");
+    expect(html).toContain('<details class="nota glossari">');
+    expect(html).toContain("<summary>Què hi ha a cada fila i d'on surt</summary>");
+    // La taula de fonts és a dins del plec, no fora.
+    expect(html.indexOf('<details class="nota glossari">')).toBeLessThan(html.indexOf('<table class="fonts-fila">'));
+    expect(html.indexOf('<table class="fonts-fila">')).toBeLessThan(html.indexOf("</details>"));
+  });
+
+  it("carrega la tipografia de la casa abans de l'estil", () => {
+    // La pàgina viu a «observatori/comparador/»: l'arrel del web és dos nivells
+    // amunt, i és `tipografia` qui ho sap, no aquesta pàgina.
+    const html = renderComparador(rows, "2026-08-29");
+    expect(html).toContain('href="../../assets/fonts.css"');
+    expect(html.indexOf("assets/fonts.css")).toBeLessThan(html.indexOf("<style>"));
+  });
+
+  it("els suggeriments són enllaços de debò amb l'adreça de la comparació", () => {
+    // Sense guió porten a la mateixa pàgina amb els municipis a l'adreça, i es
+    // poden copiar tal qual; amb guió, el guió els intercepta.
+    const html = renderComparador(rows, "2026-08-29");
+    expect(html).toContain('<a class="suggeriment" href="?m=esplugues-de-llobregat,sant-just-desvern"');
+    expect(html).not.toContain('<button type="button" data-m=');
+    expect(html).toContain('querySelectorAll(".suggeriments a[data-m]")');
+    expect(html).toContain("event.preventDefault()");
+  });
+
+  it("cap color de veredicte a la taula: ni verd ni coral sota .comparativa ni a les marques", () => {
+    const html = renderComparador(rows, "2026-08-29");
+    // Només el full d'aquesta pàgina: el de la casa té una pastilla «.marca»
+    // de marca de partit que no és la marca d'extrem d'aquí.
+    const inici = html.indexOf("/* --- el cercador i els municipis triats --- */");
+    expect(inici).toBeGreaterThan(0);
+    const css = html.slice(inici, html.indexOf("</style>")).replace(/@media[^{]*\{/g, "{");
+    const REGLA = /([^{}]*)\{([^{}]*)\}/g;
+    let mirades = 0;
+    for (const regla of css.matchAll(REGLA)) {
+      const selector = regla[1]!;
+      if (!selector.includes(".comparativa") && !selector.includes(".marca") && !selector.includes(".quintil")) continue;
+      mirades += 1;
+      expect(regla[2]).not.toContain("var(--coral)");
+      expect(regla[2]).not.toContain("var(--menta)");
+    }
+    expect(mirades).toBeGreaterThan(5);
+    // Les classes velles han desaparegut del full i del guió.
+    expect(css).not.toContain(".marca.millor");
+    expect(css).not.toContain(".marca.pitjor");
+    expect(css).not.toContain("td.millor");
+    expect(css).not.toContain("td.pitjor");
+    expect(html).not.toContain('millor: "millor"');
+    // El quint va en cinc tons de tinta i prou.
+    for (const q of [0, 1, 2, 3, 4]) expect(css).toContain(`.quintil.q${q}{opacity:`);
   });
 });
 
@@ -319,7 +384,8 @@ function municipi(
     valors: {
       poblacio: 21_000, regidories: 21, participacio: 55, alternances: 1, deute: 400,
       deute_mandat: -20, estalvi: 6, saldo: 1, carrega: 5, execucio: 60, pmp: 30, ibi: 0.7,
-      selectiva: null, dones: 45, transparencia: 70, ...valors,
+      selectiva: null, dones: 45, transparencia: 70,
+      cost_govern: 9.2, preu_aigua: 0.82, rebut_ibi: 410, renda: 15_800, estrangera_pct: 12.5, ...valors,
     },
     percentils: { deute: 42 },
     textos: {
@@ -327,6 +393,7 @@ function municipi(
       mesvotada: { principal: "Sí", secundari: "" },
       majoria: { principal: "Sí", secundari: "11 de 21 regidories" },
     },
+    enllacIdescat: "https://www.idescat.cat/emex/?id=" + slug + "#h40000",
     ...(extra.serie ? { serie: extra.serie } : {}),
   };
 }
@@ -419,7 +486,18 @@ describe("el regle de cada indicador", () => {
     // mediana de la població seria comparar mides amb mides.
     const html = obre(pagina(), ["esplugues-de-llobregat", "sant-just-desvern"])["escales-cos"]!.innerHTML;
     expect(html).not.toContain("Regidories al ple");
+    expect(html).not.toContain("Població de nacionalitat estrangera");
     expect(html).toContain("Deute per habitant");
+  });
+
+  it("les files noves també tenen regle, amb el seu format", () => {
+    const html = obre(pagina(), ["esplugues-de-llobregat", "sant-just-desvern"])["escales-cos"]!.innerHTML;
+    for (const etiqueta of ["Cost del govern per habitant", "Preu de l'aigua, €/m³", "Rebut mitjà de l'IBI", "Renda neta per persona"]) {
+      expect(html).toContain(etiqueta);
+    }
+    expect(html).toContain("9,2 €");
+    expect(html).toContain("0,82 €/m³");
+    expect(html).toContain("15.800 €");
   });
 });
 

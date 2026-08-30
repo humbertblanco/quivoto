@@ -1,4 +1,4 @@
-import { capcalera } from "./capcalera";
+import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { INDEXABLE, SITE } from "./config";
 import { tintaSobre } from "./contrast";
@@ -280,6 +280,7 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
 <meta property="og:url" content="${SITE}/observatori/partit/">
 <meta property="og:image" content="${SITE}/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
+${tipografia("../")}
 <style>${RADIOGRAFIA_CSS}${PARTITS_INDEX_CSS}</style>
 </head>
 <body>
@@ -316,7 +317,12 @@ ${cercador("../")}
 
 </main>
 
-${peu("../", generatedAt)}
+${
+  // «D'on surten els que manen» no és al menú ni al peu de sempre: hi porten
+  // la portada i les pàgines de partit, que és d'on ve qui es pregunta on
+  // acaben els alcaldes d'una marca.
+  peu("../", generatedAt, [{ text: "D'on surten els que manen", on: "../trajectoria/" }])
+}
 </body>
 </html>`;
 }

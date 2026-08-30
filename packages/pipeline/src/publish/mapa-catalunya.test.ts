@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { geometria, renderMapaCatalunya } from "./mapa-catalunya";
 import type { Els947Row } from "./els947";
+import type { VotsPartit } from "./vots-partit";
 
 const fila = (s: string, extra: Partial<Els947Row> = {}): Els947Row => ({
   s, n: s, c: "una comarca", p: 1000, r: 11,
@@ -11,7 +12,9 @@ const fila = (s: string, extra: Partial<Els947Row> = {}): Els947Row => ({
 });
 
 /** Les capes tal com arriben al navegador, que és on es pot comprovar què pinten. */
-const capesDe = (html: string): { t: string; g: string; e: string[]; n: number; m: string }[] =>
+const capesDe = (
+  html: string,
+): { t: string; g: string; e: string[]; n: number; m: string; x: string; c: string; u: [string, string] | null }[] =>
   JSON.parse(/var CAPES = (\[[\s\S]*?\]);\nvar camins/.exec(html)![1]!) as never;
 
 const infoDe = (html: string): [string, number, string, string, string][] =>
@@ -216,6 +219,40 @@ describe("la llegenda va dins de l'SVG", () => {
   it("no la sent dues vegades qui llegeix amb veu", () => {
     expect(html).toMatch(/<g class="clau-mapa" data-clau="0" aria-hidden="true">/);
   });
+
+  it("i és l'única que es veu a partir de 761 px: la d'HTML es queda per a qui llegeix amb veu", () => {
+    // Dues llegendes de la mateixa cosa a un pam l'una de l'altra fan dubtar
+    // de si volen dir el mateix. La d'HTML no se'n va —és la que se sent— però
+    // es retalla com «.nomes-lectors» mentre la de dins del dibuix es veu.
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css).toContain("@media (min-width:761px){.llegenda{position:absolute;width:1px;height:1px;overflow:hidden;");
+    expect(css).toMatch(/@media \(min-width:761px\)\{\.llegenda\{[^}]*clip:rect\(0 0 0 0\)/);
+    expect(html).toContain('<ul class="llegenda" id="llegenda" data-capa="0">');
+  });
+
+  it("per sota de 760 px es capgira: la d'HTML es veu i la del dibuix es plega", () => {
+    // Allà el text de dins de l'SVG s'escala amb el dibuix i no es llegeix; el
+    // tall era a 620 i ha pujat perquè a 700 px la lletra de la clau de tres
+    // columnes ja fa 10,9 px.
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css).toContain("@media (max-width:760px){.mapa947[data-capa] .clau-mapa[data-clau]{display:none}}");
+    // El full compartit té el seu propi tall a 620; el del mapa ja no hi és.
+    expect(css.slice(css.indexOf(".clau-mapa{display:none}"))).not.toContain("max-width:620px");
+  });
+});
+
+describe("la resta de la pàgina", () => {
+  const html = renderMapaCatalunya(Object.keys(geometria.municipis).map((s) => fila(s)), "2026-08-29");
+
+  it("no repeteix el peu: «Segueix estirant» ja no hi és, i els 947 i el comparador hi són pel peu", () => {
+    expect(html).not.toContain("Segueix estirant");
+    expect(html).toContain('href="../comparador/"');
+  });
+
+  it("enllaça les tipografies de la marca abans del full d'estil", () => {
+    expect(html.indexOf("assets/fonts.css")).toBeGreaterThan(-1);
+    expect(html.indexOf("assets/fonts.css")).toBeLessThan(html.indexOf("<style>"));
+  });
 });
 
 describe("la rampa contínua", () => {
@@ -248,9 +285,10 @@ describe("la rampa contínua", () => {
 });
 
 /**
- * Les capes que arriben de mètriques que la fila dels 947 encara no porta.
+ * Les capes que depenen d'una feina d'ingesta que pot no haver-se passat.
  *
- * Mentre `loadEls947()` no escrigui `rn` i `sa`, les dues capes no tenen dada
+ * `loadEls947()` escriu `rn` (J23) i `sa` (J22) sempre, però són `null` a tots
+ * els 947 mentre la feina no s'ha passat: llavors les dues capes no tenen dada
  * enlloc i han de desaparèixer del mapa senceres —botó, llegenda i taca—, no
  * quedar-se com un botó que pinta els 947 de gris.
  */
@@ -265,9 +303,7 @@ describe("renda i sou de l'alcaldia", () => {
   });
 
   it("surten, amb la font i la llicència, quan la fila les porta", () => {
-    const amb = slugs.map((s, i) =>
-      Object.assign(fila(s), { rn: 12_000 + i * 10, sa: i % 3 === 0 ? null : 30_000 + i }),
-    );
+    const amb = slugs.map((s, i) => fila(s, { rn: 12_000 + i * 10, sa: i % 3 === 0 ? null : 30_000 + i }));
     const html = renderMapaCatalunya(amb, "2026-08-29");
     expect(html).toContain("Renda per persona");
     expect(html).toContain("Sou de l'alcaldia");
@@ -277,9 +313,17 @@ describe("renda i sou de l'alcaldia", () => {
     // terços tenen sou, i el mapa ho ha de poder dir.
     const capes = capesDe(html);
     expect(capes.find((c) => c.t.includes("entren a les cases"))!.n).toBe(947);
-    expect(capes.find((c) => c.t.includes("cobra l'alcaldia"))!.n).toBe(
-      amb.filter((f) => (f as { sa: number | null }).sa !== null).length,
-    );
+    expect(capes.find((c) => c.t.includes("cobra l'alcaldia"))!.n).toBe(amb.filter((f) => f.sa !== null).length);
+  });
+
+  it("el sou el llegeix de la fila tal qual: la fila ja diu si és un sou", () => {
+    // Qui decideix si un import és un sou o assistències és `souAlcaldia()` a
+    // «els947.ts»; aquí un `null` és «sense dada» i prou, i un zero seria una
+    // xifra. Amb `sa` a zero a tots, la capa hi és i ningú no és «sense dada».
+    const html = renderMapaCatalunya(slugs.map((s) => fila(s, { sa: 0 })), "2026-08-29");
+    const capa = capesDe(html).find((c) => c.t.includes("cobra l'alcaldia"))!;
+    expect(capa.n).toBe(947);
+    expect(capa.g).not.toContain("x");
   });
 
   it("la descripció de la pàgina només promet les capes que hi són", () => {
@@ -287,5 +331,104 @@ describe("renda i sou de l'alcaldia", () => {
     const descripcio = /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
     expect(descripcio).toContain("qui mana");
     expect(descripcio).not.toContain("renda per persona");
+  });
+});
+
+/**
+ * Les capes de cada partit: on es vota més cadascun.
+ *
+ * Una alcaldia és el final d'un pacte i no la mesura del vot. Aquestes capes
+ * pinten el pes dels vots de cada marca en cinc quintils del seu color, i on
+ * no es va presentar hi va el ratllat, que aquí es diu pel seu nom.
+ */
+describe("on es vota més cada partit", () => {
+  const slugs = Object.keys(geometria.municipis).sort();
+  const files = slugs.map((s) => fila(s));
+  /** ERC a dos de cada tres municipis, el PSC a un de cada dos, i FIC sense cap regidoria enlloc. */
+  const vots: VotsPartit = { erc: {}, psc: {}, fic: {} };
+  slugs.forEach((s, i) => {
+    if (i % 3 !== 0) vots["erc"]![s] = { nom: s, pct: (i * 7) % 100, vots: i, regidories: i % 5, alcaldia: i % 7 === 0 };
+    if (i % 2 === 0) vots["psc"]![s] = { nom: s, pct: (i * 3) % 60, vots: i, regidories: 1, alcaldia: false };
+    if (i % 50 === 0) vots["fic"]![s] = { nom: s, pct: 5, vots: 10, regidories: 0, alcaldia: false };
+  });
+  const html = renderMapaCatalunya(files, "2026-08-29", vots);
+  const capes = capesDe(html);
+
+  it("sense vots no hi ha cap capa de partit: el mapa surt com sempre", () => {
+    const sense = renderMapaCatalunya(files, "2026-08-29");
+    expect(sense).not.toContain('<ul class="tries tries-partits"');
+    expect(sense).not.toContain("On es vota més");
+    expect(capesDe(sense).length).toBe(capesDe(html).length - 2);
+  });
+
+  it("amb vots, una capa per partit amb pàgina, en una segona filera de botons amb les sigles", () => {
+    const filera = /<ul class="tries tries-partits"[^>]*>([\s\S]*?)<\/ul>/.exec(html)![1]!;
+    expect(filera).toContain(">ERC<");
+    expect(filera).toContain(">PSC<");
+    // FIC té vots i cap regidoria: no té pàgina i no té capa.
+    expect(filera).not.toContain(">FIC<");
+    expect(html).toContain("On es vota més cada partit");
+    // La primera filera continua sent la de sempre, sense cap partit.
+    const primera = /<ul class="tries" id="tries">([\s\S]*?)<\/ul>/.exec(html)![1]!;
+    expect(primera).not.toContain(">ERC<");
+    expect(capes.some((c) => c.t === "On es vota més ERC")).toBe(true);
+    expect(capes.some((c) => c.t.includes("FIC"))).toBe(false);
+  });
+
+  it("l'índex del botó és el de la capa, no el lloc que ocupa a la filera", () => {
+    const index = capes.findIndex((c) => c.t === "On es vota més ERC");
+    expect(index).toBeGreaterThan(0);
+    expect(html).toContain(`<button type="button" data-capa="${index}" aria-pressed="false">ERC<`);
+  });
+
+  it("cada capa va del color del seu partit, en cinc graons, i es gira en fosc", () => {
+    const i = capes.findIndex((c) => c.t === "On es vota més ERC");
+    // El full compartit ja porta un bloc fosc abans del del mapa: el que es
+    // mira és el del mapa, que comença a «.mapa-marc».
+    const css = html.slice(html.indexOf(".mapa-marc"), html.indexOf("</style>"));
+    const clar = css.slice(0, css.indexOf("@media (prefers-color-scheme:dark)"));
+    for (let k = 0; k < 5; k += 1) {
+      expect(clar).toMatch(new RegExp(`\\.mapa947\\[data-capa="${i}"\\] \\.g${k}\\{fill:#[0-9a-f]{6}\\}`));
+    }
+    // La rampa d'ERC és la del seu taronja, no la coral: cap graó no és de la coral.
+    expect(clar).not.toMatch(new RegExp(`\\.mapa947\\[data-capa="${i}"\\] \\.g4\\{fill:#8E2F1D\\}`));
+    const fosc = css.slice(css.lastIndexOf("@media (prefers-color-scheme:dark)"));
+    expect(fosc).toMatch(new RegExp(`\\.mapa947\\[data-capa="${i}"\\] \\.g0\\{fill:#[0-9a-f]{6}\\}`));
+    // I la clau de dins del dibuix hi és, amb el nom del partit.
+    expect(html).toMatch(new RegExp(`<g class="clau-mapa" data-clau="${i}"[\\s\\S]*?Vot a ERC`));
+  });
+
+  it("on no es va presentar va ratllat i la clau ho diu pel seu nom", () => {
+    const erc = capes.find((c) => c.t === "On es vota més ERC")!;
+    expect(erc.x).toBe("no s'hi va presentar");
+    expect(erc.g.charAt(0)).toBe("x");
+    expect(erc.g.length).toBe(947);
+    expect(erc.n).toBe(slugs.filter((_, i) => i % 3 !== 0).length);
+    expect(erc.c).toMatch(/^S'hi va presentar a \d+ dels 947 municipis\. Al municipi del mig hi va treure el [\d,]+ %\.$/);
+    // Les capes de sempre continuen dient «sense dada».
+    expect(capes[1]!.x).toBe("sense dada");
+  });
+
+  it("les etiquetes són intervals, no «o més» a cada tall", () => {
+    const erc = capes.find((c) => c.t === "On es vota més ERC")!;
+    expect(erc.e).toHaveLength(5);
+    expect(erc.e[0]).toMatch(/^menys del [\d,]+ %$/);
+    expect(erc.e[1]).toMatch(/^del [\d,]+ % al [\d,]+ %$/);
+    expect(erc.e[4]).toMatch(/^[\d,]+ % o més$/);
+  });
+
+  it("enllaça la pàgina del partit des de la capa, i només des d'ella", () => {
+    const erc = capes.find((c) => c.t === "On es vota més ERC")!;
+    expect(erc.u).toEqual(["../partit/erc/", "La pàgina d'ERC: alcaldies, regidories i des del 1979"]);
+    expect(capes[0]!.u).toBeNull();
+    expect(html).toContain('<p class="nota" id="enllac-capa" hidden>');
+  });
+
+  it("explica la font i que els quintils no es comparen entre partits", () => {
+    expect(html).toContain("<code>ntc4-rnwr</code>");
+    expect(html).toContain("no es poden comparar entre partits");
+    const descripcio = /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+    expect(descripcio).toContain("on es vota més cada partit");
+    expect(descripcio).not.toContain("ERC");
   });
 });

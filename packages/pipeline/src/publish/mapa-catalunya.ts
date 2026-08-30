@@ -4,9 +4,13 @@ import { siglesFamily } from "@quivoto/shared-schemas/brands";
 import { SITE } from "./config";
 import type { Els947Row } from "./els947";
 import { MASCOTA_CSS, papereta } from "./mascota";
-import { capcalera } from "./capcalera";
+import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
+import { de } from "../lib/text";
+import {
+  colorDe, etiquetesPct, graoDe, MARQUES, quintilsDe, rampaDe, siglesDe, type VotsPartit,
+} from "./vots-partit";
 
 /**
  * El mapa dels 947, pintat per indicador.
@@ -71,6 +75,22 @@ type Capa = {
    * amb una rampa faria que el mapa digués una cosa que no és.
    */
   colors?: string[];
+  /**
+   * Els mateixos graons en mode fosc, quan la rampa és d'una sola tinta i s'ha
+   * de girar sencera com la coral. Les capes de categories no en tenen: el
+   * color d'un partit no es gira.
+   */
+  colorsFosc?: string[];
+  /** Com es diu el forat a la clau. Si no es diu res, «sense dada». */
+  senseDada?: string;
+  /** El títol de la clau de dins del dibuix, si no ha de ser el del botó. */
+  clau?: string;
+  /** Les etiquetes a partir dels talls, quan els talls surten per quantils i cal dir-los d'una altra manera. */
+  etiquetesDe?: (talls: readonly number[]) => string[];
+  /** La frase de sota el mapa: quants municipis tenen la dada i on cau el del mig. */
+  cobertura?: (ambDada: number, total: number, mig: string) => string;
+  /** On porta la capa, quan porta a algun lloc: la pàgina del partit. */
+  enllac?: { href: string; text: string };
 };
 
 const coma = (v: number, decimals = 0): string => v.toFixed(decimals).replace(".", ",");
@@ -168,25 +188,6 @@ const CAPA_PARTIT: Capa = {
   etiquetes: FAMILIES_MAPA.map(([, nom]) => nom),
   colors: FAMILIES_MAPA.map(([, , color]) => color),
   format: (v) => FAMILIES_MAPA[v]?.[1] ?? "sense marca",
-};
-
-/**
- * El sou de l'alcaldia, que el mapa sap pintar i la fila dels 947 encara no duu.
- *
- * És a la base —`municipality_metrics`, kind «retribucions», que és el que J22
- * desa de l'Inventari del Ministeri— però no passa per `loadEls947()`, que és
- * qui munta la fila que arriba aquí. Afegir-l'hi són quatre línies a
- * `els947.ts`, que és un fitxer que no és d'aquest encàrrec; la renda per
- * persona ja hi va arribar per aquest mateix camí i es llegeix de `r.rn`.
- *
- * Mentre la fila no el porti, la capa no té dada enlloc i el filtre de més
- * avall la treu del mapa: no surt ni botó, ni llegenda, ni taca grisa. **Un
- * botó que pinta els 947 de gris és pitjor que un botó que no hi és**, perquè
- * el lector no pot saber si el que falla és la dada o el mapa.
- */
-type FilaAmpliada = Els947Row & {
-  /** el que cobra l'alcaldia en un any, en euros, quan és un sou i no assistències */
-  sa?: number | null;
 };
 
 const CAPES: Capa[] = [
@@ -328,8 +329,13 @@ const CAPES: Capa[] = [
      * «Sense dedicació» amb import no és un sou: són assistències a plens i
      * indemnitzacions. Comptar-les com a sou faria semblar que hi ha alcaldies
      * que cobren cent euros l'any per fer d'alcalde, i el que passa és que no en
-     * cobren cap. Per això aquí només hi entra el que J22 marca com a sou, i la
-     * resta compta com a sense dada.
+     * cobren cap. Qui ho decideix és `souAlcaldia()` a `els947.ts`, que
+     * escriu `sa` només quan J22 ho marca com a sou, i la resta arriba aquí com
+     * a `null`, que és «sense dada». Mentre J22 no s'hagi passat, la capa no té
+     * dada enlloc i el filtre de més avall la treu del mapa sencera: ni botó,
+     * ni llegenda, ni taca grisa. **Un botó que pinta els 947 de gris és pitjor
+     * que un botó que no hi és**, perquè el lector no pot saber si el que falla
+     * és la dada o el mapa.
      */
     id: "sou-alcaldia",
     titol: "Quant cobra l'alcaldia",
@@ -339,34 +345,61 @@ const CAPES: Capa[] = [
       Pública. Només hi compten les dedicacions exclusives i parcials: les assistències a plens no
       són un sou i aquí no hi surten. Un poble petit sense dedicació no és un poble on l'alcaldia
       cobri poc: és un on no cobra.`,
-    valor: (r) => (r as FilaAmpliada).sa ?? null,
+    valor: (r) => r.sa ?? null,
     format: (v) => `${milers(v)} €`,
   },
 ];
 
-/** Talls per quantils, ignorant els municipis sense dada. */
-function quantils(valors: readonly number[], graons: number): number[] {
-  const ordenats = [...valors].sort((a, b) => a - b);
-  if (ordenats.length === 0) return [];
-  const talls: number[] = [];
-  for (let i = 1; i < graons; i += 1) {
-    talls.push(ordenats[Math.floor((i * ordenats.length) / graons)] ?? 0);
-  }
-  // Amb molts empats, dos talls poden coincidir i un graó quedaria buit.
-  //
-  // I un tall que valgui el mínim també en deixa un de buit, però per davant i
-  // sense que es noti a la llegenda: el deute per habitant té 400 municipis a
-  // zero, el primer quantil valia 0 i la clau del mapa deia «menys de 0 €», un
-  // graó on no hi pot caure ningú i un color que no s'arribava a fer servir.
-  const minim = ordenats[0]!;
-  return [...new Set(talls)].filter((t) => t > minim);
+/**
+ * Una capa per partit: on es vota més cadascun.
+ *
+ * «Qui mana» diu de qui és l'alcaldia i prou, i una alcaldia és el final d'un
+ * pacte, no la mesura del vot: el PSC en té 125 i treu vots a 615 municipis.
+ * Aquestes capes pinten el pes dels vots de cada marca a cada municipi, en
+ * cinc quintils del seu propi color, i on no es va presentar hi va el ratllat
+ * de «sense dada», que aquí es diu pel seu nom: «no s'hi va presentar».
+ *
+ * Els talls es fan per quantils sobre els municipis on la marca es va
+ * presentar, i per això no es poden comparar entre partits: el cinquè de dalt
+ * d'ERC comença al 62 % i el de Vox al 8,7 %. Cada capa és la geografia d'una
+ * força, no una taula de lliga.
+ *
+ * Només hi ha capa per a les marques que tenen pàgina —les que van treure
+ * alguna regidoria o tenen alguna alcaldia—, i van ordenades per quants
+ * municipis les van poder votar, que és el mateix ordre en què el lector les
+ * buscarà.
+ */
+function capesPartits(vots: VotsPartit): Capa[] {
+  return MARQUES.filter((b) => {
+    const seus = vots[b.id];
+    return seus !== undefined && Object.values(seus).some((m) => m.regidories > 0 || m.alcaldia);
+  })
+    .sort((a, b) => Object.keys(vots[b.id]!).length - Object.keys(vots[a.id]!).length)
+    .map((b) => {
+      const seus = vots[b.id]!;
+      const sigles = siglesDe(b.id);
+      const rampa = rampaDe(colorDe(b.id));
+      return {
+        id: `vots-${b.id}`,
+        titol: `On es vota més ${sigles}`,
+        boto: sigles,
+        clau: `Vot a ${sigles}`,
+        peu: `Vots a les llistes ${de(sigles)} sobre els vots a candidatures de cada municipi, a les
+          municipals del 2023. Els talls són quintils dels municipis on es va presentar: cada color
+          n'és un cinquè, i el de dalt no vol dir «molt» sinó «la cinquena part on més pesa». On no
+          s'hi va presentar, el municipi va ratllat.`,
+        valor: (r) => seus[r.s]?.pct ?? null,
+        format: pct1,
+        colors: rampa.clar,
+        colorsFosc: rampa.fosc,
+        senseDada: "no s'hi va presentar",
+        etiquetesDe: etiquetesPct,
+        cobertura: (n, total, mig) =>
+          `S'hi va presentar a ${n} dels ${total} municipis. Al municipi del mig hi va treure el ${mig}.`,
+        enllac: { href: `../partit/${b.id}/`, text: `La pàgina ${de(sigles)}: alcaldies, regidories i des del 1979` },
+      };
+    });
 }
-
-const graoDe = (valor: number, talls: readonly number[]): number => {
-  let g = 0;
-  for (const t of talls) if (valor >= t) g += 1;
-  return g;
-};
 
 /**
  * El municipi del mig. Va al peu de cada capa contínua perquè la taca sola no
@@ -414,7 +447,7 @@ function clauSvg(i: number, titol: string, entrades: readonly { classe: string; 
       const x = x0 + 22 + columna * ampleCol;
       const y = y0 + 18 + 46 + fila * alcadaFila;
       return (
-        `<rect class="mostra ${e.classe}" x="${x}" y="${y}" width="36" height="36" rx="7"/>` +
+        `<rect class="quadre ${e.classe}" x="${x}" y="${y}" width="36" height="36" rx="7"/>` +
         `<text x="${x + 50}" y="${y + 27}" font-size="${lletra}">${escape(e.text)}</text>`
       );
     })
@@ -427,11 +460,19 @@ function clauSvg(i: number, titol: string, entrades: readonly { classe: string; 
   </g>`;
 }
 
-const CSS = `
+/**
+ * El full d'estil és una funció de les capes que es publiquen i no una
+ * constant: els colors de cada graó i la clau que s'ensenya van lligats a
+ * l'índex de la capa, i l'índex és el de la llista **final** —després de
+ * treure les capes sense dada i d'afegir-hi una per partit—, no el de la
+ * taula escrita a mà.
+ */
+const css = (capes: readonly Capa[]): string => `
 .mapa-marc{margin:var(--e4) 0 0;position:relative}
 /* La fitxa que segueix el ratolí. No intercepta cap clic —el que hi ha a sota
    és l'enllaç al municipi— i no surt mai amb el dit: allà el toc ja obre la
    fitxa del poble, que és millor que qualsevol previsualització. */
+.ullada-mapa[hidden]{display:none}
 .ullada-mapa{position:absolute;z-index:5;pointer-events:none;background:var(--paper-2);
   border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
   padding:10px 14px;min-width:190px;max-width:280px;display:flex;flex-direction:column;gap:2px}
@@ -451,7 +492,7 @@ const CSS = `
    menta a coral de la marca, els tres primers quedaven indistingibles en
    deuteranòpia. Els quadrets de la llegenda són HTML i volen «background»; els
    camins són SVG i volen «fill». */
-${CAPES.map((c, i) =>
+${capes.map((c, i) =>
   c.colors
     ? c.colors
         .map(
@@ -500,30 +541,62 @@ ${CAPES.map((c, i) =>
   .mapa947,.llegenda,.clau-mapa{--nd-fons:#2E2A3A;--nd-ratlla:#8A83A3}
   .ullada-mapa .qui i.sense{background:#3A3545}
 }
-/* La llegenda escrita dins de l'SVG.
+/* Les rampes de cada partit, girades en fosc pel mateix motiu que la coral.
+   Van després del bloc fosc de la coral i amb més especificitat que ella, que
+   és el que fa que guanyin en els dos modes sense cap «important». */
+@media (prefers-color-scheme:dark){${capes.map((c, i) =>
+  c.colorsFosc
+    ? c.colorsFosc
+        .map(
+          (col, k) =>
+            `.mapa947[data-capa="${i}"] .g${k}{fill:${col}}.llegenda[data-capa="${i}"] .g${k}{background:${col}}`,
+        )
+        .join("")
+    : "",
+).join("")}}
+/* La llegenda escrita dins de l'SVG, i per què és l'única que es veu.
    Hi és perquè el mapa se'n va sol: quan algú en fa una captura o se'n desa el
    dibuix, la llista de colors que hi havia en HTML al costat no hi va, i el
    que queda és una taca de colors sense clau. Les onze van totes escrites i se
    n'ensenya una amb el mateix «data-capa» que pinta els municipis, així que
-   funciona abans que arrenqui cap JavaScript. Per sota de 620 px es plega: el
-   text de dins de l'SVG s'escala amb el dibuix i allà ja no es llegiria, i la
-   llista d'HTML, que sí que s'escala amb la lletra del lector, la substitueix.
-   Per això mateix va amb «aria-hidden»: qui llegeix amb veu ha de sentir la
-   llista una sola vegada, i la bona és la d'HTML. */
+   funciona abans que arrenqui cap JavaScript.
+   Durant un temps es veien les dues alhora —la de dins del dibuix i la llista
+   d'HTML de sobre—, i dues llegendes de la mateixa cosa a un pam l'una de
+   l'altra no diuen més: fan dubtar de si volen dir el mateix. A partir de
+   761 px mana la de dins, que viatja amb les captures; la llista d'HTML es
+   queda al document per a qui llegeix amb veu —amb el mateix retall que
+   «.nomes-lectors», i és per això que la de l'SVG va amb «aria-hidden»: la
+   llegenda s'ha de sentir una sola vegada— i torna a veure's per sota de
+   760 px, on el text de dins de l'SVG s'escala amb el dibuix i ja no es
+   llegeix, mentre que la llista s'escala amb la lletra del lector. El tall
+   era a 620 i puja a 760 perquè ara la de dins és l'única: amb el llenç de
+   1.600 unitats i la lletra de 26 de la clau de tres columnes de «qui mana»,
+   a 760 px de finestra la lletra fa 11,8 px, a 700 en fa 10,9 i a 620, 9,6;
+   per sota d'onze ja no és una llegenda que es pugui llegir sola. */
 .clau-mapa{display:none}
-${CAPES.map((_, i) => `.mapa947[data-capa="${i}"] .clau-mapa[data-clau="${i}"]{display:block}`).join("")}
+${capes.map((_, i) => `.mapa947[data-capa="${i}"] .clau-mapa[data-clau="${i}"]{display:block}`).join("")}
 .clau-mapa .fons{fill:var(--paper-2);stroke:var(--ink);stroke-width:3}
-.clau-mapa rect.mostra{stroke:var(--ink);stroke-width:2.5}
+/* «quadre» i no «mostra»: el full compartit dona a «.mostra» 14 px d'amplada i
+   d'alçada, i el navegador aplica l'amplada de CSS també a un rectangle d'SVG.
+   Amb aquell nom, els quadrets de 36 unitats sortien com a punts de 8 px. */
+.clau-mapa rect.quadre{stroke:var(--ink);stroke-width:2.5}
 .clau-mapa text{fill:var(--ink);font-family:var(--text);font-weight:800}
 .clau-mapa .cap{font-family:var(--display);font-weight:900;font-size:32px}
 /* Amb la mateixa especificitat que la regla que l'ensenya i escrita després,
    que és el que la fa guanyar sense haver de posar-hi cap «important». */
-@media (max-width:620px){.mapa947[data-capa] .clau-mapa[data-clau]{display:none}}
+@media (max-width:760px){.mapa947[data-capa] .clau-mapa[data-clau]{display:none}}
+@media (min-width:761px){.llegenda{position:absolute;width:1px;height:1px;overflow:hidden;
+  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px;padding:0;border:0}}
 .tries{display:flex;gap:8px;flex-wrap:wrap;margin:var(--e3) 0 0;padding:0;list-style:none}
 .tries button{font:inherit;font-weight:800;font-size:.85rem;cursor:pointer;background:var(--paper-2);
   color:inherit;border:2.5px solid var(--ink);border-radius:var(--r-max);padding:9px 16px;min-height:44px;
   box-shadow:var(--ombra)}
 .tries button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+/* La segona filera de botons, la dels partits, va sota la primera amb el seu
+   rètol: quinze sigles barrejades amb «Deute per habitant» serien una paret
+   on no es podria triar res. */
+.tries-cap{margin:var(--e3) 0 0}
+.tries-partits{margin-top:var(--e1)}
 .llegenda{display:flex;gap:var(--e2);flex-wrap:wrap;align-items:center;margin:var(--e3) 0 0;
   font-size:.84rem;font-weight:700;list-style:none;padding:0}
 .llegenda li{display:flex;align-items:center;gap:6px}
@@ -531,18 +604,28 @@ ${CAPES.map((_, i) => `.mapa947[data-capa="${i}"] .clau-mapa[data-clau="${i}"]{d
 @media (prefers-reduced-motion:reduce){.mapa947 path{transition:none}}
 `;
 
-export function renderMapaCatalunya(files: readonly Els947Row[], generatedAt: string): string {
+/**
+ * @param vots Els vots del 2023 de cada marca, municipi a municipi, de
+ *   `loadVotsPartit()`. Sense ells el mapa surt com sempre, sense cap capa de
+ *   partit: qui genera la vista prèvia no els necessita.
+ */
+export function renderMapaCatalunya(
+  files: readonly Els947Row[],
+  generatedAt: string,
+  vots: VotsPartit = {},
+): string {
   const perSlug = new Map(files.map((r) => [r.s, r]));
   const slugs = Object.keys(geometria.municipis).sort();
 
   // Cada capa es desa com una cadena d'un caràcter per municipi: amb 947
   // municipis i onze capes, són onze cadenes de 947 lletres. Canviar de capa és
-  // reescriure una classe, no tornar a baixar el mapa.
-  const totes = CAPES.map((capa) => {
+  // reescriure una classe, no tornar a baixar el mapa. Les dels partits, quinze
+  // més, van darrere de les de sempre i costen el mateix cadascuna.
+  const totes = [...CAPES, ...capesPartits(vots)].map((capa) => {
     const valors = slugs
       .map((s) => (perSlug.has(s) ? capa.valor(perSlug.get(s)!) : null))
       .filter((v): v is number => v !== null);
-    const talls = capa.talls ?? quantils(valors, 5);
+    const talls = capa.talls ?? quintilsDe(valors);
     const graons = slugs
       .map((s) => {
         const fila = perSlug.get(s);
@@ -563,15 +646,38 @@ export function renderMapaCatalunya(files: readonly Els947Row[], generatedAt: st
       capa.etiquetes ??
       (talls.length === 0
         ? [valors.length === 0 ? "sense dada" : capa.format(valors[0]!)]
-        : [`menys de ${capa.format(talls[0]!)}`].concat(
-            talls.map((t) => `${capa.format(t)} o més`),
-          ));
+        : capa.etiquetesDe
+          ? capa.etiquetesDe(talls)
+          : [`menys de ${capa.format(talls[0]!)}`].concat(
+              talls.map((t) => `${capa.format(t)} o més`),
+            ));
     const ambDada = graons.split("").filter((c) => c !== "x").length;
     // La mediana només val per a una xifra que es pugui ordenar. A «qui mana»
     // el valor és el número de la família a la taula i fer-ne la mediana
     // donaria una cosa que sembla una xifra i no vol dir res.
-    const mig = capa.colors || capa.etiquetes ? null : mediana(valors);
-    return { ...capa, graons, etiquetes, ambDada, talls, mig: mig === null ? "" : capa.format(mig) };
+    const mig = capa.etiquetes ? null : mediana(valors);
+    const migText = mig === null ? "" : capa.format(mig);
+    /* La frase de cobertura es fa aquí i no al navegador, perquè la primera
+       capa la porti escrita abans que arrenqui cap JavaScript i perquè cada
+       capa la pugui dir a la seva manera: «tenen aquesta dada» no val per a
+       un partit, que el que té és haver-se presentat. La mediana hi va al
+       costat perquè els talls d'una capa contínua es fan per quantils, o sigui
+       que el mapa sempre surt amb un cinquè de cada color: sense dir contra
+       què es compara, una taca fosca no vol dir «molt». */
+    const textCobertura = capa.cobertura
+      ? capa.cobertura(ambDada, slugs.length, migText)
+      : `${ambDada} dels ${slugs.length} municipis tenen aquesta dada.` +
+        (migText ? ` El municipi del mig en té ${migText}.` : "");
+    return {
+      ...capa,
+      graons,
+      etiquetes,
+      ambDada,
+      talls,
+      mig: migText,
+      textCobertura,
+      senseDada: capa.senseDada ?? "sense dada",
+    };
   });
 
   /**
@@ -616,35 +722,39 @@ export function renderMapaCatalunya(files: readonly Els947Row[], generatedAt: st
    * l'atribut el nom accessible deixaria de contenir el text que es veu i qui
    * navega per veu no podria dir «Participació» per prémer-lo.
    */
-  const tries = capes
-    .map(
-      (c, i) =>
-        `<li><button type="button" data-capa="${i}" aria-pressed="${i === 0 ? "true" : "false"}">${escape(c.boto)}<span class="nomes-lectors">: ${escape(c.titol)}</span></button></li>`,
-    )
-    .join("");
+  const boto = (c: (typeof capes)[number], i: number): string =>
+    `<li><button type="button" data-capa="${i}" aria-pressed="${i === 0 ? "true" : "false"}">${escape(c.boto)}<span class="nomes-lectors">: ${escape(c.titol)}</span></button></li>`;
+  // Les capes de partit van en una segona filera i es reconeixen per l'id;
+  // l'índex del botó és el de la llista sencera, que és el que llegeix «pinta».
+  const esPartit = (c: Capa): boolean => c.id.startsWith("vots-");
+  const tries = capes.map((c, i) => (esPartit(c) ? "" : boto(c, i))).join("");
+  const triesPartits = capes.map((c, i) => (esPartit(c) ? boto(c, i) : "")).join("");
 
   /*
    * La descripció de la pàgina es fa de les capes que realment es publiquen.
    * Escrita a mà quedava desactualitzada cada cop que se n'afegia una, i
    * prometia al cercador capes que el mapa no acaba ensenyant quan la dada no
-   * hi és —el mapa en treu el botó i la descripció es quedava dient-ho.
+   * hi és —el mapa en treu el botó i la descripció es quedava dient-ho. Les
+   * quinze sigles no s'hi enumeren: es diuen d'un cop.
    */
+  const deSempre = capes.filter((c) => !esPartit(c));
   const llistaBotons =
-    capes.length === 1
-      ? capes[0]!.boto.toLowerCase()
-      : capes
+    (deSempre.length === 1
+      ? deSempre[0]!.boto.toLowerCase()
+      : deSempre
           .slice(0, -1)
           .map((c) => c.boto.toLowerCase())
-          .join(", ") + ` i ${capes[capes.length - 1]!.boto.toLowerCase()}`;
+          .join(", ") + ` i ${deSempre[deSempre.length - 1]!.boto.toLowerCase()}`) +
+    (triesPartits ? ", i on es vota més cada partit" : "");
 
   const claus = capes
     .map((c, i) =>
       clauSvg(
         i,
-        c.boto,
+        c.clau ?? c.boto,
         c.etiquetes
           .map((et, k) => ({ classe: `g${k}`, text: et }))
-          .concat(c.ambDada < slugs.length ? [{ classe: "gnd", text: "sense dada" }] : []),
+          .concat(c.ambDada < slugs.length ? [{ classe: "gnd", text: c.senseDada }] : []),
       ),
     )
     .join("");
@@ -658,7 +768,8 @@ export function renderMapaCatalunya(files: readonly Els947Row[], generatedAt: st
 <title>El mapa dels 947 — Observatori municipal de quivoto</title>
 <meta name="description" content="Els 947 municipis de Catalunya pintats per ${escape(llistaBotons)}. Cada municipi porta a la seva fitxa.">
 <link rel="canonical" href="${SITE}/observatori/mapa/">
-<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${CSS}</style>
+${tipografia("../")}
+<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${css(capes)}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -676,13 +787,19 @@ ${cercador("../")}
   </section>
 
   <ul class="tries" id="tries">${tries}</ul>
+  ${
+    triesPartits
+      ? `<p class="micro tries-cap" id="tries-partits-cap">On es vota més cada partit</p>
+  <ul class="tries tries-partits" id="tries-partits" aria-labelledby="tries-partits-cap">${triesPartits}</ul>`
+      : ""
+  }
 
   <div class="mapa-marc">
     <h2 id="titol-capa">${escape(primera.titol)}</h2>
     <p class="entrada-bloc" id="peu-capa">${primera.peu}</p>
     <ul class="llegenda" id="llegenda" data-capa="0">${primera.etiquetes
       .map((et, k) => `<li><i class="g${k}"></i>${escape(et)}</li>`)
-      .join("")}${primera.ambDada < slugs.length ? '<li><i class="gnd"></i>sense dada</li>' : ""}</ul>
+      .join("")}${primera.ambDada < slugs.length ? `<li><i class="gnd"></i>${escape(primera.senseDada)}</li>` : ""}</ul>
     <svg class="mapa947" data-capa="0" viewBox="${escape(geometria.viewBox)}" role="img" aria-labelledby="titol-capa">
       ${
         /* Les ratlles de «sense dada». El pas és de 5 unitats del llenç de 1.600:
@@ -701,7 +818,10 @@ ${cercador("../")}
       ${claus}
     </svg>
     <div class="ullada-mapa" id="ullada" hidden aria-hidden="true"></div>
-    <p class="nota" id="cobertura-capa"></p>
+    <p class="nota" id="cobertura-capa">${escape(primera.textCobertura)}</p>
+    <p class="nota" id="enllac-capa"${primera.enllac ? "" : " hidden"}><a href="${escape(
+      primera.enllac?.href ?? "",
+    )}">${escape(primera.enllac?.text ?? "")}</a></p>
   </div>
 
   <section class="bloc fonts">
@@ -735,22 +855,25 @@ ${cercador("../")}
       sou i no hi compten.</p>`
         : ""
     }
+    ${
+      triesPartits
+        ? `<p class="nota">Les capes de cada partit són els vots a les seves llistes sobre els vots a
+      candidatures de cada municipi —sense els nuls, i amb els blancs a part—, a les municipals del
+      28 de maig del 2023 (Generalitat de Catalunya, <code>ntc4-rnwr</code>). Les candidatures
+      s'ajunten per l'agrupació electoral amb què es van presentar i, quan aquella no ho diu, per
+      les sigles: és la mateixa regla que fa servir la pàgina de cada partit, i per això les dues
+      diuen la mateixa xifra del mateix poble. Els talls són quintils dels municipis on cada marca
+      es va presentar, o sigui que <b>no es poden comparar entre partits</b>: el cinquè de dalt d'un
+      partit gran comença molt més amunt que el d'un de petit. On un partit no es va presentar, el
+      municipi va ratllat, que no és un zero.</p>`
+        : ""
+    }
     <p class="nota">Els colors de les capes de xifres van d'una sola tinta i amb la lluminància
     sempre en el mateix sentit, perquè els graons es puguin distingir també sense veure el color, i
     es giren quan el navegador demana el mode fosc. Els talls es fan per quantils: cada color n'és
     un cinquè, sempre, i per això la lectura ha de ser «està a la cinquena part de dalt», mai
     «està molt». Els municipis <b>sense dada</b> no porten cap color de l'escala sinó ratlles:
     un forat no és un valor baix, i pintat amb el to més clar ho semblava.</p>
-  </section>
-
-  <section class="bloc anar">
-    <h2>Segueix estirant</h2>
-    <ul class="destins">
-      <li><a href="../els947.html"><b>Els 947, en llista</b>
-        <span>Amb cercador i filtres, per si busques un poble concret</span></a></li>
-      <li><a href="../comparador/"><b>El comparador</b>
-        <span>Fins a quatre municipis costat a costat amb la mateixa vara</span></a></li>
-    </ul>
   </section>
 </main>
 ${peu("../", generatedAt)}
@@ -765,9 +888,13 @@ var CAPES = ${JSON.stringify(
       e: c.etiquetes,
       n: c.ambDada,
       m: c.mig,
+      x: c.senseDada,
+      c: c.textCobertura,
+      u: c.enllac ? [c.enllac.href, c.enllac.text] : null,
     })),
   )};
 var camins = document.querySelectorAll('.mapa947 a path');
+var enllac = document.getElementById('enllac-capa');
 function pinta(i) {
   var c = CAPES[i];
   for (var n = 0; n < camins.length; n++) {
@@ -780,16 +907,16 @@ function pinta(i) {
   document.getElementById('peu-capa').textContent = c.p;
   document.getElementById('llegenda').innerHTML =
     c.e.map(function (et, k) { return '<li><i class="g' + k + '"></i>' + et + '</li>'; }).join('') +
-    (c.n < camins.length ? '<li><i class="gnd"></i>sense dada</li>' : '');
-  /* La mediana al costat de la cobertura. Els talls d'una capa contínua es fan
-     per quantils, o sigui que el mapa sempre surt amb un cinquè de cada color:
-     sense dir contra què es compara, una taca fosca no vol dir «molt». */
-  document.getElementById('cobertura-capa').textContent =
-    c.n + ' dels ' + camins.length + ' municipis tenen aquesta dada.' +
-    (c.m ? ' El municipi del mig en té ' + c.m + '.' : '');
+    (c.n < camins.length ? '<li><i class="gnd"></i>' + c.x + '</li>' : '');
+  document.getElementById('cobertura-capa').textContent = c.c;
+  /* L'enllaç a la pàgina del partit, només a les capes que en tenen. */
+  if (c.u) { enllac.querySelector('a').href = c.u[0]; enllac.querySelector('a').textContent = c.u[1]; }
+  enllac.hidden = !c.u;
   capaAra = i;
-  var botons = document.querySelectorAll('#tries button');
-  for (var b = 0; b < botons.length; b++) botons[b].setAttribute('aria-pressed', b === i ? 'true' : 'false');
+  /* Els botons van en dues fileres i l'índex que mana és el que porten escrit,
+     no el lloc que ocupen: el primer botó de la segona filera és la capa dotze. */
+  var botons = document.querySelectorAll('.tries button');
+  for (var b = 0; b < botons.length; b++) botons[b].setAttribute('aria-pressed', Number(botons[b].getAttribute('data-capa')) === i ? 'true' : 'false');
 }
 /* La fitxa que surt en passar el ratolí per un municipi.
    El mapa és de 947 taques i cap no diu com es diu: el títol nadiu del
@@ -806,7 +933,7 @@ function ensenya(i, x, y) {
   if (!d) return;
   var c = CAPES[capaAra];
   var g = c.g.charAt(i);
-  var quin = g === 'x' ? 'sense dada' : c.e[parseInt(g, 36)];
+  var quin = g === 'x' ? c.x : c.e[parseInt(g, 36)];
   ullada.innerHTML =
     '<b>' + d[0] + '</b>' +
     '<span class="hab">' + d[1].toLocaleString('ca-ES') + ' habitants</span>' +
@@ -835,10 +962,13 @@ if (window.matchMedia('(hover: hover)').matches) {
     })(q);
   }
 }
-document.getElementById('tries').addEventListener('click', function (e) {
-  var b = e.target.closest('button');
-  if (b) pinta(Number(b.dataset.capa));
-});
+var fileres = document.querySelectorAll('.tries');
+for (var f = 0; f < fileres.length; f++) {
+  fileres[f].addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) pinta(Number(b.dataset.capa));
+  });
+}
 pinta(0);
 </script>
 </body></html>`;

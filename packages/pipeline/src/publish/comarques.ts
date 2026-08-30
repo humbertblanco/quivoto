@@ -4,13 +4,16 @@ import {
 } from "@quivoto/db";
 import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
-import { dataCurta, slugify } from "../lib/text";
+import { slugify } from "../lib/text";
+import { carregaCarrecsAlcaldia, carregaPleDelRegistre, resolAlcaldia } from "./alcaldia";
 import { sobreColor } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { icona } from "./icones";
 import { capsaCami, geometria, projecta } from "./mapa";
 import { sigla } from "./sigla";
-import { capcalera } from "./capcalera";
+import { GLOSSARI_CSS, esClauGlossari, renderGlossari } from "./glossari";
+import { TERRITORI_CSS, renderBlocsPoder } from "./territori";
+import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 
@@ -72,6 +75,12 @@ export type ComarcaMunicipi = {
    * fitxers que no són d'aquest encàrrec. Qui no els ompli no en publica res.
    */
   mayorFoto?: string | null;
+  /**
+   * El camí de la fitxa de l'alcaldia, relatiu a `m/<slug>/`: «regidor/<persona>/».
+   * El decideix `resolAlcaldia()`, igual que el retrat; `null` quan no en té,
+   * i llavors el nom porta a `#alcaldies` del municipi.
+   */
+  mayorAdreca?: string | null;
   /** Renda neta per persona. `null` quan l'INE la tapa per secret estadístic. */
   renda?: number | null;
   /** El que cobra l'alcaldia en un any, i només quan és un sou amb dedicació. */
@@ -158,19 +167,6 @@ const escape = (text: string): string =>
 
 const number = (n: number): string => n.toLocaleString("ca-ES");
 const decimal = (n: number, digits = 1): string => n.toFixed(digits).replace(".", ",");
-
-/** «27 d'agost», no «27 de agost». Una sola còpia, a `lib/text.ts`. */
-const formatDate = dataCurta;
-
-/**
- * «des de l'1 de juliol», no «des del 1 de juliol»: l'u i l'onze són els dos
- * únics dies que comencen amb vocal, i l'article s'hi apostrofa.
- */
-function sinceDate(iso: string | null): string {
-  if (!iso) return "";
-  const day = Number(iso.slice(8, 10));
-  return `${day === 1 || day === 11 ? "des de l'" : "des del "}${formatDate(iso)}`;
-}
 
 function plural(n: number, one: string, many: string): string {
   return n === 1 ? one : many;
@@ -401,25 +397,19 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
     .where(eq(municipalityMetrics.kind, "residus"));
 
   /*
-   * El retrat de qui té l'alcaldia, tal com el publica la seu electrònica del
-   * mateix ajuntament. S'aparella pel càrrec i no pel nom, igual que a
-   * `els947.ts`: la seu escriu «Alcalde», «Alcaldessa» o «Alcaldia», i això és
-   * més estable que el nom, que cada font escriu a la seva manera.
+   * El retrat i la fitxa de qui té l'alcaldia.
    *
-   * Va amb una subconsulta i no amb `jsonb_path_query_first` perquè cal una
-   * comparació que no distingeixi majúscules, i `ILIKE` la fa als dos motors
-   * sense discutir. El document de càrrecs no arriba mai sencer a JavaScript:
-   * d'ell només en surt aquesta cadena.
+   * Aquí hi havia una subconsulta que treia el retrat de qui portés «alcald»
+   * al càrrec, i prou. És la meitat de la regla que fa la fitxa del municipi,
+   * i la meitat que falla on més es nota: l'Hospitalet de Llobregat després
+   * del relleu, Lleida amb el seu «Paer en cap». `resolAlcaldia()` fa la regla
+   * sencera, i les dues lectures que necessita —la llista de la seu retallada
+   * al nom, el càrrec i el retrat petit, i el ple del registre per als
+   * municipis sense seu— són les mateixes que fa la llista dels 947. El
+   * document de càrrecs continua sense arribar sencer a JavaScript.
    */
-  const fotoRows = await db
-    .select({
-      municipalityId: municipalityMetrics.municipalityId,
-      foto: sql<string | null>`(SELECT c->>'fotoPetita'
-        FROM jsonb_array_elements(${data}->'carrecs') AS c
-        WHERE c->>'carrec' ILIKE '%alcald%' LIMIT 1)`,
-    })
-    .from(municipalityMetrics)
-    .where(eq(municipalityMetrics.kind, "carrecs"));
+  const carrecsSeu = await carregaCarrecsAlcaldia(db);
+  const pleRegistre = await carregaPleDelRegistre(db);
 
   // La renda neta per persona, de l'Atles de distribució de renda de les llars
   // de l'INE (J23). El document en porta sis, d'indicadors, i d'aquí només en
@@ -471,7 +461,6 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
   const govern = new Map(governRows.map((r) => [r.municipalityId, r]));
   const canvis = new Map(changeRows.map((r) => [r.municipalityId, r.change]));
   const brandBySigles = new Map(candidatureRows.map((r) => [`${r.municipalityId}\u0000${r.sigles}`, r.brandId]));
-  const fotoAlcaldia = new Map(fotoRows.map((r) => [r.municipalityId, r.foto]));
 
   const rendaPer = new Map<number, number>();
   for (const row of rendaRows) {
@@ -547,6 +536,11 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
     const change = canvis.get(m.id) ?? null;
     const successor = change?.mayors[change.mayors.length - 1] ?? null;
     const seats = toNumber(government?.totalSeats ?? null) ?? m.councilSeats ?? 0;
+    const alcaldia = resolAlcaldia(
+      carrecsSeu.get(m.id) ?? null,
+      { mayorName: government?.mayorName ?? m.mayorName, mayorSigles },
+      pleRegistre.get(m.id) ?? null,
+    );
 
     const municipi: ComarcaMunicipi = {
       slug: m.slug,
@@ -560,7 +554,8 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
       mayorName: government?.mayorName ?? m.mayorName,
       mayorSigles,
       mayorBrandId: brandId,
-      mayorFoto: fotoAlcaldia.get(m.id) ?? null,
+      mayorFoto: alcaldia.fotoPetita,
+      mayorAdreca: alcaldia.adreca,
       renda: rendaPer.get(m.id) ?? null,
       souAlcaldia: souPer.get(m.id) ?? null,
       winnerSigles: government?.winnerSigles ?? null,
@@ -622,7 +617,7 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
       nota: "Vots emesos sobre el cens a les municipals del 28 de maig del 2023.",
     }, participacio],
     [{
-      key: "paritat", label: "Dones al ple", unit: "percent",
+      key: "dones-ple", label: "Dones al ple", unit: "percent",
       nota: "Regidories ocupades per dones al ple sortit del 2023.",
     }, paritat],
     [{
@@ -1097,74 +1092,6 @@ function ulladaComarca(data: ComarcaData): string {
   return renderUllada(pastilles, `${data.name} en sis xifres`);
 }
 
-/** Governa el més votat, o hi va haver pacte. Una barra de tres trams i prou. */
-function renderRepartiment(data: ComarcaData): string {
-  const total = Math.max(1, data.municipis.length);
-  const trams: ReadonlyArray<readonly [number, string, string]> = [
-    [data.governaMesVotat, "governa-guanyador", "governa el més votat"],
-    [data.pacte, "governa-pacte", "hi va haver pacte"],
-    [data.senseIdentificar, "governa-desconegut", "sense identificar"],
-  ];
-  const bars = trams
-    .filter(([n]) => n > 0)
-    .map(([n, cls, label]) => {
-      const share = (100 * n) / total;
-      return `<span class="${cls}" style="--w:${share}%" title="${n} ${escape(label)}">${share >= 7 ? `<b>${n}</b>` : ""}</span>`;
-    })
-    .join("");
-  const clau = trams
-    .filter(([n]) => n > 0)
-    .map(([n, cls, label]) => `<li><span class="mostra ${cls}"></span><b>${n}</b> ${escape(label)}</li>`)
-    .join("");
-  return `<figure class="grafic">
-  <div class="repartiment" role="img" aria-label="${trams.filter(([n]) => n > 0).map(([n, , label]) => `${n} ${label}`).join("; ")}.">${bars}</div>
-  <ul class="clau">${clau}</ul>
-</figure>`;
-}
-
-/** Els municipis on l'alcaldia no és de la llista més votada, amb nom i cognoms. */
-function renderPactes(data: ComarcaData): string {
-  const pactes = data.municipis.filter((m) => m.winnerGoverns === false);
-  if (pactes.length === 0) {
-    return `<p>A tots els municipis d'aquesta comarca on hem pogut identificar l'alcaldia,
-    la governa la llista més votada.</p>`;
-  }
-  const items = pactes
-    .map((m) => {
-      // Les sigles de la guanyadora no porten marca desada —la mètrica només
-      // en desa el nom— i `sigla()` l'endevina per la família de les sigles.
-      // Quan no l'endevina, la pastilla es queda pintada i sense enllaç.
-      const mana = m.mayorSigles ? sigla(m.mayorSigles, { base: "../../", brandId: m.mayorBrandId }) : "?";
-      const guanya = m.winnerSigles ? sigla(m.winnerSigles, { base: "../../" }) : "?";
-      return `<li><a href="../../m/${escape(m.slug)}/">${escape(m.name)}</a>
-      <span class="secundari">governa ${mana}; la més votada, ${guanya}</span></li>`;
-    })
-    .join("");
-  return `<p>A <b>${pactes.length}</b> de ${data.municipis.length}
-  ${plural(pactes.length, "municipi", "municipis")} l'alcaldia no és de la llista més votada: hi va haver pacte.</p>
-  <ul class="detall">${items}</ul>`;
-}
-
-/** Canvis d'alcaldia a mig mandat, que és on es veu la política que no es vota. */
-function renderCanvis(data: ComarcaData): string {
-  const canvis = data.municipis.filter((m) => m.mayorChanged);
-  if (canvis.length === 0) {
-    return `<p>Cap municipi d'aquesta comarca no ha canviat d'alcaldia des de la constitució
-    dels plens el juny del 2023.</p>`;
-  }
-  const items = canvis
-    .map(
-      (m) => `<li><a href="../../m/${escape(m.slug)}/">${escape(m.name)}</a>
-      <span class="secundari">${escape(m.mayorChangeName ?? "")}${m.mayorChangeDate ? `, ${sinceDate(m.mayorChangeDate)}` : ""}</span></li>`,
-    )
-    .join("");
-  return `<p><b>${canvis.length}</b> ${plural(canvis.length, "municipi ha canviat", "municipis han canviat")}
-  d'alcaldia des de la constitució dels plens del juny del 2023.</p>
-  <ul class="detall">${items}</ul>
-  <p class="nota">Les fonts desen qui ocupa el càrrec, no per què va marxar l'anterior: aquí no
-  s'hi pot llegir ni una dimissió ni una moció de censura.</p>`;
-}
-
 /**
  * Les mitjanes comarcals. Tres xifres per indicador i totes tres necessàries:
  * la comarcal per saber com és aquí, la catalana per tenir referència, i el
@@ -1185,14 +1112,17 @@ function renderIndicadors(data: ComarcaData): string {
       ${indicador.percentilGrup === null
         ? ""
         : `<span class="percentil">Percentil <b>${Math.round(indicador.percentilGrup)}</b> entre els de la seva mida</span>`}
-      <span class="secundari">${escape(indicador.nota)}</span>
     </li>`;
     })
     .join("");
+  // La definició de cada indicador ja no va sota cada targeta: va al glossari
+  // del final, una sola vegada i amb la font, que és el que la targeta no deia.
+  const glossari = renderGlossari(data.indicadors.map((i) => i.key).filter(esClauGlossari));
   return `<ul class="indicadors">${cards}</ul>
   <p class="nota">Les medianes són sobre municipis i no sobre habitants: cada poble hi compta un
   cop. El <b>percentil</b> mesura cada municipi només amb els del seu tram de població de la
-  LOREG: 50 és quedar al mig; 80, per sobre de quatre de cada cinc de la seva mida.</p>`;
+  LOREG: 50 és quedar al mig; 80, per sobre de quatre de cada cinc de la seva mida.</p>
+  ${glossari}`;
 }
 
 
@@ -1288,16 +1218,22 @@ function renderMunicipis(data: ComarcaData): string {
       const pastilla = m.mayorSigles
         ? sigla(m.mayorSigles, { base: "../../", brandId: m.mayorBrandId })
         : "";
+      /*
+       * La cara i el nom porten a la pàgina de la persona —la que ha decidit
+       * `resolAlcaldia()` amb el retrat— o a l'apartat d'alcaldies del
+       * municipi quan no en té. Les etiquetes van fora de l'enllaç perquè la
+       * pastilla de sigles ja n'és un altre, i sense nom no hi ha enllaç: no
+       * hi ha ningú a qui anar a veure.
+       */
+      const persona = `${caraAlcaldia(m.mayorFoto, m.mayorName, m.mayorBrandId)}<span class="nom">${escape(m.mayorName ?? "Sense dada")}</span>`;
+      const onVa = m.mayorName ? `../../m/${escape(m.slug)}/${m.mayorAdreca ? escape(m.mayorAdreca) : "#alcaldies"}` : null;
       return `<tr>
       <th scope="row"><a href="../../m/${escape(m.slug)}/">${escape(m.name)}</a></th>
       <td class="xifra pob">${number(m.population ?? 0)}</td>
       <td class="xifra reg">${m.seats}</td>
       <td class="mana">
-        ${caraAlcaldia(m.mayorFoto, m.mayorName, m.mayorBrandId)}
-        <span class="qui-mana">
-          <span class="nom">${escape(m.mayorName ?? "Sense dada")}</span>
-          <span class="etiquetes">${pastilla} ${marca} ${canvi}</span>
-        </span>
+        ${onVa ? `<a class="persona" href="${onVa}">${persona}</a>` : `<span class="persona">${persona}</span>`}
+        <span class="etiquetes">${pastilla} ${marca} ${canvi}</span>
       </td>
     </tr>`;
     })
@@ -1310,103 +1246,8 @@ function renderMunicipis(data: ComarcaData): string {
 
 // ------------------------------------------------------------------ estil
 
-/**
- * El que les pàgines de territori necessiten i la fitxa municipal no té.
- *
- * Ho fa servir tal qual la pàgina de l'AMB, que és la mateixa forma amb un altre
- * perímetre: fins ara `amb.ts` en tenia una còpia literal de vuitanta línies, i
- * qualsevol arranjament aquí s'havia de fer dues vegades o quedava a mitges.
- * Va aquí i no a `estil.ts` perquè és el full de dues pàgines, no un patró del
- * portal: si demà en surten més, ja es mourà.
- */
-export const TERRITORI_CSS = `
-/* El poder en dues cintes: alcaldies a dalt, població governada a baix, amb els
-   mateixos colors i en el mateix ordre. Comparar-les només funciona si les dues
-   comencen a la mateixa vertical, i per això l'etiqueta té columna pròpia. */
-.poder{margin:0 0 var(--e3)}
-.tira-fila{display:grid;grid-template-columns:minmax(0,9.5em) 1fr;gap:6px var(--e2);
-  align-items:center;margin-bottom:var(--e2)}
-.etq-tira{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--ink-suau);line-height:1.2}
-.tira{display:flex;height:34px;border:2.5px solid var(--ink);border-radius:var(--r-s);overflow:hidden}
-/* Un tram d'una alcaldia sobre trenta fa l'1,7 % i sense mínim desapareixeria:
-   qui mana en un sol poble ha de continuar sent visible a la cinta. */
-.tira i{display:block;height:100%;width:var(--w);min-width:3px;background:var(--c);
-  border-right:1.5px solid var(--ink)}
-.tira i:last-child{border-right:0}
-@media (max-width:560px){ .tira-fila{grid-template-columns:1fr} }
-.poder-clau{list-style:none;margin:0;padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.poder-clau li{padding:8px 0;border-bottom:1px solid var(--vora);display:flex;flex-direction:column;gap:1px}
-.poder-clau .nom{font-weight:800;font-size:.94rem;display:flex;align-items:center;gap:8px}
-.poder-clau .dada{font-size:.84rem;color:var(--ink-suau)}
-.poder-clau .dada b{font-family:var(--display);font-weight:900;font-size:1.05rem;
-  letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
-
-/* El mapa del territori. Cada punt és un enllaç, i per això té estat de focus:
-   sense això, qui hi va amb el teclat no sap mai on és. */
-.mapa-territori{margin:0 0 var(--e3)}
-.mapa-territori svg{display:block;width:100%;height:auto;max-height:70vh}
-.mapa-territori circle{transition:r .12s ease}
-.mapa-territori a:hover circle{stroke-width:3.5}
-.mapa-territori a:focus-visible circle{outline:3px solid var(--coral-text);outline-offset:3px}
-.mapa-territori figcaption{font-size:.8rem;color:var(--ink-suau);line-height:1.4;margin-top:var(--e1)}
-.mapa-territori figcaption a{font-weight:800}
-@media (prefers-reduced-motion:reduce){.mapa-territori circle{transition:none}}
-
-/* Governa el més votat o hi va haver pacte: una barra i prou. Els colors són
-   els de la identitat, no els de cap partit: aquí no es parla de forces. */
-.repartiment{display:flex;height:52px;border:2.5px solid var(--ink);border-radius:var(--r-s);overflow:hidden}
-.repartiment span{width:var(--w);display:flex;align-items:center;justify-content:center;
-  border-right:1.5px solid var(--ink);color:#1E1B2E;font-family:var(--display);font-weight:900;font-size:1.1rem}
-.repartiment span:last-child{border-right:0}
-.governa-guanyador{background:var(--menta)}
-.governa-pacte{background:var(--presec)}
-.governa-desconegut{background:var(--lavanda)}
-.clau .mostra.governa-guanyador{background:var(--menta)}
-.clau .mostra.governa-pacte{background:var(--presec)}
-.clau .mostra.governa-desconegut{background:var(--lavanda)}
-
-/* Llistes de municipis amb un detall al costat: pactes i canvis d'alcaldia.
-   220 px i no 240: a 320 px de pantalla el contingut en fa 272, i una columna
-   més ampla que això vessaria. */
-.detall{list-style:none;margin:0 0 var(--e2);padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.detall li{padding:8px 0;border-bottom:1px solid var(--vora);display:flex;flex-direction:column;gap:1px}
-.detall a{font-weight:800}
-.detall .nom{font-weight:800}
-
-/* Les targetes d'indicador reaprofiten .indicadors i .indicador de la fitxa. */
-.indicador .referencia,.indicador .percentil{font-size:.88rem}
-.indicador .percentil{background:var(--lavanda);color:#1E1B2E;border-radius:var(--r-s);
-  padding:5px 9px;align-self:flex-start;font-weight:700}
-
-/* La llista de municipis: la taula més llarga del portal, 68 files a l'Alt Empordà. */
-.municipis{width:100%;border-collapse:collapse;font-size:.92rem}
-.municipis th,.municipis td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--vora);vertical-align:top}
-.municipis thead th{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
-.municipis tbody th{font-weight:800}
-.municipis .xifra{font-variant-numeric:tabular-nums;white-space:nowrap}
-.marca-pacte,.marca-minoria{display:inline-block;border-radius:var(--r-max);padding:2px 9px;
-  font-size:.68rem;font-weight:800;white-space:nowrap;color:#1E1B2E}
-.marca-pacte{background:var(--presec)}
-.marca-minoria{background:var(--lavanda)}
-@media (max-width:640px){
-  .municipis thead{display:none}
-  .municipis tr{display:block;padding:10px 0;border-bottom:1px solid var(--vora)}
-  .municipis th,.municipis td{display:block;border:0;padding:1px 0}
-  .municipis tbody th{font-size:1.02rem}
-  /* Sense capçalera de taula, «685» i «7» tots sols no volen dir res: la unitat
-     s'escriu al costat i les dades tornen a la mateixa línia. */
-  .municipis .com,.municipis .pob,.municipis .reg{display:inline;font-weight:400;color:var(--ink-suau);font-size:.86rem}
-  .municipis .com::after{content:" · "}
-  .municipis .pob::after{content:" habitants · "}
-  .municipis .reg::after{content:" regidories"}
-}
-`;
-
 /** El que només és de les comarques: el salt a les altres quaranta-dues. */
-const COMARCA_CSS = TERRITORI_CSS + `
+const COMARCA_CSS = TERRITORI_CSS + GLOSSARI_CSS + `
 /* El mapa de la comarca amb els límits municipals de veritat. Els gruixos van
    amb «non-scaling-stroke» perquè el llenç està ampliat: sense això, una vora
    d'1 unitat sobre un retall de 60 sortiria de sis píxels i es menjaria els
@@ -1466,11 +1307,19 @@ const COMARCA_CSS = TERRITORI_CSS + `
 
 /* Qui hi mana, a la llista de municipis: la cara i la pastilla del partit. El
    retrat hi va a 34 px i no a 44 perquè són fins a 68 files seguides. */
-.municipis .mana{display:flex;align-items:center;gap:9px}
-.municipis .mana .retrat{width:34px;height:34px}
-.municipis .qui-mana{display:flex;flex-direction:column;gap:2px;min-width:0}
-.municipis .qui-mana .nom{font-weight:700;line-height:1.25}
-.municipis .qui-mana .etiquetes{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+/* Qui hi mana: la cara i el nom en una línia, que és l'enllaç a la persona, i
+   les etiquetes a sota alineades amb el nom. Abans era una fila amb la cara i
+   una columna al costat; ara la persona és un enllaç i la pastilla de sigles
+   n'és un altre, i no poden anar l'un dins de l'altre. */
+.municipis .mana{display:flex;flex-direction:column;gap:3px;min-width:0}
+.municipis .mana .persona{display:flex;align-items:center;gap:9px;min-width:0;color:inherit;
+  text-decoration:none;min-height:44px}
+.municipis .mana .retrat{width:34px;height:34px;flex:none}
+.municipis .mana .nom{font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.municipis .mana a.persona:hover .nom,.municipis .mana a.persona:focus-visible .nom{text-decoration:underline;
+  text-decoration-thickness:2.5px;text-underline-offset:3px;text-decoration-color:var(--coral)}
+.municipis .mana a.persona:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.municipis .mana .etiquetes{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding-left:43px}
 
 /* Les altres 42: sense això, cada pàgina de comarca és un carreró sense sortida. */
 .veines{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
@@ -1521,6 +1370,7 @@ export function renderComarca(data: ComarcaData, generatedAt: string): string {
 <meta name="robots" content="noindex, nofollow">
 <title>${escape(title)}</title>
 <meta name="description" content="Qui mana a ${escape(data.name)}: quantes alcaldies té cada força als seus ${data.municipis.length} municipis, on hi va haver pacte, on ha canviat l'alcaldia i com són els seus indicadors comparats amb la resta de Catalunya.">
+${tipografia("../../")}
 <style>${RADIOGRAFIA_CSS}${COMARCA_CSS}</style>
 </head>
 <body>
@@ -1572,21 +1422,7 @@ ${cercador("../../")}
     : ""}</p>
 </section>
 
-<section class="bloc" id="pactes">
-  <h2>On va governar la llista més votada</h2>
-  ${renderRepartiment(data)}
-  <p>A <b>${data.majoriaAbsoluta}</b> de ${data.municipis.length}
-  ${plural(data.majoriaAbsoluta, "municipi la llista guanyadora governa", "municipis la llista guanyadora governa")}
-  amb majoria absoluta, i per tant no va necessitar ningú.</p>
-  ${renderPactes(data)}
-  <p class="nota">«Pacte» vol dir només que l'alcaldia no és de la llista més votada. Què s'hi
-  va acordar no ho sabem: les investidures no són dades obertes.</p>
-</section>
-
-<section class="bloc" id="canvis">
-  <h2>Qui ha canviat d'alcaldia a mig mandat</h2>
-  ${renderCanvis(data)}
-</section>
+${renderBlocsPoder(data, { base: "../../", ambit: "comarca" })}
 
 ${teIndicadors ? `<section class="bloc" id="indicadors">
   <h2>Com és aquesta comarca</h2>

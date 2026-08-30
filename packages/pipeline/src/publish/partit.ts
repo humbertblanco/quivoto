@@ -3,7 +3,7 @@ import {
   candidatures, councillorMandates, electionResults, municipalities, municipalityMetrics,
   people, type Db,
 } from "@quivoto/db";
-import { BRANDS_BY_ID, PARTY_BRANDS, siglesFamily } from "@quivoto/shared-schemas/brands";
+import { siglesFamily } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { buildPeerGroups, medianOf } from "../derive/peers";
 import { nomLlegible, normalizePersonName, slugify } from "../lib/text";
@@ -12,11 +12,22 @@ import { sobreColor, tintaSobre as tintaDeContrast } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { serieTemporal } from "./grafics";
 import { geometria } from "./mapa-catalunya";
-import { assignaSlugs, clau } from "./candidatura";
+import { assignaSlugs } from "./candidatura";
 import { adrecesRegidors } from "./regidor";
-import { capcalera } from "./capcalera";
+import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
+import {
+  agregaVots, colorDe, enBlocs, ES_MARCA, etiquetesPct, graoDe, llistaDeLAlcaldia, MARQUES,
+  marcaDe, quintilsDe, rampaDe, siglesDe, type VotsMarca,
+} from "./vots-partit";
+
+/**
+ * `marcaDe()` viu a «vots-partit.ts» des que el mapa dels 947 també la
+ * necessita, i es torna a exportar d'aquí perquè aquesta pàgina és on es va
+ * decidir la regla i on la busca qui la vulgui llegir.
+ */
+export { marcaDe } from "./vots-partit";
 
 /**
  * La pàgina d'**una marca a tot Catalunya**.
@@ -37,12 +48,12 @@ import { peu } from "./peu";
  *
  * ## Una sola regla per a totes les xifres
  *
- * Qui compta com a d'aquesta marca es decideix a `marcaDe()` i **a cap altre
- * lloc**: les alcaldies, les regidories, els vots i el mapa surten tots
- * d'aquella funció. Amb dues regles —una per a les alcaldies i una per als
- * regidors— la pàgina podia dir que un partit té l'alcaldia d'un poble on no
- * hi té cap regidor, que és una contradicció que el lector no pot resoldre i
- * nosaltres sí.
+ * Qui compta com a d'aquesta marca es decideix a `marcaDe()` —a «vots-partit.ts»,
+ * perquè el mapa dels 947 la fa servir també— i **a cap altre lloc**: les
+ * alcaldies, les regidories, els vots i els dos mapes surten tots d'aquella
+ * funció. Amb dues regles —una per a les alcaldies i una per als regidors— la
+ * pàgina podia dir que un partit té l'alcaldia d'un poble on no hi té cap
+ * regidor, que és una contradicció que el lector no pot resoldre i nosaltres sí.
  *
  * ## Les tres coses que hi ha a sobre de la xifra
  *
@@ -451,6 +462,12 @@ export type PartitData = {
   votsCatalunya: number;
 
   llocs: PartitMunicipi[];
+  /**
+   * El pes dels seus vots a cada municipi on es va presentar, per slug, de
+   * `agregaVots()`. És més ample que `llocs`: hi són també els pobles on va
+   * treure vots i cap regidoria, que és el que el segon mapa ensenya.
+   */
+  votsMunicipis: VotsMarca;
   serie: PartitEleccio[];
   /**
    * La població governada convocatòria a convocatòria, tan enrere com arriba el
@@ -481,35 +498,12 @@ const number = (n: number): string => n.toLocaleString("ca-ES");
 const percent = (n: number): string => `${n.toFixed(1).replace(".", ",")} %`;
 const plural = (n: number, un: string, molts: string): string => (n === 1 ? un : molts);
 
-/**
- * Les sigles curtes de cada marca. Les de `PARTY_BRANDS` són les oficials
- * senceres —«Esquerra Republicana de Catalunya»— i en una capçalera de 3,4 rem
- * ocupen tres línies i deixen d'assemblar-se a un logotip.
- */
-const SIGLES_CURTES: Record<string, string> = {
-  erc: "ERC", junts: "Junts", psc: "PSC", cup: "CUP", comuns: "Comuns",
-  pp: "PP", vox: "Vox", cs: "Ciutadans", pdecat: "PDeCAT",
-  aliancacat: "Aliança Catalana", ciu: "CiU", podem: "Podem",
-  fic: "FIC", te: "Tots per l'Empordà", idselva: "Independents de la Selva",
-  idc: "Independents de Catalunya", cda: "CDA",
-};
-
-/**
- * Colors de dades. Són els de `PARTY_BRANDS` excepte el groc pur de la CUP,
- * que damunt del paper cru no es veu; és el mateix fosquim que ja fan servir
- * el mapa dels 947 i les comarques, i ha de continuar sent el mateix.
- */
-const COLORS: Record<string, string> = { cup: "#d8d000" };
-
 const NOM_TIPUS: Record<string, string> = {
   state: "partit d'àmbit estatal",
   catalan: "partit d'àmbit català",
   regional: "federació d'àmbit comarcal",
   local: "llista local o d'electors",
 };
-
-const siglesDe = (id: string): string => SIGLES_CURTES[id] ?? BRANDS_BY_ID.get(id)?.name ?? id;
-const colorDe = (id: string): string => COLORS[id] ?? BRANDS_BY_ID.get(id)?.color ?? "#8b8b8b";
 
 /**
  * Cap color que no sigui un hexadecimal de sis xifres no entra a la pàgina: va
@@ -535,51 +529,144 @@ export const tintaSobre = (color: string): string => tintaDeContrast(colorSegur(
  * hi és. Amb dos, un poble on la marca té sis regidors de tretze es pintaria
  * igual que un on no s'hi ha presentat mai, i això no és apagat: és fals.
  *
- * Només els municipis encesos són clicables. Els altres no porten enlloc que
- * tingui a veure amb aquesta pàgina, i 947 enllaços perquè 700 no diguin res
- * és el que fa que un lector de pantalla trigui un minut a travessar el mapa.
+ * ## El segon mapa, «On el voten més», és el mateix dibuix
+ *
+ * On mana no és on el voten: el PSC té l'alcaldia de 125 municipis i treu vots
+ * a 615, i a molts on no mana hi és la segona força amb un terç del vot. La
+ * segona capa pinta el pes dels seus vots a cada municipi en cinc quintils del
+ * seu color, tingui l'alcaldia o no, i on no es va presentar hi va el ratllat
+ * de «sense dada», que aquí es diu pel seu nom.
+ *
+ * Els 947 camins pesen de 80 a 170 kB segons quants enllaços porten, i són el
+ * que més pesa de la pàgina: dibuixar-los dues vegades per tenir dos mapes la
+ * doblaria per repetir el mateix contorn. Amb la segona capa el dibuix d'ERC
+ * passa de 171 a 195 kB, i el d'una marca petita es queda als 80. Cada camí
+ * porta les classes de les dues capes alhora —«mana v3»:
+ * alcaldia, i quart cinquè de vot— i el que decideix quina es veu és un
+ * atribut del `figure` que un botó canvia. És el mateix mecanisme que el mapa
+ * dels 947, on canviar de capa és reescriure una classe i no tornar a baixar el
+ * mapa. Sense JavaScript es veu la primera.
+ *
+ * Són clicables els municipis on la marca hi és d'alguna manera: on té
+ * regidories i on es va presentar sense treure'n cap. Els altres no porten
+ * enlloc que tingui a veure amb aquesta pàgina, i 947 enllaços perquè 700 no
+ * diguin res és el que fa que un lector de pantalla trigui un minut a
+ * travessar el mapa.
  */
 function renderMapa(data: PartitData): string {
   const perSlug = new Map(data.llocs.map((m) => [m.slug, m]));
   const slugs = Object.keys(geometria.municipis).sort();
+  const vots = data.votsMunicipis;
+  const valors = Object.values(vots).map((v) => v.pct);
+  const presentat = valors.length;
+  const talls = quintilsDe(valors);
+
   const camins = slugs
     .map((slug) => {
       const d = geometria.municipis[slug]!;
       const lloc = perSlug.get(slug);
+      const v = vots[slug];
       // Els apagats van sense classe: són la majoria —de 700 a 940 dels 947
       // segons la marca— i escriure-la a cadascun costava 14 kB per pàgina de
       // dir el que el color per defecte ja diu. L'apagat és l'estat de base
-      // del mapa i el CSS ho ha de dir així.
-      if (!lloc) return `<path d="${d}"/>`;
-      const on = lloc.candidatura
-        ? `../../m/${lloc.slug}/${lloc.candidatura}/`
-        : `../../m/${lloc.slug}/`;
-      const que = lloc.alcaldia
-        ? `${lloc.name}: hi té l'alcaldia, amb ${lloc.seats} de ${lloc.totalSeats} ${plural(lloc.totalSeats, "regidoria", "regidories")}`
-        : `${lloc.name}: ${lloc.seats} de ${lloc.totalSeats} ${plural(lloc.totalSeats, "regidoria", "regidories")}, sense l'alcaldia`;
-      return `<a href="${escape(on)}"><title>${escape(que)}</title><path class="${
-        lloc.alcaldia ? "mana" : "hi-es"
-      }" d="${d}"/></a>`;
+      // del mapa i el CSS ho ha de dir així, a les dues capes.
+      if (!lloc && !v) return `<path d="${d}"/>`;
+      const on = lloc?.candidatura ? `../../m/${slug}/${lloc.candidatura}/` : `../../m/${slug}/`;
+      const nom = lloc?.name ?? v!.nom;
+      const que = lloc
+        ? lloc.alcaldia
+          ? `${nom}: hi té l'alcaldia, amb ${lloc.seats} de ${lloc.totalSeats} ${plural(lloc.totalSeats, "regidoria", "regidories")}`
+          : `${nom}: ${lloc.seats} de ${lloc.totalSeats} ${plural(lloc.totalSeats, "regidoria", "regidories")}, sense l'alcaldia`
+        : `${nom}: s'hi va presentar sense treure cap regidoria`;
+      const classes = [lloc ? (lloc.alcaldia ? "mana" : "hi-es") : "", v ? `v${graoDe(v.pct, talls)}` : ""]
+        .filter(Boolean)
+        .join(" ");
+      return `<a href="${escape(on)}"><title>${escape(
+        v ? `${que} · ${percent(v.pct)} dels vots` : que,
+      )}</title><path class="${classes}" d="${d}"/></a>`;
     })
     .join("");
 
   const senseAlcaldia = data.municipis - data.alcaldies;
-  return `<figure class="partit-mapa">
+  const capaOn = `<div data-per="on">
+    <ul class="partit-clau">
+      <li><i class="mana"></i>${data.alcaldies} amb l'alcaldia</li>
+      <li><i class="hi-es"></i>${senseAlcaldia} amb regidories i sense alcaldia</li>
+      <li><i class="apagat"></i>${slugs.length - data.municipis} on no hi té representació</li>
+    </ul>
+    <p>Cada taca encesa és clicable i porta a la fitxa d'aquesta marca en aquell poble.
+    <b>Un mapa de municipis sobrerepresenta el buit</b>: el Pallars Sobirà hi ocupa molta més taca
+    que el Barcelonès i hi viu una fracció de la gent, de manera que la superfície pintada no és
+    la gent governada. Aquesta xifra és més avall, en habitants.</p>
+  </div>`;
+
+  /**
+   * La clau i el peu de la capa de vots.
+   *
+   * Els cinc de dalt van amb nom i enllaç perquè una taca fosca en un mapa de
+   * 947 no es pot llegir: el lector vol saber quins són. I com que als pobles
+   * on la marca era l'única llista treu el 100 %, allà on passa es diu: aquell
+   * cent per cent vol dir que no hi havia ningú més a votar, no que el votés
+   * tothom.
+   */
+  const capaVots = (): string => {
+    const etiquetes =
+      talls.length === 0 ? [percent(valors[0]!)] : etiquetesPct(talls);
+    const clau = etiquetes.map((et, k) => `<li><i class="v${k}"></i>${escape(et)}</li>`).join("");
+    const cinc = Object.entries(vots)
+      .sort((a, b) => b[1].pct - a[1].pct || b[1].vots - a[1].vots || a[1].nom.localeCompare(b[1].nom, "ca"))
+      .slice(0, 5)
+      .map(([slug, v]) => {
+        const cand = perSlug.get(slug)?.candidatura;
+        const on = cand ? `../../m/${slug}/${cand}/` : `../../m/${slug}/`;
+        return `<a href="${escape(on)}">${escape(v.nom)}</a> (${percent(v.pct)})`;
+      });
+    const unics = valors.filter((p) => p >= 100).length;
+    const mig = medianOf(valors);
+    return `<div data-per="vots">
+    <ul class="partit-clau">${clau}<li><i class="gnd"></i>no s'hi va presentar</li></ul>
+    <p><b>On més pesa:</b> ${cinc.join(", ")}.${
+      unics > 0
+        ? ` A ${unics} ${plural(unics, "municipi hi era l'única llista", "municipis hi era l'única llista")}: allà el
+      100 % vol dir que no hi havia ningú més a votar, no que el votés tothom.`
+        : ""
+    }</p>
+    <p>S'hi va presentar a ${number(presentat)} dels 947 municipis${
+      mig === null ? "" : `, i al municipi del mig hi va treure el ${percent(mig)}`
+    }. Els talls són quintils d'aquests ${number(presentat)}: cada color n'és un cinquè, i el de
+    dalt no vol dir «molt» sinó «la cinquena part on més pesa». Cada taca pintada és clicable i
+    porta a la fitxa d'aquesta marca en aquell poble o, on no va treure cap regidoria, a la del
+    municipi. Val el mateix avís que al mapa d'on és: <b>un mapa de municipis sobrerepresenta el
+    buit</b>, i el Pallars ocupa més taca que el Barcelonès.</p>
+    <p>Font: resultats de les municipals del 28 de maig del 2023, Generalitat de Catalunya,
+    <code>ntc4-rnwr</code>. El percentatge és sobre els vots a candidatures del municipi, com a la
+    fitxa de cada llista: sense els nuls, i amb els blancs a part.</p>
+  </div>`;
+  };
+
+  const tries =
+    presentat === 0
+      ? ""
+      : `<ul class="partit-tries" aria-label="Què pinta el mapa">
+    <li><button type="button" data-capa="on" aria-pressed="true">On és</button></li>
+    <li><button type="button" data-capa="vots" aria-pressed="false">On el voten més</button></li>
+  </ul>`;
+
+  return `${tries}
+<figure class="partit-mapa" id="mapa-partit" data-capa="on">
   <svg viewBox="${escape(geometria.viewBox)}" role="img"
     aria-label="Els 947 municipis de Catalunya. ${escape(data.sigles)} té l'alcaldia de ${data.alcaldies}
-    i ${senseAlcaldia} més on hi té regidories sense manar-hi.">
-    ${camins}
+    i ${senseAlcaldia} més on hi té regidories sense manar-hi${
+      presentat === 0 ? "" : `; s'hi va presentar a ${presentat}`
+    }.">
+    <defs><pattern id="sense-dada" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="5" height="5" fill="var(--nd-fons)"/>
+      <rect width="2.4" height="5" fill="var(--nd-ratlla)"/>
+    </pattern></defs>
+    <g class="municipis">${camins}</g>
     ${geometria.contorn ? `<path class="contorn" d="${geometria.contorn}"/>` : ""}
   </svg>
-  <ul class="partit-clau">
-    <li><i class="mana"></i>${data.alcaldies} amb l'alcaldia</li>
-    <li><i class="hi-es"></i>${senseAlcaldia} amb regidories i sense alcaldia</li>
-    <li><i class="apagat"></i>${slugs.length - data.municipis} on no hi té representació</li>
-  </ul>
-  <figcaption>Cada taca encesa és clicable i porta a la fitxa d'aquesta marca en aquell poble.
-  <b>Un mapa de municipis sobrerepresenta el buit</b>: el Pallars Sobirà hi ocupa molta més taca
-  que el Barcelonès i hi viu una fracció de la gent, de manera que la superfície pintada no és
-  la gent governada. Aquesta xifra és més avall, en habitants.</figcaption>
+  <figcaption>${capaOn}${presentat === 0 ? "" : capaVots()}</figcaption>
 </figure>`;
 }
 
@@ -627,7 +714,7 @@ function renderLlinatge(data: PartitData): string {
 }
 
 /**
- * La població governada, convocatòria a convocatòria.
+ * Els punts de la població governada que la pàgina pot dibuixar, o cap.
  *
  * ## Quina població, la de quin any
  *
@@ -661,24 +748,37 @@ function renderLlinatge(data: PartitData): string {
  * que el lector pot comprovar sumant els municipis de la llista d'aquesta
  * mateixa pàgina; el percentatge, que és el que fa comparable una marca petita
  * amb una de gran, es llegeix a la taula, on és exacte i no s'ha d'estimar a ull.
+ *
+ * ## Una decisió, tres peces
+ *
+ * D'aquesta llista en surten el gràfic, la taula plegada i la lletra petita, i
+ * les tres han de decidir igual si hi ha res a dir: si el gràfic s'amagués i la
+ * taula no, la taula diria una cosa que la corba nega.
  */
-function renderPoblacioSerie(data: PartitData): string {
+function puntsPoblacio(data: PartitData): PartitPoblacio[] {
   const punts = data.poblacioSerie.filter((p) => dinsDeLaVida(data.id, p.year));
-  if (punts.length === 0) return "";
   // Qui no ha governat mai enlloc no té cap població governada, i una línia
   // plana damunt del zero amb una taula de zeros al costat no diu res que la
-  // frase de la secció d'alcaldies no digui ja.
-  if (punts.every((p) => p.habitants === 0)) return "";
+  // frase de la secció d'alcaldies no digui ja. Sense cap punt, tampoc.
+  if (punts.every((p) => p.habitants === 0)) return [];
 
   // La font d'aquesta sèrie és la mateixa que la de les alcaldies —l'historial
   // d'alcaldes— i per tant hereta la mateixa comprovació. Si no sabem dir
   // quantes alcaldies tenia el 2019, tampoc no podem dir quanta gent hi vivia.
-  if (!data.serieAlcaldiesFiable) return "";
+  if (!data.serieAlcaldiesFiable) return [];
+  return punts;
+}
 
-  // La primera convocatòria que aquesta pàgina dibuixa, no la primera que hi ha
-  // hagut: si la marca no existia el 1979, dir «comença el 2015 i no el 1979»
-  // seria retreure un forat a una font que no en té cap.
-  const primerElectoral = data.serie.filter((p) => dinsDeLaVida(data.id, p.year))[0]?.year ?? null;
+/**
+ * El gràfic de la població governada, dins de la seva cel·la de la graella.
+ *
+ * Amb un sol any amb padró no hi ha línia —`serieTemporal()` no en dibuixa
+ * cap— i aquí es diu per què: una cel·la buida al costat de dues corbes
+ * semblaria un gràfic que no ha carregat.
+ */
+function graficPoblacio(data: PartitData): string {
+  const punts = puntsPoblacio(data);
+  if (punts.length === 0) return "";
   const graella = serieTemporal(
     punts.map((p) => ({ any: p.year, valor: p.habitants })),
     {
@@ -687,7 +787,21 @@ function renderPoblacioSerie(data: PartitData): string {
       mida: "mitjana",
     },
   );
+  return `<div class="partit-grafic">
+    <h3 class="subtitol">Població governada, elecció a elecció</h3>
+    ${
+      graella === ""
+        ? `<p class="nota">D'un sol any no en surt cap línia: una tendència d'un punt és una tendència
+           inventada. La xifra hi és igualment, a les xifres de cada convocatòria.</p>`
+        : graella
+    }
+  </div>`;
+}
 
+/** La taula de la població governada, per al desplegable de les xifres. */
+function taulaPoblacio(data: PartitData): string {
+  const punts = puntsPoblacio(data);
+  if (punts.length === 0) return "";
   const files = punts
     .map(
       (p) => `<tr>
@@ -700,47 +814,57 @@ function renderPoblacioSerie(data: PartitData): string {
     </tr>`,
     )
     .join("");
-
-  return `<h3 class="subtitol">Població governada, elecció a elecció</h3>
-  ${
-    graella === ""
-      ? `<p class="nota">D'un sol any no en surt cap línia: una tendència d'un punt és una tendència
-         inventada. La xifra hi és igualment, a la taula d'aquí sota.</p>`
-      : graella
-  }
-  <div class="taula-ampla">
-  <table class="partit-serie">
-    <caption class="nomes-lectors">Alcaldies, habitants d'aquells municipis i part de la població de
-    Catalunya que governava ${escape(data.sigles)} a cada convocatòria amb padró</caption>
-    <thead><tr><th>Elecció</th><th>Alcaldies</th><th>Habitants governats</th>
-      <th>De tot Catalunya</th></tr></thead>
-    <tbody>${files}</tbody>
-  </table>
-  </div>
-  <p class="nota feble">Cada any amb la població d'aquell any.</p>
-  <p class="nota">Els habitants són els del <b>padró de l'any de cada elecció</b>, no els d'avui:
-  amb la població d'ara, un mandat de fa deu anys sortiria inflat amb gent que encara no hi vivia
-  —Catalunya ha passat de 7.508.106 empadronats el 2015 a 8.146.265 el 2025.${
-    primerElectoral === null || primerElectoral >= punts[0]!.year
-      ? ""
-      : ` Per això aquesta sèrie <b>comença el ${punts[0]!.year} i no el ${primerElectoral}</b>, que
-         és on comencen les altres dues d'aquesta pàgina: el padró que hem ingerit de l'Idescat no
-         va més enrere, i dibuixar els anys anteriors voldria dir posar-hi una població inventada.`
-  }${
-    data.poblacioAny === null || data.poblacioAny === punts[punts.length - 1]!.year
-      ? ""
-      : ` La xifra gran de dalt de tot d'aquesta pàgina és una altra cosa: és el padró del
-         ${data.poblacioAny}, el més recent, aplicat als municipis que la marca governa ara.`
-  }</p>`;
+  return `<h3 class="subtitol">Població governada</h3>
+    <div class="taula-ampla">
+    <table class="partit-serie">
+      <caption class="nomes-lectors">Alcaldies, habitants d'aquells municipis i part de la població de
+      Catalunya que governava ${escape(data.sigles)} a cada convocatòria amb padró</caption>
+      <thead><tr><th>Elecció</th><th>Alcaldies</th><th>Habitants governats</th>
+        <th>De tot Catalunya</th></tr></thead>
+      <tbody>${files}</tbody>
+    </table>
+    </div>`;
 }
 
 /**
- * Les dues sèries llargues, cadascuna amb el seu eix.
+ * Per què el padró és el de cada any i per què la corba comença on comença: la
+ * lletra petita d'aquesta sèrie, que va plegada amb la de les altres dues.
+ */
+function lletraPetitaPoblacio(data: PartitData): string {
+  const punts = puntsPoblacio(data);
+  if (punts.length === 0) return "";
+  // La primera convocatòria que aquesta pàgina dibuixa, no la primera que hi ha
+  // hagut: si la marca no existia el 1979, dir «comença el 2015 i no el 1979»
+  // seria retreure un forat a una font que no en té cap.
+  const primerElectoral = data.serie.filter((p) => dinsDeLaVida(data.id, p.year))[0]?.year ?? null;
+  return `<p><b>Cada any amb la població d'aquell any.</b> Els habitants són els del
+    <b>padró de l'any de cada elecció</b>, no els d'avui: amb la població d'ara, un mandat de fa
+    deu anys sortiria inflat amb gent que encara no hi vivia —Catalunya ha passat de 7.508.106
+    empadronats el 2015 a 8.146.265 el 2025.${
+      primerElectoral === null || primerElectoral >= punts[0]!.year
+        ? ""
+        : ` Per això aquesta sèrie <b>comença el ${punts[0]!.year} i no el ${primerElectoral}</b>, que
+         és on comencen les altres dues d'aquesta pàgina: el padró que hem ingerit de l'Idescat no
+         va més enrere, i dibuixar els anys anteriors voldria dir posar-hi una població inventada.`
+    }${
+      data.poblacioAny === null || data.poblacioAny === punts[punts.length - 1]!.year
+        ? ""
+        : ` La xifra gran de dalt de tot d'aquesta pàgina és una altra cosa: és el padró del
+         ${data.poblacioAny}, el més recent, aplicat als municipis que la marca governa ara.`
+    }</p>`;
+}
+
+/**
+ * Les tres sèries llargues, de costat i cadascuna amb el seu eix.
  *
- * Van en dos gràfics i no en un: regidories i alcaldies es compten per milers i
- * per centenars, i posar-les al mateix eix faria que la línia de les alcaldies
- * s'arrapés a zero i semblés que no s'hi mou res. `serieTemporal()` ja hi posa
- * l'eix des de zero i la taula equivalent per a qui no hi veu.
+ * Van en tres gràfics i no en un: regidories, alcaldies i habitants es compten
+ * per milers, per centenars i per milions, i posar-los al mateix eix faria que
+ * dues de les tres línies s'arrapessin a zero i semblés que no s'hi mou res.
+ * I van de costat i no l'un sota l'altre: tres corbes a tota amplada eren tres
+ * pantalles per dir tres xifres, quan el que el lector vol és veure-les d'un
+ * cop d'ull. Les taules amb les xifres exactes hi són, plegades: són la
+ * comprovació de les corbes, no la lectura. `serieTemporal()` ja hi posa l'eix
+ * des de zero i la taula equivalent per a qui no hi veu.
  */
 function renderEvolucio(data: PartitData): string {
   // La sèrie es talla a la vida de la marca abans de dibuixar res. Una corba
@@ -756,7 +880,11 @@ function renderEvolucio(data: PartitData): string {
         serie
           .filter((p): p is PartitEleccio & { regidories: number } => p.regidories !== null)
           .map((p) => ({ any: p.year, valor: p.regidories })),
-        { titol: `${data.sigles} · regidories a tot Catalunya`, format: (v) => number(Math.round(v)) },
+        {
+          titol: `${data.sigles} · regidories a tot Catalunya`,
+          format: (v) => number(Math.round(v)),
+          mida: "mitjana",
+        },
       )
     : "";
   // Una línia plana damunt del zero no és una sèrie: és soroll amb eix. Qui no
@@ -767,7 +895,11 @@ function renderEvolucio(data: PartitData): string {
         serie
           .filter((p): p is PartitEleccio & { alcaldies: number } => p.alcaldies !== null)
           .map((p) => ({ any: p.year, valor: p.alcaldies })),
-        { titol: `${data.sigles} · alcaldies a tot Catalunya`, format: (v) => number(Math.round(v)) },
+        {
+          titol: `${data.sigles} · alcaldies a tot Catalunya`,
+          format: (v) => number(Math.round(v)),
+          mida: "mitjana",
+        },
       )
     : "";
 
@@ -827,44 +959,64 @@ function renderEvolucio(data: PartitData): string {
     .filter(Boolean)
     .join(" ");
 
-  return `${regidories === "" ? "" : `<h3 class="subtitol">Regidories, elecció a elecció</h3>${regidories}`}
+  /** Una cel·la de la graella: el títol a sobre del seu gràfic, i res més. */
+  const cel = (titol: string, grafic: string): string =>
+    grafic === "" ? "" : `<div class="partit-grafic"><h3 class="subtitol">${titol}</h3>${grafic}</div>`;
+  const cels = [
+    cel("Regidories, elecció a elecció", regidories),
+    cel("Alcaldies, mandat a mandat", alcaldies),
+    graficPoblacio(data),
+  ].filter((c) => c !== "");
+
+  // Els forats es queden a la vista, no a la lletra petita: un guionet que
+  // sembla un zero és l'error que el lector no pot resoldre sol.
+  return `${cels.length === 0 ? "" : `<div class="partit-series">${cels.join("\n")}</div>`}
   ${
-    alcaldies === ""
-      ? capAlcaldia
-        ? `<p class="nota">No ha tingut mai cap alcaldia a Catalunya, ni el ${ANY_ARA} ni cap any
-           d'ençà del ${primer}. Per això aquí no hi ha cap corba d'alcaldies: una línia plana
-           damunt del zero no diria res que no digui aquesta frase.</p>`
-        : ""
-      : `<h3 class="subtitol">Alcaldies, mandat a mandat</h3>${alcaldies}`
+    capAlcaldia
+      ? `<p class="nota">No ha tingut mai cap alcaldia a Catalunya, ni el ${ANY_ARA} ni cap any
+         d'ençà del ${primer}. Per això aquí no hi ha cap corba d'alcaldies: una línia plana
+         damunt del zero no diria res que no digui aquesta frase.</p>`
+      : ""
   }
-  ${renderPoblacioSerie(data)}
-  <h3 class="subtitol">Les xifres de cada convocatòria</h3>
-  <div class="taula-ampla">
-  <table class="partit-serie">
-    <caption class="nomes-lectors">Regidories, part del total català, alcaldies i municipis
-    guanyats per ${escape(data.sigles)} a cada elecció municipal del ${primer} al ${ultim}</caption>
-    <thead><tr><th>Elecció</th><th>Regidories</th><th>De totes les de Catalunya</th>
-      <th>Alcaldies</th><th>Municipis guanyats</th></tr></thead>
-    <tbody>${files}</tbody>
-  </table>
-  </div>
-  <p class="nota">La columna d'alcaldies del <b>${ANY_ARA}</b> és la mateixa llista que hi ha
-  més avall, comptada municipi a municipi amb les sigles de cada candidatura; les dels mandats
-  anteriors surten de l'historial d'alcaldes, que només porta el nom del partit tal com el va
-  escriure cada ajuntament. Són dues maneres de comptar i per això es diuen. «Municipis guanyats»
-  són on va ser la <b>força més votada</b>, que no és el mateix que governar-hi: l'alcaldia la
-  vota el ple.${
-    data.lineage
-      ? ` Cap columna no arrossega el passat de ${escape(data.lineageSigles ?? data.lineage)}, la força
+  <details class="nota partit-xifres">
+    <summary>Les xifres de cada convocatòria</summary>
+    <div class="taula-ampla">
+    <table class="partit-serie">
+      <caption class="nomes-lectors">Regidories, part del total català, alcaldies i municipis
+      guanyats per ${escape(data.sigles)} a cada elecció municipal del ${primer} al ${ultim}</caption>
+      <thead><tr><th>Elecció</th><th>Regidories</th><th>De totes les de Catalunya</th>
+        <th>Alcaldies</th><th>Municipis guanyats</th></tr></thead>
+      <tbody>${files}</tbody>
+    </table>
+    </div>
+    ${taulaPoblacio(data)}
+  </details>
+  ${forats === "" ? "" : `<p class="nota feble">Un guionet no és un zero.</p><p class="nota">${forats}</p>`}
+  <details class="nota partit-lletra">
+    <summary>La lletra petita</summary>
+    <p>La columna d'alcaldies del <b>${ANY_ARA}</b> és la mateixa llista que hi ha més avall,
+    comptada municipi a municipi amb les sigles de cada candidatura; les dels mandats anteriors
+    surten de l'historial d'alcaldes, que només porta el nom del partit tal com el va escriure
+    cada ajuntament. Són dues maneres de comptar i per això es diuen. «Municipis guanyats» són on
+    va ser la <b>força més votada</b>, que no és el mateix que governar-hi: l'alcaldia la vota el
+    ple.${
+      data.lineage
+        ? ` Cap columna no arrossega el passat de ${escape(data.lineageSigles ?? data.lineage)}, la força
          de la qual prové: hi ha una filiació —explicada més amunt, amb les dates— però no és el
          mateix partit i no ho volem fer passar per continuïtat.`
-      : ""
-  }</p>
-  ${forats === "" ? "" : `<p class="nota feble">Un guionet no és un zero.</p><p class="nota">${forats}</p>`}`;
+        : ""
+    }</p>
+    ${lletraPetitaPoblacio(data)}
+  </details>`;
 }
 
-/** Quants municipis s'ensenyen abans de plegar la resta. */
-const VISIBLES = 30;
+/**
+ * Quants municipis s'ensenyen aquí. Són dotze i no trenta perquè el mapa de
+ * dalt ja els ensenya tots i la resta és a un clic, a la llista dels 947: les
+ * dotze primeres targetes diuen quines ciutats governa, que és el que tres-
+ * centes files amagaven.
+ */
+const VISIBLES = 12;
 
 /** Els euros de l'inventari, sense cèntims: la precisió no és la del cèntim. */
 const euros = (n: number): string => `${Math.round(n).toLocaleString("ca-ES")} €`;
@@ -1004,16 +1156,20 @@ function renderOnMana(data: PartitData): string {
   };
 
   const davant = mana.slice(0, VISIBLES).map(fila).join("");
-  const resta = mana.slice(VISIBLES);
+  const resta = mana.length - VISIBLES;
   const ambFitxa = mana.filter((m) => m.mayorSlug !== null).length;
 
+  /**
+   * La resta no s'escriu aquí: va a la llista dels 947, filtrada per aquesta
+   * marca. Plegada dins d'un «details», la pàgina d'ERC portava tres-centes
+   * targetes que ningú no obria i que pesaven més que el mapa; el mapa de dalt
+   * ja les ensenya totes, i la llista dels 947 té el cercador i els filtres que
+   * aquí no hi són.
+   */
   return `<ul class="partit-llocs">${davant}</ul>
   ${
-    resta.length > 0
-      ? `<details class="partit-resta">
-    <summary>Els altres ${number(resta.length)} municipis, del més gran al més petit</summary>
-    <ul class="partit-llocs">${resta.map(fila).join("")}</ul>
-  </details>`
+    resta > 0
+      ? `<p class="crida"><a href="../../els947.html?partit=${escape(data.id)}">Els altres ${number(resta)} municipis, a la llista dels 947 →</a></p>`
       : ""
   }
   <p class="nota">Cada fila porta a dos llocs: el nom del municipi, a la fitxa d'aquesta marca en
@@ -1339,26 +1495,60 @@ export const PARTIT_CSS = `
 .partit-xifres .etq,.partit-dues .etq{font-size:.68rem;font-weight:800;text-transform:uppercase;
   letter-spacing:.1em;color:var(--ink-suau)}
 
-/* --- el mapa dels 947 amb els seus municipis encesos --------------------- */
+/* --- el mapa dels 947, amb dues capes i un sol dibuix --------------------- */
+/* Els dos botons són els mateixos que les tries del mapa dels 947, perquè fan
+   el mateix: canviar què pinta el mateix dibuix. */
+.partit-tries{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 var(--e2);padding:0;list-style:none}
+.partit-tries button{font:inherit;font-weight:800;font-size:.85rem;cursor:pointer;background:var(--paper-2);
+  color:inherit;border:2.5px solid var(--ink);border-radius:var(--r-max);padding:9px 16px;min-height:44px;
+  box-shadow:var(--ombra)}
+.partit-tries button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .partit-mapa{margin:var(--e2) 0 0;padding:0}
 .partit-mapa svg{width:100%;height:auto;display:block;max-width:900px;margin:0 auto}
-.partit-mapa path{fill:#DED8CB;stroke:var(--ink);stroke-width:.7;stroke-linejoin:round}
+.partit-mapa path{stroke:var(--ink);stroke-width:.7;stroke-linejoin:round}
+.partit-mapa .municipis path{fill:#DED8CB}
 .partit-mapa a:hover path,.partit-mapa a:focus path{stroke-width:3.5}
 .partit-mapa .contorn{fill:none;stroke:var(--ink);stroke-width:3.5}
-.partit-mapa .mana{fill:var(--accent)}
+/* La capa d'on és. Les regles van lligades a la capa i no al camí perquè cada
+   camí porta les classes de les dues alhora; el que tria és l'atribut. */
+.partit-mapa[data-capa="on"] .municipis path.mana{fill:var(--accent)}
 /* On hi és sense manar-hi va del mateix color rebaixat i no d'un color nou:
    la diferència entre els dos estats és de quantitat, i inventar-hi un segon
    to faria pensar en una segona força. */
-.partit-mapa .hi-es{fill:var(--accent);fill-opacity:.3}
-.partit-clau{display:flex;gap:var(--e2);flex-wrap:wrap;align-items:center;margin:var(--e3) 0 0;
-  font-size:.84rem;font-weight:700;list-style:none;padding:0}
+.partit-mapa[data-capa="on"] .municipis path.hi-es{fill:var(--accent);fill-opacity:.3}
+/* La capa d'on el voten més: cinc graons del color de la marca, de clar a
+   fosc, que cada pàgina escriu a --v0…--v4 perquè el color és de cada marca i
+   aquest full és de totes. On no es va presentar, ratllat: el mateix patró i
+   les mateixes dues tintes que el mapa dels 947, i pel mateix motiu —un forat
+   no és un valor baix, i pintat amb el to més clar ho semblaria. El ratllat
+   és el fons de la capa i els graons s'hi escriuen a sobre, amb una classe
+   més d'especificitat que el fons. */
+.partit-mapa,.partit-clau{--nd-fons:#DDD9E6;--nd-ratlla:#7B7592}
+.partit-mapa[data-capa="vots"] .municipis path{fill:url(#sense-dada)}
+.partit-mapa[data-capa="vots"] .municipis path.v0{fill:var(--v0)}
+.partit-mapa[data-capa="vots"] .municipis path.v1{fill:var(--v1)}
+.partit-mapa[data-capa="vots"] .municipis path.v2{fill:var(--v2)}
+.partit-mapa[data-capa="vots"] .municipis path.v3{fill:var(--v3)}
+.partit-mapa[data-capa="vots"] .municipis path.v4{fill:var(--v4)}
+/* Cada capa porta la seva clau i el seu peu, i només es veu la de la capa
+   que hi ha pintada. */
+.partit-mapa[data-capa="on"] [data-per="vots"],.partit-mapa[data-capa="vots"] [data-per="on"]{display:none}
+.partit-clau{display:flex;gap:var(--e2);flex-wrap:wrap;align-items:center;margin:var(--e2) 0 0;
+  font-size:.84rem;font-weight:700;list-style:none;padding:0;color:var(--ink)}
 .partit-clau li{display:flex;align-items:center;gap:6px}
 .partit-clau i{width:22px;height:22px;border:2px solid var(--ink);border-radius:5px;display:inline-block}
 .partit-clau i.mana{background:var(--accent)}
 .partit-clau i.hi-es{background:var(--accent-esvait)}
 .partit-clau i.apagat{background:#DED8CB}
-.partit-mapa figcaption{font-size:.84rem;color:var(--ink-suau);margin-top:var(--e2)}
+.partit-clau i.v0{background:var(--v0)}.partit-clau i.v1{background:var(--v1)}
+.partit-clau i.v2{background:var(--v2)}.partit-clau i.v3{background:var(--v3)}
+.partit-clau i.v4{background:var(--v4)}
+.partit-clau i.gnd{background:repeating-linear-gradient(45deg,var(--nd-ratlla) 0 3px,var(--nd-fons) 3px 6px)}
+@media (prefers-color-scheme:dark){.partit-mapa,.partit-clau{--nd-fons:#2E2A3A;--nd-ratlla:#8A83A3}}
+.partit-mapa figcaption{font-size:.84rem;color:var(--ink-suau)}
+.partit-mapa figcaption p{margin:var(--e2) 0 0}
 .partit-mapa figcaption b{color:var(--ink)}
+.partit-mapa figcaption a{color:var(--ink);font-weight:800}
 
 /* --- la sèrie llarga ----------------------------------------------------- */
 .subtitol{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.02em;
@@ -1374,6 +1564,25 @@ export const PARTIT_CSS = `
   color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
 .partit-serie tbody th{font-weight:800;font-variant-numeric:tabular-nums}
 .partit-serie .xifra{font-variant-numeric:tabular-nums;white-space:nowrap}
+/* Les tres corbes de costat i no l'una sota l'altra: a tota amplada eren tres
+   pantalles per dir tres xifres. La cel·la fa uns 230 px i el dibuix està fet
+   a 720: el que s'hi ensenya és la versió estreta, la que el gràfic ja fa per
+   a una finestra de mòbil, sigui quina sigui l'amplada de la finestra, perquè
+   el que és estret aquí és la cel·la i no la pantalla. */
+.partit-series{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--e2);
+  margin-top:var(--e2)}
+.partit-series .partit-grafic{min-width:0}
+.partit-series .subtitol{margin:0 0 var(--e1)}
+.partit-series .grafic{margin:0}
+.partit-series .grafic svg{max-width:100%;height:auto}
+.partit-series .grafic .ample{display:none}
+.partit-series .grafic .estret{display:block}
+/* Les taules van plegades: són la comprovació de les corbes, no la lectura. El
+   full compartit estreny el que hi ha dins d'un «details.nota» a setanta
+   caràcters de text, i una taula de cinc columnes no hi cap. */
+.partit-xifres > .taula-ampla{max-width:none;margin-top:var(--e2)}
+.partit-xifres > .subtitol{font-size:1.05rem;color:var(--ink);margin:var(--e3) 0 0}
+.partit-lletra > p + p{margin-top:var(--e1)}
 
 /* --- el llinatge --------------------------------------------------------- */
 /* Va amb el filet del color de la marca a l'esquerra, com la targeta de la
@@ -1439,12 +1648,16 @@ export const PARTIT_CSS = `
 .partit-llocs .lloc-qui .retrat{width:34px;height:34px;border-width:2px;font-size:.72rem}
 .partit-llocs .lloc-qui .nom{font-size:.82rem;font-weight:800;overflow-wrap:anywhere;min-width:0}
 .partit-llocs a.lloc-qui:hover .nom{text-decoration:underline}
-.partit-resta{margin-top:var(--e2)}
-.partit-resta > summary{font-size:.85rem;font-weight:800;cursor:pointer;padding:10px 0;
-  color:var(--ink-suau)}
-.partit-resta > summary:hover{color:var(--ink)}
-.partit-resta[open] > summary{margin-bottom:var(--e2)}
-@media (prefers-reduced-motion:reduce){.partit-llocs li{transition:none}}
+/* La crida a la llista dels 947 amb la marca ja filtrada: una pastilla de tinta
+   i no del color de la marca, perquè és un enllaç del portal i no una peça del
+   partit. */
+#mana .crida{margin:var(--e2) 0 0}
+#mana .crida a{display:inline-flex;align-items:center;min-height:44px;padding:8px 18px;
+  background:var(--ink);color:var(--paper);text-decoration:none;border-radius:var(--r-max);
+  font-weight:800;font-size:.95rem;box-shadow:var(--ombra);
+  transition:transform .12s ease,box-shadow .12s ease}
+#mana .crida a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+@media (prefers-reduced-motion:reduce){.partit-llocs li,#mana .crida a{transition:none}}
 
 /* --- el desglossament de les retribucions --------------------------------
    L'última fila va marcada amb una vora discontínua a posta: és la que es
@@ -1508,6 +1721,17 @@ export function renderPartit(data: PartitData, generatedAt: string): string {
   // dient coses diferents si un dia el llindar de dins canviés.
   const retribucions = renderRetribucions(data);
   const renda = renderRenda(data);
+  /**
+   * La rampa del segon mapa, escrita a la pàgina i no al full compartit: els
+   * cinc graons són del color d'aquesta marca, i en fosc es giren sencers
+   * com la rampa coral del mapa dels 947, perquè damunt del paper fosc el que
+   * ha de cridar continuï sent el valor alt.
+   */
+  const rampa = rampaDe(color);
+  const estilRampa =
+    `.partit-mapa{${rampa.clar.map((c, k) => `--v${k}:${c}`).join(";")}}` +
+    `@media (prefers-color-scheme:dark){.partit-mapa{${rampa.fosc.map((c, k) => `--v${k}:${c}`).join(";")}}}`;
+  const ambVots = Object.keys(data.votsMunicipis).length > 0;
 
   return `<!doctype html>
 <html lang="ca">
@@ -1526,7 +1750,8 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
 <meta property="og:url" content="${SITE}/observatori/partit/${escape(data.id)}/">
 <meta property="og:image" content="${SITE}/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<style>${RADIOGRAFIA_CSS}${PARTIT_CSS}</style>
+${tipografia("../../")}
+<style>${RADIOGRAFIA_CSS}${PARTIT_CSS}${estilRampa}</style>
 </head>
 <body style="--accent:${color};--accent-tinta:${tintaSobre(color)};--accent-esvait:${color}4d">
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -1580,7 +1805,12 @@ ${cercador("../../")}
 <section class="bloc" id="mapa">
   <h2>On és, als 947</h2>
   <p class="entrada-bloc">Els municipis amb l'alcaldia van del color de la marca; els que hi tenen
-  regidories sense manar-hi, del mateix color rebaixat; la resta, apagats.</p>
+  regidories sense manar-hi, del mateix color rebaixat; la resta, apagats.${
+    ambVots
+      ? ` Amb el segon botó, el mateix mapa diu <b>on el voten més</b>: el pes dels seus vots a cada
+  municipi, tingui l'alcaldia o no.`
+      : ""
+  }</p>
   ${renderMapa(data)}
 </section>
 
@@ -1644,19 +1874,6 @@ ${
   diria que existeix un partit que no existeix. Cadascuna té la seva pàgina al seu municipi.</p>
 </section>
 
-<section class="bloc anar">
-  <h2>Segueix estirant</h2>
-  <ul class="destins">
-    <li><a href="../../mapa/"><b>El mapa dels 947</b>
-      <span>Els mateixos municipis pintats per força, majoria absoluta i alternança des del
-      1979</span></a></li>
-    <li><a href="../../els947.html"><b>Els 947, en llista</b>
-      <span>Amb cercador i filtres, per si busques un poble concret</span></a></li>
-    <li><a href="../../dades/"><b>Baixa't les dades</b>
-      <span>Tot això en CSV i JSON, amb l'esquema documentat i la font de cada xifra</span></a></li>
-  </ul>
-</section>
-
 <section class="bloc fonts">
   <h2>D'on surt tot això</h2>
   <ul>
@@ -1686,36 +1903,36 @@ ${
 </section>
 
 </main>
-${peu("../../", generatedAt)}
-
+${
+  // El peu ja porta el mapa, els 947 i les dades; el que és propi d'aquesta
+  // pàgina és d'on surten els que manen, que és l'altra manera de llegir les
+  // mateixes alcaldies.
+  peu("../../", generatedAt, [{ text: "D'on surten els que manen", on: "../../trajectoria/" }])
+}
+${
+  // El canvi de capa del mapa: un atribut al «figure» i prou, que és el que
+  // llegeix el full d'estil. Sense JavaScript es queda la primera capa, amb
+  // la seva clau i el seu peu, i els botons no hi són a mitges.
+  ambVots
+    ? `<script>
+(function () {
+  var mapa = document.getElementById('mapa-partit');
+  var botons = document.querySelectorAll('.partit-tries button');
+  for (var i = 0; i < botons.length; i++) {
+    botons[i].addEventListener('click', function () {
+      mapa.setAttribute('data-capa', this.getAttribute('data-capa'));
+      for (var k = 0; k < botons.length; k++) botons[k].setAttribute('aria-pressed', botons[k] === this ? 'true' : 'false');
+    });
+  }
+})();
+</script>`
+    : ""
+}
 </body>
 </html>`;
 }
 
 // --------------------------------------------------------------------- accés
-
-/** Les marques de debò: «local» no hi és, perquè no és cap partit. */
-const MARQUES = PARTY_BRANDS.filter((b) => b.id !== "local");
-const ES_MARCA = new Set(MARQUES.map((b) => b.id));
-
-/**
- * De quina marca és una candidatura.
- *
- * Primer l'agrupació electoral, que és el que la Generalitat publica i el que
- * `resolveBrand()` ja ha desat a `candidatures.brandId`. Quan allò diu «local»
- * o no diu res, es miren les sigles amb la mateixa funció que fa servir tota la
- * resta del projecte: hi ha coalicions locals registrades com a agrupació
- * d'electors que porten la marca escrita a les sigles («UA-PSC-CP»), i deixar-les
- * fora faria que un partit tingués menys regidories de les que té.
- *
- * Torna `null` quan cap de les dues coses no ho aclareix, i això vol dir que
- * aquella llista no compta enlloc: preferim una xifra curta a una d'inventada.
- */
-export function marcaDe(brandId: string | null, sigles: string): string | null {
-  if (brandId && ES_MARCA.has(brandId)) return brandId;
-  const familia = siglesFamily(sigles);
-  return familia && ES_MARCA.has(familia) ? familia : null;
-}
 
 /**
  * L'ordre amb què `candidatura.ts` reparteix els slugs dins d'un municipi.
@@ -1798,24 +2015,6 @@ const toNumber = (value: string | null): number | null => {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 };
-
-/**
- * PGlite fa córrer Postgres dins de WebAssembly i el resultat d'una consulta hi
- * ha de cabre sencer. Les mètriques es demanen en blocs pel mateix motiu que
- * explica `metriques.ts`, i el pitjor d'aquell error és com peta: després
- * d'haver escrit part del web.
- */
-const BLOC = 200;
-
-async function enBlocs<T>(consulta: (limit: number, salta: number) => Promise<T[]>): Promise<T[]> {
-  const out: T[] = [];
-  for (let salta = 0; ; salta += BLOC) {
-    const tros = await consulta(BLOC, salta);
-    out.push(...tros);
-    if (tros.length < BLOC) break;
-  }
-  return out;
-}
 
 /**
  * Carrega **totes** les marques d'un sol cop, com fa `loadCandidatures()`.
@@ -2026,6 +2225,18 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
   const govern = new Map(governRows.map((r) => [r.municipalityId, r]));
 
   /**
+   * El pes dels vots de cada marca a cada municipi, amb les mateixes llistes i
+   * la mateixa alcaldia que la resta d'aquesta funció: és el que pinta el segon
+   * mapa de cada pàgina, i el mapa dels 947 el demana per la seva banda amb
+   * `loadVotsPartit()`, que passa per la mateixa suma.
+   */
+  const votsTots = agregaVots(
+    muns,
+    llistes,
+    new Map(governRows.map((r) => [r.municipalityId, r.mayorSigles])),
+  );
+
+  /**
    * La cara i la fitxa de qui mana a cada municipi.
    *
    * **La regla dura és que el nom i el retrat han de sortir de la mateixa
@@ -2186,29 +2397,10 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
 
     const slugs = slugsDelMunicipi(seves);
 
-    /**
-     * De quina candidatura és l'alcaldia.
-     *
-     * Primer per les sigles exactes, amb la clau dura de `candidatura.ts` —la
-     * font de la composició del ple escriu «PSC - CP» on el dataset electoral
-     * escriu «PSC-CP»— i, si allò no lliga, per família de sigles i només quan
-     * una sola llista d'aquell ple hi encaixa. Si n'hi encaixen dues no se'n
-     * tria cap: atribuir una alcaldia a la llista equivocada és el pitjor error
-     * que pot cometre aquesta pàgina.
-     */
-    let alcaldiaDe: number | null = null;
-    if (g?.mayorSigles) {
-      const k = clau(g.mayorSigles);
-      const exactes = seves.filter((l) => clau(l.sigles) === k);
-      if (exactes.length === 1) alcaldiaDe = exactes[0]!.id;
-      else {
-        const familia = siglesFamily(g.mayorSigles);
-        const candidates = familia
-          ? seves.filter((l) => l.seats > 0 && marcaDe(l.brandId, l.sigles) === familia)
-          : [];
-        if (candidates.length === 1) alcaldiaDe = candidates[0]!.id;
-      }
-    }
+    // De quina candidatura és l'alcaldia. La regla és a «vots-partit.ts» i és
+    // la mateixa que fa servir el mapa dels 947: si aquí se'n fes una altra,
+    // el mapa i aquesta pàgina podrien discrepar sobre qui mana a un poble.
+    const alcaldiaDe = llistaDeLAlcaldia(seves, g?.mayorSigles);
 
     for (const l of seves) {
       const marca = marcaDe(l.brandId, l.sigles);
@@ -2495,6 +2687,7 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
       votsCatalunya,
 
       llocs,
+      votsMunicipis: votsTots[brand.id] ?? {},
       serie,
       poblacioSerie,
       serieRegidoriesFiable: acorden(serieRegidories2023, regidories),

@@ -11,10 +11,24 @@ import {
   marques,
   mediana,
   pastilles,
+  POSICIO_ANY_RENDA,
   renderEls947,
+  souAlcaldia,
+  textOrdre,
   type Els947Row,
   type Fila,
 } from "./els947";
+import { RADIOGRAFIA_CSS } from "./estil";
+import { MASCOTA_CSS } from "./mascota";
+
+/**
+ * El CSS propi de la pàgina: el que ve després dels dos fulls compartits, i
+ * sense comentaris, que no són regles i poden citar selectors d'altres.
+ */
+const cssPropi = (html: string): string => {
+  const estil = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+  return estil.slice(estil.indexOf(MASCOTA_CSS) + MASCOTA_CSS.length).replace(/\/\*[\s\S]*?\*\//g, "");
+};
 
 const fila = (s: string, extra: Partial<Els947Row> = {}): Els947Row => ({
   s,
@@ -124,27 +138,39 @@ describe("marques", () => {
 });
 
 describe("pastilles", () => {
-  const l = llindarsDe(conjunt);
-
   it("no repeteix qui mana: l'alcaldia té la seva pròpia línia i no és cap pastilla", () => {
     // Van ser una pastilla sola de 453px, després dues, i ara cap: el nom i les
     // sigles surten a la línia de dalt amb la cara i el color del partit. Si
     // algú els torna a posar aquí, sortiran dues vegades a cada fila.
     const p = pastilles(
       ambX(fila("x", { a: "Josep Maria Gras Charles", g: "AGRUPACIÓ D'ELECTORS-PROGRÉS MUNICIPAL" })),
-      l,
     ).join(" ");
     expect(p).not.toContain("Josep Maria Gras Charles");
     expect(p).not.toContain("AGRUPACIÓ");
   });
 
-  it("no diu res que sigui un judici de gestió", () => {
-    const p = pastilles(ambX(fila("x", { d: 9999, y: 3, t: 0 })), l).join(" ");
-    expect(p).not.toMatch(/malament|bé|pitjor|millor|suspèn|aprovat/i);
+  it("com a molt en són tres, i totes tres diuen qui mana", () => {
+    // N'hi havia set per fila —346 kB d'un fitxer d'un megabyte— i totes
+    // repetien una xifra que la fila ja duu a «data-o» o a «data-f». Un
+    // municipi que ho toca tot en porta tres, i un de corrent cap.
+    const tot = pastilles(ambX(fila("x", { w: 0, k: 1, m: 1, o: 1, v: 0, q: 12, t: 0, d: 5000, y: 0, f: 60 })));
+    expect(tot).toHaveLength(3);
+    expect(tot.join("")).toContain("Governa qui no va guanyar");
+    expect(tot.join("")).toContain("Canvi d'alcaldia a mig mandat");
+    expect(tot.join("")).toContain("Majoria absoluta");
+    expect(pastilles(ambX(fila("x")))).toEqual([]);
   });
 
-  it("escapa el que ve de la base de dades", () => {
-    expect(pastilles(ambX(fila("x", { d: 9999 })), l).join("")).not.toContain("<script>");
+  it("cap xifra no s'escriu com a pastilla: la que mana la pinta el navegador en ordenar", () => {
+    const p = pastilles(ambX(fila("x", { d: 9999, y: 3, t: 0, f: 60, rn: 14350, ra: 2023, o: 1 }))).join(" ");
+    for (const text of ["regidories", "actes", "deute", "renda", "dones", "Transparència", "candidatura", "1979"]) {
+      expect(p, text).not.toContain(text);
+    }
+  });
+
+  it("no diu res que sigui un judici de gestió", () => {
+    const p = pastilles(ambX(fila("x", { w: 0, k: 1, m: 1 }))).join(" ");
+    expect(p).not.toMatch(/malament|bé|pitjor|millor|suspèn|aprovat/i);
   });
 });
 
@@ -167,6 +193,46 @@ describe("renderEls947", () => {
     expect(p).toContain('class="cara inicials"');
     expect(p).toContain(">AC<");
     expect(p).not.toContain("<img");
+  });
+
+  it("l'Hospitalet: la cara i el nom porten a la fitxa de la persona que ha decidit resolAlcaldia", () => {
+    // La seu no marca ningú després del relleu i la fila arriba amb el retrat
+    // i el camí trobats pel nom oficial: la llista els ensenya i els enllaça.
+    const p = amb([
+      ambX(
+        fila("hospitalet-de-llobregat", {
+          n: "l'Hospitalet de Llobregat", a: "DAVID QUIRÓS BRITO", g: "PSC-CP",
+          ar: "/observatori/fotos/160/11.webp", ad: "regidor/quiros-brito-david/", ac: "#e30613",
+        }),
+        1,
+      ),
+    ]);
+    const enllac = p.slice(p.indexOf('<a class="persona"'), p.indexOf("</a>", p.indexOf('<a class="persona"')));
+    expect(enllac).toContain('href="m/hospitalet-de-llobregat/regidor/quiros-brito-david/"');
+    expect(enllac).toContain('src="/observatori/fotos/160/11.webp"');
+    expect(enllac).toContain("David Quirós Brito");
+    expect(enllac).not.toContain('class="cara inicials"');
+  });
+
+  it("sense fitxa de persona, el nom porta a l'apartat d'alcaldies del municipi", () => {
+    const p = amb([ambX(fila("x", { a: "Ada Colau Ballano", g: "B EN COMÚ", ar: null, ad: null, ac: "#662483" }), 1)]);
+    expect(p).toContain('<a class="persona" href="m/x/#alcaldies">');
+    expect(p).toContain('class="cara inicials"');
+  });
+
+  it("i sense fitxa del municipi no hi ha enllaç, com amb el nom del poble", () => {
+    // La fitxa la decideix el conjunt de pàgines escrites, no la fila.
+    const p = amb([ambX(fila("x", { a: "Ada Colau Ballano", g: "B EN COMÚ", ad: "regidor/ada-colau-ballano/" }))], []);
+    expect(p).not.toContain('class="persona"');
+    expect(p).not.toContain("regidor/ada-colau-ballano/");
+    expect(p).toContain("Ada Colau Ballano");
+  });
+
+  it("la pastilla de sigles queda fora de l'enllaç de la persona: dos enllaços, no un dins l'altre", () => {
+    const p = amb([ambX(fila("x", { a: "Ada Colau Ballano", g: "ERC-AM", b: "erc", ad: "regidor/ada-colau-ballano/" }), 1)]);
+    const persona = p.slice(p.indexOf('<a class="persona"'), p.indexOf("</a>", p.indexOf('<a class="persona"')));
+    expect(persona).not.toContain("partit/erc/");
+    expect(p).toContain('href="./partit/erc/"');
   });
 
   it("escapa el nom de l'alcaldia, que ve de la base de dades", () => {
@@ -198,8 +264,23 @@ describe("renderEls947", () => {
   it("porta a la resta de la casa: mapa, comparador, comarques i preguntes", () => {
     expect(html).toContain('href="mapa/"');
     expect(html).toContain('href="comparador/"');
-    expect(html).toContain('href="preguntes/"');
+    // Les preguntes hi són pel peu, que és el mateix a totes les pàgines: la
+    // secció «Segueix estirant» que les repetia a sobre del peu ja no hi és.
+    expect(html).toContain('href="./preguntes/"');
+    expect(html).not.toContain('href="preguntes/"');
+    expect(html).not.toContain("Segueix estirant");
     expect(html).toContain('href="c/pallars-jussa/"');
+  });
+
+  it("les pistes de sota la presentació es queden: mapa i comparador", () => {
+    const pistes = html.slice(html.indexOf('<p class="pistes">'), html.indexOf("</p>", html.indexOf('<p class="pistes">')));
+    expect(pistes).toContain('href="mapa/"');
+    expect(pistes).toContain('href="comparador/"');
+  });
+
+  it("enllaça les tipografies de la marca abans del full d'estil", () => {
+    expect(html.indexOf("assets/fonts.css")).toBeGreaterThan(-1);
+    expect(html.indexOf("assets/fonts.css")).toBeLessThan(html.indexOf("<style>"));
   });
 
   it("cap pastilla no porta «nowrap»: és el que desplaçava la pàgina a 320 px", () => {
@@ -383,12 +464,15 @@ describe("la renda per persona, la dada que faltava per comparar pobles", () => 
     expect(marques(ambX(ambRenda[0]!), l)).toContain("renda");
   });
 
-  it("la pastilla porta l'any, perquè no tothom la té del mateix", () => {
-    const l = llindarsDe(ambRenda);
-    expect(pastilles(ambX({ ...ambRenda[0]!, rn: 14350, ra: 2022 }), l).join("")).toContain(
-      "14.350 € de renda per persona (2022)",
-    );
-    expect(pastilles(ambX({ ...ambRenda[0]!, rn: null }), l).join("")).not.toContain("renda per persona");
+  it("la xifra de l'ordre porta l'any, perquè no tothom la té del mateix", () => {
+    // La renda ja no s'escriu a cada fila: la pinta el navegador quan s'ordena
+    // per renda, i l'any li arriba com a últim camp de «data-o».
+    const plantilla = ORDRES.find((o) => o.clau === "renda")!.unitat!;
+    expect(textOrdre(plantilla, 14350, 2022)).toBe("renda 14.350 € (2022)");
+    expect(textOrdre(plantilla, 14350, null)).toBe("renda 14.350 €");
+    expect(clausOrdre(ambX({ ...ambRenda[0]!, rn: 14350, ra: 2022 })).split("|")[POSICIO_ANY_RENDA]).toBe("2022");
+    // Sense renda no hi ha any: un any sol faria semblar que la xifra hi és.
+    expect(clausOrdre(ambX({ ...ambRenda[0]!, rn: null, ra: 2022 })).split("|")[POSICIO_ANY_RENDA]).toBe("");
   });
 
   it("no diu que un poble sigui pobre, i diu que això no ho decideix l'ajuntament", () => {
@@ -415,22 +499,56 @@ describe("la renda per persona, la dada que faltava per comparar pobles", () => 
 describe("ordenar la llista", () => {
   const html = renderEls947(ambRenda, "2026-08-30", new Set(ambRenda.map((f) => f.s)));
 
-  it("cada fila porta les cinc xifres que no es poden deduir, en un sol atribut", () => {
+  it("cada fila porta les cinc xifres que no es poden deduir i l'any de la renda, en un sol atribut", () => {
     // Cinc atributs «data-» per fila serien 4.735 atributs a la pàgina. I la
     // població no hi és: l'ordre en què la llista ja ve escrita és el seu, i
     // repetir-la eren 4,3 kB de pàgina —2,7 comprimida— per no dir res de nou.
     expect(html.match(/ data-o="/g) ?? []).toHaveLength(ambRenda.length);
     const primera = html.match(/ data-o="([^"]*)"/)![1]!;
-    expect(primera.split("|")).toHaveLength(5);
+    expect(primera.split("|")).toHaveLength(6);
     // La primera xifra és la renda, no la població: la població no hi viatja.
     expect(primera.split("|")[0]).toBe(String(ambRenda[0]!.rn));
     expect(primera.split("|")).not.toContain(String(ambRenda[0]!.p));
+    // I l'última és l'any de la renda, que no és cap ordre però la pastilla el diu.
+    expect(primera.split("|")[5]).toBe("2023");
+    expect(POSICIO_ANY_RENDA).toBe(5);
   });
 
   it("el buit hi va com a buit i no com a zero", () => {
     const sense = renderEls947([fila("x", { rn: null, d: null, y: null, f: null })], "2026-08-30", new Set());
-    expect(sense).toContain('data-o="||||3"');
-    expect(clausOrdre(ambX(fila("x", { p: 10, rn: null, d: 5, y: null, f: null, t: 0 })))).toBe("|5|||0");
+    expect(sense).toContain('data-o="||||3|"');
+    expect(clausOrdre(ambX(fila("x", { p: 10, rn: null, d: 5, y: null, f: null, t: 0 })))).toBe("|5|||0|");
+  });
+
+  it("cada fila té una pastilla per a la xifra de l'ordre, buida fins que el navegador l'omple", () => {
+    // Sense JavaScript no hi ha cap ordre que no sigui el de població, i la
+    // pastilla es queda amagada: la fila es llegeix igual que abans.
+    expect(html.match(/<span class="pastilla ordre" hidden><\/span>/g) ?? []).toHaveLength(ambRenda.length);
+    expect(cssPropi(html)).toContain(".pastilla.ordre[hidden]{display:none}");
+    // Va a la línia del nom, abans de la població: és el que l'ull segueix.
+    expect(html).toMatch(/<\/a><span class="pastilla ordre" hidden><\/span><span class="pob">/);
+  });
+
+  it("cada ordre de xifra diu com s'escriu la seva, i la població i el nom no diuen res", () => {
+    for (const o of ORDRES) {
+      if (o.de === "xifra") expect(o.unitat, o.clau).toContain("{n}");
+      else expect(o.unitat, o.clau).toBeUndefined();
+    }
+    expect(textOrdre(ORDRES.find((o) => o.clau === "deute")!.unitat!, 656, null)).toBe("656 € de deute per habitant");
+    expect(textOrdre(ORDRES.find((o) => o.clau === "dones")!.unitat!, 52, null)).toBe("52 % de dones al ple");
+    expect(textOrdre(ORDRES.find((o) => o.clau === "actes")!.unitat!, 49, null)).toBe("49 actes");
+    expect(textOrdre(ORDRES.find((o) => o.clau === "transp")!.unitat!, 74, null)).toBe("Transparència 74 %");
+    // Cap plantilla no és un judici.
+    for (const o of ORDRES) expect(o.unitat ?? "").not.toMatch(/millor|pitjor|bo|dolent/i);
+  });
+
+  it("la plantilla i l'any viatgen al navegador, i la funció que els llegeix és la mateixa", () => {
+    expect(html).toContain('"u":"{n} € de deute per habitant"');
+    expect(html).toContain('"c":"pob"');
+    expect(html).toContain(`const RA = ${POSICIO_ANY_RENDA};`);
+    expect(html).toContain("function textOrdre");
+    // Si el transpilador hi fica un ajudant, al navegador no hi seria.
+    expect(textOrdre.toString()).not.toMatch(/\b__[A-Za-z0-9_$]+\s*\(/);
   });
 
   it("hi ha un ordre que mana des del primer moment, i el navegador ho fa complir sol", () => {
@@ -530,11 +648,134 @@ describe("ordresDisponibles", () => {
     expect(ordresDisponibles([]).map((o) => o.clau)).toEqual(["pob", "nom"]);
   });
 
-  it("«data-o» té una casella per cada ordre de xifra, sempre les mateixes", () => {
+  it("«data-o» té una casella per cada ordre de xifra, sempre les mateixes, i l'any al final", () => {
     // Si «clausOrdre» i les posicions es podien desincronitzar, ordenar per
     // dones al ple hauria ordenat per actes sense petar enlloc.
     const dExifra = ORDRES.filter((o) => o.de === "xifra");
-    expect(clausOrdre(ambX(fila("x"))).split("|")).toHaveLength(dExifra.length);
+    expect(clausOrdre(ambX(fila("x"))).split("|")).toHaveLength(dExifra.length + 1);
     for (const [i, o] of dExifra.entries()) expect(o.i).toBe(i);
+    expect(POSICIO_ANY_RENDA).toBe(dExifra.length);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// La fila lleugera, el filtre de la llista i «?partit=»
+// ───────────────────────────────────────────────────────────────────────────
+
+describe("la fila lleugera", () => {
+  const files = ambRenda.map((f, i) => ({ ...f, w: i % 4 === 0 ? (0 as const) : (1 as const), o: i % 5 === 0 ? (1 as const) : (0 as const) }));
+  const html = renderEls947(files, "2026-08-30", new Set(files.map((f) => f.s)));
+
+  it("només escriu la línia de pastilles quan n'hi ha alguna", () => {
+    const ambPastilla = files.filter((f) => f.w === 0 || f.k === 1 || f.m === 1).length;
+    expect(ambPastilla).toBeGreaterThan(0);
+    expect(ambPastilla).toBeLessThan(files.length);
+    expect(html.match(/<p class="dades">/g) ?? []).toHaveLength(ambPastilla);
+    expect(html).not.toContain('<p class="dades"></p>');
+  });
+
+  it("cap fila no porta més de tres pastilles escrites", () => {
+    for (const dades of html.match(/<p class="dades">[^\n]*<\/p>/g) ?? []) {
+      expect((dades.match(/class="pastilla /g) ?? []).length).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it("el que ha deixat de ser pastilla continua sent filtre i ordre", () => {
+    // «Una sola candidatura» i el deute per sobre de la mediana ja no s'escriuen
+    // a la fila, però «data-f» els porta i la casella els troba.
+    expect(html.match(/data-f="[^"]*\bunica\b[^"]*"/g) ?? []).toHaveLength(files.filter((f) => f.o === 1).length);
+    expect(html).toContain('id="f-unica"');
+    expect(html).toContain('id="o-deute"');
+    expect(html).not.toContain("regidories</span>");
+    expect(html).not.toContain("actes indexades</span>");
+  });
+});
+
+describe("el filtre de la llista no és el cercador del web", () => {
+  const html = renderEls947(conjunt, "2026-08-30", new Set());
+
+  it("es diu «cerca-llista» i diu el que fa", () => {
+    expect(html).toContain('<div class="cerca-llista">');
+    expect(html).toContain('<label class="nomes-lectors" for="cerca">Filtra els 947</label>');
+    expect(html).toContain('placeholder="Filtra la llista: esplugues, la seu…"');
+    // I el diàleg compartit continua hi sent, amb el seu nom.
+    expect(html).toContain('<dialog class="cercador"');
+  });
+
+  it("el CSS de la pàgina no toca «.cercador», que és el diàleg compartit", () => {
+    // «.cercador{position:sticky}» i «.js .cercador{display:block}» agafaven
+    // també el diàleg de la capçalera i el pintaven tancat, clavat a dalt.
+    const css = cssPropi(html);
+    expect(css).not.toContain(".cercador{");
+    expect(css).not.toContain(".cercador ");
+    expect(css).toContain(".cerca-llista{position:sticky");
+    expect(css).toContain(".js .cerca-llista{display:block}");
+    // I el compartit sí que hi és, un cop, al full de tots.
+    expect(RADIOGRAFIA_CSS).toContain(".cercador{");
+  });
+});
+
+describe("«?partit=»: on mana cada marca", () => {
+  const files = [
+    fila("a", { a: "Una", g: "PSC-CP", b: "psc" }),
+    fila("b", { a: "Dues", g: "ERC-AM", b: "erc" }),
+    fila("c", { a: "Tres", g: "AGRUPACIÓ D'ELECTORS", b: "local" }),
+    fila("d", { a: null, g: null, b: null }),
+  ];
+  const html = renderEls947(files, "2026-08-30", new Set());
+
+  it("cada fila diu de quina marca és l'alcaldia, amb el mateix identificador que la pastilla enllaça", () => {
+    expect(html).toContain('data-b="psc"');
+    expect(html).toContain('data-b="erc"');
+    expect(html.match(/ data-b="/g) ?? []).toHaveLength(files.length);
+    // Una llista local no té pàgina i no és cap marca: va buida, com la pastilla que no enllaça.
+    expect(html).not.toContain('data-b="local"');
+    expect(html.match(/ data-b=""/g) ?? []).toHaveLength(2);
+  });
+
+  it("el navegador llegeix «partit» de l'adreça, filtra per «data-b» i deixa treure-ho", () => {
+    expect(html).toContain('new URLSearchParams(location.search).get("partit")');
+    expect(html).toContain("marcaDe[i] !== partit");
+    expect(html).toContain('<button class="nomes-partit" type="button" id="nomes-partit" hidden>');
+    expect(html).toContain('"Només on mana " + nomPartit()');
+    expect(html).toContain("history.replaceState");
+    // El recompte ho diu, perquè «2 de 4 municipis» sense dir per què no és cap resposta.
+    expect(html).toContain('" on mana " + nomPartit()');
+  });
+
+  it("porta el nom de cada marca que hi mana, i no els de les que no hi són", () => {
+    expect(html).toContain('"psc":"Partit dels Socialistes de Catalunya"');
+    expect(html).toContain('"erc":"Esquerra Republicana de Catalunya"');
+    expect(html).not.toContain('"local":');
+    expect(html).not.toContain('"cup":');
+  });
+
+  it("sense JavaScript la llista és sencera: el xip neix amagat i el filtre no talla res", () => {
+    expect(html).toContain('id="nomes-partit" hidden');
+    expect(cssPropi(html)).not.toContain('[data-b');
+  });
+});
+
+describe("el sou de l'alcaldia, per al mapa", () => {
+  it("només entra quan és un sou", () => {
+    // «Sense dedicació» amb import són assistències a plens: comptar-les com
+    // a sou faria semblar que hi ha alcaldies que cobren 180 € l'any per fer
+    // d'alcalde, quan el que passa és que no en cobren cap.
+    expect(souAlcaldia({ ministeri: { alcaldia: { regim: "Dedicació exclusiva", euros: 58000, mena: "sou" } } })).toBe(58000);
+    expect(souAlcaldia({ ministeri: { alcaldia: { regim: "Sense dedicació", euros: 180, mena: "assistencies" } } })).toBeNull();
+    expect(souAlcaldia({ ministeri: { alcaldia: { regim: "Sense dedicació", euros: 0, mena: "cap" } } })).toBeNull();
+  });
+
+  it("i sense fila al full, o sense la mètrica, és un forat i no un zero", () => {
+    expect(souAlcaldia({ ministeri: { alcaldia: null } })).toBeNull();
+    expect(souAlcaldia({ ministeri: null })).toBeNull();
+    expect(souAlcaldia(undefined)).toBeNull();
+    expect(souAlcaldia({ ministeri: { alcaldia: { euros: "58000", mena: "sou" } } })).toBeNull();
+  });
+
+  it("«retribucions» és a la llista del que la fila demana, que és el que fa que es llegeixi", () => {
+    const { llegeix } = lectorDe(new Map([["retribucions", { ministeri: { alcaldia: { euros: 1, mena: "sou" } } }]]));
+    expect(() => llegeix("retribucions")).not.toThrow();
+    expect(souAlcaldia(llegeix("retribucions"))).toBe(1);
   });
 });

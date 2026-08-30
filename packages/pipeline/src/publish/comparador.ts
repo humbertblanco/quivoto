@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { electionParticipation, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { tintaSobre } from "./contrast";
 import { partitDe } from "./sigla";
@@ -6,7 +6,7 @@ import { carregaMetriques } from "./metriques";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
 import { RADIOGRAFIA_CSS } from "./estil";
-import { capcalera } from "./capcalera";
+import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 
@@ -15,29 +15,32 @@ import { peu } from "./peu";
  *
  * És la pregunta que la gent es fa sola quan llegeix la fitxa del seu poble —«i
  * al del costat, com ho tenen?»— i la que un regidor de l'oposició farà servir
- * el 23-M. Per això la pàgina no és un explorador de dades: són onze files
- * triades, cadascuna amb la seva font i amb el seu sentit escrit a sobre.
+ * el 23-M. Per això la pàgina no és un explorador de dades: són una vintena de
+ * files triades, cadascuna amb la seva font i amb com es llegeix escrit a sobre.
  *
  * Tot passa al navegador amb el conjunt incrustat, com a «Els 947»: sense
  * servidor, sense peticions i sense que ningú sàpiga quins municipis compares.
  *
  * Dues decisions que expliquen la meitat del fitxer:
  *
- * 1. **La direcció de cada indicador va escrita, no deduïda.** Menys deute és
- *    millor i menys participació és pitjor: el signe no ho diu. Cada indicador
- *    porta `sentit`, i n'hi ha que no en tenen cap («qui governa», la població)
- *    o que no tenen un «millor» defensable (el tipus de l'IBI: pagar menys no
- *    és objectivament millor, depèn de què vulguis que faci l'ajuntament).
+ * 1. **Cap fila no reparteix bons i dolents.** Entre els municipis triats es
+ *    marquen el més alt i el més baix, i prou: menys deute pot ser no invertir,
+ *    i més participació pot ser un ple molt disputat. Cada indicador porta un
+ *    `sentit` que diu com es llegeix —n'hi ha que no es comparen gens, com «qui
+ *    governa» o la població—, però la pàgina no en treu cap veredicte: el
+ *    percentil i el quint dins del grup de mida diuen on cau cadascú, i el
+ *    judici és de qui llegeix. Ho diu la metodologia i ho diu la pàgina.
  * 2. **Cada xifra porta el seu percentil dins del grup de comparació**, i el
  *    grup diu de quants municipis es tracta. Que un municipi tingui menys deute
  *    que un altre no vol dir gaire si són de mides diferents; el percentil diu
  *    on és cadascun dins de la seva pròpia lliga, que és la comparació justa.
  * 3. **Hi ha temps, no només nivells.** Un nivell no jutja un govern: un poble
  *    pot tenir poc deute per una decisió del 1998. Per això la taula té una
- *    secció de mandat amb la variació del deute del 2019 al 2023, que és el
- *    tros de la xifra que sí que ha passat sota un govern concret; i per això
- *    cada fila de govern porta les sigles de qui mana, amb el seu color, al
- *    costat de les xifres que se li atribuiran.
+ *    secció de mandat amb la variació del deute des del 2023, que és el tros de
+ *    la xifra que sí que ha passat sota el govern d'ara —surt quan hi ha dos
+ *    exercicis liquidats del mandat 2023-2027, i mentre no n'hi ha, ho diu—; i
+ *    per això cada fila de govern porta les sigles de qui mana, amb el seu
+ *    color, al costat de les xifres que se li atribuiran.
  * 4. **Una casella buida parla.** Deixar-la en blanc fa pensar que la xifra és
  *    zero o que ningú no ho ha mirat; cada indicador porta escrit què és el que
  *    ens falta quan falta («no en tenim la liquidació»), i sota la taula hi ha
@@ -79,7 +82,15 @@ type Indicador = {
   etiqueta: string;
   seccio: string;
   mena: "xifra" | "text";
-  format: "nombre" | "euros" | "percent" | "tipus" | "dies" | "variacio-euros" | "vegades";
+  format:
+    | "nombre" | "euros" | "euros-decimal" | "euros-m3" | "percent" | "tipus" | "dies" | "variacio-euros" | "vegades";
+  /**
+   * Com es llegeix la fila. A la taula només en surten dues coses: si es
+   * marquen els extrems (`cap` no en marca) i, a la paritat, que el 50 % és
+   * l'objectiu. La direcció es conserva perquè `marquesDe` la sap llegir, però
+   * la pàgina no la fa servir per repartir bons i dolents: no hi posem cap
+   * veredicte.
+   */
   sentit: Sentit;
   objectiu?: number;
   /** si es calcula el percentil dins del grup de comparació */
@@ -98,12 +109,19 @@ type Indicador = {
   extrems?: { alt: string; baix: string };
   /** identificador del conjunt de dades, perquè cada fila pugui dir d'on surt */
   font: string;
+  /**
+   * La font demana el seu enllaç al costat de la xifra. L'Idescat ho posa com a
+   * condició d'ús: sense l'enllaç del municipi, la xifra no es publica —ni
+   * aquí ni a la fitxa— i la casella diu que no la tenim.
+   */
+  enllacFont?: "idescat";
 };
 
 const SECCIONS = [
   "El poble",
   "Qui mana",
   "Els comptes",
+  "Què es paga",
   "Com ha anat el mandat",
   "Com es governa",
 ] as const;
@@ -125,6 +143,25 @@ const INDICADORS: readonly Indicador[] = [
     sentit: "cap", percentil: false, font: "LOREG art. 179",
     nota: "Les fixa la llei segons la població: no és una decisió de l'ajuntament.",
     absent: "No en tenim la composició del ple.",
+  },
+  {
+    // La renda no la decideix l'ajuntament: depèn de qui hi viu i d'on
+    // treballa. Va a «El poble» i no als comptes justament per això, i la nota
+    // ho diu. Amb percentil, perquè saber si un poble és dels que més o menys
+    // renda tenen dins de la seva mida és el context de totes les xifres de
+    // sota: el que es paga i el que es deu no pesa igual a totes les cases.
+    clau: "renda", etiqueta: "Renda neta per persona", seccio: "El poble", mena: "xifra", format: "euros",
+    sentit: "cap", percentil: true, font: "INE, ADRH",
+    nota: "Renda neta mitjana per persona de l'Atles de distribució de renda de les llars de l'INE: el que entra a cada casa després d'impostos, repartit entre qui hi viu. No ho decideix l'ajuntament —depèn de qui hi viu i d'on treballa—, però diu amb quina gent treballa cada ple.",
+    absent: "L'INE no en publica la renda.",
+  },
+  {
+    // Sense percentil ni marques: és una descripció de qui hi viu, no una
+    // xifra que es pugui posar en fila com si un extrem fos millor que l'altre.
+    clau: "estrangera_pct", etiqueta: "Població de nacionalitat estrangera", seccio: "El poble", mena: "xifra",
+    format: "percent", sentit: "cap", percentil: false, font: "Idescat, cens de població", enllacFont: "idescat",
+    nota: "Persones sense nacionalitat espanyola sobre la població censada, segons el cens de població que publica l'Idescat. No és el mateix que haver nascut fora: n'hi ha que han nascut aquí, i n'hi ha de nascudes fora amb nacionalitat espanyola.",
+    absent: "No en tenim el cens de població.",
   },
   {
     clau: "govern", etiqueta: "Qui governa", seccio: "Qui mana", mena: "text", format: "nombre",
@@ -197,31 +234,60 @@ const INDICADORS: readonly Indicador[] = [
     absent: "No en tenim el període de pagament.",
   },
   {
+    // La xifra sòlida del que costa governar: el capítol de la liquidació que
+    // paga els òrgans de govern, el mateix formulari per als 947. No diu què
+    // cobra ningú —això és a la fitxa, i només quan ho publica qui ho paga— i
+    // per això no es marca cap extrem: un ple gran amb dedicacions parcials i
+    // un de petit amb una alcaldia a temps complet poden costar el mateix.
+    clau: "cost_govern", etiqueta: "Cost del govern per habitant", seccio: "Els comptes", mena: "xifra",
+    format: "euros-decimal", sentit: "cap", percentil: true, font: "8squ-bk4r",
+    nota: "Retribucions dels membres dels òrgans de govern —alcaldia i regidories amb dedicació— de l'últim exercici liquidat, dividides pel padró. És el que hi dedica l'ajuntament sencer segons la liquidació, no el sou de ningú.",
+    absent: "No en tenim la liquidació del capítol de govern.",
+  },
+  {
     // Sense sentit: pagar menys IBI no és objectivament millor —depèn de què
     // esperis de l'ajuntament—, així que es marquen els extrems i prou.
     //
     // El tipus sol no és el rebut, i la peça que faltava per dir-ho —l'any de
     // l'última revisió cadastral— la tenim: va al peu de la mateixa casella. Amb
-    // l'any al costat, la comparació deixa de ser una disculpa.
-    clau: "ibi", etiqueta: "Tipus de l'IBI urbà", seccio: "Els comptes", mena: "xifra", format: "tipus",
+    // l'any al costat, la comparació deixa de ser una disculpa. I el rebut
+    // mateix va a la fila de sota, que és el que la gent paga de debò.
+    clau: "ibi", etiqueta: "Tipus de l'IBI urbà", seccio: "Què es paga", mena: "xifra", format: "tipus",
     sentit: "neutre", percentil: true, font: "82ae0ea2",
     nota: "Tipus de gravamen dels béns immobles urbans, amb l'any de l'última revisió cadastral al peu. El rebut és el tipus multiplicat pel valor cadastral: dos municipis amb el mateix tipus i revisions de dècades diferents no cobren el mateix, i per això l'any hi va al costat.",
     absent: "No en tenim l'ordenança fiscal.",
+  },
+  {
+    // Només quan J19 la marca com a publicable: si dins de la finestra hi ha
+    // hagut revisió cadastral, el que ha pujat és la base i no el tipus, i
+    // atribuir-ho al ple seria atribuir-ho malament.
+    clau: "rebut_ibi", etiqueta: "Rebut mitjà de l'IBI", seccio: "Què es paga", mena: "xifra", format: "euros",
+    sentit: "neutre", percentil: true, font: "Idescat, IBI urbà (taula 173)", enllacFont: "idescat",
+    nota: "Quota íntegra de l'IBI urbà dividida pel nombre de rebuts, segons l'Idescat a partir del Cadastre. No és el tipus: és el que es paga de mitjana per rebut, i depèn tant del tipus que fixa el ple com del valor cadastral, que fixa l'Estat. Només surt quan la sèrie no fa cap salt que no s'expliqui pel ple.",
+    absent: "No en tenim un rebut mitjà que es pugui publicar.",
+  },
+  {
+    // El tram comparable és el subministrament i no el total: a 307 municipis
+    // el total no inclou el clavegueram, i el cànon no és municipal.
+    clau: "preu_aigua", etiqueta: "Preu de l'aigua, €/m³", seccio: "Què es paga", mena: "xifra", format: "euros-m3",
+    sentit: "neutre", percentil: true, font: "ACA, Observatori del preu de l'aigua",
+    nota: "Preu del tram de subministrament d'aigua, en euros per metre cúbic, segons l'Observatori del preu de l'aigua de l'ACA. Es compara només el subministrament: el cànon no és municipal i el clavegueram no es calcula igual a tot arreu.",
+    absent: "No és a l'observatori del preu de l'aigua.",
   },
   {
     // La columna de temps. La resta de la taula són nivells de l'últim any; això
     // no. Els extrems es marquen sense dir que baixar sigui millor: hi ha qui
     // baixa el deute perquè no inverteix, i «Inversions executades» hi és
     // justament perquè les dues coses es puguin llegir juntes.
-    clau: "deute_mandat", etiqueta: "Deute: del 2019 al 2023", seccio: "Com ha anat el mandat",
+    clau: "deute_mandat", etiqueta: "Deute: del 2023 ençà", seccio: "Com ha anat el mandat",
     mena: "xifra", format: "variacio-euros",
     // «El que més puja» seria mentida quan tots dos baixen —el que baixa menys
-    // no puja—, i passa sovint: de les 947, 401 van baixar el deute entre el
-    // 2019 i el 2023. Les marques parlen de la variació, no de la direcció.
+    // no puja—, i passa sovint: al mandat anterior, 401 dels 947 van baixar el
+    // deute. Les marques parlen de la variació, no de la direcció.
     sentit: "neutre", extrems: { alt: "la variació més alta", baix: "la variació més baixa" },
     percentil: true, font: "34db8dc5",
-    nota: "Diferència entre el deute per habitant del 2019 i el del 2023, que és el tros del deute que ha passat durant el mandat 2019-2023. Al peu hi ha les dues xifres i, quan la sabem, la candidatura que tenia l'alcaldia aquells anys —que pot no ser la d'ara.",
-    absent: "No en tenim el deute del 2019 o del 2023.",
+    nota: "Diferència entre el deute per habitant del primer exercici liquidat del mandat 2023-2027 i el de l'últim que en tenim: el tros del deute que ha passat sota el govern d'ara. Al peu hi ha les dues xifres amb els seus anys i, quan la sabem, la candidatura que té l'alcaldia. Mentre el mandat no tingui dos exercicis liquidats, la casella ho diu.",
+    absent: "Encara no hi ha dos exercicis liquidats del mandat 2023-2027.",
   },
   {
     clau: "selectiva", etiqueta: "Recollida selectiva", seccio: "Com es governa", mena: "xifra", format: "percent",
@@ -249,8 +315,8 @@ const INDICADORS: readonly Indicador[] = [
 // que també s'executen al navegador
 //
 // S'incrusten a la pàgina amb `toString()` en comptes de reescriure-les dins
-// del `<script>`: així la regla que decideix qui és el millor és literalment la
-// mateixa que passa pels tests, i no hi pot haver dues versions que divergeixin.
+// del `<script>`: així la regla que decideix quins són els extrems és literalment
+// la mateixa que passa pels tests, i no hi pot haver dues versions que divergeixin.
 // Per això no poden fer servir res de fora seu ni sintaxi que TypeScript
 // esborri: han de ser JavaScript vàlid tal com estan escrites.
 
@@ -468,6 +534,19 @@ export type ComparadorRow = {
    * la sèrie sota la variació del deute. Només les claus que en tenen.
    */
   peus?: Record<string, string>;
+  /**
+   * De quin any és cada xifra, per a les que no són totes del mateix any. La
+   * liquidació, l'observatori de l'aigua, l'IBI i la renda tenen cadascun el seu
+   * últim any, i a la pàgina l'any s'escriu un cop per fila; el municipi que va
+   * endarrerit ho diu al peu de la seva casella. Només les claus que en tenen.
+   */
+  anys?: Record<string, number>;
+  /**
+   * L'enllaç de l'Idescat d'aquest municipi, tal com el dona la seva API. La
+   * llicència el demana al costat de cada xifra seva i no ens deixa
+   * construir-ne cap: sense ell, les files de l'Idescat surten buides.
+   */
+  enllacIdescat?: string;
   /** cel·les de text, per clau; el color és el de la marca, quan n'hi ha */
   textos: Record<string, { principal: string; secundari: string; color?: string }>;
   /**
@@ -490,23 +569,52 @@ type FinancesMetric = {
   debtSeries?: { year: number; perHead: number }[];
   /** qui tenia l'alcaldia a cada mandat, per no atribuir una variació a ningú */
   bands?: { id: string; party: string | null }[];
+  /**
+   * Quins exercicis liquidats cauen dins de cada mandat, tal com els llegeix
+   * `derive/finances.ts`. És el que diu si del mandat d'ara ja en tenim dos
+   * anys o encara un de sol.
+   */
+  mandates?: { id: string; years: number[] }[];
 };
 type TaxesMetric = { taxes: Record<string, { value: number }> };
 type ParityMetric = { womenElectedPct: number | null; complet?: boolean };
 type TransparencyMetric = { pct: number | null };
 type HistoryMetric = { alternances: number | null; elections: number | null };
+/** El capítol de govern de la liquidació (J14); d'aquí només en surt l'últim any complet. */
+type CostGovernMetric = {
+  darrer: { any: number; organs: { perHabitant: number | null } | null } | null;
+};
+/** L'observatori del preu de l'aigua (J19); el tram comparable és el subministrament. */
+type PreuAiguaMetric = {
+  darrerAny: number;
+  serie?: { any: number }[];
+  preu: { subministrament: number | null };
+};
+/** El rebut mitjà de l'IBI (J19), amb el permís de publicació i l'enllaç que la llicència demana. */
+type RebutIbiMetric = {
+  darrerAny: number;
+  rebutMitja: number | null;
+  publicable: boolean;
+  font: { url: string };
+};
 
 /**
- * Els `kind` que necessita la taula. Es demanen per nom i no es carrega tot
- * `municipality_metrics`: són 13.000 files de JSON i la pàgina només en fa
- * servir set.
+ * Els `kind` que necessita la taula i que es poden llegir sencers. Es demanen
+ * per nom i no es carrega tot `municipality_metrics`: són milers de files de
+ * JSON i la pàgina només en fa servir una dotzena.
+ *
+ * «poblacio» i «riquesa» no hi són a posta: porten la sèrie sencera de cada
+ * indicador de l'Idescat i de l'INE, i d'aquí només en surt una xifra de
+ * cadascuna. Es projecten amb una consulta a `carregaProjectades`, que demana
+ * el camp i no el document, que és el que la memòria del motor aguanta.
  */
 const KINDS = [
   "government", "finances", "taxes", "parity", "transparency", "residus", "electoralHistory",
+  "costGovern", "preuAigua", "rebutIbi",
 ] as const;
 
-/** El mandat que la taula llegeix sencer: hi ha les dues puntes per als 947. */
-const MANDAT = { primer: 2019, ultim: 2023 } as const;
+/** El mandat que la taula llegeix: el del govern d'ara. */
+const MANDAT = { id: "2023-2027" } as const;
 
 /**
  * Color de la candidatura que té l'alcaldia.
@@ -524,30 +632,110 @@ function colorDeLesSigles(sigles: string | null): string {
 const euros = (n: number): string => `${Math.round(n).toLocaleString("ca-ES")} €`;
 
 /**
- * La variació del deute durant el mandat 2019-2023, i el peu que la sosté.
+ * La variació del deute durant el mandat d'ara, i el peu que la sosté.
  *
- * Es fa amb les dues puntes de la sèrie i no amb una mitjana: la pregunta és si
- * el municipi va sortir del mandat devent més o menys que hi va entrar. Si en
- * falta qualsevol de les dues, no hi ha xifra —una variació calculada contra un
- * any que no hi és seria inventada.
+ * Es fa amb les dues puntes que en tenim —el primer i l'últim exercici liquidat
+ * que `derive/finances.ts` atribueix al mandat— i no amb una mitjana: la
+ * pregunta és si el municipi deu més o menys que quan aquest govern va entrar.
+ * Amb un sol exercici no hi ha variació, i no se n'inventa cap contra un any
+ * d'un altre mandat: la casella diu que encara no n'hi ha dos.
  */
 export function variacioDelMandat(
   finances: FinancesMetric | undefined,
 ): { valor: number | null; peu: string } {
+  const mandat = finances?.mandates?.find((m) => m.id === MANDAT.id);
+  if (!mandat || mandat.years.length < 2) return { valor: null, peu: "" };
+  // Els anys arriben ordenats, però ordenar-los aquí no costa res i evita que
+  // una variació surti al revés el dia que la lectura canviï d'ordre.
+  const anys = [...mandat.years].sort((a, b) => a - b);
+  const primerAny = anys[0] as number;
+  const ultimAny = anys[anys.length - 1] as number;
+
   const serie = finances?.debtSeries ?? [];
-  const primer = serie.find((p) => p.year === MANDAT.primer);
-  const ultim = serie.find((p) => p.year === MANDAT.ultim);
+  const primer = serie.find((p) => p.year === primerAny);
+  const ultim = serie.find((p) => p.year === ultimAny);
   if (!primer || !ultim) return { valor: null, peu: "" };
 
-  const banda = finances?.bands?.find((b) => b.id === `${MANDAT.primer}-${MANDAT.ultim}`);
+  const banda = finances?.bands?.find((b) => b.id === MANDAT.id);
   const partit = banda?.party?.trim();
   // Les sigles crues del registre d'alcaldies poden ser una tirallonga; si no
   // caben en una casella val més no dir-les que trencar la taula.
   const qui = partit && partit.length <= 28 ? `, amb ${partit} a l'alcaldia` : "";
   return {
     valor: ultim.perHead - primer.perHead,
-    peu: `de ${euros(primer.perHead)} el ${MANDAT.primer} a ${euros(ultim.perHead)} el ${MANDAT.ultim}${qui}`,
+    peu: `de ${euros(primer.perHead)} el ${primerAny} a ${euros(ultim.perHead)} el ${ultimAny}${qui}`,
   };
+}
+
+/**
+ * Les mètriques grans, projectades: el camp i no el document.
+ *
+ * «poblacio» porta catorze indicadors amb la sèrie sencera de cadascun, i
+ * «riquesa» sis amb la seva; d'aquí en surt una xifra de cada una i l'any de
+ * què és. Es fa com a `comarques.ts`: `jsonb_path_query_first` va igual als
+ * dos motors —PGlite i el Postgres de producció— i tot torna com a text.
+ *
+ * L'enllaç de l'Idescat és la tercera consulta. La llicència de l'Idescat
+ * demana el seu enllaç al costat de cada xifra seva i no ens deixa
+ * construir-ne cap: el porta J18, taula per taula, i d'aquí en surt el de la
+ * població per nacionalitat —la taula de la xifra que publiquem—, que fa d'enllaç
+ * del municipi. Sense ell, la xifra no es publica.
+ */
+async function carregaProjectades(db: Db): Promise<{
+  renda: Map<number, { valor: number; any: number | null }>;
+  estrangera: Map<number, { valor: number; any: number | null }>;
+  enllacIdescat: Map<number, string>;
+}> {
+  const data = municipalityMetrics.data;
+  const nombre = (valor: string | null): number | null => {
+    if (valor === null) return null;
+    const n = Number(valor);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const rendaRows = await db
+    .select({
+      municipalityId: municipalityMetrics.municipalityId,
+      value: sql<string | null>`(jsonb_path_query_first(${data}, '$.indicadors[*] ? (@.clau == "rendaNetaPersona")'))->>'valor'`,
+      year: sql<string | null>`${data}->>'any'`,
+    })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "riquesa"));
+
+  const estrangeraRows = await db
+    .select({
+      municipalityId: municipalityMetrics.municipalityId,
+      value: sql<string | null>`(jsonb_path_query_first(${data}, '$.indicadors[*] ? (@.clau == "pctNacionalitatEstrangera")'))->>'valor'`,
+      year: sql<string | null>`(jsonb_path_query_first(${data}, '$.indicadors[*] ? (@.clau == "pctNacionalitatEstrangera")'))->>'darrerAny'`,
+    })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "poblacio"));
+
+  // «t75» és la taula de població per nacionalitat de la fitxa municipal de
+  // l'Idescat, la mateixa que J18 lliga a l'indicador que publiquem aquí.
+  const enllacRows = await db
+    .select({
+      municipalityId: municipalityMetrics.municipalityId,
+      href: sql<string | null>`(jsonb_path_query_first(${data}, '$.enllacos[*] ? (@.taula == "t75")'))->>'href'`,
+    })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "poblacioEnllacos"));
+
+  const renda = new Map<number, { valor: number; any: number | null }>();
+  for (const row of rendaRows) {
+    const valor = nombre(row.value);
+    if (valor !== null) renda.set(row.municipalityId, { valor, any: nombre(row.year) });
+  }
+  const estrangera = new Map<number, { valor: number; any: number | null }>();
+  for (const row of estrangeraRows) {
+    const valor = nombre(row.value);
+    if (valor !== null) estrangera.set(row.municipalityId, { valor, any: nombre(row.year) });
+  }
+  const enllacIdescat = new Map<number, string>();
+  for (const row of enllacRows) {
+    if (row.href && row.href.startsWith("https://www.idescat.cat/")) enllacIdescat.set(row.municipalityId, row.href);
+  }
+  return { renda, estrangera, enllacIdescat };
 }
 
 /**
@@ -580,6 +768,7 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
     .from(municipalities);
 
   const metrics = await carregaMetriques(db, KINDS);
+  const projectades = await carregaProjectades(db);
 
   const turnout = await db
     .select()
@@ -603,9 +792,31 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
     const parity = own?.get("parity") as ParityMetric | undefined;
     const transparency = own?.get("transparency") as TransparencyMetric | undefined;
     const history = own?.get("electoralHistory") as HistoryMetric | undefined;
+    const cost = own?.get("costGovern") as CostGovernMetric | undefined;
+    const aigua = own?.get("preuAigua") as PreuAiguaMetric | undefined;
+    const rebut = own?.get("rebutIbi") as RebutIbiMetric | undefined;
+    const renda = projectades.renda.get(m.id);
+    const estrangera = projectades.estrangera.get(m.id);
     const indicator = (key: string): number | null =>
       finances?.indicators.find((i) => i.key === key)?.value ?? null;
     const mandat = variacioDelMandat(finances);
+
+    // L'enllaç que la llicència de l'Idescat demana al costat de cada xifra
+    // seva: el de la taula de població del municipi i, si no el tenim, el de la
+    // pàgina de l'IBI que porta J19. És un de sol per municipi perquè els 947 hi
+    // van incrustats i cada adreça pesa; sense cap dels dos, les dues files de
+    // l'Idescat surten buides —o el porta la dada o no surt la xifra.
+    const enllacIdescat = projectades.enllacIdescat.get(m.id) ?? (rebut?.font?.url || null);
+    const costGovern = cost?.darrer?.organs?.perHabitant ?? null;
+    // `publicable` és la marca que hi posa J19 quan la variació és atribuïble
+    // al ple i no al cadastre; sense ella la xifra no es publica enlloc.
+    const rebutMitja = rebut?.publicable && typeof rebut.rebutMitja === "number" ? rebut.rebutMitja : null;
+    const rebutIbi = enllacIdescat ? rebutMitja : null;
+    const estrangeraPct = enllacIdescat ? estrangera?.valor ?? null : null;
+    const preuAigua = aigua?.preu?.subministrament ?? null;
+    // El preu és el de l'últim any del full de l'ACA o, si el municipi no hi
+    // és aquell any, el de l'últim any que hi és: l'any de la xifra és el seu.
+    const anyAigua = aigua?.serie?.at(-1)?.any ?? aigua?.darrerAny ?? null;
     // L'any de la revisió cadastral viu al mateix `kind` que el tipus de l'IBI,
     // com a valor i no com a data de la dada: per això surt d'aquí i no de `year`.
     const cadastre = taxes?.taxes?.cadastre?.value ?? null;
@@ -649,12 +860,25 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
         selectiva: recollidaSelectiva(own?.get("residus")),
         dones: parity?.complet === false ? null : parity?.womenElectedPct ?? null,
         transparencia: transparency?.pct ?? null,
+        cost_govern: costGovern,
+        rebut_ibi: rebutIbi,
+        preu_aigua: preuAigua,
+        renda: renda?.valor ?? null,
+        estrangera_pct: estrangeraPct,
       },
       percentils: {},
       peus: {
         ...(mandat.peu ? { deute_mandat: mandat.peu } : {}),
         ...(cadastre ? { ibi: `última revisió cadastral: ${Math.round(cadastre)}` } : {}),
       },
+      anys: {
+        ...(costGovern !== null && cost?.darrer?.any ? { cost_govern: cost.darrer.any } : {}),
+        ...(preuAigua !== null && anyAigua ? { preu_aigua: anyAigua } : {}),
+        ...(rebutIbi !== null && rebut?.darrerAny ? { rebut_ibi: rebut.darrerAny } : {}),
+        ...(renda?.any ? { renda: renda.any } : {}),
+        ...(estrangeraPct !== null && estrangera?.any ? { estrangera_pct: estrangera.any } : {}),
+      },
+      ...(enllacIdescat ? { enllacIdescat } : {}),
       textos: {
         govern: {
           // Les sigles primer i el nom a sota: el que s'atribueix a un govern és
@@ -752,13 +976,28 @@ export function codiPerAlNavegador(fn: { toString(): string }): string {
   return codi;
 }
 
-/** Com es llegeix la marca de cada fila, escrit a la capçalera de la fila. */
+/**
+ * Com es llegeix la marca de cada fila, escrit a la capçalera de la fila.
+ *
+ * Cap frase no diu «millor»: la taula marca el més alt i el més baix entre els
+ * triats i prou, i la paritat diu quin és l'objectiu sense dir qui hi és més a
+ * prop. El veredicte, si n'hi ha d'haver, el posa qui llegeix.
+ */
 function textDelSentit(indicador: Indicador): string {
-  if (indicador.sentit === "amunt") return "com més alt, millor";
-  if (indicador.sentit === "avall") return "com més baix, millor";
-  if (indicador.sentit === "objectiu") return `com més a prop del ${indicador.objectiu} %, millor`;
-  if (indicador.sentit === "neutre") return "no hi ha un «millor»: es marquen els extrems";
-  return "no es compara";
+  if (indicador.sentit === "cap") return "no es compara";
+  if (indicador.sentit === "objectiu") return `el ${indicador.objectiu} % és la paritat`;
+  if (indicador.extrems) return `es marquen ${indicador.extrems.alt} i ${indicador.extrems.baix}`;
+  return "es marquen el més alt i el més baix";
+}
+
+/**
+ * La capçalera de la fila, amb l'any de la xifra quan és el mateix per a
+ * (gairebé) tots: l'últim exercici liquidat, l'últim any de l'observatori. El
+ * municipi que va d'un altre any ho diu al peu de la seva casella.
+ */
+function textDeLaFila(indicador: Indicador, any: number | undefined): string {
+  const com = textDelSentit(indicador);
+  return any ? `dada del ${any} · ${com}` : com;
 }
 
 /**
@@ -847,9 +1086,11 @@ const CSS = `
 .buit h2{font-size:1.4rem}
 .buit p{max-width:52ch}
 .suggeriments{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;gap:var(--e1)}
-.suggeriments button{font:inherit;text-align:left;width:100%;background:transparent;color:inherit;cursor:pointer;
+/* Enllaços de debò, amb l'adreça de la comparació: funcionen sense guió i es
+   poden copiar tal qual. El guió només els intercepta per no recarregar. */
+.suggeriments a{display:block;font:inherit;text-align:left;text-decoration:none;color:inherit;cursor:pointer;
   border:2px solid var(--ink);border-radius:var(--r-m);padding:11px 15px}
-.suggeriments button:hover{background:var(--ink);color:var(--paper)}
+.suggeriments a:hover,.suggeriments a:focus-visible{background:var(--ink);color:var(--paper)}
 .suggeriments b{font-family:var(--display);font-weight:900;letter-spacing:-.02em;display:block}
 .suggeriments span{font-size:.86rem;opacity:.8}
 
@@ -875,7 +1116,10 @@ const CSS = `
 .comparativa thead th{position:sticky;top:0;z-index:3;background:var(--paper-2);border-bottom:2.5px solid var(--ink)}
 .comparativa thead th.cantonada{left:0;z-index:4;border-right:2.5px solid var(--ink)}
 .comparativa .municipi{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em;display:block}
-.comparativa .municipi a{text-decoration:none;border-bottom:2.5px solid var(--coral)}
+/* El subratllat del nom va amb tinta i no amb coral: dins de la taula, cap
+   color de marca no ha de poder llegir-se com un judici, i el número de color
+   del costat ja diu quin municipi és. */
+.comparativa .municipi a{text-decoration:none;border-bottom:2.5px solid var(--ink)}
 .comparativa .lloc{font-size:.78rem;color:var(--ink-suau);display:block;margin-top:2px}
 .comparativa .grup{font-size:.72rem;color:var(--ink-suau);display:block;margin-top:4px}
 .comparativa tr.seccio th{background:var(--ink);color:var(--paper);font-family:var(--display);font-weight:900;
@@ -888,17 +1132,25 @@ const CSS = `
 .comparativa .valor.sense{font-size:1rem;color:var(--ink-suau);font-family:var(--text);font-weight:700}
 .comparativa .sec{display:block;font-size:.8rem;color:var(--ink-suau);margin-top:2px}
 .comparativa .percentil{display:block;font-size:.74rem;color:var(--ink-suau);margin-top:4px}
-.marca{display:inline-block;margin-top:6px;border:2px solid #1E1B2E;border-radius:var(--r-max);
-  padding:2px 10px;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1E1B2E}
-.marca.millor{background:var(--menta)}
-.marca.pitjor{background:var(--coral)}
-.marca.alt,.marca.baix{background:transparent;border-style:dashed;color:var(--ink-suau);border-color:var(--ink-suau)}
-.comparativa td.millor{background:rgba(191,232,210,.34)}
-.comparativa td.pitjor{background:rgba(226,115,90,.16)}
-/* Les caselles amb els extrems marcats (l'IBI, la variació del deute) no
-   s'acoloreixen: el fons verd o coral es llegiria com un «bé» o un «malament»
-   que aquestes files no diuen. */
-.comparativa td.alt,.comparativa td.baix{background:transparent}
+/* El quint del percentil, en cinc tons de tinta i cap color: de més clar (el
+   quint més baix) a més fosc (el més alt), com les capes del mapa. No diu bé
+   ni malament; diu on cau dins del seu grup, i ho diu igual en fosc. */
+.quintil{display:inline-block;width:.62em;height:.62em;margin-right:5px;border-radius:2px;
+  background:var(--ink);vertical-align:-.02em}
+.quintil.q0{opacity:.12}
+.quintil.q1{opacity:.28}
+.quintil.q2{opacity:.45}
+.quintil.q3{opacity:.65}
+.quintil.q4{opacity:.9}
+/* La marca d'extrem és una pastilla de tinta discontínua, sense fons: «el més
+   alt» i «el més baix» són fets, no veredictes, i cap casella no s'acoloreix
+   perquè un fons verd o coral es llegiria com un «bé» o un «malament» que la
+   taula no diu. */
+.marca{display:inline-block;margin-top:6px;border:2px dashed var(--ink-suau);border-radius:var(--r-max);
+  padding:2px 10px;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-suau);background:transparent}
+/* L'enllaç que la llicència de l'Idescat demana al costat de la xifra. */
+.comparativa a.idescat{text-decoration:underline;text-decoration-color:var(--vora);text-underline-offset:3px}
 /* Un buit que parla ocupa dues ratlles i no ha d'estirar la columna: es
    trenca com una frase, no com una xifra. */
 .comparativa .valor.sense{font-size:.86rem;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
@@ -925,6 +1177,12 @@ const CSS = `
   vertical-align:top;overflow-wrap:anywhere}
 .fonts-fila code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:var(--paper-2);
   border:1px solid var(--vora);border-radius:5px;padding:1px 5px;overflow-wrap:anywhere}
+/* El glossari va plegat: és la referència de cada fila, no la lectura. El
+   «details.nota» de la casa li posa un sostre de 70 caràcters i li treu el
+   marge; la taula el necessita sencer. */
+.glossari > summary{font-size:1rem}
+.glossari > .fonts-fila{max-width:none;margin-top:var(--e2)}
+.glossari > .nota{margin-top:var(--e2)}
 @media (max-width:620px){
   .comparativa tbody th{min-width:10rem;max-width:10rem;padding:11px}
   .comparativa td,.comparativa thead th:not(.cantonada){min-width:11rem;max-width:12rem;padding:11px}
@@ -1055,6 +1313,29 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
   const textos = indicadors.filter((i) => i.mena === "text");
 
   /**
+   * L'any més freqüent de cada xifra que en porta. S'escriu un cop a la
+   * capçalera de la fila i al glossari; el municipi que va d'un altre any ho
+   * diu al peu de la seva casella. Així l'any no viatja 947 vegades.
+   */
+  const anyComu = new Map<string, number>();
+  for (const indicador of xifres) {
+    const compte = new Map<number, number>();
+    for (const r of rows) {
+      const any = r.anys?.[indicador.clau];
+      if (typeof any === "number") compte.set(any, (compte.get(any) ?? 0) + 1);
+    }
+    let triat: number | null = null;
+    let quants = 0;
+    for (const [any, n] of compte) {
+      if (n > quants) {
+        quants = n;
+        triat = any;
+      }
+    }
+    if (triat !== null) anyComu.set(indicador.clau, triat);
+  }
+
+  /**
    * Els anys de la sèrie del deute, escrits una sola vegada.
    *
    * Amb 947 llistes de parells «any-valor» la sèrie costava més del doble de
@@ -1080,10 +1361,21 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
       v: xifres.map((i) => r.valors[i.clau] ?? null),
       p: xifres.map((i) => r.percentils[i.clau] ?? null),
       // Els peus són pocs: van per clau i no per posició perquè no s'hi
-      // publiquin 947 × 14 cadenes buides que no diuen res.
+      // publiquin 947 × 20 cadenes buides que no diuen res. L'any només hi va
+      // quan no és el de la fila.
       u: Object.fromEntries(
-        xifres.map((i) => [i.clau, r.peus?.[i.clau] ?? ""]).filter(([, peu]) => peu !== ""),
+        xifres
+          .map((i) => {
+            const any = r.anys?.[i.clau];
+            const desfasat = typeof any === "number" && any !== anyComu.get(i.clau) ? `dada del ${any}` : "";
+            const peu = [r.peus?.[i.clau] ?? "", desfasat].filter((p) => p !== "").join("; ");
+            return [i.clau, peu];
+          })
+          .filter(([, peu]) => peu !== ""),
       ),
+      // L'enllaç de l'Idescat, un per municipi: el demana la llicència al
+      // costat de cada xifra seva.
+      ...(r.enllacIdescat ? { e: r.enllacIdescat } : {}),
       t: textos.map((i) => {
         const cela = r.textos[i.clau];
         const color = cela?.color;
@@ -1139,10 +1431,11 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
     .map((s) => ({ ...s, noms: s.slugs.map((slug) => perSlug.get(slug)!.nom) }));
 
   const fonts = indicadors
-    .map(
-      (i) => `<tr><th scope="row">${escape(i.etiqueta)}</th>
-      <td>${escape(i.nota)}</td><td><code>${escape(i.font)}</code></td></tr>`,
-    )
+    .map((i) => {
+      const any = anyComu.get(i.clau);
+      return `<tr><th scope="row">${escape(i.etiqueta)}</th>
+      <td>${escape(i.nota)}</td><td><code>${escape(i.font)}</code>${any ? ` · ${any}` : ""}</td></tr>`;
+    })
     .join("");
 
   return `<!doctype html>
@@ -1152,7 +1445,8 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Comparador de municipis · Observatori de quivoto</title>
-<meta name="description" content="Tria de dos a quatre municipis catalans i mira'ls costat a costat: qui governa, participació, deute i com ha variat durant el mandat, inversions executades, IBI, paritat i transparència. Només amb dades obertes.">
+<meta name="description" content="Tria de dos a quatre municipis catalans i mira'ls costat a costat: qui governa, participació, deute i com ha variat durant el mandat, inversions executades, què costa el govern, IBI, aigua, renda, paritat i transparència. Només amb dades obertes i sense cap veredicte.">
+${tipografia("../")}
 <style>${RADIOGRAFIA_CSS}${CSS}</style>
 </head>
 <body>
@@ -1197,8 +1491,8 @@ ${cercador("../")}
     <ul class="suggeriments">
       ${suggeriments
         .map(
-          (s) => `<li><button type="button" data-m="${escape(s.slugs.join(","))}">
-        <b>${escape(s.titol)}</b><span>${escape(s.noms.join(" · "))}</span></button></li>`,
+          (s) => `<li><a class="suggeriment" href="?m=${escape(s.slugs.join(","))}" data-m="${escape(s.slugs.join(","))}">
+        <b>${escape(s.titol)}</b><span>${escape(s.noms.join(" · "))}</span></a></li>`,
         )
         .join("\n      ")}
     </ul>
@@ -1231,23 +1525,28 @@ ${cercador("../")}
 
   <p class="buits" id="buits" hidden></p>
 
-  <p class="llegenda-taula" id="llegenda" hidden><b>Millor</b> i <b>pitjor</b> es marquen només entre els
-  municipis que has triat i només on hi ha un sentit clar: menys deute és millor, menys participació
-  no ho és. On no n'hi ha —habitants, regidories, qui governa, el tipus de l'IBI, la variació del
-  deute— no es reparteix res.
+  <p class="llegenda-taula" id="llegenda" hidden><b>El més alt</b> i <b>el més baix</b> es marquen només
+  entre els municipis que has triat, i són un fet, no un judici: menys deute pot ser no invertir, i
+  més participació pot ser un ple molt disputat. No hi posem cap veredicte. On no té sentit
+  comparar —habitants, regidories, qui governa, la renda— no es marca res.
   El <b>percentil</b> diu on queda cada xifra entre els municipis de la seva mida: p10 vol dir que
-  només un 10 % del seu grup té un valor més baix.</p>
+  només un 10 % del seu grup té un valor més baix. El quadradet del costat en pinta el quint, de més
+  clar (el més baix) a més fosc (el més alt), sense cap color.</p>
 </section>
 
 <section class="bloc fonts">
-  <h2>Què hi ha a cada fila i d'on surt</h2>
-  <table class="fonts-fila">
-    <thead><tr><th scope="col">Fila</th><th scope="col">Què vol dir</th><th scope="col">Conjunt</th></tr></thead>
-    <tbody>${fonts}</tbody>
-  </table>
-  <p class="nota">Els conjunts amb identificador de vuit caràcters són del Consorci AOC; els altres,
-  del portal de dades obertes de la Generalitat. Els percentils i els grups de comparació són
-  càlculs nostres i es poden repetir amb el codi del projecte.</p>
+  <details class="nota glossari">
+    <summary>Què hi ha a cada fila i d'on surt</summary>
+    <table class="fonts-fila">
+      <thead><tr><th scope="col">Fila</th><th scope="col">Què vol dir</th><th scope="col">Conjunt</th></tr></thead>
+      <tbody>${fonts}</tbody>
+    </table>
+    <p class="nota">Els conjunts amb identificador de vuit caràcters són del Consorci AOC; els que van
+    amb el nom de l'organisme són de l'INE, de l'Idescat o de l'ACA, i els altres, del portal de dades
+    obertes de la Generalitat. Les xifres de l'Idescat porten el seu enllaç al costat, com demana la
+    seva llicència. Els percentils i els grups de comparació són càlculs nostres i es poden repetir
+    amb el codi del projecte.</p>
+  </details>
 </section>
 </main>
 ${peu("../", generatedAt)}
@@ -1258,7 +1557,7 @@ const DADES = ${jsonSegur(dades)};
 const COMARQUES = ${jsonSegur(comarques)};
 const GRUPS = ${jsonSegur(grups)};
 const MIDES = ${jsonSegur(mides.map((m) => m ?? null))};
-const XIFRES = ${jsonSegur(xifres.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), format: i.format, sentit: i.sentit, objectiu: i.objectiu ?? null, percentil: i.percentil, absent: i.absent, extrems: i.extrems ?? null, com: textDelSentit(i) })))};
+const XIFRES = ${jsonSegur(xifres.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), format: i.format, sentit: i.sentit, objectiu: i.objectiu ?? null, percentil: i.percentil, absent: i.absent, extrems: i.extrems ?? null, idescat: i.enllacFont === "idescat", com: textDeLaFila(i, anyComu.get(i.clau)) })))};
 const TEXTOS = ${jsonSegur(textos.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), absent: i.absent, com: textDelSentit(i) })))};
 const SECCIONS = ${jsonSegur(SECCIONS)};
 const REPARTIMENT = ${jsonSegur(repartiments)};
@@ -1307,6 +1606,10 @@ const milers = (n) => n.toLocaleString("ca-ES");
 function formata(def, valor){
   if (valor === null || valor === undefined) return null;
   if (def.format === "euros") return milers(Math.round(valor)) + " €";
+  // El cost del govern per habitant són pocs euros: arrodonit a l'euro, 8,4 i
+  // 7,6 serien el mateix «8 €».
+  if (def.format === "euros-decimal") return valor.toLocaleString("ca-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " €";
+  if (def.format === "euros-m3") return valor.toLocaleString("ca-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €/m³";
   if (def.format === "dies") return milers(Math.round(valor)) + " dies";
   if (def.format === "percent") return valor.toLocaleString("ca-ES", { maximumFractionDigits: 1 }) + " %";
   if (def.format === "tipus") return valor.toLocaleString("ca-ES", { minimumFractionDigits: 2, maximumFractionDigits: 3 }) + " %";
@@ -1324,7 +1627,9 @@ function formata(def, valor){
   return milers(valor);
 }
 
-const NOM_MARCA = { millor: "millor", pitjor: "pitjor", alt: "el més alt", baix: "el més baix" };
+// Només hi ha dues marques, i cap no és un veredicte: la taula demana sempre a
+// marquesDe el sentit neutre, i «millor» i «pitjor» no arriben mai a la pàgina.
+const NOM_MARCA = { alt: "el més alt", baix: "el més baix" };
 
 // Com es diu una marca d'extrem en aquesta fila. «El més alt» val per a l'IBI i
 // no val per a una variació, on el que es marca és qui puja i qui baixa.
@@ -1451,10 +1756,16 @@ triatsUl.addEventListener("click", (event) => {
   cerca.focus();
 });
 neteja.addEventListener("click", () => { triats = []; canvia(); cerca.focus(); });
-for (const boto of document.querySelectorAll(".suggeriments button")) {
-  boto.addEventListener("click", () => {
-    triats = boto.dataset.m.split(",").filter((s) => PER_SLUG.has(s)).slice(0, MAXIM);
+// Els suggeriments són enllaços de debò amb l'adreça de la comparació, així que
+// sense guió funcionen igual; amb guió s'intercepten per no recarregar la
+// pàgina, i el focus va al primer municipi triat, que és on hi ha feina a fer.
+for (const enllac of document.querySelectorAll(".suggeriments a[data-m]")) {
+  enllac.addEventListener("click", (event) => {
+    event.preventDefault();
+    triats = enllac.dataset.m.split(",").filter((s) => PER_SLUG.has(s)).slice(0, MAXIM);
     canvia();
+    const primer = triatsUl.querySelector(".treu");
+    if (primer) primer.focus();
   });
 }
 
@@ -1467,10 +1778,19 @@ function textDelPercentil(row, percentil){
     : "entre els municipis de la seva mida");
 }
 
+// El quint d'un percentil: p0-19 és el 0 i p80-100 el 4. Es pinta en tinta,
+// de més clar a més fosc, i no diu res més que on cau dins del seu grup.
+function quintilDe(percentil){
+  return Math.max(0, Math.min(4, Math.floor(percentil / 20)));
+}
+
 function celaXifra(def, row, marca, posicio){
-  const valor = row.v[posicio];
+  // Una xifra de l'Idescat sense l'enllaç del municipi no es publica: la
+  // llicència demana l'enllaç al costat, i la càrrega ja la deixa buida, però
+  // la regla es repeteix aquí perquè no depengui de cap altre lloc.
+  const valor = def.idescat && !row.e ? null : row.v[posicio];
   const text = formata(def, valor);
-  const percentil = def.percentil ? row.p[posicio] : null;
+  const percentil = def.percentil && text !== null ? row.p[posicio] : null;
   const peu = row.u ? row.u[def.clau] : "";
   return '<td' + (marca ? ' class="' + marca + '"' : "") + ">" +
     // Una casella buida no es deixa en blanc ni s'omple d'un guionet: diu quina
@@ -1480,9 +1800,13 @@ function celaXifra(def, row, marca, posicio){
       ? '<span class="valor sense">' + esc(def.absent) + "</span>"
       : '<span class="valor">' + esc(text) + "</span>") +
     (text !== null && peu ? '<span class="sec">' + esc(peu) + "</span>" : "") +
+    (text !== null && def.idescat && row.e
+      ? '<a class="sec idescat" href="' + esc(row.e) + '" rel="noopener nofollow">Idescat</a>'
+      : "") +
     (percentil === null || percentil === undefined
       ? ""
-      : '<span class="percentil">' + esc(textDelPercentil(row, percentil)) + "</span>") +
+      : '<span class="percentil"><i class="quintil q' + quintilDe(percentil) + '" aria-hidden="true"></i>' +
+        esc(textDelPercentil(row, percentil)) + "</span>") +
     (marca ? '<span class="marca ' + marca + '">' + esc(nomDeLaMarca(def, marca)) + "</span>" : "") +
     "</td>";
 }
@@ -1555,10 +1879,13 @@ function pintaTaula(){
             (!buida && cela[1] ? '<span class="sec">' + esc(cela[1]) + "</span>" : "") + "</td>";
         }).join("");
       } else {
-        const valors = files.map((row) => row.v[fila.i]);
+        // Una xifra de l'Idescat sense enllaç compta com un forat: no surt.
+        const valors = files.map((row) => (def.idescat && !row.e ? null : row.v[fila.i]));
         caselles += valors.length;
         for (const valor of valors) { if (typeof valor !== "number") forats += 1; }
-        const marques = marquesDe(def.sentit, def.objectiu === null ? undefined : def.objectiu, valors);
+        // Sempre el sentit neutre: la taula marca el més alt i el més baix, i
+        // mai «millor» ni «pitjor». Amb «cap» no es marca res.
+        const marques = marquesDe(def.sentit === "cap" ? "cap" : "neutre", undefined, valors);
         html += files.map((row, n) => celaXifra(def, row, marques[n], fila.i)).join("");
       }
       html += "</tr>";

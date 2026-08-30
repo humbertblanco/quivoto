@@ -56,6 +56,15 @@ function mostra(canvis: Partial<PartitData> = {}): PartitData {
         majoria: false, candidatura: "psc-vic",
       }),
     ],
+    // Els tres d'amunt més dos on es va presentar sense treure cap regidoria,
+    // que és el que el segon mapa afegeix respecte de la llista de llocs.
+    votsMunicipis: {
+      "esplugues-de-llobregat": { nom: "Esplugues de Llobregat", pct: 41.2, vots: 9_800, regidories: 11, alcaldia: true },
+      gava: { nom: "Gavà", pct: 35.6, vots: 7_100, regidories: 9, alcaldia: true },
+      vic: { nom: "Vic", pct: 12.3, vots: 2_400, regidories: 3, alcaldia: false },
+      salt: { nom: "Salt", pct: 4.1, vots: 500, regidories: 0, alcaldia: false },
+      olot: { nom: "Olot", pct: 2, vots: 300, regidories: 0, alcaldia: false },
+    },
     serie: [
       { year: 2015, regidories: 1_600, regidoriesCatalunya: 9_000, guanyats: 180, alcaldies: 150, municipisAmbSerie: 947 },
       { year: 2019, regidories: 1_520, regidoriesCatalunya: 9_000, guanyats: 170, alcaldies: 140, municipisAmbSerie: 947 },
@@ -187,33 +196,127 @@ describe("renderPartit", () => {
     expect(html.indexOf("Esplugues de Llobregat")).toBeLessThan(html.indexOf("Gavà"));
   });
 
-  it("plega la resta de municipis quan n'hi ha més de trenta", () => {
+  it("amb més de dotze alcaldies, envia la resta a la llista dels 947 filtrada per marca", () => {
     const molts = Array.from({ length: 42 }, (_, i) =>
       lloc({ slug: `poble-${i}`, name: `Poble ${i}`, population: 40_000 - i, candidatura: "psc-cp" }),
     );
     const html = renderPartit(mostra({ llocs: molts, alcaldies: 42, municipis: 42 }), "2026-08-30");
-    expect(html).toContain("<details");
-    expect(html).toContain("Els altres 12 municipis");
-    // Plegats, però escrits: sense JavaScript i sense obrir res, hi són tots.
-    expect(html).toContain("Poble 41");
+    // Dotze targetes i prou: el mapa de dalt ja les ensenya totes.
+    expect(html.match(/class="lloc-on"/g)).toHaveLength(12);
+    expect(html).toContain('href="../../els947.html?partit=psc"');
+    expect(html).toContain("Els altres 30 municipis, a la llista dels 947");
+    // La resta ja no va plegada dins de la pàgina: ni el desplegable ni les files.
+    expect(html).not.toContain('<details class="partit-resta"');
+    expect(html).not.toContain("Poble 41");
   });
 
-  it("no plega res amb pocs municipis", () => {
+  it("amb dotze alcaldies o menys no hi ha cap crida a la llista dels 947", () => {
     const html = renderPartit(mostra(), "2026-08-30");
+    expect(html).not.toContain("?partit=");
     expect(html).not.toContain('<details class="partit-resta"');
   });
 
   it("pinta el mapa amb els seus municipis encesos i la resta apagats", () => {
     const html = renderPartit(mostra(), "2026-08-30");
-    expect(html).toContain('<path class="mana"');
-    expect(html).toContain('<path class="hi-es"');
+    expect(html).toMatch(/<path class="mana[ "]/);
+    expect(html).toMatch(/<path class="hi-es[ "]/);
     // El mapa surt de la geometria de debò: 947 taques i ni una menys. Les
     // apagades van sense classe, que és l'estat per defecte del mapa.
-    const comenca = html.indexOf('<figure class="partit-mapa">');
+    const comenca = html.indexOf('<figure class="partit-mapa"');
     const mapa = html.slice(comenca, html.indexOf("</svg>", comenca));
-    const taques = mapa.match(/<path (?:class="(?:mana|hi-es)" )?d="/g) ?? [];
+    // El contorn de Catalunya és un camí més i no és cap municipi.
+    const taques = mapa.match(/<path (?:class="(?!contorn)[^"]*" )?d="/g) ?? [];
     expect(taques.length).toBe(947);
-    expect(html.match(/<path class="(?:mana|hi-es)"/g)).toHaveLength(3);
+    expect(html.match(/<path class="(?:mana|hi-es)[ "]/g)).toHaveLength(3);
+  });
+
+  describe("el segon mapa: on el voten més", () => {
+    const html = renderPartit(mostra(), "2026-08-30");
+    const figura = html.slice(html.indexOf('<figure class="partit-mapa"'), html.indexOf("</figure>"));
+
+    it("és el mateix dibuix amb dues capes, no dos dibuixos", () => {
+      // Els 947 camins pesen 150 kB: un segon SVG doblaria la pàgina.
+      expect(figura.match(/<svg/g)).toHaveLength(1);
+      expect(figura.match(/<path (?:class="(?!contorn)[^"]*" )?d="/g)).toHaveLength(947);
+      // Cada camí porta les classes de les dues capes alhora.
+      expect(figura).toContain('<path class="mana v4"');
+      expect(figura).toContain('<path class="hi-es v2"');
+      // I un botó per capa, amb la d'on és pintada d'entrada.
+      expect(html).toContain('<button type="button" data-capa="on" aria-pressed="true">On és</button>');
+      expect(html).toContain('<button type="button" data-capa="vots" aria-pressed="false">On el voten més</button>');
+      expect(figura).toContain('<figure class="partit-mapa" id="mapa-partit" data-capa="on">');
+    });
+
+    it("la clau va per quintils del seu color, amb els talls escrits", () => {
+      // Cinc valors: 2, 4,1, 12,3, 35,6 i 41,2. Els quatre talls són els quatre de dalt.
+      expect(figura).toContain('<li><i class="v0"></i>menys del 4,1 %</li>');
+      expect(figura).toContain('<li><i class="v1"></i>del 4,1 % al 12,3 %</li>');
+      expect(figura).toContain('<li><i class="v4"></i>41,2 % o més</li>');
+      expect(figura).toContain('<li><i class="gnd"></i>no s\'hi va presentar</li>');
+      // I la lectura que toca a un quantil: la cinquena part, no «molt».
+      expect(figura).toContain("la cinquena part on més pesa");
+      expect(figura).toContain("S'hi va presentar a 5 dels 947 municipis");
+    });
+
+    it("on no es va presentar va ratllat, mai amb el to més clar", () => {
+      expect(figura).toContain('<pattern id="sense-dada"');
+      const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+      expect(css).toContain('.partit-mapa[data-capa="vots"] .municipis path{fill:url(#sense-dada)}');
+      expect(css).toContain('.partit-mapa[data-capa="vots"] .municipis path.v0{fill:var(--v0)}');
+    });
+
+    it("la rampa és del color de la marca, escrita a la pàgina, i es gira en fosc", () => {
+      const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+      expect(css).toMatch(/\.partit-mapa\{--v0:#[0-9a-f]{6};--v1:#[0-9a-f]{6};--v2:#[0-9a-f]{6};--v3:#[0-9a-f]{6};--v4:#[0-9a-f]{6}\}/);
+      expect(css).toMatch(/@media \(prefers-color-scheme:dark\)\{\.partit-mapa\{--v0:#[0-9a-f]{6}/);
+    });
+
+    it("diu els cinc municipis on més pesa, enllaçats a la fitxa que existeix", () => {
+      // Amb regidories, a la fitxa de la candidatura; sense, a la del municipi.
+      expect(figura).toContain('<a href="../../m/esplugues-de-llobregat/psc-cp/">Esplugues de Llobregat</a> (41,2 %)');
+      expect(figura).toContain('<a href="../../m/salt/">Salt</a> (4,1 %)');
+      expect(figura.indexOf("Esplugues de Llobregat</a> (41,2 %)")).toBeLessThan(figura.indexOf("Gavà</a> (35,6 %)"));
+      expect(figura).toContain("Cada taca pintada és clicable");
+    });
+
+    it("on es va presentar sense treure cap regidoria és clicable i porta al municipi", () => {
+      expect(figura).toContain(
+        '<a href="../../m/salt/"><title>Salt: s\'hi va presentar sense treure cap regidoria · 4,1 % dels vots</title><path class="v1"',
+      );
+      // I on hi és, el títol diu les dues coses: regidories i pes del vot.
+      expect(figura).toContain("Vic: 3 de 21 regidories, sense l'alcaldia · 12,3 % dels vots");
+    });
+
+    it("no repeteix l'avís del buit: hi remet, i cita la font", () => {
+      expect(figura).toContain("Val el mateix avís que al mapa d'on és");
+      expect(figura).toContain("el Pallars ocupa més taca que el Barcelonès");
+      expect(figura).toContain("<code>ntc4-rnwr</code>");
+      expect(figura).toContain("sobre els vots a candidatures");
+    });
+
+    it("diu on era l'única llista, perquè allà el 100 % no vol dir res", () => {
+      const sol = renderPartit(
+        mostra({
+          votsMunicipis: {
+            ...mostra().votsMunicipis,
+            alpens: { nom: "Alpens", pct: 100, vots: 140, regidories: 7, alcaldia: true },
+          },
+        }),
+        "2026-08-30",
+      );
+      expect(sol).toContain("A 1 municipi hi era l'única llista");
+      expect(sol).toContain('<a href="../../m/alpens/">Alpens</a> (100,0 %)');
+      expect(html).not.toContain("hi era l'única llista");
+    });
+
+    it("sense vots no hi ha segon mapa, ni botons a mitges", () => {
+      const sense = renderPartit(mostra({ votsMunicipis: {} }), "2026-08-30");
+      expect(sense).not.toContain('<ul class="partit-tries"');
+      expect(sense).not.toContain('<div data-per="vots">');
+      expect(sense).not.toContain("On el voten més");
+      // El primer mapa continua sencer.
+      expect(sense.match(/<path (?:class="[^"]*" )?d="/g)?.length).toBeGreaterThanOrEqual(947);
+    });
   });
 
   it("quan la sèrie llarga no sap veure la marca, no la dibuixa i diu per què", () => {
@@ -231,7 +334,7 @@ describe("renderPartit", () => {
     expect(html).not.toContain('<figure class="grafic');
   });
 
-  it("dibuixa les tres sèries llargues quan les fonts s'hi assemblen", () => {
+  it("dibuixa les tres sèries llargues, de costat, quan les fonts s'hi assemblen", () => {
     const html = renderPartit(mostra(), "2026-08-30");
     expect(html).toContain("Regidories, elecció a elecció");
     expect(html).toContain("Alcaldies, mandat a mandat");
@@ -239,6 +342,50 @@ describe("renderPartit", () => {
     // Tres gràfiques i no una de sola amb tres eixos: les regidories es compten
     // per milers, les alcaldies per centenars i els habitants per milions.
     expect(html.match(/<figure class="grafic/g)).toHaveLength(3);
+    // I les tres dins de la mateixa graella, cadascuna amb el seu títol a la cel·la.
+    expect(html).toContain('<div class="partit-series">');
+    const graella = html.slice(
+      html.indexOf('<div class="partit-series">'),
+      html.indexOf('<details class="nota partit-xifres">'),
+    );
+    expect(graella.match(/<figure class="grafic/g)).toHaveLength(3);
+    expect(graella.match(/<h3 class="subtitol">/g)).toHaveLength(3);
+  });
+
+  it("plega les taules de xifres en un sol desplegable, amb la població governada a dins", () => {
+    const html = renderPartit(mostra(), "2026-08-30");
+    expect(html).toContain('<details class="nota partit-xifres">');
+    expect(html).toContain("<summary>Les xifres de cada convocatòria</summary>");
+    const inici = html.indexOf('<details class="nota partit-xifres">');
+    const dins = html.slice(inici, html.indexOf("</details>", inici));
+    // Les dues taules al mateix desplegable: la de cada convocatòria i la de població.
+    expect(dins.match(/<table class="partit-serie">/g)).toHaveLength(2);
+    expect(dins).toContain("Municipis guanyats");
+    expect(dins).toContain("Habitants governats");
+    // I cap taula fora: les xifres exactes són la comprovació, no la lectura.
+    expect(html.match(/<table class="partit-serie">/g)).toHaveLength(2);
+  });
+
+  it("la metodologia va a la lletra petita, i els forats es queden a la vista", () => {
+    // Sense sèrie de regidories hi ha una columna de guionets, i allò s'ha de
+    // veure sense obrir res: un guionet que sembla un zero és l'error que el
+    // lector no pot resoldre sol.
+    const html = renderPartit(
+      mostra({ serieRegidoriesFiable: false, serieRegidories2023: 0 }),
+      "2026-08-30",
+    );
+    const petita = html.indexOf('<details class="nota partit-lletra">');
+    expect(petita).toBeGreaterThan(-1);
+    const dins = html.slice(petita, html.indexOf("</details>", petita));
+    expect(dins).toContain("<summary>La lletra petita</summary>");
+    expect(dins).toContain("padró de l'any de cada elecció");
+    expect(dins).toContain("La columna d'alcaldies del <b>2023</b>");
+    // El guionet s'explica entre els dos desplegables, fora de tots dos.
+    const guionet = html.indexOf("Un guionet no és un zero");
+    expect(guionet).toBeGreaterThan(-1);
+    const xifres = html.indexOf('<details class="nota partit-xifres">');
+    expect(guionet).toBeGreaterThan(html.indexOf("</details>", xifres));
+    expect(guionet).toBeLessThan(petita);
   });
 
   describe("la població governada", () => {
@@ -440,6 +587,17 @@ describe("renderPartit", () => {
     expect(html).toContain('href="../../els947.html"');
     expect(html).toContain('href="../../mapa/"');
     expect(html).toContain("2026-08-30");
+    // El peu ja porta el mapa, els 947 i les dades: la pàgina no els repeteix
+    // en un bloc propi, i el que hi afegeix és d'on surten els que manen.
+    expect(html).not.toContain("Segueix estirant");
+    expect(html).toContain('href="../../trajectoria/"');
+    expect(html).toContain("D'on surten els que manen");
+  });
+
+  it("carrega la tipografia de la casa abans del full d'estil", () => {
+    const html = renderPartit(mostra(), "2026-08-30");
+    expect(html).toMatch(/<link rel="stylesheet" href="[^"]*assets\/fonts\.css">/);
+    expect(html.indexOf("assets/fonts.css")).toBeLessThan(html.indexOf("<style>"));
   });
 
   it("no publica cap dada de contacte de ningú", () => {

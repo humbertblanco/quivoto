@@ -2,16 +2,18 @@ import { eq, sql, type SQLWrapper } from "drizzle-orm";
 import { electionParticipation, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
-import { dataCurta, slugify } from "../lib/text";
+import { slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
 import {
-  TERRITORI_CSS, renderMapaTerritori, renderPoder, renderUllada,
+  renderMapaTerritori, renderPoder, renderUllada,
   type ComarcaData, type ComarcaMunicipi, type Pastilla,
 } from "./comarques";
+import { GLOSSARI_CSS, esClauGlossari, renderGlossari } from "./glossari";
+import { TERRITORI_CSS, renderBlocsPoder } from "./territori";
 import { projecta } from "./mapa";
-import { capcalera } from "./capcalera";
+import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 
@@ -32,11 +34,13 @@ import { peu } from "./peu";
  * a qualsevol client automàtic, així que del que fa l'AMB avui només n'hi ha
  * l'enllaç perquè hi vagi qui vulgui.
  *
- * **Tot el que no és la llei ho comparteix amb les pàgines de comarca**, i des
- * d'ara literalment: la ullada d'obertura, les dues cintes de poder, el mapa i
- * el full d'estil surten de `comarques.ts`. N'hi havia una còpia sencera aquí
- * —vuitanta línies de CSS idèntiques— i qualsevol arranjament s'havia de fer
- * dues vegades o quedava a mitges en una de les dues pàgines.
+ * **Tot el que no és la llei ho comparteix amb les pàgines de comarca**, i
+ * literalment: la ullada d'obertura, les dues cintes de poder i el mapa surten
+ * de `comarques.ts`; els blocs de pactes i de canvis d'alcaldia i el full
+ * d'estil, de `territori.ts`; la definició de cada indicador, de `glossari.ts`.
+ * N'hi havia una còpia sencera aquí —vuitanta línies de CSS i tres funcions
+ * bessones— i qualsevol arranjament s'havia de fer dues vegades o quedava a
+ * mitges en una de les dues pàgines.
  */
 
 // ------------------------------------------------------------------- formes
@@ -138,16 +142,6 @@ const escape = (text: string): string =>
 
 const number = (n: number): string => n.toLocaleString("ca-ES");
 const decimal = (n: number, digits = 1): string => n.toFixed(digits).replace(".", ",");
-
-/** «27 d'agost», no «27 de agost». Una sola còpia, a `lib/text.ts`. */
-const formatDate = dataCurta;
-
-/** «des de l'1 de juliol», no «des del 1 de juliol». */
-function sinceDate(iso: string | null): string {
-  if (!iso) return "";
-  const day = Number(iso.slice(8, 10));
-  return `${day === 1 || day === 11 ? "des de l'" : "des del "}${formatDate(iso)}`;
-}
 
 function plural(n: number, one: string, many: string): string {
   return n === 1 ? one : many;
@@ -674,7 +668,7 @@ export async function loadAmb(db: Db, comarques: readonly ComarcaData[]): Promis
       nota: "Vots emesos sobre el cens a les municipals del 28 de maig del 2023. És l'única d'aquestes xifres que decideix directament qui llegeix.",
     }, participacio],
     [{
-      key: "paritat", label: "Dones al ple", unit: "percent",
+      key: "dones-ple", label: "Dones al ple", unit: "percent",
       qui: "ajuntament",
       nota: "Regidories ocupades per dones al ple sortit del 2023.",
     }, lecturesFrom(parityRows)],
@@ -735,15 +729,27 @@ export async function loadAmb(db: Db, comarques: readonly ComarcaData[]): Promis
 
 // --------------------------------------------------------------- fragments
 
-/** Què decideix l'AMB i què no: la secció que justifica que aquesta pàgina existeixi. */
+/** El text consolidat de la Llei 31/2010 al Portal Jurídic: cada article hi porta. */
+const LLEI_AMB = "https://portaljuridic.gencat.cat/eli/es-ct/l/2010/08/03/31";
+
+/**
+ * Què decideix l'AMB i què no: la secció que justifica que aquesta pàgina existeixi.
+ *
+ * Cada targeta és una matèria: què hi posa la llei a mans de l'AMB, en clar, i
+ * on s'acaba, plegat. La línia d'on s'acaba és la que costa més de trobar en
+ * cap altre lloc, però no és la que es llegeix primer: es desplega quan cal
+ * saber a qui reclamar. Amb les nou obertes de bat a bat, el bloc ocupava
+ * dues pantalles abans d'arribar a qui mana. L'article no és un adorn: és un
+ * enllaç al text de la llei, perquè qui no s'ho cregui ho pugui comprovar.
+ */
 function renderCompetencies(): string {
   const cards = COMPETENCIES.map((c) => {
     const dibuix = icona(c.tema);
     return `<li class="competencia" id="fa-${escape(c.clau)}">
     <div class="cap">${dibuix}<h3>${escape(c.titol)}</h3></div>
     <p class="que">${c.que.replace(/\s+/g, " ").trim()}</p>
-    <p class="que-no"><b>On s'acaba:</b> ${c.queNo.replace(/\s+/g, " ").trim()}</p>
-    <p class="cita">Llei 31/2010, ${escape(c.article)}</p>
+    <details class="nota"><summary>On s'acaba</summary><p>${c.queNo.replace(/\s+/g, " ").trim()}</p></details>
+    <a class="cita" href="${LLEI_AMB}" rel="noopener">Llei 31/2010, ${escape(c.article)}</a>
   </li>`;
   }).join("");
   return `<ul class="competencies">${cards}</ul>`;
@@ -757,70 +763,6 @@ function renderDiners(): string {
     <span class="cita">Llei 31/2010, ${escape(d.article)}</span></li>`,
   ).join("");
   return `<ul class="detall diners-amb">${items}</ul>`;
-}
-
-/** Governa el més votat, o hi va haver pacte. Una barra de tres trams i prou. */
-function renderRepartiment(data: AmbData): string {
-  const total = Math.max(1, data.municipis.length);
-  const trams: ReadonlyArray<readonly [number, string, string]> = [
-    [data.governaMesVotat, "governa-guanyador", "governa el més votat"],
-    [data.pacte, "governa-pacte", "hi va haver pacte"],
-    [data.senseIdentificar, "governa-desconegut", "sense identificar"],
-  ];
-  const bars = trams
-    .filter(([n]) => n > 0)
-    .map(([n, cls, label]) => {
-      const share = (100 * n) / total;
-      return `<span class="${cls}" style="--w:${share}%" title="${n} ${escape(label)}">${share >= 7 ? `<b>${n}</b>` : ""}</span>`;
-    })
-    .join("");
-  const clau = trams
-    .filter(([n]) => n > 0)
-    .map(([n, cls, label]) => `<li><span class="mostra ${cls}"></span><b>${n}</b> ${escape(label)}</li>`)
-    .join("");
-  return `<figure class="grafic">
-  <div class="repartiment" role="img" aria-label="${trams.filter(([n]) => n > 0).map(([n, , label]) => `${n} ${label}`).join("; ")}.">${bars}</div>
-  <ul class="clau">${clau}</ul>
-</figure>`;
-}
-
-/** Els municipis on l'alcaldia no és de la llista més votada, amb nom i cognoms. */
-function renderPactes(data: AmbData): string {
-  const pactes = data.municipis.filter((m) => m.winnerGoverns === false);
-  if (pactes.length === 0) {
-    return `<p>A tots els municipis metropolitans on hem pogut identificar l'alcaldia, la governa
-    la llista més votada.</p>`;
-  }
-  const items = pactes
-    .map(
-      (m) => `<li><a href="../m/${escape(m.slug)}/">${escape(m.name)}</a>
-      <span class="secundari">governa ${escape(m.mayorSigles ?? "?")}; la més votada va ser ${escape(m.winnerSigles ?? "?")}</span></li>`,
-    )
-    .join("");
-  return `<p>A <b>${pactes.length}</b> ${plural(pactes.length, "municipi", "municipis")} dels
-  ${data.municipis.length} l'alcaldia no és de la llista més votada. Vol dir que hi va haver pacte.</p>
-  <ul class="detall">${items}</ul>`;
-}
-
-/** Canvis d'alcaldia a mig mandat, que és on es veu la política que no es vota. */
-function renderCanvis(data: AmbData): string {
-  const canvis = data.municipis.filter((m) => m.mayorChanged);
-  if (canvis.length === 0) {
-    return `<p>Cap dels ${data.municipis.length} municipis metropolitans no ha canviat d'alcaldia
-    des de la constitució dels plens el juny del 2023.</p>`;
-  }
-  const items = canvis
-    .map(
-      (m) => `<li><a href="../m/${escape(m.slug)}/">${escape(m.name)}</a>
-      <span class="secundari">${escape(m.mayorChangeName ?? "")}${m.mayorChangeDate ? `, ${sinceDate(m.mayorChangeDate)}` : ""}</span></li>`,
-    )
-    .join("");
-  return `<p><b>${canvis.length}</b> dels ${data.municipis.length}
-  ${plural(canvis.length, "municipis ha canviat", "municipis han canviat")} d'alcaldia des de la
-  constitució dels plens del juny del 2023.</p>
-  <ul class="detall">${items}</ul>
-  <p class="nota">Les fonts desen qui ocupa el càrrec, no per què va marxar l'anterior: no se'n pot
-  deduir cap moció de censura. Un canvi d'alcaldia també canvia qui seu al Consell.</p>`;
 }
 
 /**
@@ -919,7 +861,6 @@ function renderIndicadors(data: AmbData): string {
         </span>`
         : ""}
       ${indicador.article ? `<span class="cita">Llei 31/2010, ${escape(indicador.article)}</span>` : ""}
-      <span class="secundari">${escape(indicador.nota)}</span>
     </li>`;
   };
 
@@ -931,10 +872,14 @@ function renderIndicadors(data: AmbData): string {
     <ul class="indicadors">${dins.map(targeta).join("")}</ul>`;
   }).join("");
 
+  // La definició de cada indicador ja no va sota cada targeta: va al glossari
+  // del final, una sola vegada i amb la font, que és el que la targeta no deia.
+  const glossari = renderGlossari(data.indicadors.map((i) => i.key).filter(esClauGlossari));
   return `${grups}
   <p class="nota">Les medianes són sobre municipis, no sobre habitants: Barcelona hi compta un cop,
   com el Papiol. El <b>percentil</b> mesura cada municipi només amb els del seu tram de població de
-  la LOREG: 80 és estar per sobre de quatre de cada cinc de la seva mida.</p>`;
+  la LOREG: 80 és estar per sobre de quatre de cada cinc de la seva mida.</p>
+  ${glossari}`;
 }
 
 /** De quantes comarques surten els 36. És l'argument de per què l'AMB és un ens propi. */
@@ -1034,23 +979,29 @@ function renderMunicipis(data: AmbData): string {
  * l'Observatori que explica una llei en comptes d'una xifra, i l'escala de
  * representants del Consell.
  */
-const AMB_CSS = TERRITORI_CSS + `
+const AMB_CSS = TERRITORI_CSS + GLOSSARI_CSS + `
 .diners-amb li{font-size:.94rem}
 .cita{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
   color:var(--coral-text);margin:6px 0 0}
 
-/* Què decideix l'AMB: el bloc que aquesta pàgina té i les de comarca no. Cada
-   targeta és una matèria, i sota de tot hi ha sempre l'article que ho diu. */
+/* Què decideix l'AMB: el bloc que aquesta pàgina té i les de comarca no. Dues
+   columnes i no «auto-fit»: amb nou targetes l'ajust automàtic feia files de
+   tres i de dos i el bloc ocupava dues pantalles. On s'acaba cada matèria va
+   plegat —és la línia que es llegeix quan cal reclamar, no sempre— i sota de
+   tot hi ha sempre l'article, que porta al text de la llei. */
 .competencies{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2);
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:640px){ .competencies{grid-template-columns:1fr} }
 .competencia{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:2px}
 .competencia .cap{display:flex;align-items:center;gap:var(--e1);margin-bottom:var(--e1)}
 .competencia .cap .icona{flex:0 0 auto;width:38px;height:38px}
 .competencia h3{font-family:var(--display);font-weight:900;font-size:1.08rem;letter-spacing:-.02em;margin:0;min-width:0}
 .competencia p{margin:0 0 var(--e1);font-size:.92rem}
-.competencia .que-no{color:var(--ink-suau)}
-.competencia .cita{margin-top:auto;padding-top:var(--e1)}
+.competencia details.nota{margin-top:0}
+.competencia .cita{margin-top:auto;padding-top:var(--e1);align-self:flex-start;
+  text-decoration-color:var(--vora);text-underline-offset:3px}
+.competencia .cita:hover{text-decoration-color:currentColor}
 
 /* El consell que no es vota: una escala i prou, sense xifres per municipi. */
 .escala{list-style:none;margin:0 0 var(--e2);padding:0;display:grid;gap:6px}
@@ -1215,6 +1166,7 @@ export function renderAmb(data: AmbData, generatedAt: string): string {
 <meta name="robots" content="noindex, nofollow">
 <title>${escape(title)}</title>
 <meta name="description" content="Què decideix l'Àrea Metropolitana de Barcelona i què no: el transport, l'aigua, els residus, les platges i l'habitatge dels seus ${data.municipis.length} municipis, amb l'article de la llei al costat, i qui governa cadascun.">
+${tipografia("../")}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${AMB_CSS}</style>
 </head>
 <body>
@@ -1306,21 +1258,7 @@ ${cercador("../")}
     : ""}</p>
 </section>
 
-<section class="bloc" id="pactes">
-  <h2>On va governar la llista més votada</h2>
-  ${renderRepartiment(data)}
-  <p>A <b>${data.majoriaAbsoluta}</b> dels ${data.municipis.length}
-  ${plural(data.majoriaAbsoluta, "municipi la llista guanyadora governa", "municipis la llista guanyadora governa")}
-  amb majoria absoluta, i per tant no va necessitar ningú.</p>
-  ${renderPactes(data)}
-  <p class="nota">«Pacte» vol dir només això: que l'alcaldia és d'una llista que no va ser la més
-  votada. El contingut de l'acord no el sabem: les investidures no són dades obertes.</p>
-</section>
-
-<section class="bloc" id="canvis">
-  <h2>Qui ha canviat d'alcaldia a mig mandat</h2>
-  ${renderCanvis(data)}
-</section>
+${renderBlocsPoder(data, { base: "../", ambit: "amb" })}
 
 ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
   <h2>Què costa viure-hi, i qui ho decideix</h2>
@@ -1353,20 +1291,6 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
   que decideix.</p>
   <p class="nota">L'àmbit només es pot modificar per llei del Parlament.</p>
 </section>
-
-<nav class="bloc" aria-label="Segueix estirant">
-  <h2>Segueix estirant</h2>
-  <ul class="detall">
-    <li><a href="../els947.html">Els ${number(data.catalunya.municipis)} municipis de Catalunya</a>
-      <span class="secundari">Tots, amb cercador i filtres</span></li>
-    <li><a href="../mapa/">El mapa</a>
-      <span class="secundari">On hi ha majoria absoluta i on no governa qui va guanyar</span></li>
-    <li><a href="../comparador/">El comparador</a>
-      <span class="secundari">Fins a quatre municipis un al costat de l'altre</span></li>
-    ${data.comarques[0] ? `<li><a href="../c/${escape(data.comarques[0].slug)}/">${escape(data.comarques[0].name)}</a>
-      <span class="secundari">La comarca que hi posa més municipis metropolitans</span></li>` : ""}
-  </ul>
-</nav>
 
 <section class="bloc fonts">
   <h2>D'on surt tot això</h2>

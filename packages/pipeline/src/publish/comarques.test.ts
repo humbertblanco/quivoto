@@ -98,6 +98,16 @@ describe("renderComarca", () => {
     );
     expect(html).toContain("Mediana catalana");
     expect(html).toContain("Percentil");
+    // La definició ja no va sota la targeta: va al glossari, amb la font.
+    expect(html).not.toContain("Deute viu a 31 de desembre.</span>");
+    expect(html).toContain('<details class="nota glossari">');
+    expect(html).toContain("Font: Consorci AOC, 34db8dc5.");
+  });
+
+  it("carrega la tipografia del portal dos nivells amunt", () => {
+    const html = renderComarca(comarca(), "2026-08-29");
+    expect(html).toContain('href="../../../assets/fonts.css"');
+    expect(html.indexOf("fonts.css")).toBeLessThan(html.indexOf("<style>"));
   });
 
   it("no deixa el singular i el plural barrejats", () => {
@@ -375,6 +385,30 @@ describe("la cara i el partit de cada alcaldia", () => {
     const html = renderComarca(comarca({ municipis: [municipi({ mayorFoto: null })] }), "2026-08-29");
     expect(html).toContain('class="retrat inicials"');
     expect(html).toContain(">MP<");
+  });
+
+  it("la cara i el nom porten a la fitxa de la persona, dos nivells amunt", () => {
+    const html = renderComarca(
+      comarca({ municipis: [municipi({ mayorFoto: "/observatori/fotos/160/25009.webp", mayorAdreca: "regidor/maria-puig/" })] }),
+      "2026-08-29",
+    );
+    const enllac = html.slice(html.indexOf('<a class="persona"'), html.indexOf("</a>", html.indexOf('<a class="persona"')));
+    expect(enllac).toContain('href="../../m/un-poble/regidor/maria-puig/"');
+    expect(enllac).toContain('src="/observatori/fotos/160/25009.webp"');
+    expect(enllac).toContain("Maria Puig");
+    // La pastilla del partit és un altre enllaç i va fora d'aquest.
+    expect(enllac).not.toContain("partit/erc/");
+  });
+
+  it("sense fitxa de persona, el nom porta a l'apartat d'alcaldies del municipi", () => {
+    const html = renderComarca(comarca({ municipis: [municipi({ mayorAdreca: null })] }), "2026-08-29");
+    expect(html).toContain('<a class="persona" href="../../m/un-poble/#alcaldies">');
+  });
+
+  it("i sense nom no hi ha enllaç: no hi ha ningú a qui anar a veure", () => {
+    const html = renderComarca(comarca({ municipis: [municipi({ mayorName: null, mayorAdreca: null })] }), "2026-08-29");
+    expect(html).not.toContain('<a class="persona"');
+    expect(html).toContain("Sense dada");
   });
 
   it("fa clicable la pastilla del partit, que abans no portava enlloc", () => {

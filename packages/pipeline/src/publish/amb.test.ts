@@ -77,9 +77,25 @@ describe("les competències, que són el cor de la pàgina", () => {
 
   it("diu sempre on s'acaba l'AMB, no només què fa", () => {
     const html = renderAmb(amb(), "2026-08-29");
-    expect(html).toContain("On s'acaba:");
+    // Plegat, però a cada targeta: tantes vegades com matèries.
+    expect(html.split("<summary>On s'acaba</summary>").length - 1).toBe(COMPETENCIES.length);
     // El tramvia és el cas exemplar: és transport metropolità i no és de l'AMB.
     expect(html).toContain("El tramvia no");
+  });
+
+  it("fa de cada article un enllaç al text de la llei, no una cita morta", () => {
+    const html = renderAmb(amb(), "2026-08-29");
+    const enllacos = html.split('href="https://portaljuridic.gencat.cat/eli/es-ct/l/2010/08/03/31"').length - 1;
+    // Una per targeta i la de la nota del bloc.
+    expect(enllacos).toBeGreaterThanOrEqual(COMPETENCIES.length + 1);
+    expect(html).toContain(">Llei 31/2010, article 14.B</a>");
+  });
+
+  it("no repeteix al final els enllaços que ja té el peu", () => {
+    // «Segueix estirant» duplicava els 947, el mapa i el comparador, que són al
+    // peu, i la comarca, que ja té bloc propi.
+    const html = renderAmb(amb(), "2026-08-29");
+    expect(html).not.toContain("Segueix estirant");
   });
 
   it("no diu ni una xifra del que fa l'AMB avui, que no hem pogut comprovar", () => {
@@ -155,6 +171,16 @@ describe("renderAmb", () => {
     expect(html).toContain("Mediana catalana");
     expect(html).toContain("Percentil");
     expect(html).toContain("34 de 1");
+    // La definició ja no va sota la targeta: va al glossari, amb la font.
+    expect(html).not.toContain("Deute viu a 31 de desembre.</span>");
+    expect(html).toContain('<details class="nota glossari">');
+    expect(html).toContain("Font: Consorci AOC, 34db8dc5.");
+  });
+
+  it("carrega la tipografia del portal un nivell amunt", () => {
+    const html = renderAmb(amb(), "2026-08-29");
+    expect(html).toContain('href="../../assets/fonts.css"');
+    expect(html.indexOf("fonts.css")).toBeLessThan(html.indexOf("<style>"));
   });
 
   it("no dona el nombre de consellers de cap municipi, perquè no el podem saber", () => {

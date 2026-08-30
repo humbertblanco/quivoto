@@ -4,6 +4,7 @@ import {
 } from "@quivoto/db";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { sobreColor } from "./contrast";
+import { carregaCarrecsAlcaldia, carregaPleDelRegistre, resolAlcaldia } from "./alcaldia";
 import { carregaMetriques } from "./metriques";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
@@ -11,7 +12,7 @@ import { icona } from "./icones";
 import { partitDe, sigla } from "./sigla";
 import { SITE } from "./config";
 import { nomLlegible, slugify } from "../lib/text";
-import { capcalera } from "./capcalera";
+import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 
@@ -40,6 +41,15 @@ export type Els947Row = {
   a: string | null; g: string | null;
   /** el retrat que publica el mateix ajuntament, si en publica */
   ar: string | null;
+  /**
+   * El camí de la fitxa de l'alcaldia, relatiu a `m/<slug>/`: «regidor/<persona>/».
+   *
+   * El decideix `resolAlcaldia()` amb la mateixa regla que la fitxa del
+   * municipi, i el cercador el copia d'aquí per enviar on envia la llista.
+   * `null` quan la persona no té pàgina: llavors el nom porta a `#alcaldies`.
+   * Opcional pel mateix motiu que els camps de sota: `mapa-ara.ts` fa files a mà.
+   */
+  ad?: string | null;
   /** el color de la força de l'alcaldia, quan se'n pot saber la marca (vegeu «b») */
   ac: string | null;
   /** governa el més votat: 1 sí, 0 no, null desconegut */
@@ -117,6 +127,19 @@ export type Els947Row = {
    */
   rn?: number | null;
   ra?: number | null;
+  /**
+   * El que cobra l'alcaldia en un any, en euros, **només quan és un sou**.
+   *
+   * Surt de l'Inventari de retribucions del Ministeri (kind «retribucions»,
+   * J22), que distingeix expressament el sou d'una dedicació —exclusiva o
+   * parcial— de les assistències a plens d'una alcaldia sense dedicació. Aquí
+   * només hi entra el primer: dir que una alcaldia «cobra» 180 € l'any per anar
+   * a dos plens barrejaria dues coses que la font separa, i al mapa faria
+   * semblar que hi ha pobles on l'alcaldia cobra poc quan el que passa és que
+   * no cobra. La resta es queda en `null`, que és com el mapa pinta «sense
+   * dada». És la mateixa regla que aplica la pàgina de comarca.
+   */
+  sa?: number | null;
 };
 
 /**
@@ -133,12 +156,11 @@ export type Els947Row = {
  * `municipalities.minutesCount`, no de cap mètrica.
  */
 const KINDS_ELS947: string[] = [
-  // «carrecs» hi és només per una cosa: el retrat de l'alcaldia. Són 5 kB per
-  // municipi —uns 4,7 MB en total— i `carregaMetriques` ja els demana en blocs
-  // de 200, que és el que fa que això no repeteixi el problema de memòria de
-  // les actes. Si un dia aquesta mètrica creix, el primer que s'ha de mirar és
-  // si val la pena continuar-la llegint aquí per una sola imatge.
-  "carrecs",
+  // «carrecs» ja no hi és. Hi era només per una cosa —el retrat de
+  // l'alcaldia— i costava 5 kB per municipi, uns 4,7 MB en total, per treure'n
+  // una imatge. Ara la llegeix `carregaCarrecsAlcaldia()` amb una projecció en
+  // SQL que porta el nom, el càrrec i el retrat petit de cada persona i res més,
+  // i és la mateixa lectura que fa la pàgina de comarca.
   "electoralHistory",
   "finances",
   "government",
@@ -165,7 +187,30 @@ const KINDS_ELS947: string[] = [
   // aquesta i «poblacio» són les dues primeres a mirar, i el que caldria és
   // una consulta que demanés el camp i no la mètrica sencera.
   "riquesa",
+  // El sou de l'alcaldia, per al mapa. La mètrica porta també el full de les
+  // regidories i, a Barcelona, el que publica el mateix ajuntament persona a
+  // persona; d'aquí només en surt una xifra —`ministeri.alcaldia.euros`, i
+  // només si és un sou— i la resta es llegeix i es llença.
+  "retribucions",
 ];
+
+/**
+ * El sou de l'alcaldia, tret de la mètrica «retribucions» tal com la desa J22.
+ *
+ * El full del Ministeri posa un import a cada alcaldia, i J22 el marca amb la
+ * `mena`: «sou» quan hi ha dedicació exclusiva o parcial, «assistencies» quan
+ * són indemnitzacions per anar als plens i «cap» quan no hi ha res. Només el
+ * primer és un sou, i és l'únic que surt d'aquí; la resta torna `null`, igual
+ * que un municipi sense fila al full, perquè el mapa no ha de pintar una
+ * alcaldia de 180 € l'any com una alcaldia mal pagada.
+ */
+export function souAlcaldia(retribucions: unknown): number | null {
+  const alcaldia = (retribucions as
+    | { ministeri?: { alcaldia?: { euros?: unknown; mena?: unknown } | null } | null }
+    | undefined)?.ministeri?.alcaldia;
+  if (!alcaldia || alcaldia.mena !== "sou") return null;
+  return typeof alcaldia.euros === "number" && Number.isFinite(alcaldia.euros) ? alcaldia.euros : null;
+}
 
 /**
  * Llegir una mètrica **només** si s'ha demanat a la consulta.
@@ -240,6 +285,12 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
    * —i creixerà, perquè les actes són el que més té per créixer.
    */
   const metrics = await carregaMetriques(db, KINDS_ELS947);
+  // Qui és l'alcaldia ho decideix `resolAlcaldia()` amb el que decideix la
+  // fitxa del municipi: la llista de la seu electrònica —retallada al nom, el
+  // càrrec i el retrat petit— i, per als municipis sense seu, el ple del
+  // registre, que és qui anomena les seves fitxes de persona.
+  const carrecsSeu = await carregaCarrecsAlcaldia(db);
+  const pleRegistre = await carregaPleDelRegistre(db);
 
   const byMunicipality = new Map<number, Map<string, unknown>>();
   for (const metric of metrics) {
@@ -289,7 +340,10 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
       const own = byMunicipality.get(m.id);
       const { llegeix, te } = lectorDe(own);
       const government = llegeix("government") as
-        | { winnerGoverns: boolean | null; winnerHasMajority: boolean; mayorSigles: string | null }
+        | {
+            winnerGoverns: boolean | null; winnerHasMajority: boolean;
+            mayorName: string | null; mayorSigles: string | null;
+          }
         | undefined;
       const mayors = llegeix("mayors") as { currentTermChange: unknown } | undefined;
       const parity = llegeix("parity") as { womenElectedPct: number | null; complet?: boolean } | undefined;
@@ -301,13 +355,21 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
       const indicator = (key: string): number | null =>
         finances?.indicators.find((i) => i.key === key)?.value ?? null;
 
-      // El retrat de qui té l'alcaldia. S'aparella pel càrrec i no pel nom:
-      // la seu electrònica escriu «Alcalde», «Alcaldessa» o «Alcaldia» i això
-      // és més estable que el nom, que cada font escriu a la seva manera.
-      const carrecs = llegeix("carrecs") as
-        | { carrecs: { nom: string; carrec: string; fotoPetita: string | null }[] }
-        | undefined;
-      const capDeCasa = carrecs?.carrecs.find((c) => /alcald/i.test(c.carrec)) ?? null;
+      /*
+       * El retrat i la fitxa de qui té l'alcaldia.
+       *
+       * Abans s'aparellava només pel càrrec, perquè «Alcalde» és més estable
+       * que el nom. Ho és, i falla justament on fa més falta: a l'Hospitalet de
+       * Llobregat la seu no marca ningú després del relleu i a Lleida el portal
+       * escriu «Paer en cap», i la segona ciutat de Catalunya sortia amb les
+       * inicials mentre la seva fitxa ensenyava la cara. `resolAlcaldia()` fa
+       * els dos passos i els fa igual a tot arreu.
+       */
+      const alcaldia = resolAlcaldia(
+        carrecsSeu.get(m.id) ?? null,
+        { mayorName: government?.mayorName ?? m.mayorName, mayorSigles: government?.mayorSigles ?? null },
+        pleRegistre.get(m.id) ?? null,
+      );
       const sigles = government?.mayorSigles ?? m.mayorPartyRaw ?? null;
       const familia = sigles ? siglesFamily(sigles) : null;
 
@@ -351,7 +413,8 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         r: government ? (government as unknown as { totalSeats: number }).totalSeats : (m.councilSeats ?? 0),
         a: m.mayorName,
         g: sigles,
-        ar: capDeCasa?.fotoPetita ?? null,
+        ar: alcaldia.fotoPetita,
+        ad: alcaldia.adreca,
         ac: marca ? BRANDS_BY_ID.get(marca)?.color ?? null : null,
         w: government?.winnerGoverns === null || government === undefined ? null : government.winnerGoverns ? 1 : 0,
         m: government?.winnerHasMajority ? 1 : 0,
@@ -370,6 +433,7 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         pa: aigua?.preu?.subministrament ?? null,
         rn: renda,
         ra: renda === null ? null : riquesa?.any ?? null,
+        sa: souAlcaldia(llegeix("retribucions")),
       };
     })
     .sort((a, b) => b.p - a.p);
@@ -548,35 +612,34 @@ export function marques(fila: Fila, l: Llindars): string[] {
     .map((f) => f.clau);
 }
 
-/** Les pastilles d'una fila, en l'ordre en què es llegeixen. */
-export function pastilles(fila: Fila, l: Llindars): string[] {
+/**
+ * Les pastilles d'una fila: només les tres de «qui mana».
+ *
+ * N'hi havia set per fila de mitjana —6.496 en total, 346 kB d'un fitxer d'un
+ * megabyte— i totes deien una xifra que la fila ja porta a `data-o` per
+ * ordenar-la o a `data-f` per filtrar-la. Escrites com a text a cada fila, les
+ * regidories, les actes, el deute, la renda, les dones al ple i la
+ * transparència eren el que més pesava de la pàgina i el que menys es llegia:
+ * amb 947 files ningú no compara pastilles de deute d'una en una, ordena la
+ * llista per deute. Per això la xifra del criteri que mana la pinta el
+ * navegador en una sola pastilla per fila (`.pastilla.ordre`), i la resta
+ * continua sent filtrable i ordenable sense ser escrita.
+ *
+ * Les tres que queden no són xifres: són fets sobre qui mana que no es
+ * dedueixen de cap ordre i que un lector busca amb l'ull —el color de cada
+ * pastilla és el mateix que el del filtre que la troba. «Una sola candidatura»
+ * i «La mateixa força des del 1979» continuen sent filtres i han deixat de ser
+ * pastilles per la mateixa raó que les xifres: el filtre les troba, i a la fila
+ * hi ocupaven lloc a 185 i 90 municipis que ja porten la marca a `data-f`.
+ */
+export function pastilles(fila: Fila): string[] {
   const out: string[] = [];
-  const posa = (text: string, mena = ""): number =>
-    out.push(`<span class="pastilla${mena ? ` ${mena}` : ""}">${escape(text)}</span>`);
+  const posa = (text: string, mena: string): number =>
+    out.push(`<span class="pastilla ${mena}">${escape(text)}</span>`);
 
   if (fila.w === 0) posa("Governa qui no va guanyar", "pacte");
   if (fila.k === 1) posa("Canvi d'alcaldia a mig mandat", "canvi");
   if (fila.m === 1) posa("Majoria absoluta", "majoria");
-  if (fila.o === 1) posa("Una sola candidatura", "unica");
-  if (fila.v === 0 && (fila.q ?? 0) >= 8) posa("La mateixa força des del 1979", "sempre");
-  else if (fila.v !== null && fila.q !== null)
-    posa(`${fila.v} canvis de mans en ${fila.q} eleccions`);
-  // El nom de l'alcaldia i les seves sigles ja tenen la seva pròpia línia amb
-  // la cara i el color: com a pastilles hi sortien una segona vegada, en text
-  // pla i barrejades amb les xifres del poble.
-  posa(`${fila.r} regidories`);
-  posa(fila.t > 0 ? `${xifra(fila.t)} actes indexades` : "Sense actes", fila.t > 0 ? "" : "sense");
-  if (fila.d !== null) posa(`${xifra(fila.d)} € de deute per habitant`);
-  // La renda porta l'any perquè no és la de tothom el mateix any: l'INE tapa la
-  // dels municipis petits i uns quants es queden amb la de fa un any o dos.
-  if ((fila.rn ?? null) !== null)
-    posa(
-      fila.ra
-        ? `${xifra(fila.rn!)} € de renda per persona (${fila.ra})`
-        : `${xifra(fila.rn!)} € de renda per persona`,
-    );
-  if (fila.f !== null) posa(`${xifra(fila.f)} % de dones al ple`);
-  if (fila.y !== null) posa(`Transparència ${xifra(fila.y)} %`);
   return out;
 }
 
@@ -601,6 +664,12 @@ export function pastilles(fila: Fila, l: Llindars): string[] {
  * s'aplica igual aquí. I qui no té la dada va sempre al final, tant si
  * s'ordena de més a menys com al revés: un forat no és un zero, i posar-lo
  * entre els que menys tenen seria inventar-se una xifra.
+ *
+ * **La xifra que mana es veu.** Quan la llista s'ordena per deute, cada fila
+ * diu el seu deute en una pastilla que el navegador omple en ordenar; quan
+ * s'ordena per població o per nom, no diu res, perquè la població ja és a
+ * cada fila i el nom és la fila. És el que substitueix les set pastilles de
+ * xifres que abans portava cada fila escrites.
  */
 export type Ordre = {
   clau: string;
@@ -626,6 +695,18 @@ export type Ordre = {
   /** Com es diu l'ordre al recompte, en cada sentit. */
   avall: string;
   amunt: string;
+  /**
+   * Com es diu la xifra a la pastilla de cada fila quan aquest ordre mana.
+   *
+   * És una plantilla i no una funció perquè l'ha d'aplicar el navegador, que
+   * és qui sap quin ordre mana en cada moment: `{n}` és la xifra amb el punt de
+   * miler i `{any}` l'any de la dada entre parèntesis, quan la fila el porta
+   * —la renda no és la de tothom el mateix any. `textOrdre()` és l'única
+   * funció que la llegeix, i va serialitzada al guió amb `toString()` perquè
+   * no hi hagi dues versions. Sense plantilla no es pinta res: la població ja
+   * és a cada fila i el nom és la fila.
+   */
+  unitat?: string;
 };
 
 export const ORDRES: readonly Ordre[] = [
@@ -634,21 +715,52 @@ export const ORDRES: readonly Ordre[] = [
   { clau: "nom", text: "Nom", de: "nom", gran: false,
     avall: "per ordre alfabètic", amunt: "per ordre alfabètic invers" },
   { clau: "renda", text: "Renda per persona", de: "xifra", i: 0, val: (f) => f.rn, gran: true,
-    avall: "de més renda per persona a menys", amunt: "de menys renda per persona a més" },
+    avall: "de més renda per persona a menys", amunt: "de menys renda per persona a més",
+    unitat: "renda {n} €{any}" },
   { clau: "deute", text: "Deute per habitant", de: "xifra", i: 1, val: (f) => f.d, gran: true,
-    avall: "de més deute per habitant a menys", amunt: "de menys deute per habitant a més" },
+    avall: "de més deute per habitant a menys", amunt: "de menys deute per habitant a més",
+    unitat: "{n} € de deute per habitant" },
   { clau: "transp", text: "Transparència", de: "xifra", i: 2, val: (f) => f.y, gran: true,
     avall: "de més compliment del portal de transparència a menys",
-    amunt: "de menys compliment del portal de transparència a més" },
+    amunt: "de menys compliment del portal de transparència a més",
+    unitat: "Transparència {n} %" },
   { clau: "dones", text: "Dones al ple", de: "xifra", i: 3, val: (f) => f.f, gran: true,
-    avall: "de més dones al ple a menys", amunt: "de menys dones al ple a més" },
+    avall: "de més dones al ple a menys", amunt: "de menys dones al ple a més",
+    unitat: "{n} % de dones al ple" },
   { clau: "actes", text: "Actes indexades", de: "xifra", i: 4, val: (f) => f.t, gran: true,
-    avall: "de més actes indexades a menys", amunt: "de menys actes indexades a més" },
+    avall: "de més actes indexades a menys", amunt: "de menys actes indexades a més",
+    unitat: "{n} actes" },
 ];
+
+/**
+ * La xifra d'un ordre, escrita com la llegeix la gent.
+ *
+ * Es fa servir dos cops, com `clauCerca()`: aquí per provar-la, i al navegador
+ * —serialitzada amb `toString()`— per omplir la pastilla de cada fila quan
+ * canvia l'ordre. Per això no pot fer servir res de fora: ni `xifra()` ni cap
+ * ajudant del transpilador. L'any només s'escriu quan hi és, i entre
+ * parèntesis, perquè «renda 14.900 € (2022)» i «renda 14.900 € (2023)» en
+ * files veïnes són el que diu que l'INE no té la de tothom del mateix any.
+ */
+export function textOrdre(plantilla: string, valor: number, any: number | null): string {
+  return plantilla
+    .replace("{n}", valor.toLocaleString("ca-ES"))
+    .replace("{any}", any ? " (" + any + ")" : "");
+}
 
 /** Les que viatgen a «data-o», en l'ordre exacte en què s'hi escriuen. */
 const XIFRES_ORDRE: readonly Ordre[] = ORDRES.filter((o) => o.de === "xifra").slice()
   .sort((a, b) => (a.i ?? 0) - (b.i ?? 0));
+
+/**
+ * On és l'any de la renda dins de «data-o»: després de totes les xifres.
+ *
+ * No és cap ordre —ningú no ordena per l'any d'una dada— i per això no és a
+ * `ORDRES`; hi viatja perquè la pastilla de la renda el digui. Va al final i no
+ * com a atribut a part perquè un `data-ra` per fila són 947 atributs més, i
+ * aquí és un «|2023».
+ */
+export const POSICIO_ANY_RENDA = XIFRES_ORDRE.length;
 
 /**
  * Els ordres que aquest conjunt permet oferir.
@@ -674,13 +786,16 @@ export function ordresDisponibles(files: readonly Fila[]): readonly Ordre[] {
  * deute.
  *
  * La població no hi és: la llista ja ve escrita de més gran a més petit i
- * l'ordre de sortida és exactament aquest.
+ * l'ordre de sortida és exactament aquest. L'any de la renda sí, i és l'últim
+ * camp: no s'hi ordena, però la pastilla de la renda l'ha de dir.
  */
 export function clausOrdre(fila: Fila): string {
-  return XIFRES_ORDRE.map((o) => {
+  const xifres = XIFRES_ORDRE.map((o) => {
     const v = o.val?.(fila) ?? null;
     return v === null ? "" : String(v);
-  }).join("|");
+  });
+  xifres.push((fila.rn ?? null) === null || !fila.ra ? "" : String(fila.ra));
+  return xifres.join("|");
 }
 
 /**
@@ -711,6 +826,16 @@ const CSS = `
 .mana .cara.inicials{display:flex;align-items:center;justify-content:center;font-family:var(--display);
   font-weight:900;font-size:.72rem;background:var(--c);color:var(--t)}
 .mana .qui-mana{font-weight:800;font-size:.9rem;min-width:0;overflow-wrap:anywhere}
+/* La cara i el nom són un sol enllaç a la pàgina de la persona. Es veu com
+   abans —sense subratllat fins que s'hi passa— i l'objectiu de toc és la
+   mateixa caixa invisible que fa servir la pastilla de sigles del costat:
+   30 px de cara més 4 amunt i 10 avall, sense fer la fila més alta. */
+.mana a.persona{display:flex;align-items:center;gap:9px;min-width:0;color:inherit;
+  text-decoration:none;position:relative}
+.mana a.persona::after{content:"";position:absolute;inset:-4px -2px -10px}
+.mana a.persona:hover .qui-mana,.mana a.persona:focus-visible .qui-mana{text-decoration:underline;
+  text-decoration-thickness:2.5px;text-underline-offset:3px;text-decoration-color:var(--coral)}
+.mana a.persona:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
 /* La pastilla de sigles, i el «nowrap» que desplaçava la pàgina sencera.
    «.sigla» de RADIOGRAFIA_CSS porta «white-space:nowrap», i té raó de portar-lo
    allà: dins d'una frase de titular, «PSC-CP» partit en dues ratlles no es
@@ -739,14 +864,21 @@ const CSS = `
   text-decoration-thickness:2px;text-underline-offset:2px}
 .mana a.sigla:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
 
-/* --- el tauler: cercador, filtres i llista ---------------------------- */
+/* --- el tauler: el filtre de la llista, els filtres i la llista --------
+   Es diu «cerca-llista» i no «cercador» a posta. El cercador del web és el
+   «dialog.cercador» compartit que porta cada pàgina, i aquesta caixa es deia
+   igual: «position:sticky» i «.js .cercador{display:block}» també l'agafaven a
+   ell, i «display:block» passa per sobre del «dialog:not([open]){display:none}»
+   del navegador. El resultat era el diàleg tancat pintat igualment, clavat a
+   dalt de la pàgina. Són dues caixes que fan dues feines —aquesta filtra les
+   947 files, l'altra porta a qualsevol lloc del web— i ara tenen dos noms. */
 .tauler{margin:var(--e4) 0 0}
-.cercador{position:sticky;top:0;z-index:5;background:var(--paper);padding:var(--e2) 0;
+.cerca-llista{position:sticky;top:0;z-index:5;background:var(--paper);padding:var(--e2) 0;
   border-bottom:2.5px solid var(--ink)}
-/* El cercador és l'única peça que necessita JavaScript: sense ell no faria res
-   i seria un camp que enganya. Els filtres, en canvi, són caselles i CSS. */
-.cercador{display:none}
-.js .cercador{display:block}
+/* El filtre de la llista és l'única peça que necessita JavaScript: sense ell no
+   faria res i seria un camp que enganya. Els filtres, en canvi, són caselles i CSS. */
+.cerca-llista{display:none}
+.js .cerca-llista{display:block}
 #cerca{width:100%;font:inherit;font-size:1.1rem;padding:13px 16px;border:2.5px solid var(--ink);
   border-radius:var(--r-m);background:var(--paper-2);color:var(--ink);box-shadow:var(--ombra)}
 
@@ -766,6 +898,15 @@ const CSS = `
   min-height:44px;padding:0 15px;border:2px dashed var(--ink);border-radius:var(--r-max);
   background:transparent;color:inherit;cursor:pointer}
 .recompte{font-size:.86rem;color:var(--ink-suau);margin:0}
+/* «Només on mana …», que és el que la pàgina d'un partit demana amb «?partit=».
+   És un botó i no un text perquè es pugui treure d'un cop, com un filtre
+   marcat; i sense JavaScript no existeix, perquè sense ell la llista és
+   sencera i un xip que digués el contrari mentiria. */
+.nomes-partit{font:inherit;font-size:.82rem;font-weight:800;display:inline-flex;align-items:center;
+  gap:8px;min-height:44px;padding:0 15px;border:2px solid var(--ink);border-radius:var(--r-max);
+  background:var(--ink);color:var(--paper);cursor:pointer}
+.nomes-partit .treu{font-size:1rem;line-height:1}
+.nomes-partit:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
 
 /* --- quants en queden, a cada casella --------------------------------
    Un filtre que no diu quants en troba fa jugar a les endevinalles: es marca,
@@ -818,7 +959,15 @@ const CSS = `
 .pastilla.sempre{background:var(--coral);border-color:var(--ink);color:#1E1B2E}
 .pastilla.unica{background:var(--ink);border-color:var(--ink);color:var(--paper)}
 .pastilla.sigles{border-color:var(--ink);font-weight:900}
-.pastilla.sense{border-style:dashed;color:var(--ink-suau)}
+/* La xifra de l'ordre que mana, una per fila. Va a la línia del nom i no a la
+   de les pastilles perquè és el que l'ull segueix quan la llista s'ordena per
+   ella —el nom i, al costat, per què és allà on és— i perquè la línia de les
+   pastilles només existeix quan hi ha alguna de les tres. L'omple el navegador
+   en ordenar; sense JavaScript no hi ha ordre que no sigui el de població, i
+   la pastilla es queda amagada. Tabular perquè les xifres quedin alineades
+   fila sota fila, que és per al que serveix una llista ordenada. */
+.pastilla.ordre{font-variant-numeric:tabular-nums;border-color:var(--ink);background:var(--paper-2)}
+.pastilla.ordre[hidden]{display:none}
 .buit{padding:var(--e4) 0;color:var(--ink-suau)}
 .fila.fora{display:none}
 
@@ -864,6 +1013,18 @@ export function renderEls947(
     a.localeCompare(b, "ca"),
   );
 
+  /*
+   * El nom de cada marca que té alguna alcaldia, per al xip de «?partit=».
+   * Només les que hi són: el navegador n'ha de saber el nom per dir «Només on
+   * mana …» i no té d'on treure'l si no és d'aquí. Són una quinzena i no les
+   * 947 sigles, que ja van a cada fila.
+   */
+  const nomsMarca: Record<string, string> = {};
+  for (const f of files) {
+    const id = partitDe(f.g, f.b);
+    if (id && !(id in nomsMarca)) nomsMarca[id] = BRANDS_BY_ID.get(id)?.name ?? id;
+  }
+
   /**
    * La llista va sencera a l'HTML, fila a fila.
    *
@@ -908,26 +1069,46 @@ export function renderEls947(
               ? `<img class="cara" src="${escape(f.ar)}" alt="" loading="lazy" width="30" height="30">`
               : `<span class="cara inicials" style="--c:${fons};--t:${tinta}" aria-hidden="true">${escape(inicials)}</span>`;
             /*
+             * La cara i el nom porten a la pàgina de la persona, i quan no en
+             * té, a l'apartat d'alcaldies del seu municipi. El nom era text
+             * pla: la llista deia qui mana a cada poble i no deixava anar a
+             * veure qui és. On va ho decideix `resolAlcaldia()`, que és qui ha
+             * decidit la cara, i per això les dues coses van dins del mateix
+             * enllaç. Sense fitxa publicada no hi ha enllaç, com el nom del
+             * municipi de la línia de dalt.
+             */
+            const persona = `${cara}<span class="qui-mana">${escape(nomLlegible(f.a))}</span>`;
+            const onVa = f.x === 1 ? `m/${escape(f.s)}/${f.ad ? escape(f.ad) : "#alcaldies"}` : null;
+            /*
              * Les sigles porten a la pàgina del partit quan sabem de quin és.
              * Les 947 pastilles d'aquesta llista eren l'exemple gros de la
-             * pastilla morta: el nom de l'alcaldia porta a la seva fitxa i les
-             * sigles del seu costat no portaven enlloc. Ho decideix `sigla()`
-             * i no aquesta pàgina, que és el que fa que una llista local
-             * —sense pàgina i sense haver-ne de tenir— es continuï quedant en
-             * un `<b>` aquí i a tot arreu igual.
+             * pastilla morta: no portaven enlloc. Ho decideix `sigla()` i no
+             * aquesta pàgina, que és el que fa que una llista local —sense
+             * pàgina i sense haver-ne de tenir— es continuï quedant en un
+             * `<b>` aquí i a tot arreu igual. Va fora de l'enllaç de la
+             * persona perquè és un altre enllaç: un dins de l'altre no és HTML.
              */
-            return `<p class="mana">${cara}<span class="qui-mana">${escape(nomLlegible(f.a))}</span>${
-              f.g ? sigla(f.g, { base: "./", brandId: f.b, color: f.ac }) : ""
-            }</p>`;
+            return `<p class="mana">${
+              onVa ? `<a class="persona" href="${onVa}">${persona}</a>` : persona
+            }${f.g ? sigla(f.g, { base: "./", brandId: f.b, color: f.ac }) : ""}</p>`;
           })()
         : "";
+      /*
+       * De quina marca és l'alcaldia, per a «?partit=». És el mateix
+       * identificador que `sigla()` fa servir per enllaçar la pastilla de
+       * sigles a la pàgina del partit, i per tant el mateix amb què aquella
+       * pàgina torna aquí: si les dues bandes el decidissin cadascuna a la seva
+       * manera, «On mana ERC» podria ensenyar un poble on la pastilla diu Junts.
+       * Buit quan no ho sabem o quan és una llista local, que no té pàgina.
+       */
+      const marcaAlcaldia = partitDe(f.g, f.b) ?? "";
+      const dades = pastilles(f);
       return `<li class="fila" data-k="${escape(clauCerca(f.n) + " " + clauCerca(f.c))}" data-f="${escape(
         marques(f, llindars).join(" "),
-      )}" data-o="${clausOrdre(f)}">
-<p class="titol">${titol}<span class="pob">${xifra(f.p)} hab.</span></p>
+      )}" data-o="${clausOrdre(f)}" data-b="${escape(marcaAlcaldia)}">
+<p class="titol">${titol}<span class="pastilla ordre" hidden></span><span class="pob">${xifra(f.p)} hab.</span></p>
 <p class="lloc">${lloc}</p>
-${qui}
-<p class="dades">${pastilles(f, llindars).join("")}</p>
+${qui}${dades.length > 0 ? `\n<p class="dades">${dades.join("")}</p>` : ""}
 </li>`;
     })
     .join("\n");
@@ -958,6 +1139,7 @@ ${qui}
 <title>Els 947 · Observatori de quivoto</title>
 <meta name="description" content="Els 947 municipis de Catalunya en una llista, amb el que en sabem de cadascun: qui hi mana, si va guanyar, si ha canviat d'alcaldia, com estan els comptes i quantes actes del ple en tenim.">
 <link rel="canonical" href="${SITE}/observatori/els947.html">
+${tipografia("./")}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${CSS}</style>
 <script>document.documentElement.className += " js";</script>
 </head>
@@ -997,10 +1179,12 @@ ${cercador("./")}
 </ul>
 
 <form class="tauler" id="tauler">
-  <div class="cercador">
-    <label class="nomes-lectors" for="cerca">Cerca un municipi o una comarca</label>
+  <!-- No és el cercador del web, que és el diàleg de la capçalera i porta a
+       qualsevol lloc: aquest només filtra les 947 files d'aquí sota, i ho diu. -->
+  <div class="cerca-llista">
+    <label class="nomes-lectors" for="cerca">Filtra els 947</label>
     <input id="cerca" type="search" autocomplete="off" spellcheck="false"
-      placeholder="Escriu un poble: esplugues, la seu, hospitalet…">
+      placeholder="Filtra la llista: esplugues, la seu…">
   </div>
 
   <div class="filtres" role="group" aria-label="Filtres">
@@ -1026,6 +1210,7 @@ ${cercador("./")}
 
   <div class="eines">
     <button class="neteja" type="reset">Treu-ho tot</button>
+    <button class="nomes-partit" type="button" id="nomes-partit" hidden><span id="nomes-partit-text"></span><span class="treu" aria-hidden="true">×</span><span class="nomes-lectors">Treu aquest filtre</span></button>
     <p class="recompte" id="recompte" aria-live="polite">${totals.municipis} municipis, ${ordres[0]!.avall}</p>
   </div>
 
@@ -1063,21 +1248,6 @@ ${llista}
   i ens va recordar que 947 no és una xifra abstracta sinó 947 llocs amb gent que hi vota.</p>
 </section>
 
-<section class="bloc anar">
-  <h2>Segueix estirant</h2>
-  <ul class="destins">
-    <li><a href="mapa/"><b>El mapa dels 947</b>
-      <span>Els mateixos municipis, pintats: on hi ha majoria absoluta, on no governa qui va
-      guanyar i on mana la mateixa força des del 1979</span></a></li>
-    <li><a href="comparador/"><b>El comparador</b>
-      <span>De dos a quatre municipis a la mateixa taula, amb la mateixa vara</span></a></li>
-    <li><a href="preguntes/"><b>Les preguntes</b>
-      <span>Les afirmacions que la brúixola farà, escrites llegint les actes del ple</span></a></li>
-    <li><a href="dades/"><b>Baixa't les dades</b>
-      <span>Tot això en CSV i JSON, amb l'esquema documentat i la font de cada xifra</span></a></li>
-  </ul>
-</section>
-
 <section class="bloc fonts">
   <h2>D'on surt tot això</h2>
   <p class="nota">Padró, alcaldia i dades de l'ens, resultats des del 1979, llistes de candidats i
@@ -1100,17 +1270,52 @@ ${peu("./", generatedAt)}
 
 <script>
 const norm = ${clauCerca.toString()};
+const textOrdre = ${textOrdre.toString()};
 const tauler = document.getElementById("tauler");
 const llistaEl = document.getElementById("llista");
 const files = Array.prototype.slice.call(tauler.querySelectorAll(".fila"));
 const claus = files.map(function (el) { return el.getAttribute("data-k"); });
 const marques = files.map(function (el) { return " " + el.getAttribute("data-f") + " "; });
+const marcaDe = files.map(function (el) { return el.getAttribute("data-b") || ""; });
+const pastillaOrdre = files.map(function (el) { return el.querySelector(".pastilla.ordre"); });
 const caselles = Array.prototype.slice.call(tauler.querySelectorAll(".commutador[type=checkbox]"));
 const cerca = document.getElementById("cerca");
 const recompte = document.getElementById("recompte");
 const buit = document.getElementById("buit");
 const capgira = document.getElementById("capgira");
+const nomesPartit = document.getElementById("nomes-partit");
+const nomesPartitText = document.getElementById("nomes-partit-text");
 const TOTAL = files.length;
+
+/*
+ * «?partit=erc»: la pàgina d'un partit hi envia amb «On mana», i la llista es
+ * queda només amb els municipis on l'alcaldia és d'aquella marca. Es llegeix
+ * de l'adreça i no d'una casella perquè és un enllaç que ve de fora; es pot
+ * treure amb el xip, que esborra el paràmetre de l'adreça sense recarregar
+ * res, i amb «Treu-ho tot», que ho treu tot. Sense JavaScript no hi ha xip ni
+ * filtre, i la llista és sencera: un paràmetre que no es pot veure ni treure
+ * no ha de tallar res. Un identificador que no és cap marca coneguda es
+ * conserva igualment —el xip el diu tal qual i el lector el pot treure—
+ * perquè un enllaç trencat s'ha de veure, no dissimular.
+ */
+const NOMS_MARCA = ${JSON.stringify(nomsMarca)};
+let partit = (function () {
+  const v = new URLSearchParams(location.search).get("partit");
+  return v && /^[a-z0-9-]+$/.test(v) ? v : "";
+})();
+function nomPartit() { return NOMS_MARCA[partit] || partit; }
+function pintaPartit() {
+  nomesPartit.hidden = partit === "";
+  nomesPartitText.textContent = partit === "" ? "" : "Només on mana " + nomPartit();
+}
+function treuPartit() {
+  if (partit === "") return;
+  partit = "";
+  const adreca = new URL(location.href);
+  adreca.searchParams.delete("partit");
+  history.replaceState(null, "", adreca.pathname + adreca.search + adreca.hash);
+  pintaPartit();
+}
 
 // Els comptadors de cada filtre. Es guarden un cop i no es tornen a buscar:
 // «pinta» s'executa a cada lletra que s'escriu al cercador.
@@ -1127,8 +1332,12 @@ for (const clau of ${JSON.stringify(disponibles.map((f) => f.clau))}) {
  * canvi d'ordre. El buit es queda com a «null» i no com a zero.
  */
 const ORDRES = ${JSON.stringify(
-    ordres.map((o) => ({ c: o.clau, d: o.de, i: o.i ?? 0, g: o.gran, a: o.avall, m: o.amunt })),
+    ordres.map((o) => ({
+      c: o.clau, d: o.de, i: o.i ?? 0, g: o.gran, a: o.avall, m: o.amunt, u: o.unitat ?? "",
+    })),
   )};
+// On és l'any de la renda dins de «data-o»: l'últim camp, després de les xifres.
+const RA = ${POSICIO_ANY_RENDA};
 const xifres = files.map(function (el) {
   return el.getAttribute("data-o").split("|").map(function (v) {
     return v === "" ? null : Number(v);
@@ -1184,6 +1393,16 @@ function ordena() {
   llistaEl.appendChild(fragment);
   capgira.querySelector(".fletxa").textContent = gran ? "↓" : "↑";
   diu = invertit ? o.m : o.a;
+  /*
+   * La xifra per la qual s'ha ordenat, a cada fila. La població i el nom no
+   * tenen plantilla i no pinten res: la població ja hi és i el nom és la fila.
+   * Qui no té la dada tampoc: és al final i la pastilla buida no li cal.
+   */
+  for (let i = 0; i < TOTAL; i++) {
+    const v = o.u === "" ? null : xifres[i][o.i];
+    pastillaOrdre[i].textContent = v === null ? "" : textOrdre(o.u, v, xifres[i][RA]);
+    pastillaOrdre[i].hidden = v === null;
+  }
 }
 
 // El navegador ja amaga les files amb els filtres de CSS; això ho torna a fer
@@ -1196,6 +1415,7 @@ function pinta() {
   let queden = 0;
   for (let i = 0; i < TOTAL; i++) {
     let hi = q === "" || claus[i].indexOf(q) !== -1;
+    if (hi && partit !== "" && marcaDe[i] !== partit) hi = false;
     for (let j = 0; hi && j < actius.length; j++) {
       if (marques[i].indexOf(actius[j]) === -1) hi = false;
     }
@@ -1213,9 +1433,12 @@ function pinta() {
     quants[clau].textContent = "(" + (facetes[clau] || 0) + ")";
   }
   buit.hidden = queden > 0;
+  // El recompte diu també el partit, perquè «212 de 947 municipis» sense dir
+  // per què no és cap resposta.
+  const on = partit === "" ? "" : " on mana " + nomPartit();
   recompte.textContent = queden === TOTAL
-    ? TOTAL + " municipis, " + diu
-    : queden + " de " + TOTAL + " municipis, " + diu;
+    ? TOTAL + " municipis" + on + ", " + diu
+    : queden + " de " + TOTAL + " municipis" + on + ", " + diu;
 }
 
 function refresca() { ordena(); pinta(); }
@@ -1226,10 +1449,13 @@ capgira.addEventListener("click", function () {
   capgira.setAttribute("aria-pressed", capgira.getAttribute("aria-pressed") === "true" ? "false" : "true");
   refresca();
 });
+nomesPartit.addEventListener("click", function () { treuPartit(); pinta(); });
 tauler.addEventListener("reset", function () {
   capgira.setAttribute("aria-pressed", "false");
+  treuPartit();
   setTimeout(refresca, 0);
 });
+pintaPartit();
 refresca();
 </script>
 </body>
