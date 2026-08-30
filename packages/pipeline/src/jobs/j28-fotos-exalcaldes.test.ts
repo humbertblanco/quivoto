@@ -8,6 +8,8 @@ import {
   TERME_ACTUAL,
   alcaldesActuals,
   anyDe,
+  continuacioDe,
+  esperaReintent,
   camiCreditRetrat,
   camiPublicRetrat,
   candidats,
@@ -141,6 +143,12 @@ const RESPOSTA_COMMONS = {
             mime: "image/svg+xml",
           },
         ],
+      },
+      {
+        ns: 6,
+        title: "File:Fitxer que no existeix.jpg",
+        missing: true,
+        imagerepository: "",
       },
       {
         pageid: 2,
@@ -341,6 +349,7 @@ describe("llegeixImageinfo", () => {
     "File:Retrat vectorial.svg",
     "File:Retrat no comercial.jpg",
     "File:Fitxer que no existeix.jpg",
+    "File:Mai contestat.jpg",
   ];
   const resultats = llegeixImageinfo(RESPOSTA_COMMONS, demanats);
 
@@ -397,16 +406,127 @@ describe("llegeixImageinfo", () => {
     expect(r.motiu).toBe("format no publicable: image/svg+xml");
   });
 
-  it("dona per descartat el fitxer que la resposta no menciona", () => {
-    const r = resultats.get("File:Fitxer que no existeix.jpg")!;
-    expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.motiu).toBe("Commons no coneix aquest fitxer");
+  /**
+   * Dues coses que s'assemblen i no són el mateix: el fitxer que Commons diu
+   * que no existeix (pàgina «missing») i el que la resposta no ha arribat a
+   * contestar (un tall per mida). El primer és un fet; el segon és una manca
+   * nostra i s'ha de tornar a demanar, no atribuir-li cap problema al fitxer.
+   */
+  it("distingeix el fitxer inexistent del que la resposta no ha contestat", () => {
+    const inexistent = resultats.get("File:Fitxer que no existeix.jpg")!;
+    expect(inexistent.ok).toBe(false);
+    if (!inexistent.ok) expect(inexistent.motiu).toBe("Commons no coneix aquest fitxer");
+    const tallat = resultats.get("File:Mai contestat.jpg")!;
+    expect(tallat.ok).toBe(false);
+    if (!tallat.ok) expect(tallat.motiu).toBe("Commons no n'ha tornat la informació");
+  });
+
+  /**
+   * MediaWiki normalitza els títols demanats i contesta amb el seu: sense
+   * aplicar el mapa «normalized», el resultat no lliga amb la clau demanada i
+   * el fitxer sembla no contestat. La primera execució real en va perdre així.
+   */
+  it("desfà la normalització de títols del servidor per lligar amb el que es va demanar", () => {
+    const resposta = {
+      query: {
+        normalized: [{ from: "File:Nom  amb   espais.jpg", to: "File:Nom amb espais.jpg" }],
+        pages: [
+          {
+            title: "File:Nom amb espais.jpg",
+            imageinfo: [
+              {
+                thumburl: "https://upload.wikimedia.org/x/240px-Nom.jpg",
+                url: "https://upload.wikimedia.org/x/Nom.jpg",
+                descriptionurl: "https://commons.wikimedia.org/wiki/File:Nom_amb_espais.jpg",
+                extmetadata: {
+                  License: { value: "cc0" },
+                  LicenseShortName: { value: "CC0" },
+                },
+                mime: "image/jpeg",
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const res = llegeixImageinfo(resposta, ["File:Nom  amb   espais.jpg"]);
+    expect(res.get("File:Nom  amb   espais.jpg")).toBeUndefined();
+    // La clau de treball és el títol normalitzat nostre, com a tot arreu.
+    expect(res.get("File:Nom amb espais.jpg")?.ok).toBe(true);
+  });
+
+  /**
+   * Una resposta amb «continue» arriba partida: la mateixa pàgina pot venir
+   * primer pelada i després amb la informació. Les parts es fusionen i mana
+   * la que porta l'imageinfo, vingui en l'ordre que vingui.
+   */
+  it("fusiona les parts d'una resposta partida i es queda la que porta la informació", () => {
+    const part1 = {
+      continue: { iistart: "2020-01-01T00:00:00Z", continue: "||" },
+      query: { pages: [{ title: "File:Partit.jpg" }, { title: "File:Sempre pelat.jpg" }] },
+    };
+    const part2 = {
+      query: {
+        pages: [
+          {
+            title: "File:Partit.jpg",
+            imageinfo: [
+              {
+                thumburl: "https://upload.wikimedia.org/x/240px-Partit.jpg",
+                url: "https://upload.wikimedia.org/x/Partit.jpg",
+                descriptionurl: "https://commons.wikimedia.org/wiki/File:Partit.jpg",
+                extmetadata: { License: { value: "cc-by-4.0" }, LicenseShortName: { value: "CC BY 4.0" } },
+                mime: "image/jpeg",
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const res = llegeixImageinfo([part1, part2], ["File:Partit.jpg", "File:Sempre pelat.jpg"]);
+    expect(res.get("File:Partit.jpg")?.ok).toBe(true);
+    const pelat = res.get("File:Sempre pelat.jpg")!;
+    expect(pelat.ok).toBe(false);
+    if (!pelat.ok) expect(pelat.motiu).toBe("Commons no n'ha tornat la informació");
+    // I el bloc «continue» es llegeix tal com el torna el servidor.
+    expect(continuacioDe(part1)).toEqual({ iistart: "2020-01-01T00:00:00Z", continue: "||" });
+    expect(continuacioDe(part2)).toBeNull();
+    expect(continuacioDe(null)).toBeNull();
+  });
+
+  it("la crida de continuació porta els paràmetres del bloc, a més dels de sempre", () => {
+    const url = new URL(urlImageinfo(["File:A.jpg"], 240, { iistart: "2020-01-01T00:00:00Z", continue: "||" }));
+    expect(url.searchParams.get("iistart")).toBe("2020-01-01T00:00:00Z");
+    expect(url.searchParams.get("continue")).toBe("||");
+    expect(url.searchParams.get("titles")).toBe("File:A.jpg");
   });
 
   it("no s'ofega amb una resposta buida", () => {
     const buit = llegeixImageinfo({}, ["File:A.jpg"]);
     expect(buit.get("File:A.jpg")?.ok).toBe(false);
+  });
+});
+
+describe("esperaReintent", () => {
+  /**
+   * La paret mesurada el 30-08-2026: després d'una trentena de baixades, la
+   * vora de Wikimedia respon 429 amb «retry-after: 11». Fer-li cas és l'única
+   * resposta correcta, i el marge de mig segon evita tornar-hi al pèl.
+   */
+  it("un 429 espera el que diu la capçalera, amb marge", () => {
+    expect(esperaReintent(429, "11", 0)).toBe(11_500);
+    expect(esperaReintent(429, null, 0)).toBe(2_500);
+    expect(esperaReintent(429, null, 2)).toBe(8_500);
+  });
+
+  it("un 5xx reintenta amb creixement; un 4xx de debò no reintenta", () => {
+    expect(esperaReintent(503, null, 1)).toBe(4_500);
+    expect(esperaReintent(404, null, 0)).toBeNull();
+    expect(esperaReintent(403, "11", 0)).toBeNull();
+  });
+
+  it("mai no s'espera més d'un minut, digui el que digui la capçalera", () => {
+    expect(esperaReintent(429, "3600", 0)).toBe(60_000);
   });
 });
 

@@ -2,8 +2,7 @@ import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { mayors, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
-import { fetchImatge } from "../adapters/seue";
-import { fetchJson, sleep } from "../lib/http";
+import { USER_AGENT, fetchJson, sleep } from "../lib/http";
 import { normalizePersonName } from "../lib/text";
 import { withRun } from "../lib/run";
 import { urlLlicencia } from "../publish/escut";
@@ -93,9 +92,16 @@ import {
  * segona execució són només les consultes SPARQL, que són les que diuen si a
  * algú li han canviat la foto.
  *
- * **Respectuós**: una petició cada cop, en sèrie, amb pausa entremig i amb
- * l'User-Agent del projecte. Uns 20 SPARQL, uns 8 a l'API de Commons i uns 230
- * fitxers, una sola vegada.
+ * **Respectuós, i pacient a la força**: una petició cada cop, en sèrie, amb
+ * pausa entremig i amb l'User-Agent del projecte. Uns 20 SPARQL, uns 8 a l'API
+ * de Commons i uns 230 fitxers, una sola vegada. I una lliçó mesurada el
+ * 30-08-2026: la vora de Wikimedia **limita el renderitzat de miniatures
+ * noves per IP** i, després d'una trentena de baixades seguides a dues per
+ * segon, respon una paret de 429 amb `retry-after: 11`. La primera execució
+ * real d'aquesta feina en va perdre 162 de 181 exactament per això. Per això
+ * la baixada reintenta esperant el que la capçalera demana: no és una fallada
+ * del fitxer, és el servei dient «més a poc a poc», i l'única resposta
+ * correcta és fer-li cas.
  *
  * Fonts: https://query.wikidata.org/sparql (dades CC0 1.0) i
  * https://commons.wikimedia.org/w/api.php (llicència per fitxer).
@@ -386,8 +392,17 @@ export function parseFotos(json: unknown): FotoWikidata[] {
 // L'API de Commons: llicència, autor i miniatura
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** URL de la crida a Commons per a un grup de títols, amb la miniatura demanada. */
-export function urlImageinfo(fitxers: readonly string[], amplada: number = AMPLADA): string {
+/**
+ * URL de la crida a Commons per a un grup de títols, amb la miniatura demanada.
+ * `continuacio` són els paràmetres del bloc `continue` d'una resposta anterior:
+ * quan la resposta no hi cap sencera, MediaWiki la parteix i cal tornar-hi amb
+ * exactament aquests paràmetres per rebre la resta.
+ */
+export function urlImageinfo(
+  fitxers: readonly string[],
+  amplada: number = AMPLADA,
+  continuacio?: Readonly<Record<string, string>>,
+): string {
   const params = new URLSearchParams({
     action: "query",
     format: "json",
@@ -398,7 +413,19 @@ export function urlImageinfo(fitxers: readonly string[], amplada: number = AMPLA
     iiextmetadatafilter: "License|LicenseShortName|LicenseUrl|Artist|AttributionRequired",
     titles: fitxers.join("|"),
   });
+  for (const [clau, valor] of Object.entries(continuacio ?? {})) params.set(clau, valor);
   return `${API_COMMONS}?${params.toString()}`;
+}
+
+/** El bloc `continue` d'una resposta de MediaWiki, o `null` quan és sencera. */
+export function continuacioDe(json: unknown): Record<string, string> | null {
+  const brut = (json as { continue?: unknown })?.continue;
+  if (brut === null || typeof brut !== "object") return null;
+  const net: Record<string, string> = {};
+  for (const [clau, valor] of Object.entries(brut)) {
+    if (typeof valor === "string" || typeof valor === "number") net[clau] = String(valor);
+  }
+  return Object.keys(net).length > 0 ? net : null;
 }
 
 /** Els formats que es publiquen tal com arriben. La resta es descarta amb motiu. */
@@ -448,26 +475,62 @@ const metadada = (
 };
 
 /**
- * Llegeix una resposta de l'API de Commons i decideix, fitxer a fitxer, si el
- * retrat es pot publicar. L'ordre de les comprovacions és el de la seguretat:
- * primer la llicència, que és la que decideix si tenim permís; després el
- * format, que decideix si el que ens donen és el fitxer que la pàgina descriu;
- * i al final la miniatura, sense la qual no hi ha res a baixar. Els títols
- * demanats que la resposta no menciona també compten, com a J20.
+ * Llegeix les respostes de l'API de Commons per a un lot i decideix, fitxer a
+ * fitxer, si el retrat es pot publicar.
+ *
+ * En plural, i no és un detall: quan la resposta no hi cap sencera, MediaWiki
+ * la **parteix** amb un bloc `continue`, i llavors la mateixa pàgina pot
+ * arribar primer pelada —sense `imageinfo`— i després sencera. Es fusionen
+ * quedant-se la versió que porta la informació, i una pàgina que després de
+ * totes les parts continua sense `imageinfo` es descarta com a «no tornada»,
+ * no com a «sense llicència»: dir que un fitxer no publica la llicència quan
+ * el que ha passat és que no l'hem rebuda seria culpar el fitxer del nostre
+ * tall. El mateix amb el mapa `normalized`: MediaWiki normalitza els títols
+ * demanats (majúscula inicial, guions baixos, Unicode) i contesta amb el seu,
+ * i sense desfer el canvi el resultat no lligaria amb la clau que es va demanar.
+ *
+ * Per a cada pàgina, l'ordre de les comprovacions és el de la seguretat:
+ * primer la llicència, que decideix si tenim permís; després el format, que
+ * decideix si el que ens donen és el fitxer que la pàgina descriu; i al final
+ * la miniatura, sense la qual no hi ha res a baixar. Els títols demanats que
+ * cap resposta no menciona també compten, com a J20.
  */
 export function llegeixImageinfo(
-  json: unknown,
+  json: unknown | readonly unknown[],
   demanats: readonly string[],
 ): Map<string, ResultatRetrat> {
-  const brut = (json as { query?: { pages?: unknown } })?.query?.pages;
-  const pagines: PaginaCommons[] = Array.isArray(brut) ? (brut as PaginaCommons[]) : [];
-  const resultats = new Map<string, ResultatRetrat>();
+  const respostes: unknown[] = Array.isArray(json) ? [...json] : [json];
+  const pagines = new Map<string, PaginaCommons>();
+  const normalitzacions: { from: string; to: string }[] = [];
+  for (const resposta of respostes) {
+    const query = (resposta as { query?: { pages?: unknown; normalized?: unknown } })?.query;
+    for (const pagina of Array.isArray(query?.pages) ? (query.pages as PaginaCommons[]) : []) {
+      const titol = typeof pagina.title === "string" ? titolNormalitzat(pagina.title) : "";
+      if (titol === "") continue;
+      const previa = pagines.get(titol);
+      if (previa === undefined || (!Array.isArray(previa.imageinfo) && Array.isArray(pagina.imageinfo))) {
+        pagines.set(titol, pagina);
+      }
+    }
+    for (const n of Array.isArray(query?.normalized) ? (query.normalized as { from?: unknown; to?: unknown }[]) : []) {
+      if (typeof n.from === "string" && typeof n.to === "string") normalitzacions.push({ from: n.from, to: n.to });
+    }
+  }
 
-  for (const pagina of pagines) {
-    const titol = typeof pagina.title === "string" ? titolNormalitzat(pagina.title) : "";
-    if (titol === "") continue;
+  const resultats = new Map<string, ResultatRetrat>();
+  for (const [titol, pagina] of pagines) {
+    if (pagina.missing !== undefined && pagina.missing !== false) {
+      resultats.set(titol, { ok: false, llicencia: null, motiu: "Commons no coneix aquest fitxer" });
+      continue;
+    }
     const info = Array.isArray(pagina.imageinfo) ? pagina.imageinfo[0] : undefined;
-    const extra = info?.extmetadata;
+    if (info === undefined) {
+      // La pàgina hi és però la seva informació no ha arribat: resposta
+      // tallada. No es diu res de la llicència, i la propera execució hi torna.
+      resultats.set(titol, { ok: false, llicencia: null, motiu: "Commons no n'ha tornat la informació" });
+      continue;
+    }
+    const extra = info.extmetadata;
     const codi = metadada(extra, "License");
 
     const veredicte = veredicteLlicencia(codi);
@@ -512,10 +575,20 @@ export function llegeixImageinfo(
     });
   }
 
+  // El servidor contesta amb el títol normalitzat per ell; el que es va
+  // demanar és el «from», i el resultat s'ha de poder trobar per tots dos.
+  for (const { from, to } of normalitzacions) {
+    const resultat = resultats.get(titolNormalitzat(to));
+    const clau = titolNormalitzat(from);
+    if (resultat !== undefined && !resultats.has(clau)) resultats.set(clau, resultat);
+  }
+
   for (const demanat of demanats) {
     const titol = titolNormalitzat(demanat);
     if (!resultats.has(titol)) {
-      resultats.set(titol, { ok: false, llicencia: null, motiu: "Commons no coneix aquest fitxer" });
+      // Absent de totes les parts de la resposta: no s'ha arribat a contestar.
+      // Els fitxers que de debò no existeixen vénen com a pàgines «missing».
+      resultats.set(titol, { ok: false, llicencia: null, motiu: "Commons no n'ha tornat la informació" });
     }
   }
   return resultats;
@@ -626,6 +699,49 @@ function midesWebp(bytes: Uint8Array): Mides | null {
 // Idempotència i descàrrega
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Quant esperar abans de reintentar una baixada, o `null` si no val la pena.
+ *
+ * La vora de Wikimedia limita el renderitzat de miniatures noves per IP:
+ * mesurat el 30-08-2026, després d'una trentena de baixades seguides tot són
+ * **429 amb `retry-after: 11`**. Un 429 no és una fallada del fitxer, és el
+ * servei demanant calma, i s'espera el que digui la capçalera —amb un marge—
+ * o un creixement exponencial si no en porta. Els 4xx de debò (un 404, un
+ * 403) no milloraran reintentant i tornen `null` de seguida.
+ */
+export function esperaReintent(status: number, retryAfter: string | null, intent: number): number | null {
+  if (status !== 429 && status < 500) return null;
+  const segons = Number(retryAfter);
+  const base = Number.isFinite(segons) && segons > 0 ? segons * 1_000 : 2_000 * 2 ** intent;
+  return Math.min(60_000, base + 500);
+}
+
+/** Quants cops es prova cada fitxer abans de deixar-lo per a la propera execució. */
+const INTENTS_BAIXADA = 5;
+
+/**
+ * Baixa un fitxer d'imatge fent cas del 429. No es fa servir el client de la
+ * seu electrònica (`fetchImatge`) a posta: aquell torna `null` al primer «no»
+ * i aquí el primer «no» és gairebé sempre un «espera't», que és una cosa que
+ * es resol esperant i no perdent 162 retrats, que és el que va passar.
+ */
+export async function baixaBytes(url: string): Promise<Uint8Array | null> {
+  for (let intent = 0; intent < INTENTS_BAIXADA; intent += 1) {
+    const resposta = await fetch(url, {
+      headers: { accept: "image/*", "user-agent": USER_AGENT },
+    });
+    if (resposta.ok) {
+      const bytes = new Uint8Array(await resposta.arrayBuffer());
+      // Un 200 amb el cos buit no és cap imatge.
+      return bytes.byteLength > 0 ? bytes : null;
+    }
+    const espera = esperaReintent(resposta.status, resposta.headers.get("retry-after"), intent);
+    if (espera === null) return null;
+    await sleep(espera);
+  }
+  return null;
+}
+
 async function existeix(cami: string): Promise<boolean> {
   try {
     return (await stat(cami)).size > 0;
@@ -672,7 +788,7 @@ export async function baixaRetrat(
   arrel?: string,
 ): Promise<ResultatBaixada> {
   const carpeta = directoriRetrats(arrel);
-  const bytes = await fetchImatge(retrat.miniaturaUrl);
+  const bytes = await baixaBytes(retrat.miniaturaUrl);
   if (bytes === null) return { estat: "sense-resposta", retrat: null };
 
   const format = formatDelsBytes(bytes);
@@ -832,9 +948,25 @@ export async function j28FotosExalcaldes(db: Db, options: OpcionsJ28 = {}): Prom
     let cridesCommons = 0;
     for (const grup of trossos(titols, FITXERS_PER_CRIDA)) {
       try {
-        const json = await fetchJson<unknown>(urlImageinfo(grup), { delayMs: PAUSA_COMMONS_MS });
-        cridesCommons += 1;
-        for (const [titol, resultat] of llegeixImageinfo(json, grup)) llicencies.set(titol, resultat);
+        /*
+         * Una resposta amb `continue` és una resposta a mitges: es torna a
+         * demanar amb els paràmetres del bloc fins que arriba sencera. El límit
+         * de voltes és per no quedar-se en un bucle si el servidor no acaba mai;
+         * el que quedi per contestar es descartarà com a «no tornat» i la
+         * propera execució hi tornarà.
+         */
+        const respostes: unknown[] = [];
+        let continuacio: Record<string, string> | null = null;
+        do {
+          const json = await fetchJson<unknown>(
+            urlImageinfo(grup, AMPLADA, continuacio ?? undefined),
+            { delayMs: PAUSA_COMMONS_MS },
+          );
+          cridesCommons += 1;
+          respostes.push(json);
+          continuacio = continuacioDe(json);
+        } while (continuacio !== null && respostes.length < 5);
+        for (const [titol, resultat] of llegeixImageinfo(respostes, grup)) llicencies.set(titol, resultat);
       } catch (error) {
         // Un lot que peta no s'endú la feina: els seus fitxers queden sense
         // llicència i, per tant, sense publicar. La propera execució hi torna.

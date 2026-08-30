@@ -12,7 +12,7 @@ export class HttpError extends Error {
   }
 }
 
-const USER_AGENT = "quivoto/0.1 (brúixola electoral municipal; hola@quivoto.cat)";
+export const USER_AGENT = "quivoto/0.1 (brúixola electoral municipal; hola@quivoto.cat)";
 
 export type FetchJsonOptions = {
   retries?: number;
