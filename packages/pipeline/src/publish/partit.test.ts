@@ -39,6 +39,7 @@ function mostra(canvis: Partial<PartitData> = {}): PartitData {
     majories: 1,
     poblacioGovernada: 58_800,
     poblacioCatalunya: 7_900_000,
+    poblacioAny: 2025,
     vots: 620_000,
     votsCatalunya: 2_900_000,
     llocs: [
@@ -53,6 +54,11 @@ function mostra(canvis: Partial<PartitData> = {}): PartitData {
       { year: 2015, regidories: 1_600, regidoriesCatalunya: 9_000, guanyats: 180, alcaldies: 150, municipisAmbSerie: 947 },
       { year: 2019, regidories: 1_520, regidoriesCatalunya: 9_000, guanyats: 170, alcaldies: 140, municipisAmbSerie: 947 },
       { year: 2023, regidories: 1_450, regidoriesCatalunya: 9_000, guanyats: 165, alcaldies: 2, municipisAmbSerie: 947 },
+    ],
+    poblacioSerie: [
+      { year: 2015, alcaldies: 150, habitants: 2_203_671, catalunya: 7_508_106 },
+      { year: 2019, alcaldies: 140, habitants: 2_315_209, catalunya: 7_675_217 },
+      { year: 2023, alcaldies: 2, habitants: 58_800, catalunya: 7_909_125 },
     ],
     serieRegidoriesFiable: true,
     serieAlcaldiesFiable: true,
@@ -171,13 +177,134 @@ describe("renderPartit", () => {
     expect(html).not.toContain('<figure class="grafic');
   });
 
-  it("dibuixa les dues sèries llargues quan les dues fonts s'hi assemblen", () => {
+  it("dibuixa les tres sèries llargues quan les fonts s'hi assemblen", () => {
     const html = renderPartit(mostra(), "2026-08-30");
     expect(html).toContain("Regidories, elecció a elecció");
     expect(html).toContain("Alcaldies, mandat a mandat");
-    // Dues gràfiques i no una de sola amb dos eixos: les regidories es compten
-    // per milers i les alcaldies per centenars.
-    expect(html.match(/<figure class="grafic/g)).toHaveLength(2);
+    expect(html).toContain("Població governada, elecció a elecció");
+    // Tres gràfiques i no una de sola amb tres eixos: les regidories es compten
+    // per milers, les alcaldies per centenars i els habitants per milions.
+    expect(html.match(/<figure class="grafic/g)).toHaveLength(3);
+  });
+
+  describe("la població governada", () => {
+    it("dibuixa la sèrie amb la població de cada any i el percentatge al costat", () => {
+      const html = renderPartit(mostra(), "2026-08-30");
+      // Els habitants del 2015 són els del padró del 2015, no els d'avui.
+      expect(html).toContain("2.203.671");
+      // 2.203.671 de 7.508.106 empadronats el 2015.
+      expect(html).toContain("29,4 %");
+      // I els del 2023 sobre el padró del 2023, no sobre el de Catalunya d'ara.
+      expect(html).toContain("7.508.106");
+    });
+
+    it("diu que comença on comença el padró i no on comença la sèrie electoral", () => {
+      const html = renderPartit(
+        mostra({
+          serie: [
+            { year: 1979, regidories: 800, regidoriesCatalunya: 8_000, guanyats: 90, alcaldies: 70, municipisAmbSerie: 940 },
+            ...mostra().serie,
+          ],
+        }),
+        "2026-08-30",
+      );
+      expect(html).toContain("comença el 2015 i no el 1979");
+    });
+
+    it("no retreu cap forat quan la sèrie de població comença on comença la resta", () => {
+      // El PSC de la mostra té les tres sèries del 2015 ençà: dir «comença el
+      // 2015 i no el 2015» seria una frase sense sentit.
+      const html = renderPartit(mostra(), "2026-08-30");
+      expect(html).not.toContain("i no el 2015");
+    });
+
+    it("no fa passar la població d'avui per la de fa deu anys", () => {
+      const html = renderPartit(mostra(), "2026-08-30");
+      expect(html).toContain("padró de l'any de cada elecció");
+      // La xifra gran de la capçalera és d'un altre any i la pàgina ho diu.
+      expect(html).toContain("és el padró del");
+      expect(html).toContain("2025");
+    });
+
+    it("amb un sol any amb padró no dibuixa cap línia, i la xifra queda a la taula", () => {
+      const html = renderPartit(
+        mostra({
+          poblacioSerie: [{ year: 2023, alcaldies: 2, habitants: 58_800, catalunya: 7_909_125 }],
+        }),
+        "2026-08-30",
+      );
+      expect(html).toContain("Població governada, elecció a elecció");
+      expect(html).toContain("una tendència d'un punt és una tendència");
+      expect(html.match(/<figure class="grafic/g)).toHaveLength(2);
+    });
+
+    it("qui no governa enlloc no té cap línia plana damunt del zero", () => {
+      const html = renderPartit(
+        mostra({
+          alcaldies: 0, majories: 0, comarques: 0, poblacioGovernada: 0,
+          llocs: [lloc({ alcaldia: false, majoria: false, mayorName: null })],
+          poblacioSerie: [
+            { year: 2015, alcaldies: 0, habitants: 0, catalunya: 7_508_106 },
+            { year: 2019, alcaldies: 0, habitants: 0, catalunya: 7_675_217 },
+            { year: 2023, alcaldies: 0, habitants: 0, catalunya: 7_909_125 },
+          ],
+        }),
+        "2026-08-30",
+      );
+      expect(html).not.toContain("Població governada, elecció a elecció");
+    });
+
+    it("no la dibuixa quan la sèrie d'alcaldies no és fiable, que és la seva font", () => {
+      const html = renderPartit(mostra({ serieAlcaldiesFiable: false, serieAlcaldies2023: 0 }), "2026-08-30");
+      expect(html).not.toContain("Població governada, elecció a elecció");
+    });
+  });
+
+  describe("el llinatge de les marques", () => {
+    it("explica d'on ve Junts i cap a on va, amb la data de cada pas", () => {
+      const html = renderPartit(
+        mostra({ id: "junts", sigles: "Junts", lineage: "ciu", lineageSigles: "CiU" }),
+        "2026-08-30",
+      );
+      expect(html).toContain("D'on ve i cap a on va");
+      expect(html).toContain("25 de juliol del 2020");
+      expect(html).toContain("18 de juny del 2015");
+      // CiU i el PDeCAT s'anomenen encara que no tinguin pàgina.
+      expect(html).toContain("CiU");
+      expect(html).toContain("PDeCAT");
+    });
+
+    it("no ajunta les xifres de dues marques amb filiació", () => {
+      const html = renderPartit(mostra({ id: "junts", sigles: "Junts" }), "2026-08-30");
+      expect(html).toContain("no arrossega les xifres de l'altra");
+      expect(html).toContain("no són la mateixa persona jurídica");
+    });
+
+    it("talla la corba de Junts on comença el partit i diu per què", () => {
+      const html = renderPartit(mostra({ id: "junts", sigles: "Junts" }), "2026-08-30");
+      // Les cinc alcaldies que la sèrie de sigles li dona el 2015 són llistes
+      // locals i d'Acord Municipal, no el partit: fora de la taula i de la corba.
+      expect(html).not.toContain("<th scope=\"row\">2015</th>");
+      expect(html).toContain("La corba comença el 2019 i no el 1979");
+    });
+
+    it("enllaça a la pàgina de l'altra marca només quan en té", () => {
+      const html = renderPartit(
+        mostra({
+          id: "junts", sigles: "Junts",
+          altres: [{ id: "pdecat", sigles: "PDeCAT", color: "#7f9ac9", alcaldies: 9, regidories: 60 }],
+        }),
+        "2026-08-30",
+      );
+      expect(html).toContain('href="../pdecat/"');
+      // CiU no en té: hi surt escrit i sense enllaç.
+      expect(html).not.toContain('href="../ciu/"');
+    });
+
+    it("qui no té llinatge documentat no en porta cap secció inventada", () => {
+      const html = renderPartit(mostra(), "2026-08-30");
+      expect(html).not.toContain("D'on ve i cap a on va");
+    });
   });
 
   it("qui no ha tingut mai cap alcaldia ho llegeix escrit, no en una línia plana", () => {

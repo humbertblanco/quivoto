@@ -19,6 +19,7 @@ import { j17Amb } from "./jobs/j17-amb";
 import { j18Poblacio } from "./jobs/j18-poblacio";
 import { j19Preus } from "./jobs/j19-preus";
 import { j20Wikidata } from "./jobs/j20-wikidata";
+import { j21TrajectoriaElectes } from "./jobs/j21-trajectoria-electes";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
 import { deriveFinances } from "./derive/finances";
@@ -48,6 +49,7 @@ const COMMANDS = {
   j18: j18Poblacio,
   j19: j19Preus,
   j20: (db: Parameters<typeof j20Wikidata>[0]) => j20Wikidata(db),
+  j21: j21TrajectoriaElectes,
   derive: deriveMetrics,
   alcaldies: deriveMayorChanges,
   comptes: deriveFinances,
@@ -93,7 +95,7 @@ type Command = keyof typeof COMMANDS;
  * S'executa a mà: `pnpm ingest j19`.
  */
 const ORDER: Command[] = [
-  "j1", "j5", "j2", "j3", "j4", "j6", "j7", "j8", "j9", "j15", "j10", "j16", "j17", "j18", "j20",
+  "j1", "j5", "j2", "j3", "j4", "j6", "j7", "j8", "j9", "j15", "j10", "j16", "j17", "j18", "j20", "j21",
   "derive", "alcaldies", "comptes", "ple", "trajectoria", "report", "publica",
 ];
 

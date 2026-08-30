@@ -9,6 +9,7 @@ import { loadEls947, renderEls947 } from "./els947";
 import { INDEXABLE, SITE } from "./config";
 import { loadComarques, renderComarca } from "./comarques";
 import { loadAmb, renderAmb } from "./amb";
+import { loadTrajectoriaElectes, renderTrajectoriaElectes } from "./trajectoria-electes";
 import { loadComparador, renderComparador } from "./comparador";
 import { renderDadesIndex, writeDownloads } from "./dades";
 import { loadCandidatures, renderCandidatura } from "./candidatura";
@@ -229,6 +230,31 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     } else {
       // Sense J17 no hi ha composició, i una llista inventada seria pitjor que cap.
       run.say("sense pàgina de l'AMB: cap municipi marcat com a metropolità (falta J17)");
+    }
+
+    /*
+     * D'on surten els que manen.
+     *
+     * De 2.917 alcaldes catalans des del 1979, 284 han ocupat després un càrrec
+     * per sobre de l'ajuntament: 213 al Parlament, 46 al Congrés, 46 al Senat,
+     * 36 al Govern i 29 a una presidència de diputació. No ho tenim de cap font
+     * agregada nostra i afecta justament les persones amb més poder.
+     *
+     * La pàgina posa la cobertura abans que cap altra xifra, i no per prudència
+     * decorativa: dels 284 que han fet el salt, el 95,8 % té article a la
+     * Viquipèdia; dels 2.633 que no consta que l'hagin fet, el 12,9 %. Sense
+     * dir-ho, la pàgina estaria mesurant qui és prou famós per tenir article i
+     * no qui ha fet carrera.
+     */
+    const trajectoria = await loadTrajectoriaElectes(db);
+    if (trajectoria) {
+      await mkdir(`${OUT_DIR}../trajectoria`, { recursive: true });
+      await writeFile(
+        `${OUT_DIR}../trajectoria/index.html`,
+        renderTrajectoriaElectes(trajectoria, generatedAt),
+        "utf8",
+      );
+      run.say(`pàgina de trajectòria dels electes`);
     }
 
     // Comparador: triar municipis i veure'ls costat a costat.
