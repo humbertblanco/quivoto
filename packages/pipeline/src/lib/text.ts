@@ -165,6 +165,43 @@ export function nomLlegible(text: string): string {
     .join(" ");
 }
 
+/**
+ * Els noms d'una seu electrònica, indexats per creuar-los amb les altres fonts.
+ *
+ * La clau és `normalizePersonName()`, la mateixa amb què tot el projecte
+ * aparella persones, i porta la mateixa cautela que les fotografies: **un nom
+ * que lliga amb dues fitxes no hi és**. A la pàgina que porta el nom d'una
+ * persona, escriure-hi el d'una altra és el pitjor error possible, i val més
+ * un nom sense accent que l'accent d'algú altre.
+ */
+export function nomsOficials(noms: Iterable<string>): ReadonlyMap<string, string> {
+  const vistos = new Map<string, string | null>();
+  for (const nom of noms) {
+    const clau = normalizePersonName(nom);
+    if (!clau) continue;
+    vistos.set(clau, vistos.has(clau) ? null : nom);
+  }
+  return new Map([...vistos].filter((e): e is [string, string] => e[1] !== null));
+}
+
+/**
+ * Una sola manera d'escriure cada nom: guanya la de la seu electrònica.
+ *
+ * El registre d'electes de la Generalitat el dona en majúscules i sense
+ * accents, i `titleCase()` en fa «Marta Farres Falgueras»; la seu electrònica
+ * del seu ajuntament l'escriu «Marta Farrés Falgueras», que és com s'escriu.
+ * La pàgina de la candidatura llegia el registre i la de la persona la seu, i
+ * el mateix nom sortia de dues maneres a dues pàgines que s'enllacen entre si.
+ *
+ * El nom triat passa per `nomLlegible()` vingui d'on vingui: hi ha seus que
+ * ho escriuen tot en majúscules, i la fitxa de la persona ja les treu. Així
+ * les dues pàgines no només trien el mateix nom: l'escriuen igual.
+ */
+export function nomPreferit(oficials: ReadonlyMap<string, string>, nom: string): string {
+  const oficial = oficials.get(normalizePersonName(nom));
+  return nomLlegible(oficial && oficial.trim() !== "" ? oficial : nom);
+}
+
 const MESOS = [
   "gener", "febrer", "març", "abril", "maig", "juny",
   "juliol", "agost", "setembre", "octubre", "novembre", "desembre",
