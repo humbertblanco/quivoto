@@ -6,6 +6,8 @@ import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
 import { dataCurta, slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { icona } from "./icones";
+import { projecta } from "./mapa";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -22,6 +24,15 @@ import { peu } from "./peu";
  * els trien els regidors, no els electors— i la pàgina ho ha de dir. Serveix
  * com a mapa per arribar a la fitxa del teu poble i per veure si el que hi passa
  * és excepcional o és el que passa a tot arreu.
+ *
+ * **La pàgina és la fitxa municipal un pis amunt, i s'hi assembla a propòsit.**
+ * Fins ara no ho era: obria amb quatre xifres soles —23 municipis, 9.376
+ * habitants— que no deien res perquè no tenien res al costat, i el repartiment
+ * del poder s'havia de deduir llegint una llista. Ara obre amb la mateixa
+ * `.ullada` que el poble, cada xifra amb la de Catalunya al peu; el poder es
+ * veu en dues cintes —una d'alcaldies i una d'habitants, que és on es descobreix
+ * que qui mana en més pobles no sempre mana sobre més gent— i hi ha el mapa de
+ * la comarca amb un punt per municipi que porta a la seva fitxa.
  */
 
 // ------------------------------------------------------------------- formes
@@ -42,6 +53,9 @@ export type ComarcaMunicipi = {
   slug: string;
   name: string;
   population: number | null;
+  /** On cau al mapa. Sense les dues, el municipi no es pot pintar i s'omet del dibuix. */
+  lat: number | null;
+  lon: number | null;
   seats: number;
   mayorName: string | null;
   mayorSigles: string | null;
@@ -102,6 +116,22 @@ export type ComarcaData = {
   majoriaAbsoluta: number;
   canvisAlcaldia: number;
   indicadors: ComarcaIndicador[];
+  /**
+   * Els mateixos comptes, però de tot Catalunya.
+   *
+   * Sense això la portada donava xifres òrfenes: «2 municipis on governa qui no
+   * va guanyar» no es pot llegir si no se sap que a Catalunya n'hi ha 214 de
+   * 947. Una xifra sola no diu si el que passa aquí és excepcional o és el que
+   * passa a tot arreu, que és exactament el que la pàgina promet respondre.
+   */
+  catalunya: {
+    municipis: number;
+    habitants: number;
+    regidories: number;
+    pacte: number;
+    majoriaAbsoluta: number;
+    canvisAlcaldia: number;
+  };
   /** Les altres 42, per poder-hi saltar sense passar per l'índex. */
   altres: { slug: string; name: string; municipis: number }[];
 };
@@ -261,6 +291,8 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
       name: municipalities.name,
       comarca: municipalities.comarca,
       population: municipalities.population,
+      lat: municipalities.lat,
+      lon: municipalities.lon,
       councilSeats: municipalities.councilSeats,
       mayorName: municipalities.mayorName,
     })
@@ -393,6 +425,10 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
       slug: m.slug,
       name: m.name,
       population: m.population,
+      // `numeric` torna text als dos motors, i «41,7» no és un número: si no es
+      // converteix aquí, el mapa projecta NaN i tots els punts cauen al zero.
+      lat: toNumber(m.lat),
+      lon: toNumber(m.lon),
       seats,
       mayorName: government?.mayorName ?? m.mayorName,
       mayorSigles,
@@ -459,6 +495,19 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
     municipis: perComarca.get(name)!.length,
   }));
 
+  // El país sencer, comptat exactament amb la mateixa regla que cada comarca:
+  // si el total es calculés d'una altra manera, la comparació de la portada
+  // —«aquí el 9 %, a Catalunya el 22 %»— compararia dues coses diferents.
+  const tots = [...perComarca.values()].flat();
+  const catalunya = {
+    municipis: tots.length,
+    habitants: tots.reduce((a, m) => a + (m.population ?? 0), 0),
+    regidories: tots.reduce((a, m) => a + m.seats, 0),
+    pacte: tots.filter((m) => m.winnerGoverns === false).length,
+    majoriaAbsoluta: tots.filter((m) => m.winnerGoverns === true && m.hasMajority).length,
+    canvisAlcaldia: tots.filter((m) => m.mayorChanged).length,
+  };
+
   return noms.map((name): ComarcaData => {
     const municipis = [...perComarca.get(name)!].sort(
       (a, b) => (b.population ?? 0) - (a.population ?? 0) || a.name.localeCompare(b.name, "ca"),
@@ -480,6 +529,7 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
       majoriaAbsoluta: municipis.filter((m) => m.winnerGoverns === true && m.hasMajority).length,
       canvisAlcaldia: municipis.filter((m) => m.mayorChanged).length,
       indicadors: indicadors.map((byComarca) => byComarca.get(name)).filter(Boolean) as ComarcaIndicador[],
+      catalunya,
       altres,
     };
   });
@@ -487,25 +537,270 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
 
 // --------------------------------------------------------------- fragments
 
+/** El mínim per pintar el repartiment del poder. L'AMB hi passa les seves forces. */
+export type ForcaPoder = { label: string; color: string; alcaldies: number; habitants: number };
+
 /**
- * Quantes alcaldies té cada força. És el gràfic que dona nom a la pàgina, i per
- * això les xifres van escrites al costat de la barra i no dins: la barra és
- * l'ajuda per comparar-les d'una ullada, no l'única manera de llegir-les.
+ * El repartiment del poder, en dues cintes.
+ *
+ * Abans era una llista de barres d'alcaldies amb els habitants escrits al
+ * costat en lletra petita, i les dues coses no es podien comparar perquè una
+ * era un dibuix i l'altra un número. Aquí van l'una damunt de l'altra i amb els
+ * mateixos colors en el mateix ordre: on un tram s'eixampla de la primera cinta
+ * a la segona, aquella força mana en pobles grans; on s'estreny, mana en molts
+ * pobles petits. Al Baix Llobregat el PSC té 15 alcaldies de 30 —la meitat de
+ * la cinta de dalt— i el 71 % de la població: és la diferència que cap llista
+ * de xifres no ensenyava.
+ *
+ * Les xifres van totes escrites a la clau de sota. La cinta és l'ajuda per
+ * comparar-les d'un cop d'ull, mai l'única manera de llegir-les.
  */
-function renderForces(data: ComarcaData): string {
-  const max = Math.max(1, ...data.forces.map((f) => f.alcaldies));
-  const items = data.forces
-    .map((forca) => {
-      const share = (100 * forca.habitants) / Math.max(1, data.habitants);
+export function renderPoder(
+  forces: readonly ForcaPoder[],
+  municipis: number,
+  habitants: number,
+  ambit: string,
+): string {
+  if (forces.length === 0) return "";
+  const totalM = Math.max(1, municipis);
+  const totalH = Math.max(1, habitants);
+
+  const cinta = (valor: (f: ForcaPoder) => number, total: number): string =>
+    forces
+      .map(
+        (f) =>
+          `<i style="--w:${((100 * valor(f)) / total).toFixed(2)}%;--c:${f.color}"
+        title="${escape(f.label)}"></i>`,
+      )
+      .join("");
+
+  const descriu = (valor: (f: ForcaPoder) => number, total: number, unitat: string): string =>
+    forces.map((f) => `${f.label}, ${decimal((100 * valor(f)) / total)} % ${unitat}`).join("; ");
+
+  const clau = forces
+    .map((f) => {
+      const partM = (100 * f.alcaldies) / totalM;
+      const partH = (100 * f.habitants) / totalH;
       return `<li>
-      <span class="nom"><span class="mostra" style="--c:${forca.color}"></span>${escape(forca.label)}</span>
-      <span class="regle"><i style="--w:${((100 * forca.alcaldies) / max).toFixed(1)}%;--c:${forca.color}"></i></span>
-      <span class="compte"><b>${forca.alcaldies}</b> ${plural(forca.alcaldies, "alcaldia", "alcaldies")}</span>
-      <span class="secundari">${number(forca.habitants)} habitants · ${decimal(share)} % de la comarca</span>
+      <span class="nom"><span class="mostra" style="--c:${f.color}"></span>${escape(f.label)}</span>
+      <span class="dada"><b>${f.alcaldies}</b> ${plural(f.alcaldies, "alcaldia", "alcaldies")}
+        de ${municipis} · ${decimal(partM)} %</span>
+      <span class="dada"><b>${number(f.habitants)}</b> habitants · ${decimal(partH)} % ${escape(ambit)}</span>
     </li>`;
     })
     .join("");
-  return `<ul class="forces">${items}</ul>`;
+
+  return `<figure class="poder">
+  <div class="tira-fila">
+    <span class="etq-tira">Alcaldies</span>
+    <div class="tira" role="img" aria-label="Alcaldies: ${escape(descriu((f) => f.alcaldies, totalM, "de les alcaldies"))}.">${cinta((f) => f.alcaldies, totalM)}</div>
+  </div>
+  <div class="tira-fila">
+    <span class="etq-tira">Població que governen</span>
+    <div class="tira" role="img" aria-label="Població governada: ${escape(descriu((f) => f.habitants, totalH, "dels habitants"))}.">${cinta((f) => f.habitants, totalH)}</div>
+  </div>
+  <ul class="poder-clau">${clau}</ul>
+</figure>`;
+}
+
+/** El mínim per pintar un municipi al mapa. L'AMB hi passa els seus 36. */
+export type PuntTerritori = {
+  slug: string;
+  name: string;
+  lat: number | null;
+  lon: number | null;
+  population: number | null;
+  mayorBrandId: string | null;
+  mayorSigles: string | null;
+};
+
+/**
+ * El territori, amb un punt per municipi i cada punt pintat de qui hi mana.
+ *
+ * És el que convertia la pàgina en un cul-de-sac: la llista de municipis és
+ * alfabètica per població i no diu on és res. Aquí es veu si una força mana en
+ * una banda de la comarca o escampada, i cada punt és un enllaç a la fitxa del
+ * poble —no un dibuix mut al costat d'una taula d'enllaços.
+ *
+ * Els colors són els mateixos de les cintes de sobre, i per això aquí no hi ha
+ * clau: repetir-la dos cops a la mateixa pantalla és fer llegir dues vegades el
+ * mateix. Sense coordenades no es pot pintar: amb menys de tres municipis
+ * situats no hi ha forma que es reconegui i val més no dibuixar res.
+ */
+export function renderMapaTerritori(
+  municipis: readonly PuntTerritori[],
+  base: string,
+  /**
+   * Com s'anomena el territori a la descripció, i sense preposició al davant:
+   * els noms de comarca vénen sense article —«Priorat», «Selva»— i qualsevol
+   * frase que els en posi una surt mal escrita, «d'Priorat» o «a Selva».
+   */
+  ambit: string,
+): string {
+  const punts = municipis.filter(
+    (m): m is PuntTerritori & { lat: number; lon: number } => m.lat !== null && m.lon !== null,
+  );
+  if (punts.length < 3) return "";
+
+  const amplada = 640;
+  // 24 i no 16: el punt més gran té un radi de 18, i amb un marge més estret la
+  // meitat d'una capital de comarca quedava tallada per la vora del llenç.
+  const marge = 24;
+  const geo = punts.map((m) => ({ slug: m.slug, nom: m.name, lat: m.lat, lon: m.lon }));
+
+  // La projecció escala per amplada. L'Alt Urgell fa el triple d'alt que
+  // d'ample, i escalat així sortia un mapa de 1.900 píxels que no cabia a cap
+  // pantalla: si l'alçada se'n va, es reescala per alçada i el dibuix es centra.
+  const maxAlt = 430;
+  let ample = amplada - 2 * marge;
+  let projectats = projecta(geo, ample);
+  let alt = Math.max(...projectats.map((p) => p.y));
+  if (alt > maxAlt) {
+    ample = Math.max(60, (ample * maxAlt) / alt);
+    projectats = projecta(geo, ample);
+    alt = Math.max(...projectats.map((p) => p.y));
+  }
+  const desplaca = (amplada - ample) / 2;
+  const alcada = alt + 2 * marge;
+
+  const radi = (population: number | null): number =>
+    // Arrel quarta, com al mapa dels 947: amb l'àrea proporcional al padró, una
+    // capital de comarca es menjaria els pobles del voltant. El mínim de 7 no és
+    // estètic: per sota d'això el punt deixa de ser un enllaç que es pugui tocar.
+    Math.max(7, Math.min(18, 7 + Math.pow(population ?? 0, 0.25) / 2.6));
+
+  const cercles = projectats
+    .map((p, i) => {
+      const m = punts[i]!;
+      const color = colorOf(m.mayorBrandId ?? SENSE_MARCA);
+      const qui = m.mayorSigles ? `${m.name} — ${m.mayorSigles}` : m.name;
+      return `<a href="${base}m/${escape(m.slug)}/"><title>${escape(qui)}</title>
+      <circle cx="${(p.x + desplaca).toFixed(1)}" cy="${(p.y + marge).toFixed(1)}" r="${radi(m.population).toFixed(1)}"
+        fill="${color}" stroke="#1E1B2E" stroke-width="1.5"/></a>`;
+    })
+    .join("");
+
+  return `<figure class="mapa-territori">
+  <svg viewBox="0 0 ${amplada} ${alcada.toFixed(0)}" aria-label="${escape(ambit)}: un punt per municipi, pintat de la força que hi té l'alcaldia. Cada punt porta a la fitxa del municipi.">${cercles}</svg>
+  <figcaption>Un punt per municipi, de la mida del seu padró i del color de qui hi mana
+  —els mateixos colors de les cintes. Cada punt porta a la seva fitxa.
+  <a href="${base}mapa/">I els 947 sencers, al mapa gran →</a></figcaption>
+</figure>`;
+}
+
+/** Una xifra de la portada: l'etiqueta, el número, on cau i on l'expliquen. */
+export type Pastilla = {
+  etq: string;
+  xifra: string;
+  /** De 0 a 100, o `null` quan no hi ha res a mesurar. Mai s'omple amb un zero. */
+  part: number | null;
+  peu: string;
+  on: string;
+  tema: string;
+};
+
+/**
+ * El resum d'una ullada, el mateix component que obre la fitxa del poble.
+ *
+ * No hi ha cap xifra nova: totes surten dels blocs de sota, i cada pastilla hi
+ * porta. El peu és el que la fa servir de res —una xifra sola no diu si és molt
+ * o poc— i la barra hi va sempre, buida quan no hi ha res a mesurar, perquè les
+ * files de la graella no es desmuntin.
+ */
+export function renderUllada(pastilles: readonly Pastilla[], titol: string): string {
+  if (pastilles.length < 3) return "";
+  return `<section class="ullada" aria-label="${escape(titol)}">
+  <ul>${pastilles
+    .map(
+      (p) => `<li><a href="${p.on}">
+      <span class="dibuix" aria-hidden="true">${icona(p.tema)}</span>
+      <span class="etq">${escape(p.etq)}</span>
+      <span class="xifra">${p.xifra}</span>
+      ${
+        p.part === null
+          ? `<span class="on buida" aria-hidden="true"></span>`
+          : `<span class="on"><i style="--w:${Math.max(0, Math.min(100, p.part)).toFixed(0)}%"></i></span>`
+      }
+      <span class="peu">${escape(p.peu)}</span>
+    </a></li>`,
+    )
+    .join("")}</ul>
+</section>`;
+}
+
+/**
+ * Les sis xifres que obren la pàgina de comarca.
+ *
+ * Les tres primeres diuen de quina mida és, i les tres següents qui hi mana:
+ * per això la primera fila no porta barra —una comarca no és «molta» ni «poca»
+ * comarca— i la segona sí, on la barra és la part de la comarca i el peu la
+ * mateixa proporció a tot Catalunya.
+ */
+function ulladaComarca(data: ComarcaData): string {
+  const total = Math.max(1, data.municipis.length);
+  const cat = data.catalunya;
+  const partCat = (n: number): string => `el ${decimal((100 * n) / Math.max(1, cat.municipis))} %`;
+  const pastilles: Pastilla[] = [
+    {
+      etq: "Municipis",
+      xifra: number(data.municipis.length),
+      part: null,
+      peu:
+        data.poblacioMediana === null
+          ? `dels ${number(cat.municipis)} de Catalunya`
+          : `dels ${number(cat.municipis)} de Catalunya; el del mig té ${number(Math.round(data.poblacioMediana))} habitants`,
+      on: "#municipis",
+      tema: "urbanisme",
+    },
+    {
+      etq: "Habitants",
+      xifra: number(data.habitants),
+      part: null,
+      peu: `el ${decimal((100 * data.habitants) / Math.max(1, cat.habitants))} % dels de Catalunya`,
+      on: "#municipis",
+      tema: "serveis socials",
+    },
+    {
+      etq: "Regidories en joc el 23-M",
+      xifra: number(data.regidories),
+      part: null,
+      peu: `de les ${number(cat.regidories)} de Catalunya`,
+      on: "#municipis",
+      tema: "el ple",
+    },
+  ];
+
+  const primera = data.forces[0];
+  if (primera && primera.brandId !== SENSE_MARCA) {
+    pastilles.push({
+      etq: "La força amb més alcaldies",
+      xifra: number(primera.alcaldies),
+      part: (100 * primera.alcaldies) / total,
+      peu: `${primera.label}, el ${decimal((100 * primera.alcaldies) / total)} % dels municipis`,
+      on: "#alcaldies",
+      tema: "participació",
+    });
+  }
+
+  pastilles.push({
+    etq: "Governa qui no va guanyar",
+    xifra: number(data.pacte),
+    part: (100 * data.pacte) / total,
+    peu: `de ${data.municipis.length}; a Catalunya, ${partCat(cat.pacte)} dels municipis`,
+    on: "#pactes",
+    tema: "seguretat",
+  });
+
+  pastilles.push({
+    etq: "Han canviat d'alcaldia",
+    xifra: number(data.canvisAlcaldia),
+    part: (100 * data.canvisAlcaldia) / total,
+    peu: `des del juny del 2023; a Catalunya, ${partCat(cat.canvisAlcaldia)}`,
+    on: "#canvis",
+    tema: "cultura",
+  });
+
+  return renderUllada(pastilles, `${data.name} en sis xifres`);
 }
 
 /** Governa el més votat, o hi va haver pacte. Una barra de tres trams i prou. */
@@ -596,13 +891,10 @@ function renderIndicadors(data: ComarcaData): string {
     })
     .join("");
   return `<ul class="indicadors">${cards}</ul>
-  <p class="nota">La mediana comarcal i la catalana es calculen sobre municipis, no sobre
-  habitants: cada poble hi compta un cop, tant si en té tres-cents com si en té cent mil.
-  El <b>percentil</b> és la comparació que val: cada municipi es mesura només amb els
-  catalans del seu tram de població de la LOREG —el mateix que decideix quants regidors
-  té— i el que es publica és la mediana d'aquells percentils. 50 vol dir que el municipi
-  típic d'aquesta comarca queda al mig; 80, que queda per sobre de quatre de cada cinc
-  municipis de la seva mida.</p>`;
+  <p class="nota">Les dues medianes són sobre municipis, no sobre habitants: cada poble hi
+  compta un cop. El <b>percentil</b> és la comparació que val, perquè mesura cada municipi
+  només amb els del seu tram de població de la LOREG: 50 és quedar al mig; 80, per sobre de
+  quatre de cada cinc de la seva mida.</p>`;
 }
 
 /** La llista de municipis: el motiu pel qual algú arriba a aquesta pàgina. */
@@ -634,24 +926,48 @@ function renderMunicipis(data: ComarcaData): string {
 // ------------------------------------------------------------------ estil
 
 /**
- * El que aquesta pàgina necessita i la fitxa municipal no té. Va aquí i no a
- * `estil.ts` perquè les comarques són una pàgina i no un patró: si demà en
- * surten més que ho comparteixin, ja es mourà.
+ * El que les pàgines de territori necessiten i la fitxa municipal no té.
+ *
+ * Ho fa servir tal qual la pàgina de l'AMB, que és la mateixa forma amb un altre
+ * perímetre: fins ara `amb.ts` en tenia una còpia literal de vuitanta línies, i
+ * qualsevol arranjament aquí s'havia de fer dues vegades o quedava a mitges.
+ * Va aquí i no a `estil.ts` perquè és el full de dues pàgines, no un patró del
+ * portal: si demà en surten més, ja es mourà.
  */
-const COMARCA_CSS = `
-.forces{list-style:none;margin:0 0 var(--e2);padding:0;display:grid;gap:var(--e2)}
-.forces li{display:grid;grid-template-columns:minmax(8em,12em) 1fr auto;gap:2px var(--e2);align-items:center}
-.forces .nom{font-weight:800;font-size:.94rem;display:flex;align-items:center;gap:8px}
-.forces .regle{height:20px;background:var(--vora);border-radius:var(--r-max);overflow:hidden}
-.forces .regle i{display:block;height:100%;width:var(--w);min-width:5px;background:var(--c);border:1.5px solid var(--ink);border-radius:var(--r-max)}
-.forces .compte{font-size:.92rem;white-space:nowrap}
-.forces .compte b{font-family:var(--display);font-weight:900;font-size:1.25rem;letter-spacing:-.02em}
-.forces .secundari{grid-column:1/-1;margin-top:-2px}
-@media (max-width:560px){
-  .forces li{grid-template-columns:1fr auto}
-  .forces .regle{grid-column:1/-1;order:3}
-  .forces .secundari{order:4}
-}
+export const TERRITORI_CSS = `
+/* El poder en dues cintes: alcaldies a dalt, població governada a baix, amb els
+   mateixos colors i en el mateix ordre. Comparar-les només funciona si les dues
+   comencen a la mateixa vertical, i per això l'etiqueta té columna pròpia. */
+.poder{margin:0 0 var(--e3)}
+.tira-fila{display:grid;grid-template-columns:minmax(0,9.5em) 1fr;gap:6px var(--e2);
+  align-items:center;margin-bottom:var(--e2)}
+.etq-tira{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--ink-suau);line-height:1.2}
+.tira{display:flex;height:34px;border:2.5px solid var(--ink);border-radius:var(--r-s);overflow:hidden}
+/* Un tram d'una alcaldia sobre trenta fa l'1,7 % i sense mínim desapareixeria:
+   qui mana en un sol poble ha de continuar sent visible a la cinta. */
+.tira i{display:block;height:100%;width:var(--w);min-width:3px;background:var(--c);
+  border-right:1.5px solid var(--ink)}
+.tira i:last-child{border-right:0}
+@media (max-width:560px){ .tira-fila{grid-template-columns:1fr} }
+.poder-clau{list-style:none;margin:0;padding:0;display:grid;gap:var(--e1);
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.poder-clau li{padding:8px 0;border-bottom:1px solid var(--vora);display:flex;flex-direction:column;gap:1px}
+.poder-clau .nom{font-weight:800;font-size:.94rem;display:flex;align-items:center;gap:8px}
+.poder-clau .dada{font-size:.84rem;color:var(--ink-suau)}
+.poder-clau .dada b{font-family:var(--display);font-weight:900;font-size:1.05rem;
+  letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* El mapa del territori. Cada punt és un enllaç, i per això té estat de focus:
+   sense això, qui hi va amb el teclat no sap mai on és. */
+.mapa-territori{margin:0 0 var(--e3)}
+.mapa-territori svg{display:block;width:100%;height:auto;max-height:70vh}
+.mapa-territori circle{transition:r .12s ease}
+.mapa-territori a:hover circle{stroke-width:3.5}
+.mapa-territori a:focus-visible circle{outline:3px solid var(--coral-text);outline-offset:3px}
+.mapa-territori figcaption{font-size:.8rem;color:var(--ink-suau);line-height:1.4;margin-top:var(--e1)}
+.mapa-territori figcaption a{font-weight:800}
+@media (prefers-reduced-motion:reduce){.mapa-territori circle{transition:none}}
 
 /* Governa el més votat o hi va haver pacte: una barra i prou. Els colors són
    els de la identitat, no els de cap partit: aquí no es parla de forces. */
@@ -666,11 +982,14 @@ const COMARCA_CSS = `
 .clau .mostra.governa-pacte{background:var(--presec)}
 .clau .mostra.governa-desconegut{background:var(--lavanda)}
 
-/* Llistes de municipis amb un detall al costat: pactes i canvis d'alcaldia. */
+/* Llistes de municipis amb un detall al costat: pactes i canvis d'alcaldia.
+   220 px i no 240: a 320 px de pantalla el contingut en fa 272, i una columna
+   més ampla que això vessaria. */
 .detall{list-style:none;margin:0 0 var(--e2);padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .detall li{padding:8px 0;border-bottom:1px solid var(--vora);display:flex;flex-direction:column;gap:1px}
 .detall a{font-weight:800}
+.detall .nom{font-weight:800}
 
 /* Les targetes d'indicador reaprofiten .indicadors i .indicador de la fitxa. */
 .indicador .referencia,.indicador .percentil{font-size:.88rem}
@@ -692,25 +1011,23 @@ const COMARCA_CSS = `
   .municipis tr{display:block;padding:10px 0;border-bottom:1px solid var(--vora)}
   .municipis th,.municipis td{display:block;border:0;padding:1px 0}
   .municipis tbody th{font-size:1.02rem}
-  /* Població i regidories tornen a la mateixa línia, amb la unitat escrita:
-     sense capçalera de taula, «685» i «7» tots sols no volen dir res. */
-  .municipis .pob,.municipis .reg{display:inline;font-weight:400;color:var(--ink-suau);font-size:.86rem}
+  /* Sense capçalera de taula, «685» i «7» tots sols no volen dir res: la unitat
+     s'escriu al costat i les dades tornen a la mateixa línia. */
+  .municipis .com,.municipis .pob,.municipis .reg{display:inline;font-weight:400;color:var(--ink-suau);font-size:.86rem}
+  .municipis .com::after{content:" · "}
   .municipis .pob::after{content:" habitants · "}
   .municipis .reg::after{content:" regidories"}
 }
+`;
 
+/** El que només és de les comarques: el salt a les altres quaranta-dues. */
+const COMARCA_CSS = TERRITORI_CSS + `
 /* Les altres 42: sense això, cada pàgina de comarca és un carreró sense sortida. */
 .veines{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
 .veines a{display:inline-flex;align-items:center;min-height:44px;font-size:.8rem;font-weight:800;
   text-decoration:none;border:2px solid var(--ink);border-radius:var(--r-max);padding:5px 12px}
 .veines a:hover{background:var(--ink);color:var(--paper)}
 .veines .aqui{background:var(--coral);color:#1E1B2E;border-color:var(--ink)}
-.resum-xifres{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e2);
-  /* 150 px no cabien: una xifra com «2.416.005» en fa 162 amb «.gran» i vessava
-     sobre el text del costat a 768 px. */
-  grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-.resum-xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:2px}
 `;
 
 // ------------------------------------------------------------------ pàgina
@@ -761,19 +1078,16 @@ ${cercador("../../")}
 <section class="portada">
   <p class="micro">Comarca</p>
   <h1>${escape(data.name)}</h1>
-  <p class="entrada">
-    ${data.municipis.length} municipis · ${number(data.habitants)} habitants ·
-    ${number(data.regidories)} regidories en total
-  </p>
-  ${summary ? `<p class="resum">${summary}</p>` : ""}
-  <ul class="resum-xifres">
-    <li><span class="gran">${data.municipis.length}</span><span class="secundari">municipis</span></li>
-    <li><span class="gran">${number(data.habitants)}</span><span class="secundari">habitants${
-      data.poblacioMediana === null ? "" : ` · el municipi del mig en té ${number(Math.round(data.poblacioMediana))}`
-    }</span></li>
-    <li><span class="gran">${number(data.regidories)}</span><span class="secundari">regidories, que és el que es reparteix el 23-M</span></li>
-    <li><span class="gran">${data.pacte}</span><span class="secundari">${plural(data.pacte, "municipi on governa qui no va guanyar", "municipis on governa qui no va guanyar")}</span></li>
-  </ul>
+  ${
+    // L'entrada era la línia de comptes —«23 municipis · 9.376 habitants»— i just
+    // a sota les mateixes tres xifres repetides en targetes. Ara l'entrada és la
+    // resposta a la pregunta que porta algú aquí, i els comptes van a la ullada.
+    summary
+      ? `<p class="entrada">${summary}</p>`
+      : `<p class="entrada">De l'alcaldia més repetida d'aquesta comarca no n'hem pogut lligar
+         la candidatura amb cap força coneguda.</p>`
+  }
+  ${ulladaComarca(data)}
 </section>
 
 <nav class="index" aria-label="Seccions d'aquesta pàgina">
@@ -785,13 +1099,13 @@ ${cercador("../../")}
 </nav>
 
 <section class="bloc" id="alcaldies">
-  <h2>Quantes alcaldies té cada força</h2>
-  <p class="entrada-bloc">L'alcaldia de cada municipi, agrupada per la força de la candidatura
-  que la va presentar. Al costat, quanta gent viu als municipis que governa.</p>
-  ${renderForces(data)}
-  <p class="nota">Una alcaldia no és un vot: als municipis petits n'hi ha prou amb dues-centes
-  persones i a la capital en calen milers. Per això hi va el nombre d'habitants al costat, que
-  és el que diu si una força mana en molts llocs o en llocs grans.
+  <h2>Qui mana, i sobre quanta gent</h2>
+  <p class="entrada-bloc">Dalt, les alcaldies. Baix, la gent que hi viu. Quan un color s'eixampla
+  de la primera cinta a la segona, aquella força mana en pocs municipis però grans.</p>
+  ${renderPoder(data.forces, data.municipis.length, data.habitants, "de la comarca")}
+  ${renderMapaTerritori(data.municipis, "../../", data.name)}
+  <p class="nota">Una alcaldia no és un vot: als pobles petits n'hi ha prou amb dues-centes
+  persones i a la capital en calen milers.
   ${(data.forces.find((f) => f.brandId === SENSE_MARCA)?.alcaldies ?? 0) > 0
     ? (() => {
         // La frase ha d'explicar la barra que el lector té davant. `senseIdentificar`
@@ -811,8 +1125,7 @@ ${cercador("../../")}
   amb majoria absoluta, i per tant no va necessitar ningú.</p>
   ${renderPactes(data)}
   <p class="nota">«Pacte» vol dir només això: que l'alcaldia és d'una llista que no va ser la
-  més votada, i que per tant algú altre hi va donar suport. No en sabem el contingut, perquè
-  els acords d'investidura no són dades obertes.</p>
+  més votada. El contingut de l'acord no el sabem: les investidures no són dades obertes.</p>
 </section>
 
 <section class="bloc" id="canvis">
@@ -834,12 +1147,11 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
 
 <section class="bloc">
   <h2>Què és i què no és una comarca</h2>
-  <p>El 23 de maig del 2027 no es vota cap consell comarcal: els seus consellers els trien els
-  regidors elegits als municipis, no els electors. Aquesta pàgina no és, doncs, la fitxa d'un
-  govern comarcal, sinó la <b>suma dels ${data.municipis.length} ajuntaments</b> que hi ha a
-  ${escape(data.name)}, per veure si el que passa al teu poble és el que passa al costat.</p>
-  <p class="nota">Els límits comarcals són els que fa servir la Generalitat al padró; el
-  Lluçanès i el Moianès hi són com a comarques pròpies.</p>
+  <p>El 23 de maig del 2027 no es vota cap consell comarcal: els consellers els trien els
+  regidors, no els electors. Això no és la fitxa d'un govern comarcal, sinó la <b>suma dels
+  ${data.municipis.length} ajuntaments</b> de ${escape(data.name)}.</p>
+  <p class="nota">Els límits són els del padró de la Generalitat; el Lluçanès i el Moianès hi
+  són com a comarques pròpies.</p>
 </section>
 
 <nav class="bloc" aria-label="Les altres comarques">
@@ -861,9 +1173,9 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
     <li>Sexe de les persones elegides: <code>xnfg-weec</code>.</li>
     <li>Liquidació pressupostària i deute viu: Consorci AOC, <code>81f18313</code> i <code>34db8dc5</code>.</li>
   </ul>
-  <p class="nota">El recompte d'alcaldies per força, els pactes, els canvis a mig mandat i els
-  percentils per tram de població són càlculs nostres sobre aquestes fonts, i es poden repetir
-  amb el codi del projecte. Cap xifra d'aquesta pàgina no ve d'una estimació.</p>
+  <p class="nota">Les alcaldies per força, els pactes, els canvis a mig mandat i els percentils
+  són càlculs nostres sobre aquestes fonts, repetibles amb el codi del projecte. Cap xifra
+  d'aquesta pàgina no ve d'una estimació.</p>
 </section>
 
 </main>

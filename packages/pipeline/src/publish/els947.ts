@@ -1,5 +1,7 @@
 import { eq } from "drizzle-orm";
-import { municipalities, municipalityMetrics, type Db } from "@quivoto/db";
+import {
+  candidatures, electionParticipation, municipalities, municipalityMetrics, type Db,
+} from "@quivoto/db";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { sobreColor } from "./contrast";
 import { carregaMetriques } from "./metriques";
@@ -37,7 +39,7 @@ export type Els947Row = {
   a: string | null; g: string | null;
   /** el retrat que publica el mateix ajuntament, si en publica */
   ar: string | null;
-  /** el color de la força de l'alcaldia, quan les sigles el deixen deduir */
+  /** el color de la força de l'alcaldia, quan se'n pot saber la marca (vegeu «b») */
   ac: string | null;
   /** governa el més votat: 1 sí, 0 no, null desconegut */
   w: 0 | 1 | null;
@@ -59,6 +61,40 @@ export type Els947Row = {
   y: number | null;
   /** ple amb una sola candidatura */
   o: 0 | 1;
+  /*
+   * Els quatre camps que vénen ara són opcionals i la resta no. No és una
+   * llicència per oblidar-los: `loadEls947()` els escriu sempre, i qui els
+   * llegeixi ha de tractar el «no hi és» igual que el `null`. Són opcionals
+   * perquè `mapa-ara.ts` —la vista prèvia del mapa, que es fa una fila a mà per
+   * a cada municipi sense tocar la base de dades— es quedaria sense compilar
+   * cada cop que aquesta llista creix, i llavors no hi hauria manera de mirar
+   * el mapa mentre es fa.
+   */
+  /**
+   * De quina marca és l'alcaldia: **primer el codi d'agrupació del dataset
+   * electoral** i, si aquell no ho diu, les sigles.
+   *
+   * Endevinar l'acrònim és el que deixava 94 municipis en gris al mapa amb
+   * 640.193 habitants a dins: «EPCP-C» és El Prat en Comú Podem i l'expressió
+   * dels comuns busca «ecp» o «en-comu», que allà van plegats dins d'un acrònim
+   * que només existeix al Prat. El codi d'agrupació no s'ha d'endevinar —és la
+   * Generalitat qui diu sota quina agrupació es presenta cada llista— i
+   * `AGRUPACIO_TO_BRAND` ja el tradueix. Comparat amb `siglesFamily()` sobre les
+   * 2.626 candidatures del 2023, coincideixen 2.189 vegades i en xoquen cinc,
+   * totes cinc coalicions amb dos noms a les sigles.
+   *
+   * Que el codi digui `local` no és una negació i per això no es fa servir per
+   * despintar res: 3.000.000 és alhora el codi de les agrupacions d'electors i
+   * la casella on cau tot allò que encara no s'ha repassat. En aquests casos
+   * mana el que diguin les sigles, que a Tiana és «JUNTS» escrit sencer.
+   */
+  b?: string | null;
+  /** participació a les municipals del 2023, en percentatge */
+  pt?: number | null;
+  /** pes de la població de nacionalitat estrangera, en percentatge */
+  pe?: number | null;
+  /** preu de l'aigua: el tram de subministrament, en euros per metre cúbic */
+  pa?: number | null;
 };
 
 /**
@@ -89,6 +125,15 @@ const KINDS_ELS947: string[] = [
   "transparency",
   "results",
   "singleList",
+  // Aquestes dues només serveixen per al mapa, i s'hi han posat sabent què
+  // costen: «poblacio» porta la sèrie sencera de cada indicador de l'Idescat i
+  // «preuAigua» la de cada any del full de l'ACA. D'aquí en surt una xifra de
+  // cadascuna —el pes de la població de nacionalitat estrangera i el preu del
+  // subministrament— i la resta es llegeix i es llença. Si un dia la memòria
+  // torna a petar, aquest és el primer lloc per mirar: el que caldria és una
+  // consulta que demanés només el camp, no la mètrica sencera.
+  "poblacio",
+  "preuAigua",
 ];
 
 /**
@@ -145,6 +190,42 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
     map.set(metric.kind, metric.data);
   }
 
+  /**
+   * De quina marca és cada candidatura, segons el codi d'agrupació electoral.
+   *
+   * La clau és el municipi **i** les sigles, mai les sigles soles: «Junts per
+   * Sabadell» i «Junts per Girona» són dues candidatures diferents, i hi ha
+   * sigles curtes —«CM», «AM», «UP»— que es repeteixen a pobles que no tenen
+   * res a veure. És la mateixa clau que fa servir la pàgina de comarca.
+   */
+  const candidatureRows = await db
+    .select({
+      municipalityId: candidatures.municipalityId,
+      sigles: candidatures.sigles,
+      brandId: candidatures.brandId,
+    })
+    .from(candidatures)
+    .where(eq(candidatures.electionId, "M20231"));
+  const brandBySigles = new Map(
+    candidatureRows.map((r) => [`${r.municipalityId} ${r.sigles}`, r.brandId]),
+  );
+
+  // La participació del 2023. No és cap mètrica derivada: són el cens i els
+  // votants tal com els publica la Generalitat, i es divideixen aquí.
+  const turnoutRows = await db
+    .select({
+      municipalityId: electionParticipation.municipalityId,
+      censusSize: electionParticipation.censusSize,
+      voters: electionParticipation.voters,
+    })
+    .from(electionParticipation)
+    .where(eq(electionParticipation.electionId, "M20231"));
+  const participacio = new Map<number, number>();
+  for (const row of turnoutRows) {
+    if (!row.censusSize || row.voters === null) continue;
+    participacio.set(row.municipalityId, Math.round((10_000 * row.voters) / row.censusSize) / 100);
+  }
+
   return all
     .map((m): Els947Row => {
       const own = byMunicipality.get(m.id);
@@ -172,6 +253,23 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
       const sigles = government?.mayorSigles ?? m.mayorPartyRaw ?? null;
       const familia = sigles ? siglesFamily(sigles) : null;
 
+      /*
+       * La marca de l'alcaldia, primer per codi d'agrupació i després per
+       * sigles. «local» compta com a no saber-ho: és alhora la marca de les
+       * agrupacions d'electors i la casella on cau tot el que no és a la taula
+       * de codis, i tractar-la com una negació hauria despintat Tiana, on la
+       * llista es diu «JUNTS» i el codi encara no s'ha repassat.
+       */
+      const marcaAgrupacio = sigles ? brandBySigles.get(`${m.id} ${sigles}`) ?? null : null;
+      const marca = marcaAgrupacio && marcaAgrupacio !== "local" ? marcaAgrupacio : familia;
+
+      const poblacio = llegeix("poblacio") as
+        | { indicadors: { clau: string; valor: number | null }[] }
+        | undefined;
+      const aigua = llegeix("preuAigua") as
+        | { preu: { subministrament: number | null } }
+        | undefined;
+
       return {
         s: m.slug,
         n: m.name,
@@ -181,7 +279,7 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         a: m.mayorName,
         g: sigles,
         ar: capDeCasa?.fotoPetita ?? null,
-        ac: familia ? BRANDS_BY_ID.get(familia)?.color ?? null : null,
+        ac: marca ? BRANDS_BY_ID.get(marca)?.color ?? null : null,
         w: government?.winnerGoverns === null || government === undefined ? null : government.winnerGoverns ? 1 : 0,
         m: government?.winnerHasMajority ? 1 : 0,
         k: mayors?.currentTermChange ? 1 : 0,
@@ -193,6 +291,10 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         q: history?.elections ?? null,
         y: transparency?.pct ?? null,
         o: te("singleList") ? 1 : 0,
+        b: marca,
+        pt: participacio.get(m.id) ?? null,
+        pe: poblacio?.indicadors?.find((i) => i.clau === "pctNacionalitatEstrangera")?.valor ?? null,
+        pa: aigua?.preu?.subministrament ?? null,
       };
     })
     .sort((a, b) => b.p - a.p);

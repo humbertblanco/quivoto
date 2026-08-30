@@ -152,7 +152,12 @@ const SIGLES_FAMILIES: ReadonlyArray<readonly [RegExp, string]> = [
   // ell 33 alcaldies del PSC es quedaven sense color mentre les d'ERC i la CUP
   // el tenien. La forma sencera «psccp» ja hi era; el que faltava era el tros.
   [/^(psc|pscpsoe|pscpm|psccp|pscpmc|psoe|pscunits)|(^|-)cp$/, "psc"],
-  [/^(ciu|cdc|convergencia|uniodemocratica|udc)/, "ciu"],
+  // El «(?!tadan)» impedeix que «Ciutadans» escrit sencer caigui a CiU: aquesta
+  // línia va abans que la de Ciutadans i «^ciu» se l'empassava. A les dades del
+  // 2023 no hi surt mai escrit sencer —les nou candidatures són «Cs»— però a la
+  // sèrie des del 1979 les sigles s'escriuen com cadascú vol, i llegir
+  // Ciutadans com a Convergència seria dir que un poble no ha canviat de mans.
+  [/^(ciu(?!tadan)|cdc|convergencia|uniodemocratica|udc)/, "ciu"],
   // «juntsxcat» hi és perquè a Tàrrega les sigles s'escriuen senceres i el
   // token «junts» no hi surt sol: sense això, l'alcaldia de Junts d'un poble de
   // dinou mil habitants sortia sense marca.
@@ -167,10 +172,22 @@ const SIGLES_FAMILIES: ReadonlyArray<readonly [RegExp, string]> = [
   // «barcelona-en-comu-c» i el testimoni enganxat ja no hi era.
   [/^(icv|iniciativa|euia|entesa|ecp|eacp|comuns|ecg|psuc|pcc)|en-?comu/, "comuns"],
   [/^(cup|amunt)/, "cup"],
-  [/^(cs|ciutadans|ciudadanos)/, "cs"],
+  // «cs» ha d'anar sol, no com a principi de qualsevol cosa. Ciutadans escriu
+  // sempre «Cs» —les nou candidatures que en queden el 2023 s'escriuen totes
+  // exactament així— i, ancorat només al davant, el patró es quedava «CSLLM-AM»
+  // de Sant Llorenç de la Muga i «CSJ-ARA PL» de Sant Jaume dels Domenys, que
+  // el codi d'agrupació electoral diu que són d'ERC i del PDeCAT. Dos encerts
+  // de cada onze eren, en realitat, un partit que no s'hi havia presentat.
+  [/^cs$|^(ciutadans|ciudadanos)/, "cs"],
   [/^vox/, "vox"],
   [/^(pdecat|arapl|pnc)/, "pdecat"],
-  [/^(aliancacat|ac$)/, "aliancacat"],
+  // Aliança Catalana s'escriu «ALIANÇA.CAT» a les tres úniques candidatures que
+  // té el 2023 —Ripoll, Manlleu i Ribera d'Ondara—, i el testimoni «AC» sol no
+  // era mai seu: era la llista d'electors de Copons i l'«AC-ARA PL» de Caldes
+  // de Montbui, que el codi d'agrupació diu que és del PDeCAT. Dues de les cinc
+  // atribucions eren falses, i penjar a un poble un partit d'extrema dreta que
+  // no s'hi ha presentat és exactament el pitjor error que podem cometre.
+  [/^aliancacat/, "aliancacat"],
   // La Convergéncia Democratica Aranesa tenia marca i color però cap patró que
   // hi arribés: a Naut Aran les sigles són «CDA-PNA» i es quedava en gris.
   [/(^|-)(cda|cdaranesa)($|-)/, "cda"],

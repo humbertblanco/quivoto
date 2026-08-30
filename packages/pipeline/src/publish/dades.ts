@@ -6,6 +6,7 @@ import type { RadiografiaData } from "./radiografia";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
+import { RADIOGRAFIA_CSS } from "./estil";
 
 /**
  * La descàrrega de dades.
@@ -1144,45 +1145,17 @@ const escapa = (text: string): string =>
  * quina llicència i com citar-nos, i res més: no volem que sembli un portal de
  * dades obertes, perquè no ho és.
  */
-export function renderDadesIndex(generatedAt: string, stats: { municipis: number; camps: number }): string {
-  const municipis = stats.municipis.toLocaleString("ca-ES");
-  return `<!doctype html>
-<html lang="ca">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Descarrega les dades · Observatori de quivoto</title>
-<meta name="description" content="Els indicadors dels ${municipis} municipis de l'Observatori en CSV i JSON, amb l'esquema documentat i la font de cada camp. Fitxers, no una API.">
-<style>
-:root{
-  --paper:#FBF7EE;--paper-2:#FFFFFF;--ink:#1E1B2E;--ink-suau:#6B6680;
-  --coral:#E2735A;--menta:#BFE8D2;--lavanda:#C9C4F2;--presec:#FFD8B8;
-  --vora:rgba(30,27,46,.12);--r-s:10px;--r-m:18px;--r-max:999px;
-  --e1:8px;--e2:16px;--e3:24px;--e4:40px;--e5:64px;
-  --display:"Gabarito",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --text:"Nunito Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
-  --ombra:3px 3px 0 var(--ink);
-}
-@media (prefers-color-scheme:dark){:root{--paper:#17141F;--paper-2:#211D2C;--ink:#F4F0E6;--ink-suau:#A9A3B8;--vora:rgba(244,240,230,.16)}}
-*,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--text);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
-h1,h2{font-family:var(--display);font-weight:900;letter-spacing:-.03em;line-height:1.03;margin:0}
-h1{font-size:clamp(2.6rem,9vw,4.4rem);margin-bottom:var(--e2)}
-h2{font-size:clamp(1.4rem,4vw,1.9rem);margin-bottom:var(--e2)}
-p{margin:0 0 var(--e2)}
-a{color:inherit;text-underline-offset:3px}
-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;background:var(--paper-2);border:1px solid var(--vora);border-radius:6px;padding:1px 5px}
-:focus-visible{outline:3px solid var(--coral);outline-offset:3px;border-radius:4px}
-.salta{position:absolute;left:-9999px;background:var(--ink);color:var(--paper);padding:var(--e1) var(--e2);z-index:9}
-.salta:focus{left:0}
-.capcalera{display:flex;justify-content:space-between;align-items:center;gap:var(--e2);max-width:820px;margin:0 auto;padding:var(--e3)}
-.logo{font-family:var(--display);font-weight:900;letter-spacing:-.05em;font-size:1.3rem;text-decoration:none}
-.etiqueta{background:var(--presec);color:#1E1B2E;border-radius:var(--r-max);padding:5px 12px;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
-main{max-width:820px;margin:0 auto;padding:0 var(--e3) var(--e5)}
-.micro{font-size:.76rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--coral);margin:0 0 var(--e2)}
-.entrada{font-size:1.15rem;color:var(--ink-suau);max-width:52ch}
-.bloc{padding:var(--e4) 0;border-top:2.5px solid var(--ink)}
-.nota{font-size:.92rem;color:var(--ink-suau)}
+/**
+ * El que és propi d'aquesta pàgina, i res més.
+ *
+ * Aquí hi havia una còpia sencera dels tokens, de la tipografia i de la
+ * capçalera, escrita a mà abans que existís la capçalera compartida. Havia
+ * envellit: quan la capçalera va guanyar el menú i el cercador, aquesta pàgina
+ * es va quedar amb la versió d'abans —sense embolcallar i sense cap media
+ * query— i era **l'única de tot el web on la capçalera desbordava**: 228 px de
+ * més a 320. Ara fa servir el full compartit, com la resta.
+ */
+const DADES_CSS = `${RADIOGRAFIA_CSS}
 .baixades{list-style:none;padding:0;margin:var(--e3) 0 0;display:grid;gap:var(--e2)}
 .baixades a{display:block;background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
   padding:var(--e3);text-decoration:none;transition:transform .12s ease,box-shadow .12s ease}
@@ -1201,9 +1174,18 @@ table{border-collapse:collapse;width:100%;font-size:.92rem;margin-top:var(--e2)}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--vora);vertical-align:top}
 th{font-family:var(--display);font-weight:900}
 .cita{background:var(--lavanda);color:#1E1B2E;border:2.5px solid #1E1B2E;border-radius:var(--r-m);padding:var(--e3);box-shadow:3px 3px 0 #1E1B2E;margin-top:var(--e2)}
-.peu{border-top:2.5px solid var(--ink);padding-top:var(--e3);margin-top:var(--e4);font-size:.86rem;color:var(--ink-suau)}
-@media (prefers-reduced-motion:reduce){.baixades a{transition:none}}
-</style>
+`;
+
+export function renderDadesIndex(generatedAt: string, stats: { municipis: number; camps: number }): string {
+  const municipis = stats.municipis.toLocaleString("ca-ES");
+  return `<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Descarrega les dades · Observatori de quivoto</title>
+<meta name="description" content="Els indicadors dels ${municipis} municipis de l'Observatori en CSV i JSON, amb l'esquema documentat i la font de cada camp. Fitxers, no una API.">
+<style>${DADES_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>

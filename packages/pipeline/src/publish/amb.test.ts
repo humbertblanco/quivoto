@@ -22,7 +22,7 @@ import type { PeerGroup } from "../derive/peers";
 function municipi(over: Partial<AmbMunicipi> = {}): AmbMunicipi {
   return {
     slug: "cornella-de-llobregat", name: "Cornellà de Llobregat", comarca: "Baix Llobregat",
-    population: 92_237, seats: 25,
+    population: 92_237, lat: 41.355, lon: 2.075, seats: 25,
     mayorName: "Antonio Balmón", mayorSigles: "PSC-CP", mayorBrandId: "psc",
     winnerSigles: "PSC-CP", winnerGoverns: true, hasMajority: true,
     mayorChanged: false, mayorChangeName: null, mayorChangeDate: null,
@@ -39,7 +39,10 @@ function amb(over: Partial<AmbData> = {}): AmbData {
     governaMesVotat: 1, pacte: 0, senseIdentificar: 0, majoriaAbsoluta: 1, canvisAlcaldia: 0,
     indicadors: [],
     comarques: [{ slug: "baix-llobregat", name: "Baix Llobregat", dins: 24, total: 30 }],
-    catalunya: { municipis: 947, habitants: 8_012_231 },
+    catalunya: {
+      municipis: 947, habitants: 8_012_231, regidories: 9_104,
+      pacte: 214, majoriaAbsoluta: 520, canvisAlcaldia: 61,
+    },
     ...over,
     municipis,
   };
@@ -108,7 +111,7 @@ describe("renderAmb", () => {
 
   it("diu de quants municipis parla cada comparació", () => {
     const html = renderAmb(amb({ forces: [{ brandId: "psc", label: "PSC", color: "#e73b39", alcaldies: 1, habitants: 92_237 }] }), "2026-08-29");
-    expect(html).toContain("alcaldia de 1");
+    expect(html.replace(/\s+/g, " ")).toContain("<b>1</b> alcaldia de 1");
     expect(html).toContain("dels 947 de Catalunya");
   });
 
@@ -244,5 +247,78 @@ describe("buildIndicador", () => {
 
   it("no inventa un indicador quan cap municipi metropolità no en té dada", () => {
     expect(buildIndicador(def, lectures, new Set([99]), peers)).toBeNull();
+  });
+});
+
+
+/**
+ * La pàgina és la fitxa d'un poble un pis amunt, i el que s'ha de provar és
+ * justament això: que obre igual, que el poder s'hi veu i que d'aquí se surt
+ * cap als 36 municipis i cap al mapa.
+ */
+describe("l'AMB llegida com una fitxa", () => {
+  it("obre amb la mateixa ullada que un municipi, i amb Catalunya al costat", () => {
+    const html = renderAmb(amb(), "2026-08-29");
+    expect(html).toContain('class="ullada"');
+    expect(html).toContain("dels 947 de Catalunya");
+    expect(html).toContain("de les 9.104 de Catalunya");
+    // La xifra que fa que la pàgina existeixi ha de ser a la portada.
+    expect(html).toContain("Matèries que decideix l'AMB");
+  });
+
+  it("no repeteix a l'entrada les xifres que hi ha just a sota", () => {
+    const html = renderAmb(amb(), "2026-08-29");
+    expect(html).not.toContain("regidories en total");
+    expect(html).not.toContain('class="resum-xifres"');
+  });
+
+  it("no diu «1 comarques» quan només n'hi ha una", () => {
+    const html = renderAmb(amb(), "2026-08-29");
+    expect(html).toContain("repartits entre 1 comarca");
+    expect(html).not.toContain("entre 1 comarques");
+  });
+
+  it("ensenya el poder en dues cintes i no en una llista de barres", () => {
+    const html = renderAmb(
+      amb({
+        forces: [
+          { brandId: "psc", label: "PSC", color: "#e73b39", alcaldies: 3, habitants: 900_000 },
+          { brandId: "erc", label: "ERC", color: "#ffb232", alcaldies: 7, habitants: 100_000 },
+        ],
+        municipis: Array.from({ length: 10 }, (_, i) => municipi({ slug: `m${i}`, name: `M${i}` })),
+        habitants: 1_000_000,
+      }),
+      "2026-08-29",
+    );
+    expect(html).toContain('class="tira"');
+    // El PSC té el 30 % de les alcaldies i el 90 % de la gent: és tot el gràfic.
+    expect(html).toContain("--w:30.00%;--c:#e73b39");
+    expect(html).toContain("--w:90.00%;--c:#e73b39");
+    expect(html).not.toContain('class="forces"');
+  });
+
+  it("porta el mapa dels 36 amb un punt per fitxa, sense sortir del seu nivell", () => {
+    const html = renderAmb(
+      amb({
+        municipis: [
+          municipi({ slug: "a", name: "A", lat: 41.3, lon: 2.0 }),
+          municipi({ slug: "b", name: "B", lat: 41.4, lon: 2.1 }),
+          municipi({ slug: "c", name: "C", lat: 41.5, lon: 2.2 }),
+        ],
+      }),
+      "2026-08-29",
+    );
+    expect(html).toContain('class="mapa-territori"');
+    expect(html).toContain('<a href="../m/a/">');
+    expect(html).toContain('href="../mapa/"');
+    expect(html).not.toContain('href="../../m/');
+  });
+
+  it("comparteix el full d'estil amb les comarques, i no en porta una còpia", () => {
+    // La còpia literal del CSS era el que feia que un arranjament a les
+    // comarques deixés l'AMB a mitges. Si algú la torna a fer, això peta.
+    const html = renderAmb(amb(), "2026-08-29");
+    const cops = html.split(".repartiment{display:flex").length - 1;
+    expect(cops).toBe(1);
   });
 });

@@ -6,7 +6,10 @@ import { dataCurta, slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
-import type { ComarcaData, ComarcaMunicipi } from "./comarques";
+import {
+  TERRITORI_CSS, renderMapaTerritori, renderPoder, renderUllada,
+  type ComarcaData, type ComarcaMunicipi, type Pastilla,
+} from "./comarques";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -27,6 +30,12 @@ import { peu } from "./peu";
  * l'article al costat, i el que no en surt no s'hi diu: `www.amb.cat` respon 403
  * a qualsevol client automàtic, així que del que fa l'AMB avui només n'hi ha
  * l'enllaç perquè hi vagi qui vulgui.
+ *
+ * **Tot el que no és la llei ho comparteix amb les pàgines de comarca**, i des
+ * d'ara literalment: la ullada d'obertura, les dues cintes de poder, el mapa i
+ * el full d'estil surten de `comarques.ts`. N'hi havia una còpia sencera aquí
+ * —vuitanta línies de CSS idèntiques— i qualsevol arranjament s'havia de fer
+ * dues vegades o quedava a mitges en una de les dues pàgines.
  */
 
 // ------------------------------------------------------------------- formes
@@ -79,8 +88,8 @@ export type AmbData = {
   canvisAlcaldia: number;
   indicadors: AmbIndicador[];
   comarques: AmbComarca[];
-  /** El conjunt on s'ha de llegir la xifra metropolitana: els 947 i els seus habitants. */
-  catalunya: { municipis: number; habitants: number };
+  /** El conjunt on s'ha de llegir cada xifra metropolitana: els 947 sencers. */
+  catalunya: ComarcaData["catalunya"];
 };
 
 // -------------------------------------------------------------- presentació
@@ -390,6 +399,12 @@ export async function loadAmb(db: Db, comarques: readonly ComarcaData[]): Promis
   if (membres.length === 0) return null;
   const dins = new Set(membres.map((m) => m.municipalityId));
 
+  // Els totals de Catalunya ja els ha comptat `loadComarques` amb una regla
+  // concreta. Tornar-los a sumar aquí seria arriscar-se a comptar-los d'una
+  // altra manera i que les dues pàgines diguessin xifres diferents del mateix.
+  const catalunya = comarques[0]?.catalunya;
+  if (!catalunya) return null;
+
   const all = await db
     .select({
       id: municipalities.id,
@@ -534,10 +549,7 @@ export async function loadAmb(db: Db, comarques: readonly ComarcaData[]): Promis
     comarques: [...perComarca.entries()]
       .map(([name, compte]) => ({ slug: slugify(name), name, dins: compte.dins, total: compte.total }))
       .sort((a, b) => b.dins - a.dins || a.name.localeCompare(b.name, "ca")),
-    catalunya: {
-      municipis: all.length,
-      habitants: all.reduce((a, m) => a + (m.population ?? 0), 0),
-    },
+    catalunya,
   };
 }
 
@@ -565,23 +577,6 @@ function renderDiners(): string {
     <span class="cita">Llei 31/2010, ${escape(d.article)}</span></li>`,
   ).join("");
   return `<ul class="detall diners-amb">${items}</ul>`;
-}
-
-/** Quantes alcaldies té cada força. Les xifres van escrites al costat de la barra. */
-function renderForces(data: AmbData): string {
-  const max = Math.max(1, ...data.forces.map((f) => f.alcaldies));
-  const items = data.forces
-    .map((forca) => {
-      const share = (100 * forca.habitants) / Math.max(1, data.habitants);
-      return `<li>
-      <span class="nom"><span class="mostra" style="--c:${forca.color}"></span>${escape(forca.label)}</span>
-      <span class="regle"><i style="--w:${((100 * forca.alcaldies) / max).toFixed(1)}%;--c:${forca.color}"></i></span>
-      <span class="compte"><b>${forca.alcaldies}</b> ${plural(forca.alcaldies, "alcaldia", "alcaldies")} de ${data.municipis.length}</span>
-      <span class="secundari">${number(forca.habitants)} habitants · ${decimal(share)} % dels ${number(data.habitants)} de l'àrea</span>
-    </li>`;
-    })
-    .join("");
-  return `<ul class="forces">${items}</ul>`;
 }
 
 /** Governa el més votat, o hi va haver pacte. Una barra de tres trams i prou. */
@@ -644,9 +639,9 @@ function renderCanvis(data: AmbData): string {
   ${plural(canvis.length, "municipis ha canviat", "municipis han canviat")} d'alcaldia des de la
   constitució dels plens del juny del 2023.</p>
   <ul class="detall">${items}</ul>
-  <p class="nota">Les fonts obertes desen qui ocupa el càrrec, no per què va marxar l'anterior:
-  d'aquí no se'n pot deduir ni una dimissió ni una moció de censura. I un canvi d'alcaldia canvia
-  també qui seu al Consell Metropolità, perquè els alcaldes en són membres nats.</p>`;
+  <p class="nota">Les fonts desen qui ocupa el càrrec, no per què va marxar l'anterior: d'aquí no
+  se'n pot deduir ni una dimissió ni una moció de censura. I un canvi d'alcaldia canvia també qui
+  seu al Consell Metropolità, perquè els alcaldes en són membres nats.</p>`;
 }
 
 /** Les mitjanes del conjunt, sempre amb la catalana i el percentil al costat. */
@@ -670,12 +665,11 @@ function renderIndicadors(data: AmbData): string {
     })
     .join("");
   return `<ul class="indicadors">${cards}</ul>
-  <p class="nota">Les dues medianes es calculen sobre municipis, no sobre habitants: cada municipi
-  hi compta un cop, tant si en té tres mil com si en té un milió i escaig. El <b>percentil</b> és
-  la comparació que val: cada municipi es mesura només amb els catalans del seu tram de població de
-  la LOREG —el mateix que decideix quants regidors té— i el que es publica és la mediana d'aquells
-  percentils. 50 vol dir que el municipi metropolità típic queda al mig dels ${number(data.catalunya.municipis)};
-  80, que queda per sobre de quatre de cada cinc municipis de la seva mida.</p>`;
+  <p class="nota">Les dues medianes són sobre municipis, no sobre habitants: cada municipi hi
+  compta un cop, tant si en té tres mil com si en té un milió i escaig. El <b>percentil</b> és la
+  comparació que val, perquè mesura cada municipi només amb els del seu tram de població de la
+  LOREG: 50 és quedar al mig dels ${number(data.catalunya.municipis)}; 80, per sobre de quatre de
+  cada cinc de la seva mida.</p>`;
 }
 
 /** De quantes comarques surten els 36. És l'argument de per què l'AMB és un ens propi. */
@@ -720,46 +714,15 @@ function renderMunicipis(data: AmbData): string {
 // ------------------------------------------------------------------ estil
 
 /**
- * El que aquesta pàgina necessita i la fitxa municipal no té. Comparteix forma
- * amb les pàgines de comarca —les barres d'alcaldies, la taula de municipis— i
- * hi afegeix les targetes de competència, que són l'única cosa de l'Observatori
- * que explica una llei en comptes d'una xifra.
+ * El que aquesta pàgina té i les de comarca no.
+ *
+ * La resta —cintes, mapa, taula de municipis, targetes d'indicador— és
+ * `TERRITORI_CSS`, el mateix full que les 43 comarques. Aquí només hi queda el
+ * que és propi: les targetes de competència, que són l'única cosa de
+ * l'Observatori que explica una llei en comptes d'una xifra, i l'escala de
+ * representants del Consell.
  */
-const AMB_CSS = `
-.forces{list-style:none;margin:0 0 var(--e2);padding:0;display:grid;gap:var(--e2)}
-.forces li{display:grid;grid-template-columns:minmax(8em,12em) 1fr auto;gap:2px var(--e2);align-items:center}
-.forces .nom{font-weight:800;font-size:.94rem;display:flex;align-items:center;gap:8px}
-.forces .regle{height:20px;background:var(--vora);border-radius:var(--r-max);overflow:hidden}
-.forces .regle i{display:block;height:100%;width:var(--w);min-width:5px;background:var(--c);border:1.5px solid var(--ink);border-radius:var(--r-max)}
-.forces .compte{font-size:.92rem;white-space:nowrap}
-.forces .compte b{font-family:var(--display);font-weight:900;font-size:1.25rem;letter-spacing:-.02em}
-.forces .secundari{grid-column:1/-1;margin-top:-2px}
-@media (max-width:560px){
-  .forces li{grid-template-columns:1fr auto}
-  .forces .regle{grid-column:1/-1;order:3}
-  .forces .secundari{order:4}
-}
-
-/* Governa el més votat o hi va haver pacte: una barra i prou. Els colors són
-   els de la identitat, no els de cap partit: aquí no es parla de forces. */
-.repartiment{display:flex;height:52px;border:2.5px solid var(--ink);border-radius:var(--r-s);overflow:hidden}
-.repartiment span{width:var(--w);display:flex;align-items:center;justify-content:center;
-  border-right:1.5px solid var(--ink);color:#1E1B2E;font-family:var(--display);font-weight:900;font-size:1.1rem}
-.repartiment span:last-child{border-right:0}
-.governa-guanyador{background:var(--menta)}
-.governa-pacte{background:var(--presec)}
-.governa-desconegut{background:var(--lavanda)}
-.clau .mostra.governa-guanyador{background:var(--menta)}
-.clau .mostra.governa-pacte{background:var(--presec)}
-.clau .mostra.governa-desconegut{background:var(--lavanda)}
-
-/* Llistes de municipis amb un detall al costat. 220 px i no 240: a 320 px de
-   pantalla el contingut en fa 272, i una columna més ampla que això vessaria. */
-.detall{list-style:none;margin:0 0 var(--e2);padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.detall li{padding:8px 0;border-bottom:1px solid var(--vora);display:flex;flex-direction:column;gap:1px}
-.detall a{font-weight:800}
-.detall .nom{font-weight:800}
+const AMB_CSS = TERRITORI_CSS + `
 .diners-amb li{font-size:.94rem}
 .cita{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
   color:var(--coral-text);margin:6px 0 0}
@@ -777,45 +740,13 @@ const AMB_CSS = `
 .competencia .que-no{color:var(--ink-suau)}
 .competencia .cita{margin-top:auto;padding-top:var(--e1)}
 
-/* Les targetes d'indicador reaprofiten .indicadors i .indicador de la fitxa. */
-.indicador .referencia,.indicador .percentil{font-size:.88rem}
-.indicador .percentil{background:var(--lavanda);color:#1E1B2E;border-radius:var(--r-s);
-  padding:5px 9px;align-self:flex-start;font-weight:700}
-
-/* La llista dels 36. */
-.municipis{width:100%;border-collapse:collapse;font-size:.92rem}
-.municipis th,.municipis td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--vora);vertical-align:top}
-.municipis thead th{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
-.municipis tbody th{font-weight:800}
-.municipis .xifra{font-variant-numeric:tabular-nums;white-space:nowrap}
-.marca-pacte,.marca-minoria{display:inline-block;border-radius:var(--r-max);padding:2px 9px;
-  font-size:.68rem;font-weight:800;white-space:nowrap;color:#1E1B2E}
-.marca-pacte{background:var(--presec)}
-.marca-minoria{background:var(--lavanda)}
-@media (max-width:640px){
-  .municipis thead{display:none}
-  .municipis tr{display:block;padding:10px 0;border-bottom:1px solid var(--vora)}
-  .municipis th,.municipis td{display:block;border:0;padding:1px 0}
-  .municipis tbody th{font-size:1.02rem}
-  /* Sense capçalera de taula, «685» i «7» tots sols no volen dir res: la unitat
-     s'escriu al costat i les tres dades tornen a la mateixa línia. */
-  .municipis .com,.municipis .pob,.municipis .reg{display:inline;font-weight:400;color:var(--ink-suau);font-size:.86rem}
-  .municipis .com::after{content:" · "}
-  .municipis .pob::after{content:" habitants · "}
-  .municipis .reg::after{content:" regidories"}
-}
-
-.resum-xifres{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e2);
-  grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-.resum-xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:2px}
-
 /* El consell que no es vota: una escala i prou, sense xifres per municipi. */
 .escala{list-style:none;margin:0 0 var(--e2);padding:0;display:grid;gap:6px}
 .escala li{display:flex;gap:var(--e2);align-items:baseline;padding:7px 0;border-bottom:1px solid var(--vora)}
 .escala b{font-family:var(--display);font-weight:900;font-size:1.15rem;flex:0 0 3.2em;
   font-variant-numeric:tabular-nums}
 `;
+
 
 // ------------------------------------------------------------------ pàgina
 
@@ -838,11 +769,81 @@ export function summarySentence(data: AmbData): string {
   return `${head}${tail}.`;
 }
 
+/**
+ * Les sis xifres que obren la pàgina.
+ *
+ * Les tres primeres diuen de quina mida és l'àrea; les tres següents, qui hi
+ * mana i què decideix. La sisena és la que fa que la pàgina existeixi: el
+ * nombre de matèries que la llei posa a mans d'un ens que ningú no vota.
+ */
+function ulladaAmb(data: AmbData): string {
+  const total = Math.max(1, data.municipis.length);
+  const cat = data.catalunya;
+  const pastilles: Pastilla[] = [
+    {
+      etq: "Municipis",
+      xifra: number(data.municipis.length),
+      part: null,
+      peu: `dels ${number(cat.municipis)} de Catalunya, repartits entre ${data.comarques.length}
+        ${plural(data.comarques.length, "comarca", "comarques")}`.replace(/\s+/g, " "),
+      on: "#municipis",
+      tema: "urbanisme",
+    },
+    {
+      etq: "Habitants",
+      xifra: number(data.habitants),
+      part: null,
+      peu: `el ${decimal((100 * data.habitants) / Math.max(1, cat.habitants))} % dels de Catalunya`,
+      on: "#municipis",
+      tema: "serveis socials",
+    },
+    {
+      etq: "Regidories en joc el 23-M",
+      xifra: number(data.regidories),
+      part: null,
+      peu: `de les ${number(cat.regidories)} de Catalunya`,
+      on: "#municipis",
+      tema: "el ple",
+    },
+  ];
+
+  const primera = data.forces[0];
+  if (primera && primera.brandId !== SENSE_MARCA) {
+    pastilles.push({
+      etq: "La força amb més alcaldies",
+      xifra: number(primera.alcaldies),
+      part: (100 * primera.alcaldies) / total,
+      peu: `${primera.label}, el ${decimal((100 * primera.alcaldies) / total)} % dels municipis`,
+      on: "#alcaldies",
+      tema: "participació",
+    });
+  }
+
+  pastilles.push({
+    etq: "Governa qui no va guanyar",
+    xifra: number(data.pacte),
+    part: (100 * data.pacte) / total,
+    peu: `de ${data.municipis.length}; a Catalunya, el ${decimal((100 * cat.pacte) / Math.max(1, cat.municipis))} %`,
+    on: "#pactes",
+    tema: "seguretat",
+  });
+
+  pastilles.push({
+    etq: "Matèries que decideix l'AMB",
+    xifra: number(COMPETENCIES.length),
+    part: null,
+    peu: "totes escrites a la Llei 31/2010, i cap no es vota en una papereta",
+    on: "#que-fa",
+    tema: "mobilitat",
+  });
+
+  return renderUllada(pastilles, "L'Àrea Metropolitana en sis xifres");
+}
+
 export function renderAmb(data: AmbData, generatedAt: string): string {
   const title = "Àrea Metropolitana de Barcelona — Observatori municipal de quivoto";
   const summary = summarySentence(data);
   const gran = data.municipis[0];
-  const partCatalunya = (100 * data.habitants) / Math.max(1, data.catalunya.habitants);
 
   return `<!doctype html>
 <html lang="ca">
@@ -867,23 +868,11 @@ ${cercador("../")}
     <p class="micro">Ens metropolità</p>
     <h1>L'Àrea Metropolitana</h1>
   </div></div>
-  <p class="entrada">
-    ${data.municipis.length} municipis · ${number(data.habitants)} habitants ·
-    ${number(data.regidories)} regidories en total
-  </p>
-  <p>Una part del que pagues i del que reps cada dia —l'autobús, l'aigua de l'aixeta, on van les
-  escombraries, la platja on vas a l'estiu— <b>no la decideix el teu ajuntament</b>, i tampoc el
-  teu consell comarcal. La decideix l'Àrea Metropolitana de Barcelona, un ens que agrupa aquests
-  ${data.municipis.length} municipis i que no es vota en cap papereta.</p>
+  <p class="entrada">L'autobús, l'aigua de l'aixeta, on van les escombraries, la platja on vas
+  a l'estiu: <b>no ho decideix el teu ajuntament</b>. Ho decideix un ens de ${data.municipis.length}
+  municipis que no es vota en cap papereta.</p>
   ${summary ? `<p class="resum">${summary}</p>` : ""}
-  <ul class="resum-xifres">
-    <li><span class="gran">${data.municipis.length}</span><span class="secundari">municipis, dels ${number(data.catalunya.municipis)} de Catalunya</span></li>
-    <li><span class="gran">${number(data.habitants)}</span><span class="secundari">habitants · ${decimal(partCatalunya)} % dels de Catalunya${
-      data.poblacioMediana === null ? "" : `, i el municipi del mig en té ${number(Math.round(data.poblacioMediana))}`
-    }</span></li>
-    <li><span class="gran">${data.comarques.length}</span><span class="secundari">comarques diferents: per això la comarca no explica què comparteixen</span></li>
-    <li><span class="gran">${number(data.regidories)}</span><span class="secundari">regidories, que és el que es reparteix el 23-M</span></li>
-  </ul>
+  ${ulladaAmb(data)}
 </section>
 
 <nav class="index" aria-label="Seccions d'aquesta pàgina">
@@ -899,14 +888,12 @@ ${cercador("../")}
 
 <section class="bloc" id="que-fa">
   <h2>Què decideix l'AMB i què no</h2>
-  <p class="entrada-bloc">${COMPETENCIES.length} matèries, totes escrites a la Llei 31/2010, del 3
-  d'agost, de l'Àrea Metropolitana de Barcelona. A cada targeta hi ha el que la llei posa a mans de l'AMB i, a sota,
-  <b>on s'acaba</b>: què continua sent de l'ajuntament o de la Generalitat. És la línia que gairebé
-  ningú no té clara, i és la que decideix a qui has de reclamar.</p>
+  <p class="entrada-bloc">${COMPETENCIES.length} matèries de la Llei 31/2010. A cada targeta, el
+  que la llei posa a mans de l'AMB i, a sota, <b>on s'acaba</b>: què continua sent de l'ajuntament
+  o de la Generalitat. És la línia que decideix a qui has de reclamar.</p>
   ${renderCompetencies()}
-  <p class="nota">Tot això és el que <b>diu la llei</b>, no el que fa l'AMB aquest any. Del que fa
-  avui —quantes línies d'autobús, quants parcs, quantes platges— no en publiquem cap xifra perquè
-  no l'hem pogut treure de cap font oberta: <code>www.amb.cat</code> respon 403 a qualsevol client
+  <p class="nota">Això és el que <b>diu la llei</b>, no el que fa l'AMB aquest any: del que fa avui
+  no en publiquem cap xifra perquè <code>www.amb.cat</code> respon 403 a qualsevol client
   automàtic, fins i tot al <code>robots.txt</code>. Qui vulgui el detall el té a
   <a href="https://www.amb.cat/" rel="noopener">amb.cat</a>, i el text sencer de la llei
   a <a href="https://portaljuridic.gencat.cat/eli/es-ct/l/2010/08/03/31" rel="noopener">portaljuridic.gencat.cat</a>.</p>
@@ -915,24 +902,22 @@ ${cercador("../")}
 <section class="bloc" id="diners">
   <h2>Què en pagues, i qui ho decideix</h2>
   <p class="entrada-bloc">Tres maneres en què l'AMB arriba a la butxaca dels veïns dels
-  ${data.municipis.length} municipis. Cap no la vota ningú directament.</p>
+  ${data.municipis.length} municipis. Cap no es vota directament.</p>
   ${renderDiners()}
   <p class="nota">Aquí no hi ha cap import: la llei diu quins recursos pot fer servir l'AMB, no
-  quant en cobra cada any. Els comptes metropolitans no són a cap de les fonts obertes que fem
-  servir per als ${number(data.catalunya.municipis)} ajuntaments, i posar-hi una xifra treta d'una
-  altra banda seria dir-la sense poder-la comprovar.</p>
+  quant en cobra. Els comptes metropolitans no són a cap de les fonts obertes que fem servir per
+  als ${number(data.catalunya.municipis)} ajuntaments, i copiar-los d'una altra banda seria dir-los
+  sense poder-los comprovar.</p>
 </section>
 
 <section class="bloc" id="consell">
   <h2>Qui decideix a l'AMB, i com hi arriba</h2>
-  <p>El Consell Metropolità és l'òrgan que aprova el pressupost, les ordenances i
-  <b>les tarifes dels serveis metropolitans</b>. El formen tots els alcaldes dels
-  ${data.municipis.length} municipis, que en són membres nats, i regidors elegits pel ple de cada
-  ajuntament d'entre els seus.</p>
-  <p><b>Ningú no vota el Consell Metropolità en una papereta.</b> El vot del 23-M tria el ple del
-  teu ajuntament, i és aquell ple qui, dins dels trenta dies següents a constituir-se, tria qui
-  representarà el municipi al Consell. Per això un canvi d'alcaldia a mig mandat també canvia qui
-  seu a l'AMB.</p>
+  <p>El Consell Metropolità aprova el pressupost, les ordenances i <b>les tarifes dels serveis
+  metropolitans</b>. El formen els alcaldes dels ${data.municipis.length} municipis, que en són
+  membres nats, i regidors que tria el ple de cada ajuntament d'entre els seus.</p>
+  <p><b>Ningú no vota el Consell Metropolità en una papereta.</b> El vot del 23-M tria el ple, i és
+  el ple qui tria qui hi va, dins dels trenta dies següents a constituir-se. Per això un canvi
+  d'alcaldia a mig mandat també canvia qui seu a l'AMB.</p>
   <p>Quants representants hi té cada municipi ho fixa la llei per trams de població:</p>
   <ul class="escala">
     <li><b>25</b><span>Barcelona</span></li>
@@ -941,24 +926,22 @@ ${cercador("../")}
     <li><b>2</b><span>municipis d'entre vint mil i setanta-cinc mil</span></li>
     <li><b>1</b><span>municipis de menys de vint mil</span></li>
   </ul>
-  <p class="nota">Aquí no diem quants en té cadascun dels ${data.municipis.length}, i no és per
-  falta de ganes: la llei mana comptar el padró <b>que es va tenir en compte a les eleccions</b> de
-  què va sortir el Consell, i el padró que tenim nosaltres és el d'avui. Amb el d'avui hi ha
-  municipis que han canviat de tram, i publicar-ho seria donar una xifra que no és la del Consell
-  que hi ha. Els llocs que no són d'alcalde es reparteixen entre les llistes de cada ple en
-  proporció als regidors que van treure.</p>
-  <p class="nota">Llei 31/2010, articles 4 a 8.</p>
+  <p class="nota">Aquí no diem quants en té cadascun dels ${data.municipis.length}: la llei mana
+  comptar el padró <b>de les eleccions</b> de què va sortir el Consell,
+  i el padró que tenim nosaltres és el d'avui. Amb el d'avui hi ha municipis que han canviat de tram, i publicar-ho
+  seria donar una composició que no és la del Consell que hi ha. Els llocs que no són d'alcalde
+  es reparteixen entre les llistes del ple en proporció als regidors que van treure.
+  Llei 31/2010, articles 4 a 8.</p>
 </section>
 
 <section class="bloc" id="alcaldies">
-  <h2>Quantes alcaldies té cada força</h2>
-  <p class="entrada-bloc">L'alcaldia de cada un dels ${data.municipis.length} municipis, agrupada
-  per la força de la candidatura que la va presentar. Al costat, quanta gent viu als municipis que
-  governa. Compta perquè tots aquests alcaldes seuen al Consell Metropolità.</p>
-  ${renderForces(data)}
+  <h2>Qui mana als ${data.municipis.length}</h2>
+  <p class="entrada-bloc">Dalt, les alcaldies. Baix, la gent que hi viu. Compta perquè tots
+  aquests alcaldes seuen al Consell Metropolità.</p>
+  ${renderPoder(data.forces, data.municipis.length, data.habitants, "de l'àrea")}
+  ${renderMapaTerritori(data.municipis, "../", "L'Àrea Metropolitana")}
   <p class="nota">Una alcaldia no és un vot: a la Palma de Cervelló n'hi ha prou amb unes centenes
-  de persones i a Barcelona en calen centenars de milers. Per això hi va el nombre d'habitants al
-  costat.
+  de persones i a Barcelona en calen centenars de milers.
   ${(data.forces.find((f) => f.brandId === SENSE_MARCA)?.alcaldies ?? 0) > 0
     ? (() => {
         const n = data.forces.find((f) => f.brandId === SENSE_MARCA)?.alcaldies ?? 0;
@@ -975,8 +958,7 @@ ${cercador("../")}
   amb majoria absoluta, i per tant no va necessitar ningú.</p>
   ${renderPactes(data)}
   <p class="nota">«Pacte» vol dir només això: que l'alcaldia és d'una llista que no va ser la més
-  votada, i que per tant algú altre hi va donar suport. No en sabem el contingut, perquè els acords
-  d'investidura no són dades obertes.</p>
+  votada. El contingut de l'acord no el sabem: les investidures no són dades obertes.</p>
 </section>
 
 <section class="bloc" id="canvis">
@@ -986,16 +968,16 @@ ${cercador("../")}
 
 ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
   <h2>Com és aquesta àrea</h2>
-  <p class="entrada-bloc">Els mateixos quatre indicadors que a les pàgines de comarca, calculats
-  sobre els ${data.municipis.length} municipis metropolitans i amb la mediana dels
+  <p class="entrada-bloc">Els mateixos indicadors que a les pàgines de comarca, calculats sobre els
+  ${data.municipis.length} municipis metropolitans i amb la mediana dels
   ${number(data.catalunya.municipis)} al costat.</p>
   ${renderIndicadors(data)}
 </section>` : ""}
 
 <section class="bloc" id="comarques">
   <h2>De quantes comarques surten aquests ${data.municipis.length}</h2>
-  <p class="entrada-bloc">L'AMB no encaixa amb cap comarca, i per això té pàgina pròpia: hi ha
-  comarques que hi són senceres i comarques que hi tenen només una part dels seus pobles.</p>
+  <p class="entrada-bloc">L'AMB no encaixa amb cap comarca: n'hi ha que hi són senceres i n'hi ha
+  que hi posen només una part dels seus pobles.</p>
   ${renderComarques(data)}
 </section>
 
@@ -1008,14 +990,13 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
 
 <section class="bloc">
   <h2>Què és i què no és l'AMB</h2>
-  <p>L'Àrea Metropolitana de Barcelona és un <b>ens local supramunicipal de caràcter territorial</b>
-  creat per la Llei 31/2010 i integrat pels ${data.municipis.length} municipis de la conurbació de
-  Barcelona. Té personalitat jurídica pròpia, potestat normativa, tributària i sancionadora, i
-  serveis de titularitat pròpia.</p>
-  <p>No és una comarca, no és una diputació i no és un ajuntament gran: és una administració amb
-  competències pròpies que ningú no vota directament. Aquesta pàgina no és la fitxa del seu govern
-  —dels seus comptes i de les seves votacions no en tenim dades obertes—, sinó la <b>suma dels
-  ${data.municipis.length} ajuntaments</b> que la formen, més el que la llei diu que decideix.</p>
+  <p>És un <b>ens local supramunicipal de caràcter territorial</b> creat per la Llei 31/2010, amb
+  personalitat jurídica pròpia i potestat normativa, tributària i sancionadora. No és una comarca,
+  no és una diputació i no és un ajuntament gran: és una administració amb competències pròpies que
+  ningú no vota directament.</p>
+  <p>Això no és la fitxa del seu govern —dels seus comptes i de les seves votacions no en tenim
+  dades obertes—, sinó la <b>suma dels ${data.municipis.length} ajuntaments</b> que la formen, més
+  el que la llei diu que decideix.</p>
   <p class="nota">L'àmbit territorial només es pot modificar per llei del Parlament.</p>
 </section>
 
@@ -1048,10 +1029,10 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
     <li>Sexe de les persones elegides: <code>xnfg-weec</code>.</li>
     <li>Liquidació pressupostària i deute viu: Consorci AOC, <code>81f18313</code> i <code>34db8dc5</code>.</li>
   </ul>
-  <p class="nota">El recompte d'alcaldies per força, els pactes, els canvis a mig mandat i els
-  percentils per tram de població són càlculs nostres sobre aquestes fonts, i es poden repetir amb
-  el codi del projecte. Cap xifra d'aquesta pàgina no ve d'una estimació, i cap frase sobre què
-  decideix l'AMB no ve d'enlloc més que del text de la llei.</p>
+  <p class="nota">Les alcaldies per força, els pactes, els canvis a mig mandat i els percentils són
+  càlculs nostres sobre aquestes fonts, repetibles amb el codi del projecte. Cap xifra d'aquesta
+  pàgina no ve d'una estimació, i cap frase sobre què decideix l'AMB no ve d'enlloc més que del
+  text de la llei.</p>
 </section>
 
 </main>

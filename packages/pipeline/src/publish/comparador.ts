@@ -41,6 +41,22 @@ import { peu } from "./peu";
  *    zero o que ningú no ho ha mirat; cada indicador porta escrit què és el que
  *    ens falta quan falta («no en tenim la liquidació»), i sota la taula hi ha
  *    el compte de forats de la comparació que s'està mirant.
+ * 5. **Primer el dibuix i després la taula.** «237 €» i «120 €» un al costat de
+ *    l'altre no diuen si tots dos són poc: diuen quin és més petit, que ja es
+ *    veia. Cada indicador es dibuixa en un regle amb la mediana del grup de
+ *    mida marcada i amb el 80 % central ombrejat, i els municipis triats hi
+ *    cauen com a punts numerats. La taula continua a sota, perquè el peu de
+ *    cada casella —l'any de la revisió cadastral, les dues puntes del mandat—
+ *    no cap en un dibuix.
+ * 6. **Una línia per municipi, i no només l'últim any.** El deute per habitant
+ *    és l'única sèrie que tenim dels 947 any a any, i és justament la xifra que
+ *    més s'atribueix a qui mana: dibuixada, es veu qui puja, qui baixa i des de
+ *    quan, que és el que un nivell sol no diu mai.
+ *
+ * I el que travessa les tres coses: **si una xifra no es pot comparar, es diu i
+ * es diu per què**. Un regle amb un sol punt no és una comparació, i abans es
+ * dibuixava igual; ara al seu lloc hi ha la frase que diu qui hi falta i quina
+ * peça ens falta d'aquell municipi.
  */
 
 // ------------------------------------------------------------- els indicadors
@@ -302,6 +318,135 @@ export function marquesDe(
   return marques;
 }
 
+/**
+ * El tros de recta que surt dibuixat al regle d'un indicador.
+ *
+ * No comença a zero, i és a posta: el regle no és una barra —una barra que
+ * comença a mig camí menteix sobre la mida— sinó una posició, i el que ha de
+ * quedar clar és **on cau cadascú respecte dels altres i de la mediana**. Amb
+ * el zero forçat a l'esquerra, Girona, Lleida i Tarragona quedarien totes tres
+ * al mateix pam de recta i el dibuix no diria absolutament res. El que impedeix
+ * que això enganyi és que els dos extrems van escrits a sobre del regle: qui
+ * mira sap sempre de quin tros de món li estem parlant.
+ *
+ * Amb tots els valors iguals no hi ha tros: se n'inventa un de simètric perquè
+ * els punts caiguin al mig i no en una vora, que es llegiria com un extrem.
+ */
+export function escalaDomini(referencies: readonly (number | null)[]): { min: number; max: number } {
+  let min = Infinity;
+  let max = -Infinity;
+  for (let i = 0; i < referencies.length; i += 1) {
+    const v = referencies[i];
+    if (typeof v !== "number" || !Number.isFinite(v)) continue;
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+  if (min === Infinity) return { min: 0, max: 1 };
+  if (min === max) {
+    const gruix = Math.abs(min) > 0 ? Math.abs(min) * 0.1 : 1;
+    return { min: min - gruix, max: max + gruix };
+  }
+  const marge = (max - min) * 0.09;
+  return { min: min - marge, max: max + marge };
+}
+
+/**
+ * A quina alçada va l'etiqueta de cada punt perquè no se'n mengi una altra.
+ *
+ * Dos municipis amb el deute a 237 € i 240 € cauen al mateix mil·límetre del
+ * regle i les seves dues xifres s'escrivien una damunt de l'altra: es llegia
+ * una tercera xifra que no existeix.
+ *
+ * Amb tantes alçades com etiquetes n'hi ha prou sempre —l'última sempre en
+ * troba una de lliure, perquè només n'hi pot haver una menys que la bloquegi—,
+ * i el dibuix creix només quan cal: amb quatre municipis escampats, totes
+ * quatre xifres es queden a la primera.
+ *
+ * Torna el nivell de cada etiqueta, en l'ordre en què han arribat.
+ */
+export function nivellsSenseSolapar(
+  centres: readonly number[],
+  amples: readonly number[],
+  nivellsMax = 2,
+): number[] {
+  // Ordre per posició amb una ordenació per inserció i sense comparador: la
+  // funció s'incrusta a la pàgina amb `toString()` i qualsevol funció interna
+  // hi arribaria embolicada amb els ajudants del transpilador.
+  const ordre: number[] = [];
+  for (let i = 0; i < centres.length; i += 1) {
+    let on = ordre.length;
+    for (let j = 0; j < ordre.length; j += 1) {
+      if ((centres[ordre[j] as number] as number) > (centres[i] as number)) {
+        on = j;
+        break;
+      }
+    }
+    ordre.splice(on, 0, i);
+  }
+
+  const nivells: number[] = [];
+  for (let i = 0; i < centres.length; i += 1) nivells.push(0);
+  const ocupatFinsA: number[] = [];
+  for (let n = 0; n < ordre.length; n += 1) {
+    const i = ordre[n] as number;
+    const mig = (amples[i] ?? 0) / 2;
+    let nivell = 0;
+    while (nivell < nivellsMax && (centres[i] as number) - mig < (ocupatFinsA[nivell] ?? -Infinity) + 5) {
+      nivell += 1;
+    }
+    if (nivell >= nivellsMax) nivell = 0;
+    nivells[i] = nivell;
+    ocupatFinsA[nivell] = (centres[i] as number) + mig;
+  }
+  return nivells;
+}
+
+/**
+ * Marques rodones per a l'eix vertical, de zero fins a passar el màxim.
+ *
+ * És germana de `marquesEix` de `grafics.ts` i no és la mateixa perquè aquesta
+ * s'executa **al navegador**: la d'allà porta una funció interna a dins, i el
+ * transpilador li penja un ajudant que a la pàgina no existeix. La regla és la
+ * mateixa: un eix amb marques a 0, 247 i 494 no el llegeix ningú.
+ */
+export function marquesRodones(maxim: number, quantes = 4): number[] {
+  if (!(maxim > 0) || !Number.isFinite(maxim)) return [0, 1];
+  const brut = maxim / quantes;
+  const magnitud = Math.pow(10, Math.floor(Math.log10(brut)));
+  const opcions = [1, 2, 2.5, 5, 10];
+  let pas = 10 * magnitud;
+  for (let i = 0; i < opcions.length; i += 1) {
+    const provi = (opcions[i] as number) * magnitud;
+    if (provi >= brut) {
+      pas = provi;
+      break;
+    }
+  }
+  const marques: number[] = [];
+  const sostre = Math.ceil(maxim / pas - 1e-9) * pas;
+  for (let v = 0; v <= sostre + pas * 1e-9; v += pas) marques.push(Math.round(v * 1e6) / 1e6);
+  return marques;
+}
+
+/**
+ * Quins anys s'escriuen a l'eix sense que es trepitgin. Onze anys en un telèfon
+ * són un mur de xifres; els que no s'escriuen conserven la marca, que és el que
+ * fa veure que la sèrie no salta cap any.
+ */
+export function anysEscrits(anys: readonly number[], maxim = 7): number[] {
+  if (anys.length <= maxim) {
+    const tots: number[] = [];
+    for (let i = 0; i < anys.length; i += 1) tots.push(anys[i] as number);
+    return tots;
+  }
+  const pas = Math.ceil((anys.length - 1) / (maxim - 1));
+  const tria: number[] = [];
+  for (let i = 0; i < anys.length; i += pas) tria.push(anys[i] as number);
+  const ultim = anys[anys.length - 1] as number;
+  if (tria[tria.length - 1] !== ultim) tria.push(ultim);
+  return tria;
+}
+
 // -------------------------------------------------------------------- càrrega
 
 export type ComparadorRow = {
@@ -324,6 +469,13 @@ export type ComparadorRow = {
   peus?: Record<string, string>;
   /** cel·les de text, per clau; el color és el de la marca, quan n'hi ha */
   textos: Record<string, { principal: string; secundari: string; color?: string }>;
+  /**
+   * El deute per habitant any a any: l'única sèrie que tenim dels 947 i la
+   * xifra que més se li atribueix a qui mana. És opcional perquè hi ha
+   * municipis dels quals no en tenim cap any, i perquè una comparació sense
+   * sèrie ha de continuar sortint —dient que la sèrie hi falta, no callant.
+   */
+  serie?: readonly { any: number; valor: number }[];
 };
 
 type GovernmentMetric = {
@@ -532,6 +684,12 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
                 : "",
         },
       },
+      // La sèrie es passa sencera i es reparteix en anys a la pàgina. Aquí
+      // només se'n treuen els anys sense xifra: una línia que travessa un any
+      // que la font no publica és una tendència inventada.
+      serie: (finances?.debtSeries ?? [])
+        .filter((p) => typeof p.perHead === "number" && Number.isFinite(p.perHead))
+        .map((p) => ({ any: p.year, valor: p.perHead })),
     };
   });
 
@@ -607,6 +765,46 @@ function textDelSentit(indicador: Indicador): string {
  * població: si la primera cosa que veu algú fos Barcelona contra un poble de
  * 300 habitants, la pàgina ja hauria ensenyat malament què és comparar.
  */
+/**
+ * El valor que deixa una part `q` del grup per sota, sobre una llista ordenada.
+ *
+ * S'interpola entre els dos veïns i no s'agafa l'element de la posició
+ * arrodonida: en un grup de 45 municipis, «el p90» arrodonit salta de cop de
+ * 812 € a 1.140 € i la vora de la banda dibuixada es mouria un centímetre
+ * perquè sí. Es calcula aquí, un cop, amb els 947; al navegador hi arriben tres
+ * xifres per grup i indicador i no el conjunt ordenat catorze vegades.
+ *
+ * Sota `MINIM_REPARTIMENT` valors torna `null`: una mediana de cinc municipis
+ * és una anècdota dibuixada com si fos una llei.
+ */
+const MINIM_REPARTIMENT = 8;
+
+export function quantil(ordenats: readonly number[], q: number): number | null {
+  if (ordenats.length === 0) return null;
+  if (ordenats.length === 1) return ordenats[0] as number;
+  const posicio = (ordenats.length - 1) * q;
+  const baix = Math.floor(posicio);
+  const dalt = Math.min(ordenats.length - 1, baix + 1);
+  const a = ordenats[baix] as number;
+  const b = ordenats[dalt] as number;
+  return a + (b - a) * (posicio - baix);
+}
+
+/** El repartiment d'un indicador dins d'un grup: p10, mediana, p90 i de quants. */
+export function repartimentDe(valors: readonly (number | null)[]): [number, number, number, number] | null {
+  const nets: number[] = [];
+  for (const v of valors) if (typeof v === "number" && Number.isFinite(v)) nets.push(v);
+  if (nets.length < MINIM_REPARTIMENT) return null;
+  nets.sort((a, b) => a - b);
+  const arrodoneix = (v: number | null): number => Math.round((v ?? 0) * 100) / 100;
+  return [
+    arrodoneix(quantil(nets, 0.1)),
+    arrodoneix(quantil(nets, 0.5)),
+    arrodoneix(quantil(nets, 0.9)),
+    nets.length,
+  ];
+}
+
 const SUGGERIMENTS: readonly { titol: string; slugs: readonly string[] }[] = [
   { titol: "Dos veïns del Baix Llobregat", slugs: ["esplugues-de-llobregat", "sant-just-desvern"] },
   { titol: "Tres capitals de província", slugs: ["girona", "lleida", "tarragona"] },
@@ -730,6 +928,102 @@ const CSS = `
   .comparativa tbody th{min-width:10rem;max-width:10rem;padding:11px}
   .comparativa td,.comparativa thead th:not(.cantonada){min-width:11rem;max-width:12rem;padding:11px}
 }
+
+/* --- qui és qui: un número i un color per municipi triat ------------------
+   El mateix número surt a la fitxa que es tria, a la capçalera de la taula, al
+   punt del regle i a la punta de la línia del deute. Sense això, quatre punts
+   de colors en un dibuix són quatre punts de colors: el número és el que fa
+   que el dibuix i la taula parlin del mateix, i el que ho fa llegible a qui no
+   distingeix el coral del préssec. */
+.num{display:inline-flex;align-items:center;justify-content:center;width:1.55rem;height:1.55rem;
+  border:2.5px solid #1E1B2E;border-radius:var(--r-max);font-family:var(--display);font-weight:900;
+  font-size:.82rem;line-height:1;color:#1E1B2E;flex:none}
+.num.q1{background:var(--coral)}
+.num.q2{background:var(--menta)}
+.num.q3{background:var(--lavanda)}
+.num.q4{background:var(--presec)}
+.comparativa .municipi{display:flex;align-items:center;gap:8px}
+.triats li{padding-left:6px}
+
+/* --- els regles: cada indicador, amb la mediana del grup marcada --------- */
+.escales{margin:var(--e3) 0 0}
+.escales[hidden]{display:none}
+.escales h2{font-size:1.5rem;margin:0}
+.escala-clau{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin:var(--e2) 0 0;
+  font-weight:800;font-size:.9rem}
+.escala-clau span.num{margin-right:6px}
+.escala-compte{background:var(--presec);color:#1E1B2E;border:2.5px solid #1E1B2E;border-radius:var(--r-m);
+  padding:var(--e2);margin:var(--e2) 0 0;font-size:.9rem}
+.escala-compte[hidden]{display:none}
+.escala-seccio{font-family:var(--display);font-weight:900;font-size:.8rem;text-transform:uppercase;
+  letter-spacing:.12em;color:var(--ink-suau);margin:var(--e3) 0 var(--e1)}
+.escala-graella{display:grid;gap:var(--e2)}
+@media (min-width:900px){ .escala-graella{grid-template-columns:1fr 1fr} }
+.escala{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
+  box-shadow:var(--ombra);padding:var(--e2)}
+.escala-titol{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.02em;margin:0}
+.escala-com{display:block;font-family:var(--text);font-weight:600;font-size:.78rem;color:var(--ink-suau);
+  margin-top:2px}
+/* El dibuix es dimensiona amb el «viewBox» i prou: 480 unitats es veuen a 320
+   px sense desplaçar res, que és per què no és de 720 com les gràfiques de la
+   fitxa. Un regle no necessita eix ni onze anys escrits. */
+.escala-svg{display:block;width:100%;height:auto;margin-top:var(--e1)}
+.escala-banda{fill:var(--lavanda);opacity:.6}
+.escala-via{stroke:var(--ink-suau);stroke-width:2;stroke-linecap:round}
+.escala-mediana{stroke:var(--ink);stroke-width:2.5;stroke-dasharray:5 4}
+.escala-marge{font-family:var(--text);font-size:16px;font-weight:700;fill:var(--ink-suau)}
+.escala-halo{fill:var(--paper-2)}
+.escala-punt{stroke:#1E1B2E;stroke-width:2.5}
+.escala-punt.q1{fill:var(--coral)}
+.escala-punt.q2{fill:var(--menta)}
+.escala-punt.q3{fill:var(--lavanda)}
+.escala-punt.q4{fill:var(--presec)}
+.escala-num{font-family:var(--display);font-size:17px;font-weight:900;fill:#1E1B2E}
+.escala-xifra{font-family:var(--display);font-size:21px;font-weight:900;fill:var(--ink);
+  font-variant-numeric:tabular-nums}
+.escala-limits{display:flex;justify-content:space-between;gap:var(--e2);margin:2px 0 0;
+  font-size:.76rem;font-weight:700;color:var(--ink-suau);font-variant-numeric:tabular-nums}
+.escala-peu{font-size:.82rem;color:var(--ink-suau);margin:var(--e1) 0 0}
+/* El que no es pot comparar no es dibuixa a mitges: es diu. Un regle amb un sol
+   punt es llegeix com una comparació i no ho és. */
+.escala-avis{background:var(--presec);color:#1E1B2E;border:2px solid #1E1B2E;border-radius:var(--r-s);
+  padding:10px 12px;margin:var(--e1) 0 0;font-size:.88rem}
+@media (prefers-color-scheme:dark){
+  .escala-banda{fill:#4b467a;opacity:.75}
+}
+
+/* --- la sèrie del deute: una línia per municipi -------------------------- */
+:root{--via1:#C24429;--via2:#2C7A57;--via3:#4B467A;--via4:#8F5310}
+@media (prefers-color-scheme:dark){
+  :root{--via1:#E2735A;--via2:#8FDCB6;--via3:#C9C4F2;--via4:#FFC489}
+}
+.serie{margin:var(--e4) 0 0}
+.serie[hidden]{display:none}
+.serie h2{font-size:1.5rem;margin:0}
+.serie .entradeta{margin:var(--e1) 0 var(--e2)}
+/* Un eix amb onze anys escrits no cap a 320 px sense fer-se il·legible: el
+   gràfic s'arrossega dins de la seva caixa i no empeny el document, que és el
+   mateix que fa la fitxa amb les seves gràfiques. */
+.serie-marc{overflow-x:auto;-webkit-overflow-scrolling:touch;border:2.5px solid var(--ink);
+  border-radius:var(--r-m);background:var(--paper-2);box-shadow:var(--ombra);padding:var(--e2)}
+.serie-marc svg{display:block;width:100%;height:auto}
+@media (max-width:640px){ .serie-marc svg{min-width:520px} }
+.serie-graella{stroke:var(--vora);stroke-width:1}
+.serie-eix{stroke:var(--ink);stroke-width:2}
+.serie-marca{stroke:var(--vora);stroke-width:1.5}
+/* Cada línia es distingeix per la forma i no només pel color: amb quatre
+   municipis, el color sol deixa fora qui no el veu. */
+.serie-linia{fill:none;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.serie-linia.q1{stroke:var(--via1)}
+.serie-linia.q2{stroke:var(--via2);stroke-dasharray:9 5}
+.serie-linia.q3{stroke:var(--via3);stroke-dasharray:2 5}
+.serie-linia.q4{stroke:var(--via4);stroke-dasharray:13 4 3 4}
+.serie-clau{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin:var(--e2) 0 0;
+  font-size:.88rem;font-weight:700}
+.serie-clau span.num{margin-right:6px}
+.serie-clau em{font-style:normal;color:var(--ink-suau);font-weight:600}
+.titol-taula{font-size:1.5rem;margin:var(--e4) 0 var(--e2)}
+.titol-taula[hidden]{display:none}
 `;
 
 export function renderComparador(rows: readonly ComparadorRow[], generatedAt: string): string {
@@ -759,6 +1053,21 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
   const xifres = indicadors.filter((i) => i.mena === "xifra");
   const textos = indicadors.filter((i) => i.mena === "text");
 
+  /**
+   * Els anys de la sèrie del deute, escrits una sola vegada.
+   *
+   * Amb 947 llistes de parells «any-valor» la sèrie costava més del doble de
+   * repetir onze vegades el mateix any; amb la llista a part en són 52 KB, que
+   * és el preu de poder comparar el temps i no només l'últim any. Cada
+   * municipi hi porta només les seves xifres alineades amb aquesta llista, i un
+   * any que la font no publica hi és com a `null` i no com un any que no hi és.
+   */
+  const anysSerie: number[] = [];
+  for (const r of rows) {
+    for (const punt of r.serie ?? []) if (!anysSerie.includes(punt.any)) anysSerie.push(punt.any);
+  }
+  anysSerie.sort((a, b) => a - b);
+
   const dades = rows.map((r) => {
     const g = indexDe(grups, r.grup);
     if (mides[g] === undefined) mides[g] = r.grupMida ?? null;
@@ -781,7 +1090,33 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
           ? [cela?.principal ?? "", cela?.secundari ?? "", color, tintaSobre(color)]
           : [cela?.principal ?? "", cela?.secundari ?? ""];
       }),
+      // La sèrie només hi és quan n'hi ha: un municipi sense cap any no porta
+      // una llista d'onze nuls, i a la pàgina «no tenir `d`» és exactament el
+      // que fa sortir la frase que diu que amb ell no es pot comparar.
+      ...(r.serie && r.serie.length > 0
+        ? {
+            d: anysSerie.map((any) => {
+              const punt = r.serie?.find((p) => p.any === any);
+              return punt ? Math.round(punt.valor) : null;
+            }),
+          }
+        : {}),
     };
+  });
+
+  /**
+   * On cau el 80 % central de cada grup de mida, indicador a indicador.
+   *
+   * És el que converteix el regle en una comparació: 237 € de deute no volen
+   * dir res sols i volen dir molt quan es veu que el 80 % central dels 88
+   * municipis de la seva mida va de 210 € a 980 €. Es calcula aquí amb els 947
+   * i viatja com a una dotzena de files de quatre xifres per indicador; fer-ho
+   * al navegador voldria dir enviar-hi el conjunt sencer ordenat catorze
+   * vegades.
+   */
+  const repartiments = grups.map((etiqueta) => {
+    const membres = rows.filter((r) => r.grup === etiqueta);
+    return xifres.map((indicador) => repartimentDe(membres.map((r) => r.valors[indicador.clau] ?? null)));
   });
 
   // Els suggeriments es comproven contra el conjunt: si un slug canvia, el
@@ -820,11 +1155,9 @@ ${cercador("../")}
 <section class="portada">
   <p class="micro">Comparador</p>
   <h1>El teu poble, al costat</h1>
-  <p class="entradeta">Tria de dos a quatre municipis i mira'ls a la mateixa taula.
-  Cada fila diu si «més» vol dir millor o pitjor, i cada xifra porta el seu lloc dins del
-  grup de municipis de la mateixa mida, que és l'única comparació que és justa.
-  A dalt de tot hi ha qui governa, perquè les xifres de sota tinguin a qui atribuir-se;
-  i hi ha una secció que mira com ha anat el mandat i no només com estan les coses avui.</p>
+  <p class="entradeta">Tria de dos a quatre municipis. Cada xifra es dibuixa en un regle amb la
+  mediana dels municipis de la mateixa mida marcada, que és l'única comparació justa; el deute
+  hi va any a any, i la taula del final en té el detall, fila per fila.</p>
 </section>
 
 <section class="tria">
@@ -861,6 +1194,21 @@ ${cercador("../")}
     </ul>
   </div>
 
+  <section class="escales" id="escales" hidden>
+    <h2>Cada xifra, en un regle</h2>
+    <p class="escala-clau" id="escala-clau"></p>
+    <p class="escala-compte" id="escala-compte" hidden></p>
+    <div id="escales-cos"></div>
+  </section>
+
+  <section class="serie" id="serie" hidden>
+    <h2>El deute, any a any</h2>
+    <p class="entradeta">Un nivell no diu de qui és: pot venir d'una operació del 1998. La línia sí
+    que diu qui puja, qui baixa i des de quan.</p>
+    <div id="serie-cos"></div>
+  </section>
+
+  <h2 class="titol-taula" id="titol-taula" hidden>El detall, fila per fila</h2>
   <div class="marc" id="marc" role="region" aria-label="Taula de comparació, es pot desplaçar de costat" tabindex="0" hidden>
     <table class="comparativa" id="taula">
       <caption class="nomes-lectors">Indicadors dels municipis triats, un per columna</caption>
@@ -873,15 +1221,12 @@ ${cercador("../")}
 
   <p class="buits" id="buits" hidden></p>
 
-  <p class="llegenda-taula" id="llegenda" hidden><b>Millor</b> i <b>pitjor</b> es marquen només dins dels municipis que
-  has triat, i només a les files on hi ha un sentit clar: menys deute és millor, menys participació
-  no ho és. A les que no en tenen —quants habitants, quantes regidories, qui governa, quantes vegades
-  ha canviat de mans— no es marca res, i al tipus de l'IBI i a la variació del deute només s'assenyalen
-  els extrems, sense dir que cap sigui millor.
+  <p class="llegenda-taula" id="llegenda" hidden><b>Millor</b> i <b>pitjor</b> es marquen només entre els
+  municipis que has triat i només on hi ha un sentit clar: menys deute és millor, menys participació
+  no ho és. On no n'hi ha —habitants, regidories, qui governa, el tipus de l'IBI, la variació del
+  deute— no es reparteix res.
   El <b>percentil</b> diu on queda cada xifra entre els municipis de la seva mida: p10 vol dir que
-  només un 10 % del seu grup té un valor més baix.
-  La secció <b>Com ha anat el mandat</b> és l'única que mira el temps i no una foto de l'últim any:
-  la resta són nivells, i un nivell pot venir d'una decisió de fa vint anys que no és d'aquest govern.</p>
+  només un 10 % del seu grup té un valor més baix.</p>
 </section>
 
 <section class="bloc fonts">
@@ -906,10 +1251,16 @@ const MIDES = ${jsonSegur(mides.map((m) => m ?? null))};
 const XIFRES = ${jsonSegur(xifres.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), format: i.format, sentit: i.sentit, objectiu: i.objectiu ?? null, percentil: i.percentil, absent: i.absent, extrems: i.extrems ?? null, com: textDelSentit(i) })))};
 const TEXTOS = ${jsonSegur(textos.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), absent: i.absent, com: textDelSentit(i) })))};
 const SECCIONS = ${jsonSegur(SECCIONS)};
+const REPARTIMENT = ${jsonSegur(repartiments)};
+const ANYS = ${jsonSegur(anysSerie)};
 const MAXIM = 4;
 
 const normalitza = ${codiPerAlNavegador(normalitza)};
 const marquesDe = ${codiPerAlNavegador(marquesDe)};
+const escalaDomini = ${codiPerAlNavegador(escalaDomini)};
+const nivellsSenseSolapar = ${codiPerAlNavegador(nivellsSenseSolapar)};
+const marquesRodones = ${codiPerAlNavegador(marquesRodones)};
+const anysEscrits = ${codiPerAlNavegador(anysEscrits)};
 
 for (const row of DADES) row.k = normalitza(row.n) + " " + normalitza(COMARQUES[row.c]);
 const PER_SLUG = new Map(DADES.map((row) => [row.s, row]));
@@ -928,6 +1279,13 @@ const llegenda = document.getElementById("llegenda");
 const desigual = document.getElementById("desigual");
 const capcalera = document.getElementById("capcalera-taula");
 const cos = document.getElementById("cos-taula");
+const escalesSec = document.getElementById("escales");
+const escalesCos = document.getElementById("escales-cos");
+const escalaClau = document.getElementById("escala-clau");
+const escalaCompte = document.getElementById("escala-compte");
+const serieSec = document.getElementById("serie");
+const serieCos = document.getElementById("serie-cos");
+const titolTaula = document.getElementById("titol-taula");
 
 let triats = [];
 let candidats = [];
@@ -1122,21 +1480,27 @@ function celaXifra(def, row, marca, posicio){
 // «tots els municipis» és una etiqueta de grup possible i no encaixa amb la
 // frase, així que la frase s'adapta i no al revés. La mida hi va sempre que la
 // sabem: comparar «dins del grup» sense dir de quants municipis és no és dir res.
+function nomDelGrup(g, quants){
+  const grup = GRUPS[g];
+  const mida = typeof quants === "number" ? quants : MIDES[g];
+  // «tots els municipis» és una etiqueta de grup possible i no encaixa amb cap
+  // frase que hi posi «els» davant: la frase s'adapta i no al revés.
+  if (grup.indexOf("tots") === 0) return mida ? milers(mida) + " municipis" : grup;
+  return (mida ? milers(mida) + " municipis " : "municipis ") + grup;
+}
+
 function compara(row){
   const grup = GRUPS[row.g];
-  const mida = MIDES[row.g];
-  const quants = mida ? "els " + milers(mida) + " municipis " : "els municipis ";
-  return grup.indexOf("tots") === 0
-    ? "es compara amb " + (mida ? milers(mida) + " municipis" : grup)
-    : "es compara amb " + quants + grup;
+  return "es compara amb " + (grup.indexOf("tots") === 0 ? "" : "els ") + nomDelGrup(row.g);
 }
 
 function pintaTaula(){
   const files = triats.map((slug) => PER_SLUG.get(slug));
 
   capcalera.innerHTML = '<tr><th class="cantonada" scope="col"><span class="nomes-lectors">Indicador</span></th>' +
-    files.map((row) =>
-      '<th scope="col"><span class="municipi"><a href="../m/' + esc(row.s) + '/">' + esc(row.n) + "</a></span>" +
+    files.map((row, n) =>
+      '<th scope="col"><span class="municipi"><span class="num q' + (n + 1) + '">' + (n + 1) + "</span>" +
+      '<a href="../m/' + esc(row.s) + '/">' + esc(row.n) + "</a></span>" +
       '<span class="lloc">' + esc(COMARQUES[row.c]) + "</span>" +
       '<span class="grup">' + esc(compara(row)) + "</span></th>").join("") +
     "</tr>";
@@ -1205,10 +1569,311 @@ function pintaForats(forats, caselles){
     "més fluixa.";
 }
 
+// --------------------------------------------------------------- els regles
+//
+// El mateix indicador, dibuixat i escrit. No és repetir-se: llegir «237 €» i
+// «120 €» diu quin dels dos és més petit —que ja es veia— i no diu si tots dos
+// són poc. El regle hi posa la mediana del grup de mida i la franja on cau el
+// 80 % central, i llavors la mateixa parella de xifres es llegeix sola.
+
+const ESC = { ample: 400, marge: 26, via: 40, primeraXifra: 76, entreXifres: 20 };
+const n1 = (v) => Math.round(v * 10) / 10;
+const euros = (v) => milers(Math.round(v)) + " €";
+const minuscula = (frase) => frase.charAt(0).toLowerCase() + frase.slice(1);
+
+function xEscala(valor, domini){
+  const dins = domini.max === domini.min ? 0.5 : (valor - domini.min) / (domini.max - domini.min);
+  return ESC.marge + Math.max(0, Math.min(1, dins)) * (ESC.ample - ESC.marge * 2);
+}
+
+function blocEscala(def, i, files){
+  const titol = '<h4 class="escala-titol">' + esc(def.etiqueta) +
+    (def.com ? '<span class="escala-com">' + esc(def.com) + "</span>" : "") + "</h4>";
+
+  const amb = [];
+  const sense = [];
+  for (let n = 0; n < files.length; n += 1) {
+    if (typeof files[n].v[i] === "number") amb.push(n);
+    else sense.push(files[n].n);
+  }
+
+  // Un regle amb un sol punt es llegeix com una comparació i no ho és. Al seu
+  // lloc hi va qui hi falta i quina peça d'aquell municipi ens falta: és la
+  // diferència entre «aquí no hi ha res» i «això no ho tenim».
+  if (amb.length < 2) {
+    const falten = sense.length === files.length
+      ? "no en tenim la xifra de cap dels municipis triats"
+      : (sense.length === 1 ? "hi falta " : "hi falten ") + sense.join(" i ");
+    return '<article class="escala">' + titol +
+      '<p class="escala-avis"><b>No es pot comparar:</b> ' + esc(falten) + ". " + esc(def.absent) +
+      "</p></article>";
+  }
+
+  const grupsAmb = [];
+  for (let n = 0; n < amb.length; n += 1) {
+    if (grupsAmb.indexOf(files[amb[n]].g) === -1) grupsAmb.push(files[amb[n]].g);
+  }
+  // La mediana i la franja només es dibuixen si tots els triats juguen a la
+  // mateixa lliga: dues medianes de dos grups damunt del mateix regle es
+  // llegirien com si fossin una sola, i no ho són.
+  const repart = grupsAmb.length === 1 ? (REPARTIMENT[grupsAmb[0]] || [])[i] : null;
+
+  const refs = [];
+  for (let n = 0; n < amb.length; n += 1) refs.push(files[amb[n]].v[i]);
+  if (repart) { refs.push(repart[0]); refs.push(repart[1]); refs.push(repart[2]); }
+  const domini = escalaDomini(refs);
+
+  const centres = [];
+  const amples = [];
+  const escrits = [];
+  for (let n = 0; n < amb.length; n += 1) {
+    const text = formata(def, files[amb[n]].v[i]);
+    escrits.push(text);
+    centres.push(xEscala(files[amb[n]].v[i], domini));
+    // Una xifra de 21 unitats fa uns 10,8 d'ample per caràcter: prou per saber
+    // si dues etiquetes es tocarien abans de dibuixar-les una damunt l'altra.
+    amples.push(text.length * 10.8 + 8);
+  }
+  // Tantes alçades com punts: el regle creix cinc unitats abans que dues xifres
+  // s'escriguin una damunt de l'altra, que és el que passava amb només dues.
+  const nivells = nivellsSenseSolapar(centres, amples, amb.length);
+  let fons = 0;
+  for (let n = 0; n < nivells.length; n += 1) if (nivells[n] > fons) fons = nivells[n];
+  const alt = ESC.primeraXifra + ESC.entreXifres * fons + 6;
+
+  let dibuix = "";
+  if (repart) {
+    const x0 = xEscala(repart[0], domini);
+    const x1 = xEscala(repart[2], domini);
+    dibuix += '<rect class="escala-banda" x="' + n1(x0) + '" y="30" width="' +
+      n1(Math.max(2, x1 - x0)) + '" height="20" rx="5"/>';
+  }
+  dibuix += '<line class="escala-via" x1="' + ESC.marge + '" x2="' + (ESC.ample - ESC.marge) +
+    '" y1="' + ESC.via + '" y2="' + ESC.via + '"/>';
+  if (repart) {
+    const xm = xEscala(repart[1], domini);
+    dibuix += '<line class="escala-mediana" x1="' + n1(xm) + '" x2="' + n1(xm) + '" y1="24" y2="56"/>' +
+      '<text class="escala-marge" x="' + n1(Math.max(50, Math.min(ESC.ample - 50, xm))) +
+      '" y="14" text-anchor="middle">mediana</text>';
+  }
+  for (let n = 0; n < amb.length; n += 1) {
+    // El cèrcol del color del paper és el que separa dos punts que cauen a
+    // tocar: sense ell, dos municipis amb 237 € i 280 € es tapen mig número i
+    // el dibuix deixa de dir de qui és cadascun.
+    dibuix += '<circle class="escala-halo" cx="' + n1(centres[n]) + '" cy="' + ESC.via + '" r="14"/>' +
+      '<circle class="escala-punt q' + (amb[n] + 1) + '" cx="' + n1(centres[n]) +
+      '" cy="' + ESC.via + '" r="11"/>' +
+      '<text class="escala-num" x="' + n1(centres[n]) + '" y="' + (ESC.via + 5.5) +
+      '" text-anchor="middle">' + (amb[n] + 1) + "</text>" +
+      '<text class="escala-xifra" x="' + n1(Math.max(40, Math.min(ESC.ample - 40, centres[n]))) +
+      '" y="' + (ESC.primeraXifra + ESC.entreXifres * nivells[n]) + '" text-anchor="middle">' +
+      esc(escrits[n]) + "</text>";
+  }
+
+  let llegit = def.etiqueta + ". ";
+  for (let n = 0; n < amb.length; n += 1) llegit += files[amb[n]].n + ", " + escrits[n] + ". ";
+  if (repart) llegit += "La mediana del seu grup de mida és " + formata(def, repart[1]) + ".";
+
+  let peu;
+  if (repart) {
+    peu = "El 80 % central dels " + nomDelGrup(grupsAmb[0], repart[3]) + " que en tenen la xifra va de " +
+      formata(def, repart[0]) + " a " + formata(def, repart[2]) + "; la mediana és " +
+      formata(def, repart[1]) + ".";
+  } else if (grupsAmb.length > 1) {
+    peu = "Sense mediana: aquests municipis són de " + grupsAmb.length +
+      " grups de mida diferents i cadascun es compara amb el seu.";
+  } else {
+    peu = "Sense mediana: del seu grup de mida no en tenim prou xifres per calcular-la.";
+  }
+  if (sense.length > 0) peu += " Fora del dibuix, " + sense.join(" i ") + ": " + minuscula(def.absent);
+
+  return '<article class="escala">' + titol +
+    '<svg class="escala-svg" viewBox="0 0 ' + ESC.ample + " " + alt +
+    '" role="img" aria-label="' + esc(llegit) + '">' + dibuix + "</svg>" +
+    // Els dos extrems del regle van escrits, i van fora del dibuix: dins hi
+    // anaven a la mida del «viewBox» —set píxels en un telèfon— i, a més,
+    // ensopegaven amb la paraula «mediana» quan la mediana queia a la vora.
+    // Sense els extrems, un tros de recta triat pels valors que hi cauen pot
+    // fer semblar un abisme el que són quatre euros.
+    '<p class="escala-limits"><span>' + esc(formata(def, domini.min)) + "</span><span>" +
+    esc(formata(def, domini.max)) + "</span></p>" +
+    '<p class="escala-peu">' + esc(peu) + "</p></article>";
+}
+
+function pintaEscales(){
+  const files = triats.map((slug) => PER_SLUG.get(slug));
+  escalesSec.hidden = false;
+  escalaClau.innerHTML = files.map((row, n) =>
+    '<span><span class="num q' + (n + 1) + '">' + (n + 1) + "</span>" + esc(row.n) + "</span>").join("");
+
+  let html = "";
+  let mudes = 0;
+  let total = 0;
+  for (const seccio of SECCIONS) {
+    let blocs = "";
+    XIFRES.forEach((def, i) => {
+      // Només les xifres que tenen un grup de comparació: dibuixar els
+      // habitants en un regle amb mediana seria comparar mides amb mides.
+      if (def.seccio !== seccio || !def.percentil) return;
+      total += 1;
+      let quants = 0;
+      for (const row of files) if (typeof row.v[i] === "number") quants += 1;
+      if (quants < 2) mudes += 1;
+      blocs += blocEscala(def, i, files);
+    });
+    if (blocs !== "") {
+      html += '<h3 class="escala-seccio">' + esc(seccio) + "</h3>" +
+        '<div class="escala-graella">' + blocs + "</div>";
+    }
+  }
+  escalesCos.innerHTML = html;
+  escalaCompte.hidden = mudes === 0;
+  if (mudes > 0) {
+    escalaCompte.innerHTML = "<b>" + mudes + " de les " + total + " xifres no es poden comparar</b>: " +
+      "d'algun dels municipis triats ens en falta la dada. Cada regle diu de quin municipi es tracta " +
+      "i quina és la peça que ens falta.";
+  }
+}
+
+// ---------------------------------------------------------------- la sèrie
+//
+// El deute per habitant any a any: l'única sèrie que tenim dels 947 i la xifra
+// que més se li atribueix a qui mana. Una línia per municipi, cadascuna amb la
+// seva forma —i no només amb el seu color— perquè amb quatre municipis el color
+// sol deixa fora qui no el distingeix.
+
+const SER = { ample: 720, alt: 292, dalt: 16, dreta: 18, baix: 40, esq: 64 };
+
+function pintaSerie(){
+  const files = triats.map((slug) => PER_SLUG.get(slug));
+  const amb = [];
+  for (let n = 0; n < files.length; n += 1) if (files[n].d) amb.push(n);
+  if (files.length < 2 || ANYS.length < 2 || amb.length === 0) { serieSec.hidden = true; return; }
+
+  let primer = -1;
+  let ultim = -1;
+  let maxim = 0;
+  for (let a = 0; a < ANYS.length; a += 1) {
+    for (let n = 0; n < amb.length; n += 1) {
+      const v = files[amb[n]].d[a];
+      if (typeof v !== "number") continue;
+      if (primer === -1) primer = a;
+      if (a > ultim) ultim = a;
+      if (v > maxim) maxim = v;
+    }
+  }
+  // Amb un sol any no hi ha línia: dibuixar-la seria inventar-se una tendència.
+  if (primer === -1 || ultim === primer) { serieSec.hidden = true; return; }
+  serieSec.hidden = false;
+
+  // L'eix comença a zero sempre: un eix de deute que comenci a 900 € converteix
+  // una diferència de dos euros en un penya-segat.
+  const marques = marquesRodones(maxim, 4);
+  const sostre = marques[marques.length - 1] || 1;
+  const ampleUtil = SER.ample - SER.esq - SER.dreta;
+  const altUtil = SER.alt - SER.dalt - SER.baix;
+  const x = (a) => SER.esq + ((a - primer) / (ultim - primer)) * ampleUtil;
+  const y = (v) => SER.alt - SER.baix - (Math.max(0, Math.min(sostre, v)) / sostre) * altUtil;
+
+  let dibuix = "";
+  for (let m = 0; m < marques.length; m += 1) {
+    dibuix += '<line class="serie-graella" x1="' + SER.esq + '" x2="' + (SER.ample - SER.dreta) +
+      '" y1="' + n1(y(marques[m])) + '" y2="' + n1(y(marques[m])) + '"/>' +
+      '<text class="escala-marge" x="' + (SER.esq - 8) + '" y="' + n1(y(marques[m]) + 4) +
+      '" text-anchor="end">' + esc(euros(marques[m])) + "</text>";
+  }
+
+  const anys = [];
+  for (let a = primer; a <= ultim; a += 1) anys.push(ANYS[a]);
+  const escrits = anysEscrits(anys, 7);
+  for (let a = primer; a <= ultim; a += 1) {
+    dibuix += '<line class="serie-marca" x1="' + n1(x(a)) + '" x2="' + n1(x(a)) +
+      '" y1="' + (SER.alt - SER.baix) + '" y2="' + (SER.alt - SER.baix + 5) + '"/>';
+    if (escrits.indexOf(ANYS[a]) !== -1) {
+      dibuix += '<text class="escala-marge" x="' + n1(x(a)) + '" y="' + (SER.alt - SER.baix + 21) +
+        '" text-anchor="middle">' + ANYS[a] + "</text>";
+    }
+  }
+  dibuix += '<line class="serie-eix" x1="' + SER.esq + '" x2="' + (SER.ample - SER.dreta) +
+    '" y1="' + (SER.alt - SER.baix) + '" y2="' + (SER.alt - SER.baix) + '"/>';
+
+  let alt = "Deute per habitant, del " + ANYS[primer] + " al " + ANYS[ultim] + ". ";
+  for (let n = 0; n < amb.length; n += 1) {
+    const row = files[amb[n]];
+    let cami = "";
+    let obert = false;
+    let ultimX = null;
+    let ultimY = null;
+    let primerText = "";
+    for (let a = primer; a <= ultim; a += 1) {
+      const v = row.d[a];
+      // Un any que la font no publica trenca la línia: unir-lo per damunt
+      // dibuixaria un pendent que no hem mesurat enlloc.
+      if (typeof v !== "number") { obert = false; continue; }
+      cami += (obert ? "L" : "M") + n1(x(a)) + " " + n1(y(v)) + " ";
+      obert = true;
+      ultimX = x(a);
+      ultimY = y(v);
+      if (primerText === "") primerText = euros(v) + " el " + ANYS[a];
+    }
+    if (cami !== "") dibuix += '<path class="serie-linia q' + (amb[n] + 1) + '" d="' + cami.trim() + '"/>';
+    if (ultimX !== null) {
+      dibuix += '<circle class="escala-halo" cx="' + n1(ultimX) + '" cy="' + n1(ultimY) + '" r="14"/>' +
+        '<circle class="escala-punt q' + (amb[n] + 1) + '" cx="' + n1(ultimX) +
+        '" cy="' + n1(ultimY) + '" r="11"/>' +
+        '<text class="escala-num" x="' + n1(ultimX) + '" y="' + n1(ultimY + 5) +
+        '" text-anchor="middle">' + (amb[n] + 1) + "</text>";
+    }
+    if (primerText !== "") alt += row.n + ": de " + primerText + " endavant. ";
+  }
+
+  let clau = "";
+  const sense = [];
+  for (let n = 0; n < files.length; n += 1) {
+    const row = files[n];
+    let darrer = null;
+    let anyDarrer = null;
+    if (row.d) {
+      for (let a = primer; a <= ultim; a += 1) {
+        if (typeof row.d[a] === "number") { darrer = row.d[a]; anyDarrer = ANYS[a]; }
+      }
+    }
+    if (darrer === null) sense.push(row.n);
+    clau += '<span><span class="num q' + (n + 1) + '">' + (n + 1) + "</span>" + esc(row.n) +
+      (darrer === null ? " <em>sense sèrie</em>" : " " + esc(euros(darrer)) + " el " + anyDarrer) + "</span>";
+  }
+  const avisSense = sense.length === 0 ? "" :
+    '<p class="escala-avis"><b>No es pot comparar amb ' + esc(sense.join(" i ")) +
+    ":</b> no en tenim el deute any a any.</p>";
+
+  // L'equivalent en text no és una nota al peu: és la mateixa dada. La classe
+  // que l'amaga va al div i mai a la taula, que no es creu una amplada d'un píxel.
+  let filesHtml = "";
+  for (let a = primer; a <= ultim; a += 1) {
+    let cel = "";
+    for (let n = 0; n < files.length; n += 1) {
+      const v = files[n].d ? files[n].d[a] : null;
+      cel += "<td>" + (typeof v === "number" ? esc(euros(v)) : "sense dada") + "</td>";
+    }
+    filesHtml += '<tr><th scope="row">' + ANYS[a] + "</th>" + cel + "</tr>";
+  }
+
+  serieCos.innerHTML = '<div class="serie-marc"><svg viewBox="0 0 ' + SER.ample + " " + SER.alt +
+    '" role="img" aria-label="' + esc(alt) + '">' + dibuix + "</svg></div>" +
+    '<p class="serie-clau">' + clau + "</p>" + avisSense +
+    '<p class="escala-peu">Deute viu a 31 de desembre dividit pel padró de cada any. Conjunt 34db8dc5.</p>' +
+    '<div class="nomes-lectors"><table><caption>Deute per habitant, any a any</caption>' +
+    '<thead><tr><th scope="col">Any</th>' +
+    files.map((row) => '<th scope="col">' + esc(row.n) + "</th>").join("") +
+    "</tr></thead><tbody>" + filesHtml + "</tbody></table></div>";
+}
+
 function pintaTriats(){
-  triatsUl.innerHTML = triats.map((slug) => {
+  triatsUl.innerHTML = triats.map((slug, n) => {
     const row = PER_SLUG.get(slug);
-    return "<li>" + esc(row.n) +
+    // El número que porta aquí és el mateix que portarà al regle i a la punta
+    // de la seva línia: és l'única cosa que lliga el dibuix amb el nom.
+    return '<li><span class="num q' + (n + 1) + '">' + (n + 1) + "</span>" + esc(row.n) +
       '<button class="treu" type="button" data-s="' + esc(slug) + '" aria-label="Treu ' + esc(row.n) + ' de la comparació">×</button></li>';
   }).join("");
 }
@@ -1244,9 +1909,19 @@ function pinta(){
   buit.hidden = nhiha;
   marc.hidden = !nhiha;
   llegenda.hidden = !nhiha;
+  titolTaula.hidden = !nhiha;
   pista.hidden = triats.length < 3;
-  if (nhiha) pintaTaula();
-  else buits.hidden = true;
+  if (nhiha) {
+    pintaTaula();
+    pintaEscales();
+    pintaSerie();
+  } else {
+    buits.hidden = true;
+    escalesSec.hidden = true;
+    serieSec.hidden = true;
+    escalesCos.innerHTML = "";
+    serieCos.innerHTML = "";
+  }
   neteja.hidden = triats.length === 0;
   compte.textContent = triats.length >= MAXIM
     ? "Ja n'hi ha quatre, que és el màxim. Treu-ne un per canviar-lo."

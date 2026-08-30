@@ -181,3 +181,32 @@ describe("els noms de dues paraules, amb separador i sense", () => {
     expect(siglesFamily("PSCPSOE")).toBe("psc");
   });
 });
+
+/**
+ * Els dos acrònims que atribuïen un poble a un partit que no s'hi ha presentat.
+ *
+ * Es van trobar comparant les 2.626 candidatures del 2023 amb el `brand_id`
+ * que en surt del codi d'agrupació electoral: de 2.194 casos on totes dues
+ * coses diuen una família, només vuit no coincidien, i quatre eren d'aquests
+ * dos patrons. Un acrònim curt ancorat només al davant no és un senyal.
+ */
+describe("els acrònims curts no poden manar sobre un tros de paraula", () => {
+  it("«Cs» és Ciutadans; «CSLLM» i «CSJ» no ho són", () => {
+    expect(siglesFamily("Cs")).toBe("cs");
+    expect(siglesFamily("C's")).toBe("cs");
+    expect(siglesFamily("Ciutadans")).toBe("cs");
+    // Sant Llorenç de la Muga: l'«-AM» del final sí que és un senyal, i ara la
+    // dona a Esquerra, que és el que en diu el codi d'agrupació.
+    expect(siglesFamily("CSLLM-AM")).toBe("erc");
+    // Sant Jaume dels Domenys es queda sense família, que és el que ha de
+    // passar: el codi d'agrupació la dona al PDeCAT i és aquell qui la pinta,
+    // no un acrònim que comença igual que un partit.
+    expect(siglesFamily("CSJ-ARA PL")).toBeNull();
+  });
+
+  it("Aliança Catalana només quan s'escriu, i «AC» sol no ho és", () => {
+    expect(siglesFamily("ALIANÇA.CAT")).toBe("aliancacat");
+    // Copons: una llista d'electors que sortia pintada d'extrema dreta.
+    expect(siglesFamily("AC")).toBeNull();
+  });
+});
