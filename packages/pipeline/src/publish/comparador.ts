@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { electionParticipation, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { tintaSobre } from "./contrast";
+import { partitDe } from "./sigla";
 import { carregaMetriques } from "./metriques";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
@@ -1086,8 +1087,17 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
       t: textos.map((i) => {
         const cela = r.textos[i.clau];
         const color = cela?.color;
+        /*
+         * El cinquè element és l'identificador del partit, quan el sabem.
+         *
+         * La pastilla de sigles la pinta el guió al navegador i no portava
+         * enlloc, tot i que hi ha quinze pàgines de partit publicades. Va aquí i
+         * no al guió perquè saber de quin partit són unes sigles demana la taula
+         * de marques, que és del generador i no del navegador.
+         */
+        const partit = color ? partitDe(cela?.principal ?? null) : null;
         return color
-          ? [cela?.principal ?? "", cela?.secundari ?? "", color, tintaSobre(color)]
+          ? [cela?.principal ?? "", cela?.secundari ?? "", color, tintaSobre(color), partit ?? ""]
           : [cela?.principal ?? "", cela?.secundari ?? ""];
       }),
       // La sèrie només hi és quan n'hi ha: un municipi sense cap any no porta
@@ -1532,8 +1542,13 @@ function pintaTaula(){
           // dada; aquí es canvia per la frase que diu què és el que falta.
           const buida = !cela[0] || cela[0] === "No consta";
           if (buida) forats += 1;
+          // Amb l'identificador del partit la pastilla porta a la seva pàgina;
+          // sense ell —una llista local— es queda pintada i quieta, que és el
+          // que toca: aquelles candidatures no tenen res a veure entre elles.
           const sigla = cela[2]
-            ? '<b class="sigla" style="--c:' + esc(cela[2]) + ";--t:" + esc(cela[3]) + '">' + esc(cela[0]) + "</b>"
+            ? (cela[4]
+                ? '<a class="sigla" href="../partit/' + esc(cela[4]) + '/" style="--c:' + esc(cela[2]) + ";--t:" + esc(cela[3]) + '">' + esc(cela[0]) + "</a>"
+                : '<b class="sigla" style="--c:' + esc(cela[2]) + ";--t:" + esc(cela[3]) + '">' + esc(cela[0]) + "</b>")
             : '<span class="valor">' + esc(cela[0]) + "</span>";
           return "<td>" +
             (buida ? '<span class="valor sense">' + esc(def.absent) + "</span>" : sigla) +

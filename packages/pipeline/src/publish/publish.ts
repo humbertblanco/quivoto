@@ -525,7 +525,39 @@ async function escriuRegidors(
   generatedAt: string,
   fitxaTrajectoria: FitxaTrajectoria | null = null,
 ): Promise<number> {
-  const carrecs = dades.carrecs?.carrecs ?? [];
+  /*
+   * Qui seu al ple, i d'on ho sabem.
+   *
+   * Les fitxes de persona sortien **només** de la seu electrònica, i per això
+   * només n'hi havia a 464 dels 947 municipis: 4.807 pàgines de les 9.146
+   * regidories que hi ha a Catalunya. A Santa Coloma de Gramenet, amb 124.000
+   * habitants, no n'hi havia ni una, perquè l'AOC hi serveix un tauler
+   * incrustat en comptes de la llista de càrrecs.
+   *
+   * Però qui seu a cada ple ho sabem dels 947: ho diu la font electoral, que és
+   * d'on surten les regidories de cada candidatura. En sabem menys —ni la
+   * fotografia, ni si és a l'equip de govern, ni l'enllaç a la fitxa
+   * oficial— i el que en sabem és prou per a una pàgina: qui és, de quina
+   * llista va sortir, en quina posició i què ha votat el seu grup.
+   *
+   * La seu electrònica continua manant quan hi és, perquè en diu més. La font
+   * electoral hi entra quan aquella no hi arriba, que és el cas de 483 pobles.
+   */
+  const deLaSeu = dades.carrecs?.carrecs ?? [];
+  const carrecs: typeof deLaSeu =
+    deLaSeu.length > 0
+      ? deLaSeu
+      : dades.councillors.map((c) => ({
+          nom: c.name,
+          carrec: c.role ?? "Regidoria",
+          grup: c.groupName,
+          // El que la font electoral no diu, i que no s'inventa: la seu
+          // electrònica és qui publica la cara, l'equip de govern i la fitxa.
+          equipGovern: false,
+          foto: null,
+          fotoPetita: null,
+          fitxa: null,
+        })) as typeof deLaSeu;
   if (carrecs.length === 0) return 0;
   const grups = grupsDelPle(dades);
   const perNom = new Map(dades.councillors.map((c) => [normalizePersonName(c.name), c]));

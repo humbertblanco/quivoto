@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  assignaSlugs, clau, renderCandidatura, tintaSobre, type CandidaturaData,
+  assignaSlugs, clau, marcaAmbPagina, renderCandidatura, tintaSobre, type CandidaturaData,
 } from "./candidatura";
 import { de } from "../lib/text";
 
@@ -16,6 +16,7 @@ function mostra(canvis: Partial<CandidaturaData> = {}): CandidaturaData {
     sigles: "PSC-CP",
     denominacio: "Partit dels Socialistes de Catalunya - Candidatura de Progrés",
     brandId: "psc", brandName: "Partit dels Socialistes de Catalunya", brandKind: "catalan",
+    partitId: "psc",
     family: "psc", lineage: null,
     color: "#D00C3C", colorIsOfficial: true,
     votes: 7794, seats: 11, share: 44.4, totalVotes: 17_545,
@@ -200,6 +201,164 @@ describe("renderCandidatura", () => {
     expect(html).not.toContain("body{margin:0;background:#D00C3C");
   });
 
+  it("el títol de la pàgina diu també de quin poble parla", () => {
+    // Amb les sigles soles, aquesta pàgina i les altres 2.625 tenien el mateix
+    // encapçalament: qui hi arriba d'un cercador no sabia de quin PSC-CP parla.
+    const html = renderCandidatura(mostra(), "2026-08-29");
+    const h1 = /<h1>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? "";
+    expect(h1).toContain("PSC-CP");
+    expect(h1).toContain("Esplugues de Llobregat");
+  });
+
+  it("ordena la sèrie encara que la mètrica no vingui ordenada", () => {
+    // La mostra porta els anys desendreçats a posta: 2015, 2019, 2023, 2011.
+    const html = renderCandidatura(mostra(), "2026-08-29");
+    expect(html).toContain("Com li ha anat des del 2011");
+    const anys = [...html.matchAll(/<span class="peu-any"><b>(\d{4})<\/b>/g)].map((c) => Number(c[1]));
+    expect(anys).toEqual([2011, 2015, 2019, 2023]);
+  });
+});
+
+// ------------------------------------------------------- les cares del grup
+
+describe("les fotografies del ple", () => {
+  const deu = (ambFoto: number): CandidaturaData["councillors"] =>
+    Array.from({ length: 10 }, (_, i) => ({
+      name: `Nom Cognom${i}`,
+      role: i === 0 ? "Alcalde President" : "Regidoria",
+      match: "grup" as const,
+      foto: i < ambFoto ? `../regidor/nom-cognom${i}/foto.jpg` : null,
+      fitxa: null,
+    }));
+
+  it("ensenya les cares que hi ha encara que no les tingui tothom", () => {
+    // Esplugues: l'ajuntament en publica 6 de 10. Amb la regla vella de
+    // tot-o-res no en sortia ni una, l'alcalde inclòs.
+    const html = renderCandidatura(mostra({ councillors: deu(6) }), "2026-08-29");
+    expect([...html.matchAll(/class="cara-cand" src=/g)]).toHaveLength(6);
+    expect([...html.matchAll(/class="cara-cand inicials"/g)]).toHaveLength(4);
+    expect(html).toContain("D'aquest grup en publica 6 de 10");
+  });
+
+  it("qui no en té rep una inicial amb el color de la seva llista, no un buit", () => {
+    const html = renderCandidatura(mostra({ councillors: deu(0) }), "2026-08-29");
+    // El fons de la inicial surt del color del partit i la tinta, de la fórmula
+    // de contrast: mai un gris de «falta una cosa aquí».
+    expect(html).toContain("--inicial-fons:#d00c3c");
+    expect(html).toContain("--inicial-tinta:#FBF7EE");
+    expect(html).toContain("background:var(--inicial-fons)");
+    expect(html).toContain("les inicials amb el color de la llista");
+  });
+
+  it("amb el groc de la CUP la inicial continua llegint-se", () => {
+    // #ffff00 amb tinta clara a sobre queda a 1,07:1. «sobreColor()» mou la
+    // lluminositat el mínim fins a arribar als 4,5:1 de la norma.
+    const html = renderCandidatura(
+      mostra({ color: "#ffff00", councillors: deu(0) }),
+      "2026-08-29",
+    );
+    expect(html).toContain("--inicial-tinta:#1E1B2E");
+  });
+
+  it("quan les té totes, no diu que en falti cap", () => {
+    const html = renderCandidatura(mostra({ councillors: deu(10) }), "2026-08-29");
+    expect(html).toContain("les retirem a la primera petició");
+    expect(html).not.toContain("D'aquest grup en publica");
+  });
+});
+
+// ------------------------------------------------- el camí cap a la marca
+
+describe("marcaAmbPagina", () => {
+  it("agafa l'agrupació que publica la Generalitat quan és una marca", () => {
+    expect(marcaAmbPagina("psc", "PSC-CP")).toBe("psc");
+    expect(marcaAmbPagina("junts", "JxCat-Junts")).toBe("junts");
+  });
+
+  it("repesca per sigles les coalicions registrades com a agrupació d'electors", () => {
+    // «UA-PSC-CP» porta la marca escrita a dins i el dataset la desa com a local.
+    expect(marcaAmbPagina("local", "UA-PSC-CP")).toBe("psc");
+    expect(marcaAmbPagina(null, "ERC-AM")).toBe("erc");
+  });
+
+  it("no inventa marca on no n'hi ha", () => {
+    // «local» no és cap partit i no té pàgina.
+    expect(marcaAmbPagina("local", "GENT DEL POBLE")).toBeNull();
+    expect(marcaAmbPagina(null, "TOTS PER SANT MARTÍ")).toBeNull();
+  });
+});
+
+describe("l'enllaç amb la fitxa de partit", () => {
+  it("hi va des de la marca de la portada i des del peu de la pàgina", () => {
+    const html = renderCandidatura(mostra(), "2026-08-29");
+    // Som a /observatori/m/<municipi>/<llista>/ i el partit és a
+    // /observatori/partit/<id>/: tres nivells amunt, com la capçalera.
+    expect(html).toContain('href="../../../partit/psc/"');
+    expect([...html.matchAll(/href="\.\.\/\.\.\/\.\.\/partit\/psc\/"/g)].length).toBeGreaterThanOrEqual(2);
+    expect(html).toContain("a tot Catalunya");
+  });
+
+  it("sense marca coneguda no enllaça enlloc i ho diu", () => {
+    const html = renderCandidatura(
+      mostra({ partitId: null, brandId: "local", brandName: null, brandKind: "local" }),
+      "2026-08-29",
+    );
+    // La capçalera de la casa sí que porta «Partits» a l'índex de marques: el
+    // que no pot haver-hi és cap enllaç a la pàgina d'una marca concreta.
+    expect(html).not.toMatch(/partit\/[a-z]+\//);
+    expect(html).toContain("no té pàgina de marca");
+  });
+
+  it("posa el nom de la marca encara que el dataset la desi com a local", () => {
+    // El cas d'«UA-PSC-CP»: `brandName` és nul i la marca la donen les sigles.
+    const html = renderCandidatura(
+      mostra({ brandId: "local", brandName: null, brandKind: null, partitId: "psc" }),
+      "2026-08-29",
+    );
+    expect(html).toContain("Partit dels Socialistes de Catalunya");
+    expect(html).toContain('href="../../../partit/psc/"');
+  });
+});
+
+// ------------------------------------------------------------ els 320 píxels
+
+describe("cap a 320 px", () => {
+  it("la taula de les eleccions anteriors es desplaça ella sola", () => {
+    // A 320 px el document en feia 330 i el culpable era «table.cand-recents»:
+    // quatre columnes amb «9.200 vots» i «11 regidories» sense partir. Ara la
+    // taula viu dins d'una caixa amb «overflow-x:auto» i el que s'arrossega és
+    // la caixa, no la pàgina.
+    const html = renderCandidatura(mostra(), "2026-08-29");
+    const taula = html.indexOf('<table class="cand-recents">');
+    const envolta = html.lastIndexOf('class="taula-envolta"', taula);
+    expect(envolta).toBeGreaterThan(-1);
+    expect(html.slice(envolta, taula)).not.toContain("</div>");
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css).toMatch(/\.taula-envolta\{[^}]*overflow-x:auto/);
+  });
+
+  it("res de fora d'una caixa desplaçable no té una amplada fixa que desbordi", () => {
+    const html = renderCandidatura(mostra(), "2026-08-29");
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    const REGLA = /([^{}]*)\{([^{}]*)\}/g;
+    const desplacables = [...css.matchAll(REGLA)]
+      .filter((r) => /overflow-x:\s*auto/.test(r[2]!))
+      .flatMap((r) => [...r[1]!.matchAll(/\.[A-Za-z0-9_-]+/g)].map((c) => c[0]!));
+    expect(desplacables).toContain(".taula-envolta");
+
+    const amples: number[] = [];
+    for (const regla of css.replace(/@media[^{]*\{/g, "{").matchAll(REGLA)) {
+      if (desplacables.some((classe) => regla[1]!.includes(classe))) continue;
+      for (const decl of regla[2]!.matchAll(/(?:^|[;{\s(])((?:min-)?width):\s*(\d+)px/g)) {
+        amples.push(Number(decl[2]));
+      }
+    }
+    expect(amples.length).toBeGreaterThan(0);
+    for (const ample of amples) expect(ample).toBeLessThanOrEqual(320);
+  });
+});
+
+describe("renderCandidatura, la resta", () => {
   it("amb la marca local no atribueix a la llista el passat d'una altra", () => {
     // `recent` s'omple al carregador; aquí es comprova que la pàgina no dibuixa
     // la taula quan no n'hi ha.

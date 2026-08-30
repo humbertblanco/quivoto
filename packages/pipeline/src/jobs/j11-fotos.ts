@@ -88,6 +88,46 @@ import { withRun } from "../lib/run";
  * Mataró. De les set, sis són manca de font i la setena, Mataró, és una
  * prohibició escrita a l'avís legal.
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Les set que faltaven, obertes de debò (30 d'agost del 2026)
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * «El mòdul serveix un Tableau» era una descripció, no una resposta: no deia si
+ * darrere del tauler hi havia dades. Ara s'hi ha anat a mirar i el resultat
+ * tanca la pregunta, en els dos sentits.
+ *
+ *   · **El Tableau sí que té un punt final de dades, i no porta cap foto.** La
+ *     mateixa pàgina que l'incrusta enllaça el conjunt d'on beu: el recurs
+ *     `eb131bb1-f521-4aeb-9004-2fea1f372e89` de `dadesobertes.seu-e.cat`,
+ *     filtrat per `CODI_ENS`. Consultat a l'API de CKAN: **10.591 files i dotze
+ *     columnes** —CARREC, NOM_REGIDOR, PARTIT, AREA, MUNICIPI_REPRESENTA,
+ *     DATA_NOMENAMENT, E_MAIL, SEXE, ORDRE, CODI_ENS, NOM_ENS i l'`_id`—, **cap
+ *     de fotografia**. El tauler de Tableau («SEU-E-Crrecselectes») dibuixa
+ *     exactament aquest conjunt. O sigui: allà on l'AOC ha canviat el mòdul pel
+ *     tauler, les cares no s'han mogut de lloc, s'han perdut. Queda escrit
+ *     perquè ningú no hi torni a anar a buscar-les.
+ *   · **Els cinc slugs responen, i tots cinc són el mateix cas.** Mataró,
+ *     `santacolomadegramenet`, Cornellà, Manresa i `vilanovailageltru` donen 200
+ *     amb el Tableau. No és un problema de descobriment de slug.
+ *   · **Reus no està bloquejat: la seva seu-e està donada de baixa.** Els 2 kB
+ *     que arriben no són cap verificació de bot —amb navegador i amb galetes
+ *     arriben igual— sinó una pàgina que diu, literalment, «Aquest lloc web és
+ *     inactiu. Contacteu amb l'administrador.», tant a l'arrel de l'ens com al
+ *     mòdul. Són dues coses ben diferents: davant d'un bloqueig, la feina seria
+ *     tornar-hi d'una altra manera; davant d'una baixa, no hi ha res a fer i
+ *     insistir-hi és perdre el temps. Per això ara té motiu propi.
+ *   · **Terrassa no és a seu-e i prou.** Provats els tres slugs raonables
+ *     (`terrassa`, `terrassaajuntament`, `ajuntamentdeterrassa`), tant a
+ *     l'arrel com al mòdul: 404 als sis. `fora-de-seu-e` era el motiu correcte.
+ *
+ * I a cal ajuntament, que era l'altra via: **Cornellà i Vilanova sí que
+ * publiquen els retrats** de l'equip de govern, un per bloc i amb el nom al
+ * costat —16 i 14 cares, ben aparellables—, però **l'avís legal de totes dues
+ * en prohibeix la reproducció** amb les mateixes paraules que el de Mataró. No
+ * es baixen. **Santa Coloma** només penja una foto de grup de la corporació i
+ * **Manresa i Reus** no en publiquen cap: allà no hi ha res a decidir, és que no
+ * hi és. Els detalls i el codi de lectura són feina de J13, no d'aquí.
+ *
  * El conjunt, abans d'aquesta passada: 3.520 fotos de 4.807 càrrecs en 464
  * municipis (217 amb cobertura completa, 129 parcial, 118 sense cap). Les dues
  * correccions en recuperen 26 comptades una a una —25 a Sant Boi i la de
@@ -107,7 +147,7 @@ import { withRun } from "../lib/run";
 const FONT = "seu-e.cat (Consorci AOC)";
 
 /** Les dues mides que fa servir la fitxa: la llista i el detall. */
-const MIDES = [160, 320] as const;
+export const MIDES = [160, 320] as const;
 
 /**
  * Costat curt mínim per fer-ne miniatura.
@@ -117,7 +157,7 @@ const MIDES = [160, 320] as const;
  * com de gran es veu el retrat, i el més gran de tota la web fa 120 px. Per
  * sota d'això sí que es notaria, i per això el llindar es queda aquí.
  */
-const MINIM_PX = 120;
+export const MINIM_PX = 120;
 
 /**
  * Sis peticions alhora. seu-e aguanta bé però és un servei públic i aquí s'hi
@@ -325,13 +365,34 @@ export async function baixaFoto(
   arrelFotos: string,
   midaMinima = MINIM_PX,
 ): Promise<ResultatFoto> {
-  const destins = MIDES.map((m) => join(arrelFotos, String(m), `${fotoId}.webp`));
-  const fetes = await Promise.all(destins.map(existeix));
-  if (fetes.every(Boolean)) return "ja-hi-era";
+  if (await miniaturesFetes(fotoId, arrelFotos)) return "ja-hi-era";
 
   const bytes = await fetchImatge(urlFoto(slug, fotoId));
   if (!bytes) return "sense-foto";
+  return miniaturesDeBytes(bytes, fotoId, arrelFotos, midaMinima);
+}
 
+/**
+ * Fa les dues miniatures a partir dels bytes d'una imatge ja baixada.
+ *
+ * És la meitat de `baixaFoto` que no sap res de seu-e, i viu a part perquè no
+ * és la primera feina que necessita **exactament** aquestes dues mides: J13 ja
+ * en va copiar el procediment per a les ciutats grans i J25 el necessita per als
+ * retrats històrics de Commons. Tenir-ne dues còpies vol dir que el dia que es
+ * corregeix una cosa —el perfil CMYK, per exemple— la fitxa d'unes cares queda
+ * arreglada i la d'unes altres no, i ningú no se n'assabenta.
+ *
+ * Rep bytes i no un camí perquè les fonts no s'assemblen —una serveix
+ * `getPhotoBytes`, l'altra una URL de Commons— i el fitxer temporal, la mesura
+ * i el llindar de nitidesa sí que han de ser els mateixos per a totes.
+ */
+export async function miniaturesDeBytes(
+  bytes: Uint8Array,
+  fotoId: number,
+  arrelFotos: string,
+  midaMinima = MINIM_PX,
+): Promise<ResultatFoto> {
+  const destins = MIDES.map((m) => join(arrelFotos, String(m), `${fotoId}.webp`));
   const temporal = join(tmpdir(), `quivoto-foto-${fotoId}-${process.pid}`);
   try {
     await writeFile(temporal, bytes);
@@ -348,6 +409,14 @@ export async function baixaFoto(
   } finally {
     await rm(temporal, { force: true });
   }
+}
+
+/** Ja hi són totes dues miniatures d'aquest identificador? */
+export async function miniaturesFetes(fotoId: number, arrelFotos: string): Promise<boolean> {
+  const fetes = await Promise.all(
+    MIDES.map((m) => existeix(join(arrelFotos, String(m), `${fotoId}.webp`))),
+  );
+  return fetes.every(Boolean);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -377,6 +446,8 @@ export type MotiuFalta =
   | "sense-pagina"
   /** Cap slug de seu-e no respon per aquest municipi. */
   | "fora-de-seu-e"
+  /** El portal diu que la seu d'aquest ens està donada de baixa. */
+  | "seu-e-inactiva"
   /** 200 amb un cos que no és la pàgina: verificació de bot, manteniment… */
   | "pagina-bloquejada"
   /** L'execució s'ha aturat abans d'arribar-hi. */
@@ -388,9 +459,13 @@ const ETIQUETA: Record<MotiuFalta, string> = {
   "foto-massa-petita": `l'original no arriba a ${MINIM_PX} px`,
   "foto-illegible": "els bytes no són cap imatge llegible",
   "modul-buit": "la pàgina hi és però el mòdul de càrrecs és buit",
-  "modul-tableau": "la pàgina serveix un Tableau de municat.gencat.cat, sense cap fotografia",
+  // Comprovat a l'API de CKAN el 30-08-2026: el conjunt que hi ha darrere del
+  // tauler té 10.591 files i dotze columnes, i cap no és una fotografia.
+  "modul-tableau":
+    "la pàgina serveix el Tableau de l'AOC; el conjunt que el nodreix no té columna de fotografia",
   "sense-pagina": "l'ens és a seu-e però no publica la pàgina de càrrecs",
   "fora-de-seu-e": "cap slug de seu-e no respon",
+  "seu-e-inactiva": "seu-e diu que aquesta seu està inactiva",
   "pagina-bloquejada": "seu-e respon 200 amb un cos que no és la pàgina",
   "no-mirat": "no s'hi ha arribat en aquesta execució",
 };
@@ -402,17 +477,33 @@ export function motiuDelResultat(resultat: ResultatFoto): MotiuFalta | null {
   return "foto-illegible";
 }
 
-export type EstatPagina = "modul" | "tableau" | "modul-buit" | "bloquejada";
+export type EstatPagina = "modul" | "tableau" | "modul-buit" | "inactiva" | "bloquejada";
+
+/**
+ * El text que serveix seu-e quan la seu d'un ens està donada de baixa. És una
+ * pàgina de 2 kB sense `<title>`, i per això abans es confonia amb un bloqueig.
+ *
+ * La frase es busca sense accents i en minúscules perquè arriba dins d'un HTML
+ * antic on la «é» tant pot venir literal com escapada. Comprovat el 30-08-2026
+ * contra Reus: la mateixa pàgina a l'arrel de l'ens i al mòdul de càrrecs.
+ */
+const RE_INACTIVA = /lloc web (é|&eacute;|&#233;)s inactiu/i;
 
 /**
  * Què hem rebut de seu-e quan la resposta és 200.
  *
- * Reus n'és el motiu: respon 200 amb 2 kB de Dynatrace i cap `<title>`, i això
- * abans es comptava igual que un municipi que no és al portal. Són coses
- * diferents —una demana una altra font, l'altra demana un navegador— i han de
- * sortir separades a l'informe.
+ * Reus n'és el motiu, i el diagnòstic ha canviat en anar-hi a mirar de debò:
+ * els 2 kB que arriben **no** són una verificació de bot —amb navegador i amb
+ * galetes arriben exactament igual— sinó l'avís que aquella seu està inactiva.
+ * Tres coses ben diferents que abans anaven al mateix sac: un municipi que no
+ * és al portal demana una altra font; una pàgina que no arriba demana un
+ * navegador; una seu donada de baixa no demana res, perquè ja no hi és.
+ *
+ * L'ordre importa: la comprovació de la baixa va **abans** que la de mida,
+ * perquè aquesta pàgina també fa dos quilobytes i també li falta el `<title>`.
  */
 export function classificaPagina(html: string): EstatPagina {
+  if (RE_INACTIVA.test(html)) return "inactiva";
   if (!/<title>/i.test(html) || html.length < 5_000) return "bloquejada";
   if (/organ-principal-carrecs-item/.test(html)) return "modul";
   if (/tableau|dadesobertes\.seu-e\.cat/i.test(html)) return "tableau";
@@ -422,6 +513,7 @@ export function classificaPagina(html: string): EstatPagina {
 /** Traducció de l'estat de la pàgina al motiu que surt a l'informe. */
 export function motiuDeLaPagina(estat: EstatPagina): MotiuFalta | null {
   if (estat === "modul") return null;
+  if (estat === "inactiva") return "seu-e-inactiva";
   if (estat === "bloquejada") return "pagina-bloquejada";
   return estat === "tableau" ? "modul-tableau" : "modul-buit";
 }
@@ -482,17 +574,26 @@ export function liniaInforme(d: Diagnostic): string {
  * Per què no hem sabut trobar el slug d'un municipi gran.
  *
  * El descobriment de slug dona per bona una pàgina quan el `<title>` diu el nom
- * de l'ajuntament, i Reus no en té cap: respon 200 amb 2 kB de verificació de
- * bot. El resultat era el mateix que per a Terrassa, que sí que és fora del
- * portal, i les dues coses demanen feines diferents. Aquesta petició de més
+ * de l'ajuntament, i Reus no en té cap: respon 200 amb una pàgina de dos
+ * quilobytes. El resultat era el mateix que per a Terrassa, que sí que és fora
+ * del portal, i les dues coses demanen feines diferents. Aquesta petició de més
  * només es fa per als municipis grans que han fallat: són comptats.
+ *
+ * Des del 30-08-2026 en distingeix tres i no dos, perquè el cos d'aquells dos
+ * quilobytes s'ha llegit: el de Reus diu que la seu està inactiva, i això no és
+ * cap bloqueig. Terrassa, en canvi, dona 404 als tres slugs raonables tant a
+ * l'arrel com al mòdul: allà «fora-de-seu-e» és exacte.
  */
 async function motiuSenseSlug(nom: string): Promise<MotiuFalta> {
   const candidat = slugCandidates(nom)[0];
   if (!candidat) return "fora-de-seu-e";
   try {
     const { status, html } = await fetchText(urlCarrecs(candidat));
-    if (status === 200 && classificaPagina(html) === "bloquejada") return "pagina-bloquejada";
+    if (status === 200) {
+      const estat = classificaPagina(html);
+      if (estat === "inactiva") return "seu-e-inactiva";
+      if (estat === "bloquejada") return "pagina-bloquejada";
+    }
   } catch {
     // Si tampoc no es pot comprovar, val més la resposta prudent.
   }
@@ -685,7 +786,7 @@ export async function j11Fotos(db: Db, options: OpcionsJ11 = {}): Promise<void> 
     const comptador = {
       slugs: 0, senseSlug: 0, senseCarrecs: 0, ambModul: 0, ambFoto: 0,
       desades: 0, jaHiEren: 0, petites: 0, senseImatge: 0,
-      fotoFallida: 0, errors: 0, bloquejades: 0, conservades: 0,
+      fotoFallida: 0, errors: 0, bloquejades: 0, inactives: 0, conservades: 0,
       completa: 0, parcial: 0, peticions: 0,
     };
 
@@ -722,6 +823,7 @@ export async function j11Fotos(db: Db, options: OpcionsJ11 = {}): Promise<void> 
             ? await motiuSenseSlug(muni.name)
             : "fora-de-seu-e";
           if (motiu === "pagina-bloquejada") comptador.bloquejades += 1;
+          if (motiu === "seu-e-inactiva") comptador.inactives += 1;
           anota(muni, { motiu });
           await run.issue({
             kind: "seue_slug_no_resolt",
@@ -751,6 +853,7 @@ export async function j11Fotos(db: Db, options: OpcionsJ11 = {}): Promise<void> 
            * HTML. La resta són el Tableau de municat, que no porta cap cara.
            */
           if (estat === "bloquejada") comptador.bloquejades += 1;
+          if (estat === "inactiva") comptador.inactives += 1;
           anota(muni, { slug: trobat.slug, motiu: motiuDeLaPagina(estat) });
           errorsSeguits = 0;
           return;
@@ -839,7 +942,8 @@ export async function j11Fotos(db: Db, options: OpcionsJ11 = {}): Promise<void> 
     run.say(`slugs resolts: ${comptador.slugs}/${feina.length} (${comptador.senseSlug} sense)`);
     run.say(
       `sense pàgina de càrrecs: ${comptador.senseCarrecs} · amb mòdul emplenat: ${comptador.ambModul} · ` +
-        `pàgines que no arriben: ${comptador.bloquejades} · fitxes d'una altra font respectades: ${comptador.conservades}`,
+        `pàgines que no arriben: ${comptador.bloquejades} · seus donades de baixa: ${comptador.inactives} · ` +
+        `fitxes d'una altra font respectades: ${comptador.conservades}`,
     );
     run.say(`municipis amb foto: ${comptador.ambFoto} (${comptador.completa} completa, ${comptador.parcial} parcial)`);
     run.say(

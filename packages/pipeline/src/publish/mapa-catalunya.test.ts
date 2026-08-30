@@ -223,7 +223,7 @@ describe("la rampa contínua", () => {
 
   it("es gira en fosc, perquè el graó que crida sigui sempre el valor alt", () => {
     expect(html).toMatch(/@media \(prefers-color-scheme:dark\)\{[\s\S]*?\.mapa947 \.g0\{fill:#3B2119\}/);
-    expect(html).toMatch(/@media \(prefers-color-scheme:dark\)\{[\s\S]*?\.mapa947 \.gnd\{fill:#3A3545\}/);
+    expect(html).toMatch(/@media \(prefers-color-scheme:dark\)\{[\s\S]*?--nd-fons:#2E2A3A/);
   });
 
   it("el «sense dada» no és mai un graó de la rampa", () => {
@@ -232,5 +232,60 @@ describe("la rampa contínua", () => {
     for (const ramp of ["#FBEFE6", "#F0BFA9", "#E2735A", "#BE5138", "#8E2F1D", "#3B2119", "#F5A583"]) {
       expect(html).not.toContain(`.gnd{fill:${ramp}}`);
     }
+  });
+
+  it("el «sense dada» va ratllat i no pintat, i el patró és dins del dibuix", () => {
+    // El gris de sorra d'abans tenia la lluminància entre el primer graó i el
+    // segon: un forat es llegia com «poc». Les ratlles no són cap graó de cap
+    // escala i es distingeixen encara que no es distingeixi el color.
+    expect(html).toContain(".mapa947 .gnd{fill:url(#sense-dada)}");
+    const dins = /<svg class="mapa947"[\s\S]*?<\/svg>/.exec(html)![0]!;
+    expect(dins).toContain('<pattern id="sense-dada"');
+    // I el quadret de la llegenda d'HTML ha de portar les mateixes ratlles: si
+    // el mapa va ratllat i la clau va plana, la clau no és la clau del mapa.
+    expect(html).toMatch(/\.llegenda \.gnd\{background:repeating-linear-gradient/);
+  });
+});
+
+/**
+ * Les capes que arriben de mètriques que la fila dels 947 encara no porta.
+ *
+ * Mentre `loadEls947()` no escrigui `rn` i `sa`, les dues capes no tenen dada
+ * enlloc i han de desaparèixer del mapa senceres —botó, llegenda i taca—, no
+ * quedar-se com un botó que pinta els 947 de gris.
+ */
+describe("renda i sou de l'alcaldia", () => {
+  const slugs = Object.keys(geometria.municipis);
+
+  it("no surten quan la fila no en porta la xifra", () => {
+    const html = renderMapaCatalunya(slugs.map((s) => fila(s)), "2026-08-29");
+    expect(html).not.toContain("Renda per persona");
+    expect(html).not.toContain("Sou de l'alcaldia");
+    expect(html).not.toContain("Atlas de distribución de renta");
+  });
+
+  it("surten, amb la font i la llicència, quan la fila les porta", () => {
+    const amb = slugs.map((s, i) =>
+      Object.assign(fila(s), { rn: 12_000 + i * 10, sa: i % 3 === 0 ? null : 30_000 + i }),
+    );
+    const html = renderMapaCatalunya(amb, "2026-08-29");
+    expect(html).toContain("Renda per persona");
+    expect(html).toContain("Sou de l'alcaldia");
+    expect(html).toContain("Atlas de distribución de renta");
+    expect(html).toContain("Ministeri per a la Transformació Digital");
+    // La cobertura de cada capa arriba al navegador: els 947 tenen renda i dos
+    // terços tenen sou, i el mapa ho ha de poder dir.
+    const capes = capesDe(html);
+    expect(capes.find((c) => c.t.includes("entren a les cases"))!.n).toBe(947);
+    expect(capes.find((c) => c.t.includes("cobra l'alcaldia"))!.n).toBe(
+      amb.filter((f) => (f as { sa: number | null }).sa !== null).length,
+    );
+  });
+
+  it("la descripció de la pàgina només promet les capes que hi són", () => {
+    const html = renderMapaCatalunya(slugs.map((s) => fila(s)), "2026-08-29");
+    const descripcio = /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+    expect(descripcio).toContain("qui mana");
+    expect(descripcio).not.toContain("renda per persona");
   });
 });

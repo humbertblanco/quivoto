@@ -8,6 +8,7 @@ import { carregaMetriques } from "./metriques";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
+import { partitDe, sigla } from "./sigla";
 import { SITE } from "./config";
 import { nomLlegible, slugify } from "../lib/text";
 import { capcalera } from "./capcalera";
@@ -95,6 +96,27 @@ export type Els947Row = {
   pe?: number | null;
   /** preu de l'aigua: el tram de subministrament, en euros per metre cúbic */
   pa?: number | null;
+  /**
+   * Renda neta mitjana per persona, en euros l'any, i de quin any és.
+   *
+   * És l'Atles de distribució de renda de les llars de l'INE (kind «riquesa»,
+   * J23), i és la dada que faltava per poder comparar pobles de debò: fins ara
+   * aquesta llista deia qui hi mana i què deu l'ajuntament, i no deia res de
+   * quants diners hi entren a casa. La xifra és neta —després d'impostos i
+   * cotitzacions— i repartida entre tots els membres de la llar, que és la que
+   * la gent entén; per ordenar municipis, J23 recomana la mediana per unitat de
+   * consum, i qui la vulgui la té sencera a la fitxa del municipi.
+   *
+   * **Això no ho decideix l'ajuntament.** Quant guanya la gent d'un poble
+   * depèn de qui hi viu i de què hi treballa, no del ple; el que sí que decideix
+   * el ple és quines taxes cobra i a qui les bonifica. La pàgina ho ha de dir al
+   * costat de la xifra, com ja fa amb el deute.
+   *
+   * L'any va a cada fila i no a la pàgina perquè un municipi sense la xifra de
+   * l'any bo no ha de fer semblar que la llista sencera és d'un altre any.
+   */
+  rn?: number | null;
+  ra?: number | null;
 };
 
 /**
@@ -134,6 +156,14 @@ const KINDS_ELS947: string[] = [
   // consulta que demanés només el camp, no la mètrica sencera.
   "poblacio",
   "preuAigua",
+  // La renda. Aquesta mètrica porta els sis indicadors de l'ADRH amb la sèrie
+  // sencera del 2015 al 2023 i la comparació amb Catalunya: d'aquí només en
+  // surten dues xifres —el valor de la renda neta per persona i el seu any— i
+  // la resta es llegeix i es llença, igual que passa amb «poblacio». Mesurat
+  // sobre els 947, són 3,4 MB de mètrica per 947 xifres. Si la memòria del
+  // motor torna a petar, aquesta i «poblacio» són les dues primeres a mirar:
+  // el que caldria és una consulta que demanés el camp i no la mètrica.
+  "riquesa",
 ];
 
 /**
@@ -270,6 +300,21 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         | { preu: { subministrament: number | null } }
         | undefined;
 
+      /*
+       * La renda de la gent que hi viu, de l'Atles de l'INE.
+       *
+       * Es busca l'indicador per la clau i no per la posició de la llista: J23
+       * en desa sis i l'ordre és cosa seva. `darrerAnyPropi` no s'agafa a
+       * posta: si un municipi no té la xifra de l'any bo, aquí surt buit i no
+       * una xifra vella barrejada amb les dels altres, que és el que faria que
+       * ordenar la llista per renda comparés anys diferents.
+       */
+      const riquesa = llegeix("riquesa") as
+        | { any: number | null; indicadors: { clau: string; valor: number | null }[] }
+        | undefined;
+      const renda =
+        riquesa?.indicadors?.find((i) => i.clau === "rendaNetaPersona")?.valor ?? null;
+
       return {
         s: m.slug,
         n: m.name,
@@ -295,6 +340,8 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         pt: participacio.get(m.id) ?? null,
         pe: poblacio?.indicadors?.find((i) => i.clau === "pctNacionalitatEstrangera")?.valor ?? null,
         pa: aigua?.preu?.subministrament ?? null,
+        rn: renda,
+        ra: renda === null ? null : riquesa?.any ?? null,
       };
     })
     .sort((a, b) => b.p - a.p);
@@ -351,6 +398,16 @@ export type Llindars = {
   transparencia: number | null;
   ambDeute: number;
   ambTransparencia: number;
+  /**
+   * La renda neta per persona del municipi que queda al mig.
+   *
+   * L'INE tapa per secret estadístic la renda dels municipis més petits, i per
+   * això la mediana es fa **només amb els que en tenen** i es diu quants són:
+   * si es comptessin els forats com a zero, la mitja Catalunya de muntanya
+   * arrossegaria el llindar cap avall i el filtre diria una cosa falsa.
+   */
+  renda: number | null;
+  ambRenda: number;
 };
 
 /** Per sota d'això, una mediana diu més del forat de dades que dels municipis. */
@@ -359,6 +416,7 @@ const MINIM_PER_A_MEDIANA = 40;
 export function llindarsDe(files: readonly Els947Row[]): Llindars {
   const deutes = files.map((f) => f.d).filter((v): v is number => v !== null);
   const transparencies = files.map((f) => f.y).filter((v): v is number => v !== null);
+  const rendes = files.map((f) => f.rn ?? null).filter((v): v is number => v !== null);
   const arrodoneix = (v: number | null): number | null => (v === null ? null : Math.round(v));
   return {
     deute: deutes.length >= MINIM_PER_A_MEDIANA ? arrodoneix(mediana(deutes)) : null,
@@ -366,6 +424,8 @@ export function llindarsDe(files: readonly Els947Row[]): Llindars {
       transparencies.length >= MINIM_PER_A_MEDIANA ? arrodoneix(mediana(transparencies)) : null,
     ambDeute: deutes.length,
     ambTransparencia: transparencies.length,
+    renda: rendes.length >= MINIM_PER_A_MEDIANA ? arrodoneix(mediana(rendes)) : null,
+    ambRenda: rendes.length,
   };
 }
 
@@ -430,6 +490,20 @@ export const FILTRES: readonly Filtre[] = [
     hi: (l) => l.transparencia !== null,
   },
   { clau: "sense", grup: "papers", text: () => "Sense cap acta del ple", te: (f) => f.t === 0 },
+  /*
+   * La renda va a «Quin municipi» i no a «Els comptes i els papers» a posta:
+   * no és un compte de l'ajuntament sinó el context en què governa, i posar-la
+   * al costat del deute la faria llegir com una nota de gestió. El text diu
+   * «hi entra menys» i no «és més pobre»: la xifra és una posició dins dels
+   * 947, i qui hi viu no ha de rebre cap adjectiu d'aquesta pàgina.
+   */
+  {
+    clau: "renda",
+    grup: "municipi",
+    text: (l) => `Hi entra menys de ${xifra(l.renda ?? 0)} € per persona`,
+    te: (f, l) => l.renda !== null && (f.rn ?? null) !== null && f.rn! < l.renda,
+    hi: (l) => l.renda !== null,
+  },
   { clau: "petits", grup: "municipi", text: () => "Menys de 1.000 habitants", te: (f) => f.p < 1000 },
   { clau: "fitxa", grup: "municipi", text: () => "Amb radiografia", te: (f) => f.x === 1 },
 ];
@@ -465,9 +539,78 @@ export function pastilles(fila: Fila, l: Llindars): string[] {
   posa(`${fila.r} regidories`);
   posa(fila.t > 0 ? `${xifra(fila.t)} actes indexades` : "Sense actes", fila.t > 0 ? "" : "sense");
   if (fila.d !== null) posa(`${xifra(fila.d)} € de deute per habitant`);
+  // La renda porta l'any perquè no és la de tothom el mateix any: l'INE tapa la
+  // dels municipis petits i uns quants es queden amb la de fa un any o dos.
+  if ((fila.rn ?? null) !== null)
+    posa(
+      fila.ra
+        ? `${xifra(fila.rn!)} € de renda per persona (${fila.ra})`
+        : `${xifra(fila.rn!)} € de renda per persona`,
+    );
   if (fila.f !== null) posa(`${xifra(fila.f)} % de dones al ple`);
   if (fila.y !== null) posa(`Transparència ${xifra(fila.y)} %`);
   return out;
+}
+
+/**
+ * Per què es pot ordenar la llista.
+ *
+ * Una llista de 947 files ordenada sempre igual només respon una pregunta: qui
+ * és més gran. Totes les altres xifres hi eren escrites i no es podien fer
+ * servir per posar ningú en ordre, i «quin poble deu més per habitant» o «on hi
+ * entren menys diners a casa» eren respostes que la pàgina tenia i no donava.
+ *
+ * `i` és la posició dins de `data-o`, que és com viatja cada xifra fins al
+ * navegador. El nom no hi és: ja va a `data-k`, que és la clau de cerca, i
+ * escriure'l dues vegades a cada fila serien 947 còpies del mateix.
+ *
+ * **Cap ordre no és un rànquing de gestió.** «De més deute a menys» diu on cau
+ * cada municipi, no qui ho fa millor: la pàgina ja ho diu de les medianes i
+ * s'aplica igual aquí. I qui no té la dada va sempre al final, tant si
+ * s'ordena de més a menys com al revés: un forat no és un zero, i posar-lo
+ * entre els que menys tenen seria inventar-se una xifra.
+ */
+export type Ordre = {
+  clau: string;
+  text: string;
+  /** La posició dins de «data-o». `null` vol dir el nom, que ja és a «data-k». */
+  i: number | null;
+  /** Si de primeres es llegeix de més a menys. */
+  gran: boolean;
+  /** Com es diu l'ordre al recompte, en cada sentit. */
+  avall: string;
+  amunt: string;
+};
+
+export const ORDRES: readonly Ordre[] = [
+  { clau: "pob", text: "Població", i: 0, gran: true,
+    avall: "dels més grans als més petits", amunt: "dels més petits als més grans" },
+  { clau: "nom", text: "Nom", i: null, gran: false,
+    avall: "per ordre alfabètic", amunt: "per ordre alfabètic invers" },
+  { clau: "renda", text: "Renda per persona", i: 1, gran: true,
+    avall: "de més renda per persona a menys", amunt: "de menys renda per persona a més" },
+  { clau: "deute", text: "Deute per habitant", i: 2, gran: true,
+    avall: "de més deute per habitant a menys", amunt: "de menys deute per habitant a més" },
+  { clau: "transp", text: "Transparència", i: 3, gran: true,
+    avall: "de més compliment del portal de transparència a menys",
+    amunt: "de menys compliment del portal de transparència a més" },
+  { clau: "dones", text: "Dones al ple", i: 4, gran: true,
+    avall: "de més dones al ple a menys", amunt: "de menys dones al ple a més" },
+  { clau: "actes", text: "Actes indexades", i: 5, gran: true,
+    avall: "de més actes indexades a menys", amunt: "de menys actes indexades a més" },
+];
+
+/**
+ * Les xifres d'una fila que es poden ordenar, en una sola cadena.
+ *
+ * Van totes juntes i separades per barres perquè sis atributs `data-` per fila
+ * són 5.682 atributs a la pàgina; així n'és un. El buit és la cadena buida i
+ * **no** un zero, que és el que fa que un municipi sense la dada es pugui
+ * enviar al final en comptes de fer-lo passar per pobre o per net de deute.
+ */
+export function clausOrdre(fila: Fila): string {
+  const n = (v: number | null | undefined): string => (v === null || v === undefined ? "" : String(v));
+  return [n(fila.p), n(fila.rn), n(fila.d), n(fila.y), n(fila.f), n(fila.t)].join("|");
 }
 
 /**
@@ -498,7 +641,29 @@ const CSS = `
 .mana .cara.inicials{display:flex;align-items:center;justify-content:center;font-family:var(--display);
   font-weight:900;font-size:.72rem;background:var(--c);color:var(--t)}
 .mana .qui-mana{font-weight:800;font-size:.9rem;min-width:0;overflow-wrap:anywhere}
-.mana .sigla{font-size:.72rem;padding:0 9px}
+/* La pastilla de sigles, i el «nowrap» que desplaçava la pàgina sencera.
+   «.sigla» de RADIOGRAFIA_CSS porta «white-space:nowrap», i té raó de portar-lo
+   allà: dins d'una frase de titular, «PSC-CP» partit en dues ratlles no es
+   llegeix. Aquí no: les sigles de la llista són les de la candidatura sencera,
+   i n'hi ha de 63 caràcters —«VIU SORIGUERA-ESQUERRA REPUBLICANA DE
+   CATALUNYA-ACORD MUNICIPAL»— que amb «nowrap» fan 498 px. En un mòbil de 320
+   això feia un document de 522 px: la pàgina sencera es desplaçava de costat i
+   el títol i la capçalera se n'anaven amb ella. Ara la pastilla es parteix, com
+   ja fan «.pastilla» i el nom del municipi d'aquesta mateixa fila.
+   El «max-width» és el cinturó: si un dia arriba una paraula sola més llarga
+   que la pantalla, es queda dins de la seva fila i no mou res més. */
+.mana .sigla{font-size:.72rem;padding:0 9px;white-space:normal;overflow-wrap:anywhere;
+  max-width:100%;min-width:0;text-align:center;
+  display:inline-flex;align-items:center;min-height:30px;
+  text-decoration:none;position:relative}
+/* L'objectiu de toc, sense fer la fila més alta. La pastilla fa 30 px per
+   quadrar amb la cara del costat; els 44 que demana un dit els posa aquesta
+   caixa invisible, que creix cap amunt i cap avall sobre l'espai que la fila ja
+   té buit i no desplaça res. */
+.mana a.sigla::after{content:"";position:absolute;inset:-7px -2px}
+.mana a.sigla:hover,.mana a.sigla:focus-visible{text-decoration:underline;
+  text-decoration-thickness:2px;text-underline-offset:2px}
+.mana a.sigla:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
 
 /* --- el tauler: cercador, filtres i llista ---------------------------- */
 .tauler{margin:var(--e4) 0 0}
@@ -527,6 +692,33 @@ const CSS = `
   min-height:44px;padding:0 15px;border:2px dashed var(--ink);border-radius:var(--r-max);
   background:transparent;color:inherit;cursor:pointer}
 .recompte{font-size:.86rem;color:var(--ink-suau);margin:0}
+
+/* --- quants en queden, a cada casella --------------------------------
+   Un filtre que no diu quants en troba fa jugar a les endevinalles: es marca,
+   es compta el que ha quedat i es torna a desmarcar. La xifra és quants dels
+   que ara es veuen porten aquella marca, i per això canvia amb la cerca i amb
+   la resta de filtres: marcar-lo deixarà exactament aquests. Va entre parèntesis
+   i en tabular perquè no ballin els botons a cada lletra que s'escriu. */
+.quants{font-variant-numeric:tabular-nums;font-weight:700;opacity:.72;margin-left:7px}
+.commutador:checked+.filtre .quants{opacity:.85}
+/* Sense JavaScript la xifra no existeix, i un parèntesi buit al costat de cada
+   filtre seria pitjor que no dir res. */
+.quants{display:none}
+.js .quants{display:inline}
+
+/* --- per què s'ordena, i quina mana -----------------------------------
+   Els botons són camps de ràdio: només un pot manar alhora i el navegador ja
+   ho fa complir sol, sense cap línia de JavaScript que hi vigili. El que mana
+   es veu igual que un filtre marcat —fons de tinta, lletra de paper— perquè
+   la pàgina ja ensenya així «això està actiu» i no cal aprendre-ho dues vegades. */
+.ordre{margin:var(--e3) 0 0;display:none}
+.js .ordre{display:block}
+.ordre .tries{align-items:center}
+.capgira{font:inherit;font-size:.82rem;font-weight:800;display:inline-flex;align-items:center;gap:7px;
+  min-height:44px;padding:0 15px;border:2px dashed var(--ink);border-radius:var(--r-max);
+  background:transparent;color:inherit;cursor:pointer}
+.capgira:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.capgira .fletxa{font-size:.9rem;line-height:1}
 
 .llista{list-style:none;margin:var(--e2) 0 0;padding:0}
 .fila{border-bottom:1px solid var(--vora);padding:2px 0 var(--e2);min-width:0}
@@ -620,7 +812,16 @@ export function renderEls947(
       // que és el que fa que aquesta llista es pugui recórrer de debò.
       const qui = f.a
         ? (() => {
-            const { fons, tinta } = sobreColor(f.ac ?? "#8b8b8b");
+            /*
+             * El color el decideix la marca, i el mateix per a la cara i per a
+             * la pastilla. Abans la cara el treia de `f.ac` i la pastilla se'l
+             * pintava a part: quan `mapa-ara.ts` fa una fila a mà sense `ac`,
+             * la pastilla sortia del color del partit i les inicials grises al
+             * costat, com si fossin de dues persones diferents.
+             */
+            const marca = partitDe(f.g, f.b);
+            const color = (marca ? BRANDS_BY_ID.get(marca)?.color : null) ?? f.ac ?? "#8b8b8b";
+            const { fons, tinta } = sobreColor(color);
             const inicials = f.a
               .split(/\s+/)
               .filter(Boolean)
@@ -630,14 +831,23 @@ export function renderEls947(
             const cara = f.ar
               ? `<img class="cara" src="${escape(f.ar)}" alt="" loading="lazy" width="30" height="30">`
               : `<span class="cara inicials" style="--c:${fons};--t:${tinta}" aria-hidden="true">${escape(inicials)}</span>`;
+            /*
+             * Les sigles porten a la pàgina del partit quan sabem de quin és.
+             * Les 947 pastilles d'aquesta llista eren l'exemple gros de la
+             * pastilla morta: el nom de l'alcaldia porta a la seva fitxa i les
+             * sigles del seu costat no portaven enlloc. Ho decideix `sigla()`
+             * i no aquesta pàgina, que és el que fa que una llista local
+             * —sense pàgina i sense haver-ne de tenir— es continuï quedant en
+             * un `<b>` aquí i a tot arreu igual.
+             */
             return `<p class="mana">${cara}<span class="qui-mana">${escape(nomLlegible(f.a))}</span>${
-              f.g ? `<b class="sigla" style="--c:${fons};--t:${tinta}">${escape(f.g)}</b>` : ""
+              f.g ? sigla(f.g, { base: "./", brandId: f.b, color: f.ac }) : ""
             }</p>`;
           })()
         : "";
       return `<li class="fila" data-k="${escape(clauCerca(f.n) + " " + clauCerca(f.c))}" data-f="${escape(
         marques(f, llindars).join(" "),
-      )}">
+      )}" data-o="${clausOrdre(f)}">
 <p class="titol">${titol}<span class="pob">${xifra(f.p)} hab.</span></p>
 <p class="lloc">${lloc}</p>
 ${qui}
@@ -652,7 +862,7 @@ ${qui}
     const botons = seus
       .map(
         (f) => `<input class="commutador nomes-lectors" type="checkbox" id="f-${f.clau}" value="${f.clau}">
-      <label class="filtre" for="f-${f.clau}">${escape(f.text(llindars))}</label>`,
+      <label class="filtre" for="f-${f.clau}">${escape(f.text(llindars))}<span class="quants" id="q-${f.clau}"></span></label>`,
       )
       .join("\n      ");
     return `<section class="colla">
@@ -721,13 +931,37 @@ ${cercador("./")}
   ${tries}
   </div>
 
+  <section class="ordre colla" id="ordre">
+    <!-- Sense icona a posta: les quatre colles de filtres en porten perquè
+         cadascuna té un tema —el ple, els comptes, el municipi— i ordenar no
+         és cap tema. Posar-n'hi una de manllevada només diria que hi falta. -->
+    <h3>Per què s'ordena</h3>
+    <div class="tries" role="group" aria-label="Ordena la llista">
+      ${ORDRES.map(
+        (o, i) => `<input class="commutador nomes-lectors" type="radio" name="ordre" id="o-${o.clau}" value="${
+          o.clau
+        }"${i === 0 ? " checked" : ""}>
+      <label class="filtre" for="o-${o.clau}">${escape(o.text)}</label>`,
+      ).join("\n      ")}
+      <button class="capgira" type="button" id="capgira" aria-pressed="false">
+        <span class="fletxa" aria-hidden="true">↓</span>Capgira l'ordre</button>
+    </div>
+  </section>
+
   <div class="eines">
     <button class="neteja" type="reset">Treu-ho tot</button>
-    <p class="recompte" id="recompte" aria-live="polite">${totals.municipis} municipis, dels més grans als més petits</p>
+    <p class="recompte" id="recompte" aria-live="polite">${totals.municipis} municipis, ${ORDRES[0]!.avall}</p>
   </div>
 
   <p class="nota">Les medianes són el municipi que queda al mig dels ${totals.municipis}: diuen on
-  cau cadascun respecte dels altres, no si això està bé o malament. Els filtres es poden combinar.</p>
+  cau cadascun respecte dels altres, no si això està bé o malament. Els filtres es poden combinar, i
+  la xifra de cada casella diu quants dels que ara es veuen hi entrarien. Cap ordre no és un
+  rànquing de gestió, i qui no té la dada va sempre al final: un forat no és un zero.${
+    llindars.renda === null
+      ? ""
+      : ` La renda per persona la tenen ${xifra(llindars.ambRenda)} dels ${totals.municipis}: l'INE
+  tapa per secret estadístic la dels municipis més petits, i no tenir-la no vol dir no tenir-ne.`
+  }</p>
 
   <ul class="llista" id="llista">
 ${llista}
@@ -773,8 +1007,14 @@ ${llista}
   <p class="nota">Padró, alcaldia i dades de l'ens, resultats des del 1979, llistes de candidats i
   historial d'alcaldies: dades obertes de la Generalitat de Catalunya. Comptes i deute: Ministeri
   d'Hisenda via el portal de la Generalitat. Índex d'actes del ple i compliment del portal de
-  transparència: Consorci AOC. Cada fitxa de municipi porta el codi del conjunt d'on surt cada
+  transparència: Consorci AOC. Renda neta mitjana per persona: Atles de distribució de renda de les
+  llars (ADRH) de l'Institut Nacional d'Estadística; elaboració pròpia amb dades extretes del web de
+  l'INE, <a href="https://www.ine.es/" target="_blank" rel="noopener">www.ine.es</a>, que en permet
+  la reutilització citant-ne la font. Cada fitxa de municipi porta el codi del conjunt d'on surt cada
   xifra, i a <a href="dades/">dades obertes</a> hi ha l'esquema camp a camp.</p>
+  <p class="nota">La renda no la decideix l'ajuntament: quant guanya la gent d'un poble depèn de qui
+  hi viu i de què hi treballa. El que sí que decideix el ple és quines taxes cobra, a qui les
+  bonifica i en què gasta.</p>
   <p class="nota">Aquí no hi ha cap veredicte de gestió: hi ha la dada, la font i on queda respecte
   de la resta. El judici és de qui llegeix.</p>
 </section>
@@ -785,14 +1025,85 @@ ${peu("./", generatedAt)}
 <script>
 const norm = ${clauCerca.toString()};
 const tauler = document.getElementById("tauler");
+const llistaEl = document.getElementById("llista");
 const files = Array.prototype.slice.call(tauler.querySelectorAll(".fila"));
 const claus = files.map(function (el) { return el.getAttribute("data-k"); });
 const marques = files.map(function (el) { return " " + el.getAttribute("data-f") + " "; });
-const caselles = Array.prototype.slice.call(tauler.querySelectorAll(".commutador"));
+const caselles = Array.prototype.slice.call(tauler.querySelectorAll(".commutador[type=checkbox]"));
 const cerca = document.getElementById("cerca");
 const recompte = document.getElementById("recompte");
 const buit = document.getElementById("buit");
+const capgira = document.getElementById("capgira");
 const TOTAL = files.length;
+
+// Els comptadors de cada filtre. Es guarden un cop i no es tornen a buscar:
+// «pinta» s'executa a cada lletra que s'escriu al cercador.
+const quants = {};
+for (const clau of ${JSON.stringify(disponibles.map((f) => f.clau))}) {
+  quants[clau] = document.getElementById("q-" + clau);
+}
+
+/*
+ * Les xifres per ordenar, tal com viatgen a «data-o».
+ *
+ * Es llegeixen una sola vegada i es guarden com a nombres: llegir l'atribut i
+ * convertir-lo dins del comparador seria fer-ho unes 9.000 vegades per cada
+ * canvi d'ordre. El buit es queda com a «null» i no com a zero.
+ */
+const ORDRES = ${JSON.stringify(ORDRES.map((o) => ({ c: o.clau, i: o.i, g: o.gran, a: o.avall, m: o.amunt })))};
+const xifres = files.map(function (el) {
+  return el.getAttribute("data-o").split("|").map(function (v) {
+    return v === "" ? null : Number(v);
+  });
+});
+// L'ordre inicial és el que ja té l'HTML: de més població a menys. Guardar-lo
+// serveix per desempatar sempre igual, que és el que fa que dos municipis amb
+// la mateixa renda no ballin cada vegada que es torna a ordenar.
+const inicial = files.map(function (_, i) { return i; });
+
+function ordreTriat() {
+  const marcat = tauler.querySelector("input[name=ordre]:checked");
+  const clau = marcat ? marcat.value : ORDRES[0].c;
+  for (const o of ORDRES) { if (o.c === clau) return o; }
+  return ORDRES[0];
+}
+
+/*
+ * Ordenar les 947 files.
+ *
+ * Es mouen els nodes que ja hi ha —no se'n dibuixa cap de nou— dins d'un
+ * fragment, i el navegador només refà la pàgina un cop. Qui no té la dada va
+ * sempre al final, tant si es demana de més a menys com al revés: un forat no
+ * és un zero i no ha de competir amb ningú.
+ */
+// Com es diu l'ordre que mana ara. El recompte l'ha de dir cada cop que canvia
+// el que es veu, també quan només s'ha escrit una lletra al cercador.
+let diu = ORDRES[0].a;
+
+function ordena() {
+  const o = ordreTriat();
+  const invertit = capgira.getAttribute("aria-pressed") === "true";
+  const gran = o.g !== invertit;
+  const ordenats = inicial.slice();
+  ordenats.sort(function (a, b) {
+    if (o.i === null) {
+      const na = claus[a], nb = claus[b];
+      if (na !== nb) return (na < nb ? -1 : 1) * (gran ? -1 : 1);
+      return a - b;
+    }
+    const va = xifres[a][o.i], vb = xifres[b][o.i];
+    if (va === null && vb === null) return a - b;
+    if (va === null) return 1;
+    if (vb === null) return -1;
+    if (va !== vb) return gran ? vb - va : va - vb;
+    return a - b;
+  });
+  const fragment = document.createDocumentFragment();
+  for (const i of ordenats) fragment.appendChild(files[i]);
+  llistaEl.appendChild(fragment);
+  capgira.querySelector(".fletxa").textContent = gran ? "↓" : "↑";
+  diu = invertit ? o.m : o.a;
+}
 
 // El navegador ja amaga les files amb els filtres de CSS; això ho torna a fer
 // perquè el recompte sigui cert i perquè funcioni igual si algun no sap «:has()».
@@ -800,25 +1111,45 @@ function pinta() {
   const q = norm(cerca.value);
   const actius = caselles.filter(function (c) { return c.checked; })
     .map(function (c) { return " " + c.value + " "; });
-  let quants = 0;
+  const facetes = {};
+  let queden = 0;
   for (let i = 0; i < TOTAL; i++) {
     let hi = q === "" || claus[i].indexOf(q) !== -1;
     for (let j = 0; hi && j < actius.length; j++) {
       if (marques[i].indexOf(actius[j]) === -1) hi = false;
     }
-    if (hi) quants++;
+    if (hi) {
+      queden++;
+      // Quants dels que ara es veuen porten cada marca: és el que quedarà si
+      // es marca aquell filtre, i per això canvia amb la cerca i amb la resta.
+      for (const clau of marques[i].trim().split(" ")) {
+        if (clau !== "") facetes[clau] = (facetes[clau] || 0) + 1;
+      }
+    }
     files[i].classList.toggle("fora", !hi);
   }
-  buit.hidden = quants > 0;
-  recompte.textContent = quants === TOTAL
-    ? TOTAL + " municipis, dels més grans als més petits"
-    : quants + " de " + TOTAL + " municipis";
+  for (const clau in quants) {
+    quants[clau].textContent = "(" + (facetes[clau] || 0) + ")";
+  }
+  buit.hidden = queden > 0;
+  recompte.textContent = queden === TOTAL
+    ? TOTAL + " municipis, " + diu
+    : queden + " de " + TOTAL + " municipis, " + diu;
 }
 
+function refresca() { ordena(); pinta(); }
+
 cerca.addEventListener("input", pinta);
-tauler.addEventListener("change", pinta);
-tauler.addEventListener("reset", function () { setTimeout(pinta, 0); });
-pinta();
+tauler.addEventListener("change", refresca);
+capgira.addEventListener("click", function () {
+  capgira.setAttribute("aria-pressed", capgira.getAttribute("aria-pressed") === "true" ? "false" : "true");
+  refresca();
+});
+tauler.addEventListener("reset", function () {
+  capgira.setAttribute("aria-pressed", "false");
+  setTimeout(refresca, 0);
+});
+refresca();
 </script>
 </body>
 </html>`;

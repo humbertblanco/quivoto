@@ -270,10 +270,28 @@ describe("les quatre diputacions", () => {
     expect(Object.keys(SLUGS_DIPUTACIONS)).toHaveLength(4);
   });
 
-  it("el cens de la Generalitat en compta 130 en total", () => {
-    const total = Object.values(DIPUTATS_AL_CENS).reduce((a, b) => a + b, 0);
-    expect(total).toBe(130);
-    expect(DIPUTATS_AL_CENS["Diputació de Barcelona"]).toBe(51);
+  /**
+   * Les xifres són les del conjunt `nm3n-3vbj` de la Generalitat, comptades amb
+   * un `group by nom_ens` el 30-08-2026. La prova les fixa una per una i no
+   * només el total: si algú retoca la de Girona i compensa amb la de Lleida, el
+   * total seguiria fent 130 i l'invariant no serviria de res.
+   */
+  it("el cens de la Generalitat en compta 130, i sap quants a cada casa", () => {
+    expect(DIPUTATS_AL_CENS).toEqual({
+      "Diputació de Barcelona": 51,
+      "Diputació de Girona": 27,
+      "Diputació de Lleida": 25,
+      "Diputació de Tarragona": 27,
+    });
+    expect(Object.values(DIPUTATS_AL_CENS).reduce((a, b) => a + b, 0)).toBe(130);
+  });
+
+  /**
+   * Totes quatre han de tenir cens i pàgina: una diputació amb slug però sense
+   * invariant es llegiria sense que ningú comprovés si en surt el ple sencer.
+   */
+  it("cap diputació es queda sense invariant de recompte", () => {
+    expect(Object.keys(DIPUTATS_AL_CENS).sort()).toEqual(Object.keys(SLUGS_DIPUTACIONS).sort());
   });
 
   it("les dues taules de seu-e tenen URL pròpia i acabada en el seu identificador", () => {

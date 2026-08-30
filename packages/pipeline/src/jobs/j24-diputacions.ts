@@ -15,7 +15,7 @@ import {
   URL_DIBA,
 } from "./j14-electes-cost";
 import { sleep } from "../lib/http";
-import { normalize, normalizePersonName, titleCase } from "../lib/text";
+import { normalize, titleCase } from "../lib/text";
 import { withRun, type Run } from "../lib/run";
 
 /**
@@ -52,16 +52,30 @@ import { withRun, type Run } from "../lib/run";
  * **Diputació de Barcelona** — `diba.cat`, HTML, sense taula d'imports per
  * persona: publica un codi retributiu (A1…A5) per electe i, a part, la taula
  * que el converteix en euros bruts mensuals (A1 8.144,08 · A2 7.295,75 ·
- * A3 6.495,72, per 14 mensualitats). 51 diputats. La conversió quadra a l'euro
- * amb el que declara la fitxa de Rubí (A3 × 14 = 90.940,08 €). El lector d'això
- * és el de la J14 i aquí es reaprofita tal qual, no se'n fa un de nou.
+ * A3 6.495,72, per 14 mensualitats; taula del 2024). 51 diputats: 38 amb codi
+ * retributiu i 13 que només cobren per assistència. La conversió quadra a l'euro
+ * amb el que declara la fitxa de Rubí (A3 × 14 = 90.940,08 €); la presidenta,
+ * A1, en surt a 114.017,12 €. El lector d'això és el de la J14 i aquí es
+ * reaprofita tal qual, no se'n fa un de nou.
+ *
+ * Dos avisos sobre aquesta font. Un: la URL respon **301** cap a
+ * `/ca/web/ladiputacio/retribucions-electes`, i només va perquè `fetchText`
+ * segueix les redireccions; el dia que deixi de fer-ho, aquí no hi haurà cap
+ * error, hi haurà un silenci. Dos: al seu portal de dades obertes
+ * (`dadesobertes.diba.cat`) **no hi ha aquesta dada**. Repassats els 92 conjunts
+ * del catàleg el 30-08-2026, el que s'hi assembla és «Càrrecs electes»
+ * (`do.diba.cat/api/dataset/electes`, CSV, CC-BY, diari), que són els regidors
+ * dels municipis de la demarcació i no porta cap columna de retribució. Per
+ * això aquí es llegeix la pàgina de transparència i no una API.
  *
  * **Diputació de Girona** — seu-e `ddgi`, mòdul «Retribucions alts càrrecs»
  * (`retribucions-alts-carrecs-207`), HTML, taula de 27 diputats amb columnes
  * Nom · Cognoms · Càrrec · Data de nomenament · Dedicació · Retribucions brutes
  * anuals · Indemnització màxima per assistències. La pàgina data la seva última
  * actualització: 05-02-2026. Mostra real: «Miquel · Noguer Planas · President ·
- * Exclusiva · 91.526,82».
+ * Exclusiva · 91.526,82». Dels 27, **9** tenen retribució anual publicada
+ * (de 53.839,24 a 91.526,82 €) i els altres **18** només un sostre
+ * d'indemnitzacions, que no és un sou i no es desa com a tal.
  *
  * **Diputació de Tarragona** — seu-e `dipta`, mateix mòdul
  * (`retribucions-alts-carrecs-198`), HTML, taula de 27 diputats del mandat
@@ -69,12 +83,17 @@ import { withRun, type Run } from "../lib/run";
  * Relació de càrrecs · Règim de dedicació · Retribucions anuals brutes ·
  * Indemnització màxima bruta per assistències. Mostra real: «Noemí Llauradó i
  * Sans · ERC · Govern · Presidenta · exclusiva · 93.810,42 € · No aplica».
+ * Dels 27, **19** amb retribució anual (de 43.071,53 a 93.810,42 €) i **8**
+ * només amb sostre d'assistències.
  *
  * **Diputació de Lleida** — seu-e `diputaciolleida`, mòdul de càrrecs electes,
  * HTML: 25 càrrecs, cadascun amb fitxa pròpia i el camp «Retribució anual
  * bruta». Mostra real, la del president: «Retribució anual bruta: 82.081.76 €»
  * —amb punt de milers i punt decimal, que és per què l'import es llegeix amb
- * `importEnEuros` de la J14 i no amb un `parseFloat`.
+ * `importEnEuros` de la J14 i no amb un `parseFloat`. Comprovat el 30-08-2026
+ * baixant-ho: 25 càrrecs, tots 25 amb fitxa pròpia, i les cinc primeres donen
+ * 82.081,76 · 76.476,49 · 74.418,80 · 60.209,76 · 60.209,76 €. És l'única de
+ * les quatre que costa 26 peticions en comptes d'una.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * EL QUE S'HI DESA I EL QUE NO
@@ -124,13 +143,18 @@ export const URL_ALTS_CARRECS: Readonly<Record<string, string>> = {
 };
 
 /**
- * Quants diputats hi ha a cada diputació segons el cens de la Generalitat
- * («Càrrecs electes dels ens locals», `m5nd-xjza`, consultat el 30-08-2026).
+ * Quants diputats hi ha a cada diputació segons el mateix conjunt que aquesta
+ * feina ja consulta: `PLENS` («Composició dels plens d'ajuntaments, consells
+ * comarcals i diputacions provincials», `nm3n-3vbj`, Secretaria de Governs
+ * Locals i de Relacions amb l'Aran). Comptat el 30-08-2026 amb un `group by`:
+ * Barcelona 51 · Girona 27 · Lleida 25 · Tarragona 27, 130 en total.
  *
- * Serveix d'invariant, no de dada: aquell conjunt té les 130 files però amb el
- * nom buit, i per tant només diu **quants n'hi ha d'haver**. Si el lector d'una
- * pàgina en treu menys, no és que la diputació hagi aprimat el ple: és que la
- * pàgina ha canviat de forma i el que en surt ja no és de fiar.
+ * Serveix d'invariant, no de dada: aquelles 130 files són les de
+ * `tipus_ens = "Províncies"` i **no porten el camp `nom`** —d'aquí que els noms
+ * s'hagin d'anar a buscar a la pàgina de cada diputació—, i per tant el conjunt
+ * només diu **quants n'hi ha d'haver**. Si el lector d'una pàgina en treu
+ * menys, no és que la diputació hagi aprimat el ple: és que la pàgina ha
+ * canviat de forma i el que en surt ja no és de fiar.
  */
 export const DIPUTATS_AL_CENS: Readonly<Record<string, number>> = {
   "Diputació de Barcelona": 51,

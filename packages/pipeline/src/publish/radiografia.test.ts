@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   colorDeCandidatura,
   renderEscombraries,
+  renderQuantGasta,
   renderQuePaga,
   renderQuiHiViu,
   renderContractacio,
@@ -107,14 +108,35 @@ function poblacio(): NonNullable<RadiografiaData["poblacio"]> {
     mandat: { desDe: 2023, anterior: 2019 },
     darrerAny: 2025,
     indicadors: [
+      // Els anys que J18 demana de debò del padró: els tres inicis de mandat i
+      // la sèrie recent. Els del mig no hi són perquè no es demanen, no perquè
+      // l'Idescat no els publiqui —el padró hi és des del 1998—, i la fitxa ho
+      // ha de dir així. Si algú allarga SERIE_PADRO, aquesta prova ha de canviar.
       indicador("padroHabitants", "Persones empadronades", "persones",
         "Persones inscrites al padró municipal d'habitants a 1 de gener. Compta empadronats, no residents.",
-        224_512, { emex: null, enllac: null }),
+        224_512, { emex: null, enllac: null, serie: [
+          { any: 2015, valor: 207_814 },
+          { any: 2019, valor: 213_644 },
+          { any: 2021, valor: 216_204 },
+          { any: 2022, valor: 218_100 },
+          { any: 2023, valor: 220_312 },
+          { any: 2024, valor: 222_400 },
+          { any: 2025, valor: 224_512 },
+        ] }),
+      // El cens arrenca el 2021 i abans no existeix: és el motiu pel qual els
+      // percentatges d'aquest bloc no poden anar més enrere.
       indicador("censHabitants", "Població censada", "persones",
         "Població resident segons el Cens de població anual de l'INE a 1 de gener.",
         CENS_2025, {
           mandat: variacio(2023, 2025, 216_204, CENS_2025),
           mandatDelGrup: { fins: 2025, diferencia: 1_240, percentual: 2.1, municipis: 22 },
+          serie: [
+            { any: 2021, valor: 214_900 },
+            { any: 2022, valor: 217_800 },
+            { any: 2023, valor: 216_204 },
+            { any: 2024, valor: 221_050 },
+            { any: 2025, valor: CENS_2025 },
+          ],
         }),
       indicador("nacionalitatEstrangera", "Persones de nacionalitat estrangera", "persones",
         "Persones que no tenen la nacionalitat espanyola. NO és el mateix que haver nascut fora.",
@@ -122,20 +144,47 @@ function poblacio(): NonNullable<RadiografiaData["poblacio"]> {
       indicador("pctNacionalitatEstrangera", "Pes de la població de nacionalitat estrangera", "%",
         "Persones sense nacionalitat espanyola sobre el total de població censada.",
         15.2, { emex: "t75", enllac: enllac("t75", "Població per nacionalitat"),
-          catalunya: { valor: 17.4, mandat: null } }),
+          catalunya: { valor: 17.4, mandat: null },
+          serie: [
+            { any: 2021, valor: 12.7 },
+            { any: 2022, valor: 13.3 },
+            { any: 2023, valor: 13.9 },
+            { any: 2024, valor: 14.6 },
+            { any: 2025, valor: 15.2 },
+          ] }),
       indicador("nascutsAEstranger", "Persones nascudes a l'estranger", "persones",
         "Persones nascudes fora d'Espanya, tinguin la nacionalitat que tinguin. NO és el mateix que ser estranger.",
         46_870, { emex: "t68", enllac: enllac("t68", "Població per lloc de naixement") }),
       indicador("pctNascutsAEstranger", "Pes de la població nascuda a l'estranger", "%",
         "Persones nascudes fora d'Espanya sobre el total de població censada.",
         20.9, { emex: "t68", enllac: enllac("t68", "Població per lloc de naixement"),
-          catalunya: { valor: 22.6, mandat: null } }),
+          catalunya: { valor: 22.6, mandat: null },
+          serie: [
+            { any: 2021, valor: 18.4 },
+            { any: 2022, valor: 19.3 },
+            { any: 2023, valor: 19.8 },
+            { any: 2024, valor: 20.4 },
+            { any: 2025, valor: 20.9 },
+          ] }),
       indicador("pct65iMes", "Pes de la població de 65 anys o més", "%",
         "Persones de 65 anys o més sobre el total de població censada, tal com ho calcula l'Idescat.",
         18.9, { emex: "t25", enllac: enllac("t25", "Població per grups d'edat"),
           mandat: variacio(2023, 2025, 18.3, 18.9),
           mandatDelGrup: { fins: 2025, diferencia: 0.4, percentual: 2.2, municipis: 22 },
           catalunya: { valor: 19.7, mandat: null } }),
+      indicador("pct0a15", "Pes de la població de 0 a 15 anys", "%",
+        "Persones de 0 a 15 anys sobre el total de població censada, tal com ho calcula l'Idescat.",
+        16.4, { emex: "t25", enllac: enllac("t25", "Població per grups d'edat"),
+          mandat: variacio(2023, 2025, 17.2, 16.4),
+          mandatDelGrup: { fins: 2025, diferencia: -0.5, percentual: -2.9, municipis: 22 },
+          catalunya: { valor: 15.9, mandat: null },
+          serie: [
+            { any: 2021, valor: 18.4 },
+            { any: 2022, valor: 17.8 },
+            { any: 2023, valor: 17.2 },
+            { any: 2024, valor: 16.8 },
+            { any: 2025, valor: 16.4 },
+          ] }),
       indicador("edatMitjana", "Edat mitjana", "anys",
         "Edat mitjana de la població censada, calculada per l'Idescat.",
         42.6, { emex: "t25", enllac: enllac("t25", "Població per grups d'edat"),
@@ -301,8 +350,17 @@ function despesa(): NonNullable<RadiografiaData["despesaProgrames"]> {
     anys: [2019, 2020, 2021, 2022, 2023, 2024, 2025],
     darrerAny: 2025,
     anyComparable: 2024,
-    anysSenseLiquidacio: [],
-    total: [{ any: 2025, total: 268_910_400, perHabitant: 1200, fiable: true }],
+    // El 2023 no s'ha liquidat: no és un zero, és un forat, i la sèrie l'ha de
+    // dibuixar com un forat. La resta és la sèrie sencera des del 2019.
+    anysSenseLiquidacio: [2023],
+    total: [
+      { any: 2019, total: 240_818_900, perHabitant: 1075, fiable: true },
+      { any: 2020, total: 233_055_680, perHabitant: 1040, fiable: true },
+      { any: 2021, total: 251_783_320, perHabitant: 1124, fiable: true },
+      { any: 2022, total: 259_770_540, perHabitant: 1159, fiable: true },
+      { any: 2024, total: 265_101_320, perHabitant: 1183, fiable: true },
+      { any: 2025, total: 268_910_400, perHabitant: 1200, fiable: true },
+    ],
     programes: [
       {
         codi: "1602",
@@ -342,6 +400,33 @@ function despesa(): NonNullable<RadiografiaData["despesaProgrames"]> {
     zeroIBuit:
       "«liquidacio: false» vol dir que aquell exercici encara no s'ha liquidat i no en sabem res. " +
       "Un import de 0 € vol dir que l'ajuntament ha presentat els comptes i no hi ha destinat cap euro.",
+  };
+}
+
+/**
+ * El que desa J8 a «spending»: el repartiment per àrees i, sobretot, la mediana
+ * del total als municipis de la mateixa mida. Sense aquesta mediana la xifra
+ * gran del bloc no es pot jutjar, i per això la prova la porta.
+ */
+function gasta(over: Partial<NonNullable<RadiografiaData["spending"]>> = {}): NonNullable<
+  RadiografiaData["spending"]
+> {
+  return {
+    year: 2025,
+    areas: [
+      { label: "Serveis públics bàsics", perHead: 430, total: 96_359_560, share: 35.8 },
+      { label: "Administració general", perHead: 320, total: 71_709_440, share: 26.7 },
+      { label: "Educació, cultura i esport", perHead: 250, total: 56_023_000, share: 20.8 },
+      { label: "Protecció i promoció social", perHead: 200, total: 44_818_400, share: 16.7 },
+    ],
+    totalPerHead: 1200,
+    medians: {},
+    grup: { etiqueta: "de més de 50.000 habitants", mida: 23, ambDada: 21 },
+    medianesGrup: null,
+    totalMediaGrup: 1050,
+    poblacio: CENS_2025,
+    autofinancament: { pct: 58, medianaGrup: 54 },
+    ...over,
   };
 }
 
@@ -433,6 +518,143 @@ describe("qui hi viu", () => {
   it("posa el canvi del mandat amb el dels municipis de la seva mida al costat", () => {
     expect(html).toContain("22 municipis de la seva mida");
     expect(html).toContain("als 22 de la seva mida");
+  });
+});
+
+describe("qui hi viu: percentatges i tants anys com en tenim", () => {
+  const html = renderQuiHiViu(poblacio());
+
+  it("la xifra gran de l'origen és el percentatge, i el recompte queda a sota", () => {
+    // Un recompte no es pot comparar amb res: ni amb el poble del costat ni amb
+    // el mateix poble fa quatre anys, que tenia una altra població.
+    expect(html).toContain('<span class="gran">15,2 %</span>');
+    expect(html).toContain('<span class="gran">20,9 %</span>');
+    // I el recompte no marxa: és el que hi ha darrere del tant per cent.
+    expect(html).toContain("34.062 persones");
+    expect(html).toContain("46.870 persones");
+  });
+
+  it("l'espurna de l'origen dibuixa el percentatge i no el recompte", () => {
+    // En un poble que creix, la línia dels recomptes puja encara que el pes
+    // baixi, i llavors el dibuix diu el contrari que la xifra que té a sobre.
+    expect(html).toContain("2021, 12,7 %");
+    expect(html).toContain("2025, 15,2 %");
+    expect(html).not.toContain("2021, 33.040");
+  });
+
+  it("dibuixa el padró any a any, que és la sèrie que va més enrere", () => {
+    expect(html).toContain("Quanta gent hi ha, any a any");
+    expect(html).toContain("207.814");
+    expect(html).toContain("2015");
+  });
+
+  it("diu que els anys que falten del padró no els demanem, i que la font els té", () => {
+    // La diferència és tota: si es diguessin «anys que la font no publica»,
+    // estaríem carregant a l'Idescat una decisió d'ingesta nostra.
+    expect(html).toContain("2016, 2017, 2018 i 2020");
+    expect(html).toContain("des del 1998");
+    expect(html).not.toMatch(/2016[^<]{0,80}la font no publica/);
+  });
+
+  it("diu per què els percentatges no poden anar més enrere", () => {
+    expect(html).toContain("any a any des del 2021");
+    expect(html).toContain("El padró sí que hi va, i és l'única sèrie d'aquest bloc que s'ha pogut allargar");
+  });
+
+  it("porta el pes de 0 a 15 anys, que la dada ja tenia i la fitxa no ensenyava", () => {
+    expect(html).toContain("Pes de la població de 0 a 15 anys");
+    expect(html).toContain("16,4 %");
+    // Els pesos van abans dels recomptes: un pes es compara i un recompte no.
+    expect(html.indexOf("Pes de la població de 0 a 15 anys")).toBeLessThan(
+      html.indexOf("Infants de 0 a 2 anys"),
+    );
+  });
+});
+
+describe("quant gasta l'ajuntament, en total i per habitant", () => {
+  const html = renderQuantGasta(despesa(), gasta());
+
+  it("diu el total i el que surt per habitant", () => {
+    expect(html).toContain("268.910.400 €");
+    expect(html).toContain("1.200 €");
+    expect(html).toContain("224.092 habitants");
+  });
+
+  it("avisa que això és una liquidació i no un pressupost", () => {
+    // No són la mateixa cosa: el pressupost és el que el ple aprova, la
+    // liquidació és el que s'ha acabat gastant. Barrejar-los seria un error.
+    expect(html).toContain("Això és una liquidació, no un pressupost");
+    expect(html).toContain("modificacions de l'exercici incloses");
+  });
+
+  it("compara amb els municipis de la seva mida, i ho diu en euros del total", () => {
+    expect(html).toContain("de més de 50.000 habitants");
+    expect(html).toContain("1.050 € per habitant");
+    // (1.200 − 1.050) × 224.092 habitants = 33.613.800 €.
+    expect(html).toContain("33.613.800 €");
+    expect(html).toContain("més petita");
+  });
+
+  it("sense mediana del grup no s'inventa cap comparació", () => {
+    const sol = renderQuantGasta(despesa(), null);
+    expect(sol).toContain("268.910.400 €");
+    expect(sol).toContain("Sense comparació no diu si és molta o poca");
+    expect(sol).not.toContain("Gastant com ells");
+  });
+
+  it("no compara la xifra d'un any amb la mediana d'un altre", () => {
+    // El 2025 d'aquest municipi contra el 2024 dels seus faria semblar una
+    // decisió del ple el que només és un any de diferència.
+    const desquadrat = renderQuantGasta(despesa(), gasta({ year: 2024 }));
+    expect(desquadrat).not.toContain("1.050 € per habitant");
+    expect(desquadrat).toContain("Sense comparació no diu si és molta o poca");
+  });
+
+  it("un exercici sense liquidar surt com un forat i no com un zero", () => {
+    expect(html).toContain("L'exercici 2023 no consta liquidat");
+    expect(html).toContain("un forat no és un zero");
+    // El text alternatiu de la sèrie també ho diu: qui no veu el cercle buit ha
+    // de saber igualment que d'aquell any no en consta cap xifra.
+    expect(html).toContain("no en consta cap xifra");
+  });
+
+  it("amb la liquidació de la Generalitat i prou, encara diu la xifra", () => {
+    const nomesJ8 = renderQuantGasta(null, gasta());
+    expect(nomesJ8).toContain("1.200 €");
+    expect(nomesJ8).toContain("268.910.400 €");
+    expect(nomesJ8).toContain("Això és una liquidació, no un pressupost");
+  });
+
+  it("sense cap de les dues mètriques no hi ha bloc", () => {
+    expect(renderQuantGasta(null, null)).toBe("");
+  });
+});
+
+describe("els diners: el total i el repartiment, al mateix bloc", () => {
+  it("la xifra gran va al capdamunt i no es repeteix al repartiment", () => {
+    const html = renderRadiografia(fitxa({ spending: gasta() }));
+    expect(html).toContain('id="diners"');
+    expect(html).toContain("Quant gasta en total");
+    expect(html).toContain('<a href="#diners">Els diners</a>');
+    // Una sola vegada: abans la comparació del total vivia al mig de la llista
+    // de partides i es llegia com una partida més.
+    expect(html.split("Gastant com ells").length - 1).toBe(1);
+    expect(html.indexOf("Quant gasta en total")).toBeLessThan(html.indexOf("On van"));
+  });
+
+  it("amb la liquidació per programes però sense la de la Generalitat, diu què hi falta", () => {
+    // Són 112 dels 947: en sabem quant gasta però no en què.
+    const html = renderRadiografia(fitxa());
+    expect(html).toContain('id="diners"');
+    expect(html).toContain("Quant gasta en total");
+    expect(html).toContain("en tenim quant gasta però no en què");
+    expect(html).not.toContain("<b>D'aquest ajuntament no en tenim la liquidació.</b>");
+  });
+
+  it("sense cap de les tres, el bloc diu que no en tenim la liquidació", () => {
+    const html = renderRadiografia(fitxa({ despesaProgrames: null }));
+    expect(html).toContain("D'aquest ajuntament no en tenim la liquidació");
+    expect(html).not.toContain("Quant gasta en total");
   });
 });
 

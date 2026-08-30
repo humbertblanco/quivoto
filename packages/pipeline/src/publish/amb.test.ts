@@ -26,6 +26,7 @@ function municipi(over: Partial<AmbMunicipi> = {}): AmbMunicipi {
     mayorName: "Antonio Balmón", mayorSigles: "PSC-CP", mayorBrandId: "psc",
     winnerSigles: "PSC-CP", winnerGoverns: true, hasMajority: true,
     mayorChanged: false, mayorChangeName: null, mayorChangeDate: null,
+    valors: {},
     ...over,
   };
 }
@@ -38,6 +39,7 @@ function amb(over: Partial<AmbData> = {}): AmbData {
     forces: [{ brandId: "psc", label: "PSC", color: "#e73b39", alcaldies: 1, habitants: 92_237 }],
     governaMesVotat: 1, pacte: 0, senseIdentificar: 0, majoriaAbsoluta: 1, canvisAlcaldia: 0,
     indicadors: [],
+    situacio: [],
     comarques: [{ slug: "baix-llobregat", name: "Baix Llobregat", dins: 24, total: 30 }],
     catalunya: {
       municipis: 947, habitants: 8_012_231, regidories: 9_104,
@@ -143,6 +145,7 @@ describe("renderAmb", () => {
       amb({
         indicadors: [{
           key: "deute-habitant", label: "Deute per habitant", unit: "euros",
+          qui: "ajuntament", article: "",
           metropolita: 412, catalana: 285, ambDada: 34, ambDadaCatalunya: 921,
           percentilGrup: 61, nota: "Deute viu a 31 de desembre.",
         }],
@@ -159,8 +162,8 @@ describe("renderAmb", () => {
     // i el que tenim és el d'avui. Publicar-ho seria inventar-se la composició
     // d'un òrgan que aprova el que paga la gent.
     const html = renderAmb(amb(), "2026-08-29");
-    expect(html).toContain("Ningú no vota el Consell Metropolità");
-    expect(html).toContain("el padró que tenim nosaltres és el d'avui");
+    expect(html).toContain("Ningú no el vota en una papereta");
+    expect(html).toContain("el que tenim és el d'avui");
   });
 
   it("no deixa el singular i el plural barrejats", () => {
@@ -224,7 +227,10 @@ describe("buildIndicador", () => {
     [3, { key: "a", label: "grup A", size: 4 } as PeerGroup],
     [4, { key: "a", label: "grup A", size: 4 } as PeerGroup],
   ]);
-  const def = { key: "deute-habitant", label: "Deute per habitant", unit: "euros" as const, nota: "." };
+  const def = {
+    key: "deute-habitant", label: "Deute per habitant", unit: "euros" as const,
+    qui: "ajuntament" as const, nota: ".",
+  };
   const lectures = [
     { municipalityId: 1, value: 100 },
     { municipalityId: 2, value: 200 },
@@ -320,5 +326,128 @@ describe("l'AMB llegida com una fitxa", () => {
     const html = renderAmb(amb(), "2026-08-29");
     const cops = html.split(".repartiment{display:flex").length - 1;
     expect(cops).toBe(1);
+  });
+});
+
+/**
+ * El que l'usuari va trobar a faltar: un mapa que situï els 36, i prou
+ * indicadors per respondre «i el meu poble, com hi queda». El que es prova aquí
+ * és que cap de les dues coses no es pugui perdre sense que això peti.
+ */
+describe("on cau l'àrea i com hi queda cada poble", () => {
+  /** Els 947 punts falsos, escampats, amb els primers marcats com a metropolitans. */
+  const situacio = Array.from({ length: 947 }, (_, i) => ({
+    lat: 40.6 + (i % 40) / 20,
+    lon: 0.3 + Math.floor(i / 40) / 12,
+    dins: i < 36,
+  }));
+
+  it("porta els dos mapes: els 36 ampliats i on cauen dins dels 947", () => {
+    // Amb un de sol no n'hi ha prou. Ampliats es pot buscar el poble però es
+    // perd on és; damunt de Catalunya se sap on és però no s'hi encerta res.
+    const html = renderAmb(
+      amb({
+        situacio,
+        municipis: [
+          municipi({ slug: "a", name: "A", lat: 41.3, lon: 2.0 }),
+          municipi({ slug: "b", name: "B", lat: 41.4, lon: 2.1 }),
+          municipi({ slug: "c", name: "C", lat: 41.5, lon: 2.2 }),
+        ],
+      }),
+      "2026-08-29",
+    );
+    expect(html).toContain('class="mapa-territori"');
+    expect(html).toContain('class="situacio"');
+    expect(html).toContain("els 36 metropolitans damunt dels 947 municipis");
+  });
+
+  it("no dibuixa el segell de situació amb quatre punts, que no situarien res", () => {
+    const html = renderAmb(amb({ situacio: situacio.slice(0, 4) }), "2026-08-29");
+    expect(html).not.toContain('class="situacio"');
+  });
+
+  it("ordena els indicadors per qui pren la decisió, i cita l'article quan és l'AMB", () => {
+    // És el que separa aquesta pàgina d'una llista d'indicadors qualsevol: el
+    // preu de l'aigua i el rebut de l'IBI no els decideix el mateix govern.
+    const html = renderAmb(
+      amb({
+        indicadors: [
+          {
+            key: "preu-aigua", label: "Preu de l'aigua", unit: "euros-m3",
+            qui: "amb", article: "article 14.C",
+            metropolita: 2.288, catalana: 1.02, ambDada: 36, ambDadaCatalunya: 945,
+            percentilGrup: 82, nota: "Subministrament domiciliari.",
+          },
+          {
+            key: "rebut-ibi", label: "Rebut mitjà de l'IBI", unit: "euros",
+            qui: "ajuntament", article: "",
+            metropolita: 412, catalana: 285, ambDada: 36, ambDadaCatalunya: 940,
+            percentilGrup: 61, nota: "Quota íntegra pels rebuts.",
+          },
+        ],
+      }),
+      "2026-08-29",
+    );
+    expect(html).toContain("Ho decideix l'AMB");
+    expect(html).toContain("Ho decideix el teu ajuntament");
+    expect(html).toContain("Llei 31/2010, article 14.C");
+    // Dos decimals i el metre cúbic: arrodonir el preu de l'aigua a «2 €» el
+    // deixaria sense cap de les dues xifres que el fan comparable.
+    expect(html).toContain("2,29 €/m³");
+    expect(html).toContain("412 €");
+  });
+
+  it("diu qui paga més i qui menys, perquè una mediana no és de ningú", () => {
+    const municipis = [
+      municipi({ slug: "a", name: "A", valors: { "preu-aigua": 1.07 } }),
+      municipi({ slug: "b", name: "B", valors: { "preu-aigua": 2.0 } }),
+      municipi({ slug: "c", name: "C", valors: { "preu-aigua": 2.5 } }),
+      municipi({ slug: "d", name: "D", valors: { "preu-aigua": 3.03 } }),
+    ];
+    const indicadors: AmbData["indicadors"] = [{
+      key: "preu-aigua", label: "Preu de l'aigua", unit: "euros-m3",
+      qui: "amb", article: "article 14.C",
+      metropolita: 2.25, catalana: 1.02, ambDada: 4, ambDadaCatalunya: 945,
+      percentilGrup: 80, nota: ".",
+    }];
+    const html = renderAmb(amb({ municipis, indicadors }), "2026-08-29");
+    expect(html).toContain('Més alt: <a href="../m/d/">D</a>');
+    expect(html).toContain('Més baix: <a href="../m/a/">A</a>');
+    expect(html).toContain("3,03 €/m³");
+
+    // Amb tres municipis no hi ha extrems que valguin: són tots tres extrems.
+    const pocs = renderAmb(amb({ municipis: municipis.slice(0, 3), indicadors }), "2026-08-29");
+    expect(pocs).not.toContain("Més alt:");
+  });
+
+  it("posa les xifres comparables a la taula dels 36, amb la posició de cadascuna", () => {
+    const municipis = [
+      municipi({ slug: "a", name: "A", valors: { "preu-aigua": 1, "residus-kg": 300, selectiva: 20 } }),
+      municipi({ slug: "b", name: "B", valors: { "preu-aigua": 2, "residus-kg": 400, selectiva: 40 } }),
+      municipi({ slug: "c", name: "C", valors: { "preu-aigua": 3, "residus-kg": 500, selectiva: 60 } }),
+      municipi({ slug: "d", name: "D", valors: { "preu-aigua": 4, "residus-kg": 600, selectiva: 80 } }),
+    ];
+    const html = renderAmb(amb({ municipis }), "2026-08-29");
+    expect(html).toContain("<th>Aigua</th>");
+    expect(html).toContain("<th>Selectiva</th>");
+    // El primer és el mínim de la seva columna i el darrer el màxim.
+    expect(html).toContain('style="--p:0%"');
+    expect(html).toContain('style="--p:100%"');
+    expect(html).toContain("1,00");
+  });
+
+  it("no obre una columna que només tindria guionets", () => {
+    // Sense dades de quatre municipis la barreta no compara res, i una columna
+    // buida només fa la taula més ampla.
+    const html = renderAmb(amb(), "2026-08-29");
+    expect(html).not.toContain("<th>Aigua</th>");
+  });
+
+  it("lliga la mida del titular a l'ample de la vista, que és el que feia vessar la pàgina", () => {
+    // A 390 px «Metropolitana» demanava 272 px dins d'una columna de 234 i el
+    // document se n'anava a 404. Si algú torna a fixar la mida, això peta.
+    const html = renderAmb(amb(), "2026-08-29");
+    expect(html).toContain(".portada .presenta h1{font-size:clamp(");
+    expect(html).toContain("vw");
   });
 });

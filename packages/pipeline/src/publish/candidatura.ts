@@ -215,6 +215,22 @@ export const tintaSobre = (color: string): string => tintaDeContrast(colorSegur(
 
 const ESVAIT = (color: string): string => `${color}2e`;
 
+/**
+ * La sèrie de sempre del més antic al més nou.
+ *
+ * La mètrica `electoralHistory` ve ordenada, però la pàgina no ho pot donar per
+ * fet: si un dia arribés d'una altra manera, aquí no petaria res —sortirien les
+ * dotze columnes barrejades i el text diria «com li ha anat des del 2011» amb
+ * la primera columna al 1979. Un gràfic mal ordenat no s'assembla a un error,
+ * s'assembla a una dada, i és la mena de cosa que ningú no mira dues vegades.
+ */
+const ordenada = (history: readonly PuntSerie[]): PuntSerie[] =>
+  [...history].sort((a, b) => a.year - b.year);
+
+/** El primer any de la sèrie, vingui com vingui. */
+const primerAny = (data: CandidaturaData): number =>
+  data.history.length > 0 ? Math.min(...data.history.map((p) => p.year)) : 1979;
+
 // --------------------------------------------------------------- fragments
 
 /**
@@ -226,7 +242,7 @@ const ESVAIT = (color: string): string => `${color}2e`;
  * marcada, perquè «aquí no hi eren» és informació i no una absència de dada.
  */
 function renderSerie(data: CandidaturaData): string {
-  const columns = data.history
+  const columns = ordenada(data.history)
     .map((point) => {
       const share = point.seats > 0 ? (100 * point.familySeats) / point.seats : 0;
       const lineageShare =
@@ -248,7 +264,7 @@ function renderSerie(data: CandidaturaData): string {
     })
     .join("");
 
-  const etiqueta = data.history
+  const etiqueta = ordenada(data.history)
     .map((p) => `${p.year}: ${p.familySeats} de ${p.seats}`)
     .join("; ");
 
@@ -274,27 +290,36 @@ function renderRegidors(data: CandidaturaData): string {
   const inicials = (nom: string): string =>
     nom.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
   const ambFoto = data.councillors.filter((r) => r.foto).length;
-  /**
-   * Les cares només si les té tothom.
-   *
-   * És la mateixa regla que a la fitxa del municipi: ensenyar la fotografia
-   * d'uns quants i les inicials de la resta fa que els que no en tenen quedin
-   * com a regidors de segona, i no és cosa seva sinó de què publica
-   * l'ajuntament. O totes o cap.
-   */
   const totesAmbFoto = ambFoto === data.councillors.length && ambFoto > 0;
+  /*
+   * Les cares s'ensenyen quan les tenim, i qui no en té rep la seva inicial.
+   *
+   * Abans hi havia aquí la mateixa regla de tot-o-res que a la fitxa del
+   * municipi: si l'ajuntament no publicava la fotografia de TOTS els regidors
+   * del grup, no se'n mostrava cap. A Esplugues de Llobregat en publica 6 de
+   * 10 i per això no en sortia ni una, l'alcalde inclòs.
+   *
+   * El que la regla volia protegir és just: que qui no en té no quedi com a
+   * regidor de segona, cosa que no depèn d'ell sinó del que publica el seu
+   * ajuntament. Però es respecta millor d'una altra manera —i és la que ja fa
+   * la fitxa del municipi—: la inicial no és el forat que queda quan falta una
+   * foto, és una peça dissenyada, amb el color de la seva llista i la mateixa
+   * mida i la mateixa vora que el retrat. Les dues formes són deliberades i cap
+   * de les dues no es llegeix com una absència. Amagar sis cares perquè en
+   * falten quatre no igualava ningú: buidava la pàgina.
+   */
   const rows = data.councillors
     .map(
       (regidor) => `<tr>
       <th scope="row">${
-        totesAmbFoto
-          ? `<img class="cara-cand" src="${escape(regidor.foto!)}" alt="" width="36" height="36" loading="lazy">`
+        regidor.foto
+          ? `<img class="cara-cand" src="${escape(regidor.foto)}" alt="" width="36" height="36" loading="lazy">`
           : `<span class="cara-cand inicials" aria-hidden="true">${escape(inicials(regidor.name))}</span>`
-      }${
+      }<span class="qui-cand">${
         regidor.fitxa
           ? `<a href="${escape(regidor.fitxa)}">${escape(regidor.name)}</a>`
           : escape(regidor.name)
-      }</th>
+      }</span></th>
       <td>${escape(regidor.role ?? "Regidoria")}</td>
     </tr>`,
     )
@@ -306,15 +331,18 @@ function renderRegidors(data: CandidaturaData): string {
     <tbody>${rows}</tbody>
   </table>
   ${
-    totesAmbFoto
+    ambFoto > 0
       ? `<p class="nota">Les fotografies les publica el mateix ajuntament al seu portal de
          transparència; les reproduïm en mida petita i les retirem a la primera petició de la
-         persona, sense demanar-ne el motiu.</p>`
-      : ambFoto > 0
-        ? `<p class="nota">L'ajuntament publica fotografia de ${ambFoto} d'aquests
-           ${data.councillors.length} regidors. Com que no les té tothom, no en mostrem cap:
-           ensenyar-ne només algunes seria un tracte desigual.</p>`
-        : ""
+         persona, sense demanar-ne el motiu.${
+           totesAmbFoto
+             ? ""
+             : ` D'aquest grup en publica ${ambFoto} de ${data.councillors.length}: qui no hi surt
+                no és que no en tingui, és que el seu ajuntament no l'ha publicada, i per això hi
+                va la inicial amb el color de la llista i no un buit.`
+         }</p>`
+      : `<p class="nota">L'ajuntament no publica la fotografia de cap d'aquests regidors, i per
+         això hi van les inicials amb el color de la llista.</p>`
   }
   <p class="nota">Grup municipal <b>${escape(data.sigles)}</b>. Publiquem el nom i el càrrec i res més:
   ni correu, ni telèfon, ni cap altra dada de contacte, tot i que la font oberta en porta.
@@ -360,11 +388,24 @@ function renderRecents(data: CandidaturaData): string {
     </tr>`,
     )
     .join("");
-  return `<table class="cand-recents">
+  /*
+   * La taula va dins d'una caixa que es desplaça ella sola.
+   *
+   * Quatre columnes amb «9.200 vots» i «11 regidories» sense partir demanen
+   * 330 px, i a 320 el document sencer en feia 330: la pàgina s'arrossegava
+   * de costat i amb ella la capçalera, el títol i tota la resta. Les xifres no
+   * es poden partir —«11 regi- dories» no és una xifra— i escurçar-les seria
+   * canviar la dada per fer-la cabre. El que ha de desplaçar-se és la taula, i
+   * `.taula-envolta` és la peça que la casa ja té per a això.
+   */
+  return `<div class="taula-envolta" tabindex="0" role="region"
+    aria-label="La mateixa marca a les eleccions anteriors">
+    <table class="cand-recents">
     <caption class="nomes-lectors">La mateixa marca a les eleccions anteriors</caption>
     <thead><tr><th>Any</th><th>Es deia</th><th>Vots</th><th>Regidories</th></tr></thead>
     <tbody>${rows}</tbody>
-  </table>
+    </table>
+  </div>
   <p class="nota">Les mateixes sigles no duren: aquí hi ha què va presentar la mateixa marca
   a les dues eleccions anteriors en aquest municipi, amb el nom exacte que duia cada cop.
   Quan un any no hi surt és que la marca no s'hi va presentar.</p>`;
@@ -464,16 +505,38 @@ const CANDIDATURA_CSS = `
 
 .cand-fitxa{display:inline-block;background:var(--ink);color:var(--paper);text-decoration:none;
   border-radius:var(--r-max);padding:9px 20px;font-weight:800;font-size:.95rem;margin-top:var(--e2)}
+/* Les dues sortides d'aquesta pàgina: amunt cap al municipi, al costat cap a la
+   marca. La segona va buida perquè la primera continuï sent la principal. */
+.cand-sortides{display:flex;flex-wrap:wrap;gap:var(--e1);margin:0}
+.cand-fitxa.buida{background:transparent;color:var(--ink);border:2.5px solid var(--ink);
+  padding:6.5px 17.5px}
+/* El nom del poble al títol: la mateixa línia, mig to més petit, perquè les
+   sigles continuïn sent el que es veu primer. */
+.cand-a-on{display:block;font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:clamp(1.1rem,3.4vw,1.6rem);line-height:1.15;color:var(--ink-suau);margin-top:2px}
 
 /* Les cares dels regidors a la taula del ple. Van dins de la mateixa cel·la que
    el nom perquè la taula continuï tenint dues columnes i es plegui bé en un
    mòbil de 320 px. */
 .cara-cand{width:36px;height:36px;border-radius:50%;border:2px solid var(--ink);
   object-fit:cover;vertical-align:middle;margin-right:9px;background:var(--paper-2);
-  display:inline-block}
+  display:inline-block;flex:none}
+/* La inicial de qui no té retrat publicat: mateixa mida i mateixa vora que la
+   fotografia, i el color de la llista a dins. No és el buit que queda quan
+   falta una foto: és l'altra manera d'ensenyar una persona. El fons i la tinta
+   surten de «sobreColor()», que garanteix els 4,5:1 de la norma fins i tot amb
+   el groc de la CUP i el turquesa de Junts. */
 .cara-cand.inicials{display:inline-flex;align-items:center;justify-content:center;
-  font-family:var(--display);font-weight:900;font-size:.78rem;color:var(--ink-suau)}
+  font-family:var(--display);font-weight:900;font-size:.78rem;
+  background:var(--inicial-fons);color:var(--inicial-tinta)}
 .cand-ple th[scope="row"]{display:flex;align-items:center;gap:0;flex-wrap:wrap}
+/* Els noms llargs es parteixen dins de la seva columna en comptes d'estirar la
+   taula: «Maria del Carme Fernández-Villaverde» no ha de desplaçar la pàgina. */
+.cand-ple .qui-cand{min-width:0;overflow-wrap:anywhere}
+/* La taula de les eleccions anteriors mai no estreny les seves columnes: si no
+   hi cap, es desplaça la caixa (vegeu «renderRecents»). */
+.taula-envolta .cand-recents{width:auto;min-width:100%}
+.taula-envolta:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
 `;
 
 /**
@@ -489,7 +552,19 @@ function mostraSerie(data: CandidaturaData): boolean {
 
 export function renderCandidatura(data: CandidaturaData, generatedAt: string): string {
   const m = data.municipality;
-  const marca = data.brandName;
+  // El nom de la marca amb pàgina, que no sempre és el de `brandId`: hi ha
+  // coalicions locals registrades com a agrupació d'electors que porten la
+  // marca escrita a les sigles («UA-PSC-CP»), i aquelles també hi han d'anar.
+  const nomPartit = data.partitId ? BRANDS_BY_ID.get(data.partitId)?.name ?? null : null;
+  const marca = data.brandName ?? nomPartit;
+  // Al botó hi va el nom curt, que és el que cap en una línia de 320 px:
+  // «PSC a tot Catalunya» i no «Partit dels Socialistes de Catalunya a tot
+  // Catalunya», que a més repetiria el país dues vegades.
+  const siglesMarca = data.partitId ? NOM_FAMILIA[data.partitId] ?? nomPartit ?? data.sigles : data.sigles;
+  const capAlPartit = data.partitId ? `../../../partit/${data.partitId}/` : null;
+  // El fons i la tinta de les inicials de qui no té retrat publicat, calculats
+  // un sol cop: és el color de la llista, mogut només si no s'hi llegiria.
+  const inicial = sobreColor(colorSegur(data.color));
   const title = `${data.sigles} a ${m.name} — Observatori municipal de quivoto`;
   const description = `Què va treure ${data.sigles} a ${m.name} el 2023, com li ha anat des del 1979, qui la representa al ple i si té l'alcaldia. Només amb dades obertes.`;
 
@@ -523,7 +598,7 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
 <meta name="twitter:card" content="summary_large_image">
 <style>${RADIOGRAFIA_CSS}${CANDIDATURA_CSS}</style>
 </head>
-<body style="--accent:${colorSegur(data.color)};--accent-tinta:${tintaSobre(data.color)};--accent-esvait:${ESVAIT(colorSegur(data.color))}">
+<body style="--accent:${colorSegur(data.color)};--accent-tinta:${tintaSobre(data.color)};--accent-esvait:${ESVAIT(colorSegur(data.color))};--inicial-fons:${colorSegur(inicial.fons)};--inicial-tinta:${inicial.tinta}">
 <a class="salta" href="#contingut">Ves al contingut</a>
 <div class="cand-dalt" aria-hidden="true"></div>
 
@@ -534,14 +609,22 @@ ${cercador("../../../")}
 
 <section class="cand-portada">
   <a class="cand-tornar" href="../">← ${escape(m.name)}${m.comarca ? ` · ${escape(m.comarca)}` : ""}</a>
-  <h1><span class="cand-sigles">${escape(data.sigles)}</span></h1>
+  <!-- El títol diu també de quin poble parla. Amb les sigles soles, aquesta
+       pàgina i les altres 2.625 tenien un encapçalament que no distingia
+       «PSC-CP» de Vic del de Reus: ni per a qui hi arriba des d'un cercador ni
+       per a qui la llegeix amb un lector de pantalla, que sovint només en sent
+       el primer encapçalament. -->
+  <h1><span class="cand-sigles">${escape(data.sigles)}</span>
+    <span class="cand-a-on">a ${escape(m.name)}</span></h1>
   ${data.denominacio && data.denominacio !== data.sigles
     ? `<p class="cand-denominacio">${escape(data.denominacio)}</p>`
     : ""}
   <p class="resum">${escape(resum)}</p>
   <ul class="cand-marca">
     <li><span class="etq">Marca</span>${marca
-      ? `<span>${escape(marca)}${data.brandKind ? ` · ${escape(NOM_TIPUS[data.brandKind] ?? data.brandKind)}` : ""}</span>`
+      ? `<span>${capAlPartit
+          ? `<a href="${escape(capAlPartit)}">${escape(marca)}</a>`
+          : escape(marca)}${data.brandKind ? ` · ${escape(NOM_TIPUS[data.brandKind] ?? data.brandKind)}` : ""}</span>`
       : "<span>sense marca supramunicipal</span>"}</li>
     <li><span class="etq">Color oficial</span>
       <span class="mostra-color"><i></i>${escape(data.color.toUpperCase())}</span></li>
@@ -551,7 +634,7 @@ ${cercador("../../../")}
 
 <nav class="index" aria-label="Seccions d'aquesta pàgina">
   <a href="#resultat">El 2023</a>
-  ${mostraSerie(data) ? '<a href="#serie">Des del 1979</a>' : ""}
+  ${mostraSerie(data) || data.historyMismatch ? `<a href="#serie">Des del ${primerAny(data)}</a>` : ""}
   <a href="#ple">Qui la representa</a>
   <a href="#alcaldia">L'alcaldia</a>
   <a href="#altres">Els altres grups</a>
@@ -582,14 +665,14 @@ ${data.recent.length > 0 ? `<section class="bloc">
 </section>` : ""}
 
 ${mostraSerie(data) ? `<section class="bloc" id="serie">
-  <h2>Com li ha anat des del ${data.history[0]?.year ?? 1979}</h2>
+  <h2>Com li ha anat des del ${primerAny(data)}</h2>
   <p class="entrada-bloc">Hi ha tret representació a ${escape(m.name)} en
   <b>${data.history.filter((p) => p.familySeats > 0).length} de les ${data.history.length} eleccions</b>
-  municipals des del ${data.history[0]?.year ?? 1979}${
+  municipals des del ${primerAny(data)}${
     data.history.filter((p) => p.won).length > 0
       ? `, i n'ha guanyat ${data.history.filter((p) => p.won).length}`
       : ", i no n'ha guanyat cap"
-  }.${data.firstYear && data.firstYear > (data.history[0]?.year ?? 1979)
+  }.${data.firstYear && data.firstYear > primerAny(data)
     ? ` La primera va ser el ${data.firstYear}.`
     : ""}</p>
   ${renderSerie(data)}
@@ -639,7 +722,21 @@ ${mostraSerie(data) ? `<section class="bloc" id="serie">
         )
         .join("")}</ul>`
     : `<p>Aquesta és l'única llista amb representació al ple ${escape(de(m.name))}.</p>`}
-  <a class="cand-fitxa" href="../">Tota la fitxa ${escape(de(m.name))}</a>
+  <p class="cand-sortides">
+    <a class="cand-fitxa" href="../">Tota la fitxa ${escape(de(m.name))}</a>${
+      capAlPartit
+        ? `<a class="cand-fitxa buida" href="${escape(capAlPartit)}">${escape(siglesMarca)} a tot Catalunya</a>`
+        : ""
+    }</p>
+  ${capAlPartit
+    ? `<p class="nota">Aquesta llista és <b>${escape(marca ?? data.sigles)} en aquest municipi</b>, i la
+       marca té pàgina pròpia: quantes alcaldies i quantes regidories té a Catalunya, on mana i
+       com li ha anat des del 1979. La relació entre les dues no és mecànica —una candidatura pot
+       pactar en direcció contrària a la seva marca, i moltes només existeixen en un poble—, i per
+       això les dues pàgines expliquen coses diferents.</p>`
+    : `<p class="nota">Aquesta llista no té pàgina de marca: les seves sigles no són de cap partit
+       d'àmbit català o estatal dels que en tenim la sèrie sencera, o bé són una coalició que
+       n'apunta dos alhora. Quan no ho podem dir amb seguretat, no ho diem.</p>`}
 </section>
 
 <section class="bloc fonts">
@@ -911,7 +1008,11 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
         ? regidorsPerCandidatura.get(candidaturaAlcaldia)?.find((r) => /^alcald/i.test(r.role ?? ""))?.name
         : null) ?? govern?.mayorName ?? null;
 
-    const serie = historyPerMunicipi.get(municipalityId)?.series ?? [];
+    // Del 1979 cap aquí, i sobre una còpia: la mètrica és compartida amb la
+    // fitxa del municipi i no s'ha de reordenar la seva.
+    const serie = [...(historyPerMunicipi.get(municipalityId)?.series ?? [])].sort(
+      (a, b) => a.year - b.year,
+    );
     const anteriorsMunicipi = anteriorsPerMunicipi.get(municipalityId) ?? [];
 
     for (const [i, llista] of ambEscons.entries()) {
@@ -968,6 +1069,7 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
         brandId: llista.brandId,
         brandName: brand?.name ?? null,
         brandKind: brand?.kind ?? null,
+        partitId: marcaAmbPagina(llista.brandId, llista.sigles),
         family,
         lineage,
         color,

@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { geometria } from "./mapa";
 import { siglesFamily } from "@quivoto/shared-schemas/brands";
 import { SITE } from "./config";
 import type { Els947Row } from "./els947";
@@ -37,20 +37,15 @@ import { peu } from "./peu";
 const escape = (t: string): string =>
   t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-type Geometria = {
-  font: string;
-  fontUrl: string;
-  llicencia: string;
-  llicenciaUrl: string;
-  actualitzat: string;
-  viewBox: string;
-  contorn: string | null;
-  municipis: Record<string, string>;
-};
-
-export const geometria: Geometria = JSON.parse(
-  readFileSync(new URL("./geo/municipis.json", import.meta.url), "utf8"),
-) as Geometria;
+/**
+ * La geometria viu a «mapa.ts» i aquí només es torna a exportar.
+ *
+ * Els dos mapes —el gran dels 947 i el petit de cada fitxa— llegeixen el mateix
+ * fitxer de 81 kB, i tenir-ne dues còpies volia dir llegir-lo dues vegades a
+ * cada publicació. Es torna a exportar amb el mateix nom perquè «mapa-ara.ts»,
+ * la vista prèvia del mapa, el demana d'aquí.
+ */
+export { geometria } from "./mapa";
 
 type Capa = {
   id: string;
@@ -175,6 +170,28 @@ const CAPA_PARTIT: Capa = {
   format: (v) => FAMILIES_MAPA[v]?.[1] ?? "sense marca",
 };
 
+/**
+ * Les dues xifres que el mapa sap pintar i que la fila dels 947 encara no porta.
+ *
+ * Són a la base —`municipality_metrics`, kind «riquesa» (J23, la renda neta per
+ * persona de l'Atlas de distribución de renta de los hogares de l'INE) i kind
+ * «retribucions» (J22, el que el Ministeri publica del sou de cada alcaldia)—
+ * però no passen per `loadEls947()`, que és qui munta la fila que arriba aquí.
+ * Afegir-les-hi és una línia a `els947.ts` i toca un fitxer que no és d'aquest
+ * encàrrec, o sigui que aquí s'hi llegeixen com a camps opcionals.
+ *
+ * Mentre la fila no els porti, les dues capes no tenen dada enlloc i el filtre
+ * de més avall les treu del mapa: no surt cap botó, cap llegenda ni cap taca
+ * grisa. **Un botó que pinta els 947 de gris és pitjor que un botó que no hi
+ * és**, perquè el lector no pot saber si el que falla és la dada o el mapa.
+ */
+type FilaAmpliada = Els947Row & {
+  /** renda neta mitjana per persona i any, en euros */
+  rn?: number | null;
+  /** el que cobra l'alcaldia en un any, en euros, quan és un sou i no assistències */
+  sa?: number | null;
+};
+
 const CAPES: Capa[] = [
   CAPA_PARTIT,
   {
@@ -286,6 +303,47 @@ const CAPES: Capa[] = [
       segons el mesurament de l'AOC. No mesura la qualitat del que hi ha, només que hi sigui.`,
     valor: (r) => r.y,
     format: pct,
+  },
+  {
+    /*
+     * La segona xifra de diners, i la que menys decideix l'ajuntament de totes.
+     * Un ple no fixa quant guanya la gent que hi viu: fixa quines taxes cobra i
+     * a qui les bonifica. Va al mapa igualment perquè és el context en què es
+     * governa —el mateix pressupost per habitant no vol dir el mateix a Sant
+     * Cugat que a la Franja— i perquè és l'única capa que explica per què moltes
+     * de les altres surten com surten.
+     *
+     * L'INE tapa per secret estadístic la renda dels municipis més petits: un
+     * municipi sense xifra no és un municipi sense renda, i per això el gris de
+     * «sense dada» va ratllat i no pintat d'un to de la rampa.
+     */
+    id: "renda",
+    titol: "Quants diners entren a les cases",
+    boto: "Renda per persona",
+    peu: `Renda neta mitjana per persona i any, de l'Atlas de distribución de renta de los hogares
+      de l'INE. És el que queda a la llar després d'impostos i cotitzacions, repartit entre tots els
+      seus membres. No ho decideix cap ajuntament: depèn de qui hi viu i de què hi treballa.`,
+    valor: (r) => (r as FilaAmpliada).rn ?? null,
+    format: (v) => `${milers(v)} €`,
+  },
+  {
+    /*
+     * «Sense dedicació» amb import no és un sou: són assistències a plens i
+     * indemnitzacions. Comptar-les com a sou faria semblar que hi ha alcaldies
+     * que cobren cent euros l'any per fer d'alcalde, i el que passa és que no en
+     * cobren cap. Per això aquí només hi entra el que J22 marca com a sou, i la
+     * resta compta com a sense dada.
+     */
+    id: "sou-alcaldia",
+    titol: "Quant cobra l'alcaldia",
+    boto: "Sou de l'alcaldia",
+    peu: `El que percep l'alcaldia en un any, segons l'Inventari de retribucions dels membres de les
+      corporacions locals que publica el Ministeri per a la Transformació Digital i de la Funció
+      Pública. Només hi compten les dedicacions exclusives i parcials: les assistències a plens no
+      són un sou i aquí no hi surten. Un poble petit sense dedicació no és un poble on l'alcaldia
+      cobri poc: és un on no cobra.`,
+    valor: (r) => (r as FilaAmpliada).sa ?? null,
+    format: (v) => `${milers(v)} €`,
   },
 ];
 
@@ -407,9 +465,26 @@ ${CAPES.map((c, i) =>
     : "",
 ).join("")}
 .mapa947 .g0{fill:#FBEFE6}.mapa947 .g1{fill:#F0BFA9}.mapa947 .g2{fill:#E2735A}
-.mapa947 .g3{fill:#BE5138}.mapa947 .g4{fill:#8E2F1D}.mapa947 .gnd{fill:#DED8CB}
+.mapa947 .g3{fill:#BE5138}.mapa947 .g4{fill:#8E2F1D}
 .llegenda .g0{background:#FBEFE6}.llegenda .g1{background:#F0BFA9}.llegenda .g2{background:#E2735A}
-.llegenda .g3{background:#BE5138}.llegenda .g4{background:#8E2F1D}.llegenda .gnd{background:#DED8CB}
+.llegenda .g3{background:#BE5138}.llegenda .g4{background:#8E2F1D}
+/* «Sense dada» no és un graó de l'escala, i per això no es pinta amb cap color.
+   El gris de sorra d'abans (#DED8CB) tenia una lluminància de 0,69 sobre una
+   rampa que va de 0,88 a 0,08: queia entre el primer graó i el segon, amb un
+   contrast d'1,16 contra el segon, o sigui que **un municipi sense dada es
+   llegia com un municipi amb poc**. Amb quatre-cents municipis sense deute i
+   uns quants centenars sense renda, això no és un detall.
+   La resposta és la de qualsevol atles: ratlles. La textura es distingeix del
+   pla encara que no es distingeixi cap color, el to és blau-gris i no coral
+   —o sigui de fora de la rampa— i la barreja de les ratlles amb el fons cau al
+   mig de l'escala (0,41 en clar, 0,10 en fosc) i no a l'extrem clar, que és
+   justament el que la feia semblar «poc». Les ratlles s'apliquen amb un patró
+   d'SVG als camins i amb un degradat repetit als quadrets d'HTML, que són dues
+   maneres de dibuixar la mateixa cosa. */
+.mapa947,.llegenda,.clau-mapa{--nd-fons:#DDD9E6;--nd-ratlla:#7B7592}
+.mapa947 .gnd{fill:url(#sense-dada)}
+.llegenda .gnd{background:repeating-linear-gradient(45deg,
+  var(--nd-ratlla) 0 3px,var(--nd-fons) 3px 6px)}
 /* En fosc la rampa s'ha de girar sencera i no només enfosquir-la: sobre el
    paper fosc, el graó més clar és el que crida més, i amb la rampa de clar la
    taca que saltava a l'ull era la dels municipis sense deute. Aquí el que
@@ -419,9 +494,13 @@ ${CAPES.map((c, i) =>
    rampa, perquè un forat no s'ha de poder confondre amb un valor. */
 @media (prefers-color-scheme:dark){
   .mapa947 .g0{fill:#3B2119}.mapa947 .g1{fill:#6A3524}.mapa947 .g2{fill:#9C4A31}
-  .mapa947 .g3{fill:#D06A47}.mapa947 .g4{fill:#F5A583}.mapa947 .gnd{fill:#3A3545}
+  .mapa947 .g3{fill:#D06A47}.mapa947 .g4{fill:#F5A583}
   .llegenda .g0{background:#3B2119}.llegenda .g1{background:#6A3524}.llegenda .g2{background:#9C4A31}
-  .llegenda .g3{background:#D06A47}.llegenda .g4{background:#F5A583}.llegenda .gnd{background:#3A3545}
+  .llegenda .g3{background:#D06A47}.llegenda .g4{background:#F5A583}
+  /* En fosc les ratlles s'aclareixen i el fons s'enfosqueix, que és el mateix
+     canvi que fa la rampa: el patró de l'SVG llegeix aquestes dues variables i
+     no cal tornar-lo a declarar. */
+  .mapa947,.llegenda,.clau-mapa{--nd-fons:#2E2A3A;--nd-ratlla:#8A83A3}
   .ullada-mapa .qui i.sense{background:#3A3545}
 }
 /* La llegenda escrita dins de l'SVG.
@@ -547,6 +626,20 @@ export function renderMapaCatalunya(files: readonly Els947Row[], generatedAt: st
     )
     .join("");
 
+  /*
+   * La descripció de la pàgina es fa de les capes que realment es publiquen.
+   * Escrita a mà quedava desactualitzada cada cop que se n'afegia una, i
+   * prometia al cercador capes que el mapa no acaba ensenyant quan la dada no
+   * hi és —el mapa en treu el botó i la descripció es quedava dient-ho.
+   */
+  const llistaBotons =
+    capes.length === 1
+      ? capes[0]!.boto.toLowerCase()
+      : capes
+          .slice(0, -1)
+          .map((c) => c.boto.toLowerCase())
+          .join(", ") + ` i ${capes[capes.length - 1]!.boto.toLowerCase()}`;
+
   const claus = capes
     .map((c, i) =>
       clauSvg(
@@ -566,7 +659,7 @@ export function renderMapaCatalunya(files: readonly Els947Row[], generatedAt: st
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>El mapa dels 947 — Observatori municipal de quivoto</title>
-<meta name="description" content="Els 947 municipis de Catalunya pintats per la força que hi mana, majoria absoluta, pactes, canvis d'alcaldia, alternança des del 1979, participació, deute per habitant, preu de l'aigua, població estrangera, dones al ple i transparència.">
+<meta name="description" content="Els 947 municipis de Catalunya pintats per ${escape(llistaBotons)}. Cada municipi porta a la seva fitxa.">
 <link rel="canonical" href="${SITE}/observatori/mapa/">
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${CSS}</style>
 </head>
@@ -594,6 +687,18 @@ ${cercador("../")}
       .map((et, k) => `<li><i class="g${k}"></i>${escape(et)}</li>`)
       .join("")}${primera.ambDada < slugs.length ? '<li><i class="gnd"></i>sense dada</li>' : ""}</ul>
     <svg class="mapa947" data-capa="0" viewBox="${escape(geometria.viewBox)}" role="img" aria-labelledby="titol-capa">
+      ${
+        /* Les ratlles de «sense dada». El pas és de 5 unitats del llenç de 1.600:
+           al mapa gran, que s'ensenya com a molt a 900 px, són 2,8 px de pas, i
+           en un municipi de mida mediana —36 x 43 unitats— hi caben set o vuit
+           ratlles, prou per veure que allò és una textura i no un color. Quan el
+           mapa es fa petit i el pas baixa d'un píxel, les dues tintes es fonen en
+           el blau-gris del mig de l'escala, que continua sense ser cap graó. */ ""
+      }
+      <defs><pattern id="sense-dada" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="5" height="5" fill="var(--nd-fons)"/>
+        <rect width="2.4" height="5" fill="var(--nd-ratlla)"/>
+      </pattern></defs>
       ${camins}
       ${geometria.contorn ? `<path class="contorn" d="${geometria.contorn}"/>` : ""}
       ${claus}
@@ -617,11 +722,28 @@ ${cercador("../")}
     ha quants municipis tenen la dada i quant en té el municipi del mig, i per això les
     comparacions serioses es fan al <a href="../comparador/">comparador</a>, que compara municipis
     de la mateixa mida.</p>
+    ${
+      capes.some((c) => c.id === "renda")
+        ? `<p class="nota">La renda per persona surt de l'<a href="https://www.ine.es/dynt3/inebase/es/index.htm?padre=7132"
+      target="_blank" rel="noopener">Atlas de distribución de renta de los hogares</a> de l'Institut
+      Nacional d'Estadística. L'INE tapa per secret estadístic la renda dels municipis més petits:
+      un municipi sense xifra no és un municipi sense renda, i per això surt ratllat i no pintat.</p>`
+        : ""
+    }
+    ${
+      capes.some((c) => c.id === "sou-alcaldia")
+        ? `<p class="nota">El sou de l'alcaldia surt de l'Inventari de retribucions dels membres de
+      les corporacions locals que publica el Ministeri per a la Transformació Digital i de la Funció
+      Pública. Hi entren les dedicacions exclusives i parcials; les assistències a plens no són un
+      sou i no hi compten.</p>`
+        : ""
+    }
     <p class="nota">Els colors de les capes de xifres van d'una sola tinta i amb la lluminància
     sempre en el mateix sentit, perquè els graons es puguin distingir també sense veure el color, i
     es giren quan el navegador demana el mode fosc. Els talls es fan per quantils: cada color n'és
     un cinquè, sempre, i per això la lectura ha de ser «està a la cinquena part de dalt», mai
-    «està molt».</p>
+    «està molt». Els municipis <b>sense dada</b> no porten cap color de l'escala sinó ratlles:
+    un forat no és un valor baix, i pintat amb el to més clar ho semblava.</p>
   </section>
 
   <section class="bloc anar">
