@@ -1,6 +1,6 @@
 import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
-import { desc, isNotNull } from "drizzle-orm";
-import { municipalities, type Db } from "@quivoto/db";
+import { desc, eq, isNotNull } from "drizzle-orm";
+import { municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { loadRadiografia, renderRadiografia } from "./radiografia";
 import { carregaMedianes } from "./medianes";
 import { escriuCerca, escriuCercaElectes } from "./cerca";
@@ -14,6 +14,9 @@ import { loadComparador, renderComparador } from "./comparador";
 import { renderDadesIndex, writeDownloads } from "./dades";
 import { loadCandidatures, renderCandidatura } from "./candidatura";
 import { loadPartits, renderPartit } from "./partit";
+import { renderPartitsIndex } from "./partits-index";
+import { fixaXifresPeu, XIFRES_PEU } from "./peu";
+import { KIND as KIND_TRAJECTORIA, type FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
 import { writeOgImages } from "./og";
 import type { PuntMapa } from "./mapa";
 import { carregaPreguntes, renderIndexPreguntes, renderPreguntes } from "./preguntes";
@@ -22,7 +25,7 @@ import { verifica } from "./verificacio";
 import { renderPortada } from "./portada";
 import { renderMapaCatalunya } from "./mapa-catalunya";
 import { encaixa, type Grup } from "./posicions";
-import { adrecesRegidors, renderRegidor, type ContextRegidor, type Regidor } from "./regidor";
+import { adrecesRegidors, renderRegidor, trajectoriaDePersona, type ContextRegidor, type Regidor } from "./regidor";
 import { sameForce } from "@quivoto/shared-schemas/brands";
 import { normalizePersonName, slugify } from "../lib/text";
 import { withRun } from "../lib/run";
@@ -147,6 +150,34 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     const electes = await escriuCercaElectes(db, carregats, `${OUT_DIR}../cerca-electes.json`);
     run.say(`índex d'electes amb ${electes.regidors} regidors i ${electes.candidatures} candidatures`);
 
+    // El peu de cada pàgina ensenya el que s'ha comptat en aquesta publicació i
+    // no una xifra escrita a mà que envelleix sola. Va aquí perquè la primera
+    // pàgina que s'escriu ja el porti bo.
+    fixaXifresPeu({
+      municipis: carregats.length,
+      electes: electes.regidors,
+      candidatures: electes.candidatures,
+      fitxersDades: XIFRES_PEU.fitxersDades,
+    });
+
+    /*
+     * Les fitxes de trajectòria, totes de cop i abans del bucle: són 947 files
+     * petites i fer-ne una consulta per municipi serien 947 anades a la base per
+     * una dada que hi cap sencera a la memòria.
+     *
+     * D'aquí en surt el bloc «Més enllà de l'ajuntament» de la fitxa de persona,
+     * que és el que tanca el cercle amb /observatori/trajectoria/: aquella
+     * pàgina porta el nom cap aquí, i aquesta hi torna.
+     */
+    const trajectoriaPerMunicipi = new Map<number, FitxaTrajectoria>(
+      (
+        await db
+          .select({ municipalityId: municipalityMetrics.municipalityId, data: municipalityMetrics.data })
+          .from(municipalityMetrics)
+          .where(eq(municipalityMetrics.kind, KIND_TRAJECTORIA))
+      ).map((f) => [f.municipalityId, f.data as FitxaTrajectoria]),
+    );
+
     let regidorsEscrits = 0;
     for (const slug of wanted) {
       const data = await loadRadiografia(db, slug, generatedAt);
@@ -163,7 +194,12 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       );
       await mkdir(`${OUT_DIR}${slug}`, { recursive: true });
       await writeFile(`${OUT_DIR}${slug}/index.html`, html, "utf8");
-      regidorsEscrits += await escriuRegidors(data, slug, generatedAt);
+      regidorsEscrits += await escriuRegidors(
+        data,
+        slug,
+        generatedAt,
+        trajectoriaPerMunicipi.get(data.municipality.id) ?? null,
+      );
       if (!all) run.say(`${data.municipality.name} → observatori/m/${slug}/ (${Math.round(html.length / 1024)} kB)`);
       done.push(slug);
       run.rowsOut += 1;
@@ -206,7 +242,32 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       await mkdir(dir, { recursive: true });
       await writeFile(`${dir}/index.html`, renderPartit(partit, generatedAt), "utf8");
     }
-    run.say(`${partits.length} pàgines de partit`);
+    /*
+     * La portada de les marques. Les 15 pàgines existien i no hi havia índex, de
+     * manera que «Partits» al menú hauria estat un 404 i només s'hi arribava pel
+     * cercador. És també l'únic lloc del web on es veu com es reparteixen les 947
+     * alcaldies: 850 són d'alguna marca i 97 de llistes locals.
+     */
+    await writeFile(
+      `${OUT_DIR}../partit/index.html`,
+      // `PartitData` en diu `name` i la portada en diu `nom`: cada mòdul té el
+      // seu tipus mínim a posta, per no lligar-los l'un a l'altre.
+      renderPartitsIndex(
+        partits.map((p) => ({
+          id: p.id,
+          sigles: p.sigles,
+          nom: p.name,
+          color: p.color,
+          alcaldies: p.alcaldies,
+          regidories: p.regidories,
+          poblacioGovernada: p.poblacioGovernada,
+        })),
+        partits[0]?.poblacioCatalunya ?? 0,
+        generatedAt,
+      ),
+      "utf8",
+    );
+    run.say(`${partits.length} pàgines de partit i la seva portada`);
 
     // Pàgines de comarca: «qui mana a la meva comarca» no ho respon ningú.
     const comarques = await loadComarques(db);
@@ -322,6 +383,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       `${SITE}/observatori/els947.html`,
       `${SITE}/observatori/mapa/`,
       `${SITE}/observatori/comparador/`,
+      `${SITE}/observatori/partit/`,
       ...partits.map((p) => `${SITE}/observatori/partit/${p.id}/`),
       ...(amb ? [`${SITE}/observatori/amb/`] : []),
       ...comarques.map((c) => `${SITE}/observatori/c/${slugify((c as { name?: string; nom?: string }).name ?? (c as { nom?: string }).nom ?? "")}/`),
@@ -461,6 +523,7 @@ async function escriuRegidors(
   dades: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>,
   slug: string,
   generatedAt: string,
+  fitxaTrajectoria: FitxaTrajectoria | null = null,
 ): Promise<number> {
   const carrecs = dades.carrecs?.carrecs ?? [];
   if (carrecs.length === 0) return 0;
@@ -571,6 +634,11 @@ async function escriuRegidors(
           adreca: adreces.get(carrec)!,
           governConegut: carrecs.some((c) => c.equipGovern),
           publicaDeLaPersona: publicaDe(dades, carrec.nom),
+          // El que Wikidata sap d'aquesta persona i que el nostre registre no sap
+          // de ningú: si ha estat al Parlament, al Congrés o al Govern, i què feia
+          // abans de la política. Si el nom lliga amb més d'una persona del ple,
+          // no s'hi posa res, que és la regla de sempre.
+          trajectoria: trajectoriaDePersona(fitxaTrajectoria, carrec.nom),
           ...retribucionsDe(dades, carrec.nom),
         },
         generatedAt,

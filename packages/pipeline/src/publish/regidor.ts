@@ -1,10 +1,11 @@
 import { tintaSobre } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { de, delDia, nomLlegible, slugify } from "../lib/text";
+import { de, delDia, elDia, nomLlegible, normalizePersonName, slugify } from "../lib/text";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
+import type { FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
 
 /**
  * Una pàgina per a cada persona que seu al ple.
@@ -267,6 +268,45 @@ export type ContextRegidor = {
    * sí que es pot dir, i és una dada de debò, és si l'ajuntament ho publica o
    * no: això no depèn de la persona però sí del ple que hi seu.
    */
+  /**
+   * El que Wikidata sap d'aquesta persona i el nostre registre no sap de ningú:
+   * si ha ocupat un càrrec per sobre de l'ajuntament i què feia abans de la
+   * política.
+   *
+   * És la contrapartida de la pàgina /observatori/trajectoria/, que llista les
+   * 283 persones que han fet el salt i fins ara acabava en un nom que no
+   * portava enlloc. Una pàgina que diu «aquest home va ser diputat» i una altra
+   * que porta el seu nom al títol i no ho diu són dues pàgines que es
+   * contradiuen; aquest camp és el que les tanca.
+   *
+   * `null` quan aquesta persona no és a la fitxa de J21 del seu municipi, que
+   * és el cas de la gran majoria: Wikidata en coneix 2.917 des del 1979 i el
+   * nostre historial en porta molts més. No saber-ne res no s'escriu enlloc.
+   */
+  trajectoria?: {
+    qid: string;
+    /** L'ítem de Wikidata d'on surt tot això. */
+    url: string;
+    /** L'article de la Viquipedia catalana, que en tenen 613 de les 2.917. */
+    viquipedia: string | null;
+    /** L'ofici anterior a la política (P106), que en tenen 603. */
+    ocupacions: string[];
+    /** Els càrrecs per sobre de l'ajuntament, amb les dates que en dona la font. */
+    carrecs: { nom: string; inici: string | null; fi: string | null }[];
+    /**
+     * Si el nom i les dates lliguen amb el nostre historial oficial d'alcaldies.
+     *
+     * Quan no lliguen, la dada es publica igual —és de Wikidata i com a tal se
+     * cita— però amb l'avís al costat: el que no es pot fer és penjar la
+     * carrera d'algú a la fitxa d'un altre sense dir que no ho hem pogut
+     * comprovar contra la font oficial.
+     */
+    aparellat: boolean;
+    font: string;
+    llicencia: string;
+    /** Data d'extracció: sense any, cap dada no entra a la fitxa. */
+    descarregat: string | null;
+  } | null;
   publicaDeLaPersona: {
     retribucio: "xifra" | "sense-xifra" | "cap" | null;
     declaracioBens: boolean;
@@ -303,6 +343,59 @@ export function adrecesRegidors<T extends { nom: string }>(carrecs: readonly T[]
     sortida.set(carrec, adreca);
   }
   return sortida;
+}
+
+/**
+ * El que J21 sap d'aquesta persona, buscat pel nom dins de la fitxa del seu
+ * municipi.
+ *
+ * L'aparellament és el mateix que fa la resta del projecte per creuar persones
+ * entre fonts —nom normalitzat— i amb la mateixa cautela que `publicaDe()`: si
+ * el nom lliga amb més d'una fitxa de Wikidata, **no es retorna res**. En una
+ * pàgina que porta el nom d'una persona al títol, atribuir-li la carrera d'una
+ * altra és el pitjor error possible, i val més el bloc buit.
+ *
+ * La fitxa de J21 és la del municipi, o sigui que aquí només hi entra qui
+ * Wikidata dona com a alcalde d'aquest mateix poble: no és una cerca per nom
+ * per tot Catalunya.
+ */
+export function trajectoriaDePersona(
+  fitxa: FitxaTrajectoria | null | undefined,
+  nom: string,
+): ContextRegidor["trajectoria"] {
+  if (!fitxa || !Array.isArray(fitxa.persones)) return null;
+  const clau = normalizePersonName(nom);
+  const iguals = fitxa.persones.filter((p) => normalizePersonName(p.nom) === clau);
+  if (iguals.length !== 1) return null;
+  const p = iguals[0]!;
+  // Ni càrrec per sobre de l'ajuntament, ni ofici, ni article: no hi ha res a
+  // dir i el bloc no s'escriu. La fitxa de Wikidata tota sola no és una dada.
+  if (p.carrecs.length === 0 && p.ocupacions.length === 0 && p.viquipedia === null) return null;
+  return {
+    qid: p.qid,
+    url: p.url,
+    viquipedia: p.viquipedia,
+    ocupacions: p.ocupacions,
+    /*
+     * Del més recent al més antic, i sense repetits. Un mandat per línia és el
+     * correcte —Josep Tutusaus va ser al Parlament el 1999 i el 2003-2005, i
+     * són dues coses— però la mateixa línia dues vegades amb les mateixes
+     * dates només pot ser un duplicat de la font, i llavors s'ensenya un cop.
+     */
+    carrecs: [
+      ...new Map(
+        p.carrecs.map((c) => [`${c.nom}|${c.inici ?? ""}|${c.fi ?? ""}`, {
+          nom: c.nom,
+          inici: c.inici,
+          fi: c.fi,
+        }]),
+      ).values(),
+    ].sort((a, b) => (b.inici ?? "").localeCompare(a.inici ?? "")),
+    aparellat: p.aparellat,
+    font: fitxa.font,
+    llicencia: fitxa.llicenciaDades,
+    descarregat: fitxa.descarregat ?? null,
+  };
 }
 
 const SENTITS: Record<string, { text: string; grup: string; classe: string }> = {
@@ -399,6 +492,19 @@ const CSS = `
 .pas .xifra{display:block;font-family:var(--display);font-weight:900;font-size:1.9rem;
   line-height:1.1;letter-spacing:-.03em;margin-top:4px}
 .pas .peu{display:block;font-size:.76rem;color:var(--ink-suau);line-height:1.35;margin-top:5px}
+
+/* --- més enllà de l'ajuntament -------------------------------------------
+   Els càrrecs per sobre de l'ajuntament, un per línia i amb els anys a sota:
+   són pocs —qui en té, en té un o dos— i una graella o unes pastilles serien
+   disfressar de taulell una frase de dotze paraules. La vora esquerra en coral
+   és la mateixa marca que porta l'avís dels sous, i aquí vol dir el mateix:
+   «això no ho diu el seu ajuntament». */
+.salts{list-style:none;margin:var(--e2) 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.salts li{border-left:6px solid var(--coral);padding:2px 0 2px 12px;font-weight:700}
+.salts .quan{display:block;font-size:.8rem;font-weight:800;color:var(--ink-suau);
+  font-variant-numeric:tabular-nums;margin-top:2px}
+.ofici-abans{margin:var(--e3) 0 0}
+.viqui{margin:var(--e2) 0 0;font-size:.9rem;font-weight:700}
 `;
 
 /** Tinta llegible damunt del color del grup. Ho decideix `contrast.ts`. */
@@ -694,6 +800,72 @@ function pasPelPle(r: Regidor, ctx: ContextRegidor, generatedAt: string): string
   </section>`;
 }
 
+/** Els anys d'un càrrec, tal com els dona la font i sense inventar-ne cap. */
+function anysDelCarrec(inici: string | null, fi: string | null): string {
+  if (inici === null) return fi === null ? "" : `fins al ${fi.slice(0, 4)}`;
+  const desDe = inici.slice(0, 4);
+  if (fi === null) return `des del ${desDe}`;
+  const fins = fi.slice(0, 4);
+  return fins === desDe ? desDe : `${desDe}–${fins}`;
+}
+
+/**
+ * On ha arribat aquesta persona per sobre del seu ajuntament, i què feia abans.
+ *
+ * És el bloc que tanca el cercle amb /observatori/trajectoria/: aquella pàgina
+ * llista les 283 persones que han fet el salt i el seu nom porta aquí, i aquí
+ * es diu el mateix de la persona i es torna cap allà. Que una de les dues ho
+ * digués i l'altra no era el defecte que es corregeix.
+ *
+ * Wikidata **no és un cens**: dels que han fet el salt, el 95,8 % té article a
+ * la Viquipedia, i dels que no consta que l'hagin fet, només el 12,9 %. O sigui
+ * que el silenci d'aquest bloc no vol dir que la persona no hagi estat enlloc,
+ * vol dir que no ho sabem —i per això, quan no en sabem res, no s'escriu ni una
+ * línia en comptes d'escriure «no consta que hagi estat res».
+ */
+function mesEnllaDelPle(ctx: ContextRegidor): string {
+  const t = ctx.trajectoria;
+  if (!t) return "";
+  const salts = t.carrecs
+    .map((c) => {
+      const quan = anysDelCarrec(c.inici, c.fi);
+      return `<li>${escape(c.nom)}${quan === "" ? "" : `<span class="quan">${escape(quan)}</span>`}</li>`;
+    })
+    .join("");
+  return `<section class="bloc" id="mes-enlla">
+    <h2>Més enllà de l'ajuntament</h2>
+    ${
+      t.carrecs.length === 0
+        ? ""
+        : `<p class="entrada-bloc">${
+            t.carrecs.length === 1 ? "També ha ocupat aquest càrrec" : "També ha ocupat aquests càrrecs"
+          } per sobre del seu ajuntament, i per això és a
+          <a href="../../../../trajectoria/">la llista dels alcaldes que han fet el salt</a>.</p>
+          <ul class="salts">${salts}</ul>`
+    }
+    ${
+      t.ocupacions.length === 0
+        ? ""
+        : `<p class="ofici-abans">Abans de la política hi consta com a
+           <b>${escape(t.ocupacions.join(", "))}</b>.</p>`
+    }
+    ${
+      t.viquipedia === null
+        ? ""
+        : `<p class="viqui"><a href="${escape(t.viquipedia)}" rel="noopener nofollow">La seva pàgina a la Viquipedia</a>.</p>`
+    }
+    <p class="nota">${escape(t.font)}, ítem
+    <a href="${escape(t.url)}" rel="noopener nofollow">${escape(t.qid)}</a>${
+      t.descarregat === null ? "" : `, consultat ${escape(elDia(t.descarregat))}`
+    }. Les dades de Wikidata són <b>${escape(t.llicencia)}</b>.${
+      t.aparellat
+        ? " El nom i les dates lliguen amb el nostre historial oficial d'alcaldies."
+        : " <b>Les dates no lliguen del tot amb el nostre historial oficial d'alcaldies</b>, i per això ho publiquem dient-ho: és el que diu Wikidata, no una comprovació nostra."
+    } Wikidata l'escriu qui vol, i cobreix molt millor la gent coneguda: que aquí no hi surti res
+    d'algú no vol dir que no hagi estat enlloc.</p>
+  </section>`;
+}
+
 export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: string): string {
   const inicials = r.nom
     .split(/\s+/)
@@ -807,6 +979,8 @@ ${cercador("../../../../")}
   ${queCobra(r, ctx)}
 
   ${pasPelPle(r, ctx, generatedAt)}
+
+  ${mesEnllaDelPle(ctx)}
 
   ${
     !ctx.publicaDeLaPersona

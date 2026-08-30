@@ -41,6 +41,8 @@ const persona = (extra: Partial<SaltPersona> = {}): SaltPersona => ({
   ],
   ocupacions: ["advocat"],
   aparellat: true,
+  fitxa: "../m/granollers/regidor/josep-pujadas-i-maspons/",
+  foto: "/observatori/fotos/160/8096.webp",
   ...extra,
 });
 
@@ -220,6 +222,21 @@ describe("fitxaPersona", () => {
   it("qui no lliga amb el nostre historial ho porta escrit", () => {
     expect(fitxaPersona(persona({ aparellat: false }))).toContain("no lliga amb el nostre historial");
     expect(fitxaPersona(persona({ aparellat: true }))).not.toContain("no lliga amb el nostre");
+  });
+
+  it("el nom porta a la fitxa de la persona quan en té, i el retrat hi surt", () => {
+    const html = fitxaPersona(persona());
+    expect(html).toContain('href="../m/granollers/regidor/josep-pujadas-i-maspons/"');
+    expect(html).toContain('src="/observatori/fotos/160/8096.webp"');
+    // La Viquipedia continua sent-hi, però al peu i com a font: el nom porta a
+    // la nostra pàgina, que és la que respon qui és aquesta persona.
+    expect(html).toContain("Viquipedia</a>");
+  });
+
+  it("qui no té fitxa pròpia porta a l'historial d'alcaldies del seu municipi", () => {
+    const html = fitxaPersona(persona({ fitxa: "../m/granollers/#alcaldies", foto: null }));
+    expect(html).toContain('href="../m/granollers/#alcaldies"');
+    expect(html).not.toContain("<img");
   });
 
   it("un nom amb signes no es converteix en marques", () => {

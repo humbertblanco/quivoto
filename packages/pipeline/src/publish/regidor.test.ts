@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adrecesRegidors, renderRegidor, slugRegidor } from "./regidor";
+import { adrecesRegidors, renderRegidor, slugRegidor, trajectoriaDePersona } from "./regidor";
 
 describe("adrecesRegidors", () => {
   it("dona una adreça diferent a dues persones que es diuen igual", () => {
@@ -61,11 +61,121 @@ const CONTEXT = {
   assistencia: { hi: 11, de: 12 },
 };
 
+/**
+ * La fitxa que desa J21 d'un municipi, retallada al que llegeix aquesta pàgina.
+ * Les xifres del capçal són les de l'extracció del 30-08-2026.
+ */
+const FITXA_J21 = {
+  font: "Wikidata (wikidata.org)",
+  url: "https://query.wikidata.org/sparql",
+  llicenciaDades: "CC0 1.0",
+  descarregat: "2026-08-30",
+  ine5: "08077",
+  totalPersones: 2,
+  aparellades: 1,
+  ambCarrecSuperior: 1,
+  persones: [
+    {
+      qid: "Q11907",
+      url: "https://www.wikidata.org/wiki/Q11907",
+      qidsFusionats: [],
+      nom: "Marta Alarcón i Puerto",
+      naixement: "1962-04-11",
+      viquipedia: "https://ca.wikipedia.org/wiki/Marta_Alarc%C3%B3n",
+      ocupacions: ["advocada"],
+      mandats: [{ inici: "2011-06-11", fi: null }],
+      altresMunicipis: [],
+      carrecs: [
+        {
+          qid: "Q18714",
+          nom: "diputada al Parlament de Catalunya",
+          familia: "parlament" as const,
+          inici: "1999-10-01",
+          fi: "2003-09-01",
+        },
+      ],
+      altresCarrecs: 0,
+      aparellat: true,
+      termes: ["2011-2015"],
+      motiuNoAparellat: null,
+    },
+  ],
+};
+
+describe("trajectoriaDePersona", () => {
+  it("troba la persona pel nom normalitzat", () => {
+    const t = trajectoriaDePersona(FITXA_J21, "MARTA ALARCON I PUERTO");
+    expect(t?.qid).toBe("Q11907");
+    expect(t?.carrecs).toHaveLength(1);
+    expect(t?.llicencia).toBe("CC0 1.0");
+  });
+
+  it("no diu res de qui no hi és, ni quan encara no s'ha ingerit la fitxa", () => {
+    expect(trajectoriaDePersona(FITXA_J21, "Pere Coll")).toBe(null);
+    expect(trajectoriaDePersona(null, "Marta Alarcón i Puerto")).toBe(null);
+  });
+
+  it("davant de dos noms iguals no atribueix la carrera a ningú", () => {
+    const dos = { ...FITXA_J21, persones: [...FITXA_J21.persones, FITXA_J21.persones[0]!] };
+    expect(trajectoriaDePersona(dos, "Marta Alarcón i Puerto")).toBe(null);
+  });
+
+  it("una fitxa sense càrrec, ni ofici, ni article no és cap dada", () => {
+    const buida = {
+      ...FITXA_J21,
+      persones: [{ ...FITXA_J21.persones[0]!, carrecs: [], ocupacions: [], viquipedia: null }],
+    };
+    expect(trajectoriaDePersona(buida, "Marta Alarcón i Puerto")).toBe(null);
+  });
+});
+
 describe("renderRegidor", () => {
   it("explica quan el vot es pot atribuir a la persona i quan no", () => {
     const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-29");
     expect(html).toContain("tants vots com regidories té");
     expect(html).toContain("no es pot saber qui");
+  });
+
+  it("diu el càrrec de més amunt, amb les dates, i torna a la pàgina dels que manen", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, trajectoria: trajectoriaDePersona(FITXA_J21, REGIDORA.nom) },
+      "2026-08-29",
+    );
+    expect(html).toContain("Més enllà de l'ajuntament");
+    expect(html).toContain("diputada al Parlament de Catalunya");
+    expect(html).toContain("1999–2003");
+    expect(html).toContain('href="../../../../trajectoria/"');
+  });
+
+  it("cita la font i la llicència de Wikidata al costat de la dada", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, trajectoria: trajectoriaDePersona(FITXA_J21, REGIDORA.nom) },
+      "2026-08-29",
+    );
+    expect(html).toContain("CC0 1.0");
+    expect(html).toContain("Q11907");
+    expect(html).toContain("advocada");
+    expect(html).toContain("La seva pàgina a la Viquipedia");
+  });
+
+  it("quan no en sabem res, el bloc no s'escriu: cap «no consta»", () => {
+    const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-29");
+    expect(html).not.toContain("Més enllà de l'ajuntament");
+  });
+
+  it("quan les dates no lliguen amb el nostre historial, ho diu al costat", () => {
+    const fluix = {
+      ...FITXA_J21,
+      persones: [{ ...FITXA_J21.persones[0]!, aparellat: false }],
+    };
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, trajectoria: trajectoriaDePersona(fluix, REGIDORA.nom) },
+      "2026-08-29",
+    );
+    expect(html).toContain("no lliguen del tot amb el nostre historial");
   });
 
   it("no publica cap dada de contacte", () => {

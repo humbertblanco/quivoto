@@ -5,6 +5,7 @@ import { serieTemporal } from "./grafics";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera } from "./capcalera";
+import { adrecesRegidors } from "./regidor";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { FAMILIES, KIND, type Familia, type FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
@@ -90,7 +91,25 @@ export type SaltPersona = {
   ocupacions: string[];
   /** Cert si el nom i les dates lliguen amb el nostre historial oficial. */
   aparellat: boolean;
+  /**
+   * On porta el seu nom. Sempre hi ha destí, i per això aquest camp no decideix
+   * res a la plantilla: la fitxa de persona quan en té —només 333 dels 947
+   * alcaldes, perquè les fitxes de regidor existeixen als 464 municipis amb
+   * càrrecs al ple— i, quan no, l'historial d'alcaldies del seu municipi, que
+   * hi és sempre. Un nom que no porta enlloc, en una pàgina de 283 noms, són
+   * 283 preguntes que la pàgina obre i no respon.
+   */
+  fitxa: string | null;
+  /** El retrat que publica el seu ajuntament, quan encara seu al ple. */
+  foto: string | null;
 };
+
+/**
+ * El que ens cal de la fitxa de càrrecs de la seu electrònica: qui hi seu i
+ * quin retrat en publica el seu ajuntament. La fitxa sencera la descriu
+ * `radiografia.ts` i aquí no se'n toca res més.
+ */
+type CarrecDelPle = { nom: string; foto: string | null; fotoPetita: string | null };
 
 export type MunicipiTrajectoria = {
   slug: string;
@@ -352,18 +371,33 @@ export function fitxaPersona(p: SaltPersona): string {
       return `<li class="f-${c.familia}">${escape(c.nom)}${anys}</li>`;
     })
     .join("");
+  /*
+   * El nom porta a la nostra pàgina i no a Wikidata: qui llegeix «Josep
+   * Pujadas» aquí es pregunta qui és, i la resposta la tenim nosaltres —el ple
+   * on seu, què hi ha votat, què cobra. L'ítem de Wikidata i la Viquipedia són
+   * la font i van al peu de la targeta, que és el seu lloc.
+   */
   const nom =
-    p.viquipedia === null
+    p.fitxa === null
       ? `<b>${escape(p.nom)}</b>`
-      : `<b><a href="${escape(p.viquipedia)}" rel="noopener">${escape(p.nom)}</a></b>`;
+      : `<b><a href="${escape(p.fitxa)}">${escape(p.nom)}</a></b>`;
+  const retrat =
+    p.foto === null
+      ? ""
+      : `<img class="retrat" src="${escape(p.foto)}" alt="" width="56" height="56" loading="lazy" decoding="async">`;
   const anys =
     p.primerAny === 0 ? "" : p.ultimAny > p.primerAny ? `${p.primerAny}–${p.ultimAny}` : `${p.primerAny}`;
   return `<li class="persona" data-families="${escape(p.families.join(" "))}">
-  <p class="qui">${nom}
-    <span class="alcaldia">alcaldia a ${on}${anys === "" ? "" : ` · ${anys}`}</span></p>
+  <div class="cap">${retrat}
+    <p class="qui">${nom}
+    <span class="alcaldia">alcaldia a ${on}${anys === "" ? "" : ` · ${anys}`}</span></p></div>
   <ul class="carrecs">${carrecs}</ul>
   ${p.ocupacions.length === 0 ? "" : `<p class="ofici">Abans: ${escape(p.ocupacions.join(", "))}</p>`}
-  <p class="origen"><a href="${escape(p.url)}" rel="noopener">${escape(p.qid)}</a>${p.aparellat ? "" : " · no lliga amb el nostre historial"}</p>
+  <p class="origen"><a href="${escape(p.url)}" rel="noopener">${escape(p.qid)}</a>${
+    p.viquipedia === null
+      ? ""
+      : ` · <a href="${escape(p.viquipedia)}" rel="noopener">Viquipedia</a>`
+  }${p.aparellat ? "" : " · no lliga amb el nostre historial"}</p>
 </li>`;
 }
 
@@ -418,7 +452,10 @@ export const TRAJECTORIA_CSS = `
   grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
 .persona{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
   padding:var(--e2);box-shadow:var(--ombra)}
-.persona .qui{margin:0 0 10px;line-height:1.3}
+.persona .cap{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+.persona .retrat{width:56px;height:56px;flex:0 0 auto;border-radius:var(--r-s);
+  border:2px solid var(--ink);object-fit:cover;background:var(--paper-2)}
+.persona .qui{margin:0;line-height:1.3}
 .persona .qui b{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.02em}
 .persona .qui a{color:inherit}
 .persona .alcaldia{display:block;font-size:.84rem;color:var(--ink-suau);font-weight:700;margin-top:2px}
@@ -600,7 +637,8 @@ ${cercador("../")}
 <section class="bloc" id="gent">
   <h2>Qui són</h2>
   <p class="entrada-bloc">Els ${nombre(data.persones.length)}, del salt més recent al més antic.
-  Cada fitxa porta l'enllaç a l'ítem de Wikidata d'on surt.</p>
+  <b>El nom porta a la seva fitxa</b> quan encara seu al ple, i si no, a l'historial d'alcaldies
+  del seu municipi. Cada targeta porta l'enllaç a l'ítem de Wikidata d'on surt.</p>
   <div class="filtra" hidden>${botons}</div>
   <ul class="gent">${gent.map(fitxaPersona).join("")}</ul>
 </section>
@@ -662,6 +700,47 @@ export async function loadTrajectoriaElectes(db: Db): Promise<TrajectoriaData | 
     })
     .from(municipalities);
   const perId = new Map(munis.map((m) => [m.id, m]));
+
+  /*
+   * Qui seu avui a cada ple, per saber quins dels 283 tenen fitxa pròpia.
+   *
+   * Les fitxes de persona només existeixen als 464 municipis amb càrrecs
+   * llegits de la seu electrònica, i dins d'aquests, només de qui hi seu ara:
+   * un alcalde del 1983 no en té cap. L'adreça surt de `adrecesRegidors()`
+   * sobre la mateixa llista i en el mateix ordre que fa servir el generador de
+   * pàgines, que és l'única manera que l'enllaç i el directori no divergeixin
+   * quan dues persones del mateix ple es diuen igual.
+   */
+  const plens = await db
+    .select({
+      municipalityId: municipalityMetrics.municipalityId,
+      data: municipalityMetrics.data,
+    })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "carrecs"));
+  const fitxesDelPle = new Map<number, Map<string, { adreca: string; foto: string | null }>>();
+  for (const fila of plens) {
+    const carrecs = (fila.data as { carrecs?: CarrecDelPle[] } | null)?.carrecs;
+    if (!Array.isArray(carrecs)) continue;
+    const adreces = adrecesRegidors(carrecs);
+    const perNom = new Map<string, { adreca: string; foto: string | null }>();
+    for (const carrec of carrecs) {
+      const clau = normalizePersonName(carrec.nom);
+      // Dos noms iguals al mateix ple: no se sap quin dels dos és, i penjar la
+      // carrera de l'un a la fitxa de l'altre és el pitjor error possible en
+      // una pàgina que porta el nom al títol. Es queda sense fitxa i va al
+      // municipi, que sempre és cert.
+      if (perNom.has(clau)) {
+        perNom.set(clau, { adreca: "", foto: null });
+        continue;
+      }
+      perNom.set(clau, {
+        adreca: adreces.get(carrec)!,
+        foto: carrec.fotoPetita ?? carrec.foto ?? null,
+      });
+    }
+    fitxesDelPle.set(fila.municipalityId, perNom);
+  }
 
   const persones = new Map<string, SaltPersona>();
   const totsElsQid = new Set<string>();
@@ -731,6 +810,13 @@ export async function loadTrajectoriaElectes(db: Db): Promise<TrajectoriaData | 
 
       const ja = persones.get(p.qid);
       const municipi = { nom: muni.name, slug: muni.slug };
+      // On porta el seu nom des d'aquesta pàgina, que penja de /trajectoria/.
+      const alPle = fitxesDelPle.get(fila.municipalityId)?.get(normalizePersonName(p.nom));
+      const propia = alPle !== undefined && alPle.adreca !== "";
+      const fitxa = propia
+        ? `../m/${muni.slug}/regidor/${alPle!.adreca}/`
+        : `../m/${muni.slug}/#alcaldies`;
+      const foto = propia ? alPle!.foto : null;
       if (ja === undefined) {
         persones.set(p.qid, {
           qid: p.qid,
@@ -749,6 +835,8 @@ export async function loadTrajectoriaElectes(db: Db): Promise<TrajectoriaData | 
           })),
           ocupacions: p.ocupacions,
           aparellat: p.aparellat,
+          fitxa,
+          foto,
         });
       } else {
         // Segon municipi de la mateixa persona: s'hi afegeix el poble i
@@ -757,6 +845,13 @@ export async function loadTrajectoriaElectes(db: Db): Promise<TrajectoriaData | 
         if (primer > 0 && (ja.primerAny === 0 || primer < ja.primerAny)) ja.primerAny = primer;
         if (finals.length > 0) ja.ultimAny = Math.max(ja.ultimAny, ...finals);
         ja.aparellat = ja.aparellat || p.aparellat;
+        // Qui ha manat a dos pobles: mana la fitxa pròpia, si n'hi ha cap de
+        // les dues. L'historial d'un municipi on ja no hi seu és el destí de
+        // segona, i només s'hi va quan no n'hi ha cap de millor.
+        if (propia && !ja.fitxa?.includes("/regidor/")) {
+          ja.fitxa = fitxa;
+          ja.foto = foto;
+        }
       }
     }
   }

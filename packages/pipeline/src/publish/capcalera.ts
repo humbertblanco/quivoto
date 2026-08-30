@@ -50,6 +50,7 @@ const DESTINS: ReadonlyArray<{ clau: Destí; text: string; on: string }> = [
   { clau: "portada", text: "Observatori", on: "" },
   { clau: "947", text: "La llista", on: "els947.html" },
   { clau: "mapa", text: "Mapa", on: "mapa/" },
+  { clau: "partits", text: "Partits", on: "partit/" },
   { clau: "comparador", text: "Comparador", on: "comparador/" },
 ];
 
