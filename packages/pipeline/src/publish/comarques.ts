@@ -906,10 +906,27 @@ export function renderMapaComarca(
   // Un marge del 7 % del costat llarg, i mai menys de 12 unitats de les 1.600
   // del llenç: el Barcelonès fa 60 unitats i sense un mínim quedaria arran.
   const marge = Math.max(12, 0.07 * Math.max(x1 - x0, y1 - y0));
-  const vx = x0 - marge;
+  let vx = x0 - marge;
   const vy = y0 - marge;
-  const vw = x1 - x0 + 2 * marge;
+  let vw = x1 - x0 + 2 * marge;
   const vh = y1 - y0 + 2 * marge;
+
+  /*
+   * Un llenç molt més alt que ample deixa dues franges buides als costats: el
+   * dibuix s'ajusta a l'alçada màxima del full d'estil i s'encongeix al mig.
+   * Val més eixamplar el retall —més veïnat a banda i banda, que és context i
+   * no farciment— fins a un llenç poc més alt que ample.
+   *
+   * L'eixamplada té sostre a mig llenç de més. Sense sostre, l'Alt Urgell, que
+   * fa el triple d'alt que d'ample, quedaria fet un fil enmig d'un mapa que
+   * seria sobretot dels seus veïns.
+   */
+  const objectiu = 1.05;
+  if (vh > objectiu * vw) {
+    const volguda = Math.min(vh / objectiu, vw * 1.5);
+    vx -= (volguda - vw) / 2;
+    vw = volguda;
+  }
   const retalla = (n: number): string => n.toFixed(1);
 
   const propis = new Set(dins.map((m) => m.slug));
@@ -941,6 +958,8 @@ export function renderMapaComarca(
         aria-label="${escape(ambit)}, dins de Catalunya.">
         <path class="pais" d="${geometria.contorn}"/>
         <path class="aqui" d="${dins.map((m) => geometria.municipis[m.slug]!).join(" ")}"/>
+        <circle class="anella" cx="${retalla((x0 + x1) / 2)}" cy="${retalla((y0 + y1) / 2)}"
+          r="${retalla(Math.max(70, Math.hypot(x1 - x0, y1 - y0) / 2 + 25))}"/>
       </svg>
       <span>On cau</span>
     </div>`
@@ -1204,7 +1223,10 @@ function renderDispersio(
   const alt = ordenats[ordenats.length - 1]!;
   if (alt.value === baix.value) return "";
   const mig = medianOf(ordenats.map((v) => v.value));
-  const on = (v: number): string => ((100 * (v - baix.value)) / (alt.value - baix.value)).toFixed(2);
+  // Del 4 % al 96 % i no de 0 a 100: la marca fa 14 px i als extrems mitja
+  // marca quedava fora de la caixa arrodonida.
+  const on = (v: number): string =>
+    (4 + (92 * (v - baix.value)) / (alt.value - baix.value)).toFixed(2);
   const euros = (v: number): string => `${number(Math.round(v))} €`;
 
   const marques = ordenats
@@ -1410,7 +1432,10 @@ const COMARCA_CSS = TERRITORI_CSS + `
   border:2.5px solid var(--ink);border-radius:var(--r-s);box-shadow:var(--ombra);padding:5px}
 @media (max-width:560px){ .mapa-comarca .llenc{grid-template-columns:minmax(0,1fr) 86px} }
 .mapa-comarca .on-cau .pais{fill:var(--vora);stroke:var(--ink);stroke-width:1.5}
-.mapa-comarca .on-cau .aqui{fill:var(--coral);stroke:var(--ink);stroke-width:1}
+.mapa-comarca .on-cau .aqui{fill:var(--coral);stroke:var(--ink);stroke-width:.5}
+/* Sense anella no es troba: el Priorat dins de Catalunya fa dos mil·límetres
+   d'aquest dibuix, i és la mateixa solució que el mapa petit de la fitxa. */
+.mapa-comarca .on-cau .anella{fill:none;stroke:var(--ink);stroke-width:1.5}
 .mapa-comarca figcaption{font-size:.8rem;color:var(--ink-suau);line-height:1.4;margin-top:var(--e1)}
 .mapa-comarca figcaption a{font-weight:800}
 
@@ -1429,8 +1454,8 @@ const COMARCA_CSS = TERRITORI_CSS + `
   opacity:1;left:4px;width:6px;top:2px;bottom:2px}
 /* La mediana surt de la caixa per dalt i per baix: ha de guanyar visualment a
    les 900 marques d'una comarca gran sense pintar-se d'un altre color. */
-.dispersio .mig{position:absolute;left:var(--p);top:-7px;bottom:-7px;width:4px;margin-left:-2px;
-  background:var(--coral);border:1.5px solid var(--ink);border-radius:3px}
+.dispersio .mig{position:absolute;left:var(--p);top:-7px;bottom:-7px;width:8px;margin-left:-4px;
+  background:var(--coral);border:2px solid var(--ink);border-radius:4px}
 .dispersio .extrems{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:var(--e1);
   grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 .dispersio .extrems li{display:flex;flex-direction:column;gap:1px}

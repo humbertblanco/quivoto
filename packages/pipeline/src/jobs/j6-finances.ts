@@ -6,8 +6,9 @@ import { withRun } from "../lib/run";
  * J6 — els comptes dels 947 ajuntaments.
  *
  * Quatre fonts obertes del Consorci AOC, totes amb cobertura completa i sèrie
- * llarga: la liquidació pressupostària per capítols des del 2011, el deute viu
- * des del 2010, el període mitjà de pagament a proveïdors i el padró.
+ * llarga: la liquidació pressupostària per capítols des del 2010, el deute viu
+ * des del 2010, el període mitjà de pagament a proveïdors des del juny del 2018
+ * i el padró des del 2009.
  *
  * Amb això es pot dir, amb la mateixa vara per a tothom, si un ajuntament
  * estalvia o es descapitalitza, si el deute puja o baixa, si executa les
@@ -21,9 +22,51 @@ const DEUTE = "34db8dc5-ad5e-4bf0-83cc-537cd8671342";
 const PMP = "eecca986-a51b-4b0e-a03b-6fc8bb71d387";
 const PADRO = "e0be5678-0bdd-48e0-99af-05cd5404a9a5";
 
-/** Des d'on ingerim. Dos mandats sencers enrere és prou context. */
-const FROM_YEAR = 2015;
+/**
+ * Des d'on ingerim. **El límit el posa la font, no nosaltres.**
+ *
+ * Fins ara aquí hi deia 2015 «perquè dos mandats sencers enrere és prou
+ * context», i era una decisió nostra que amagava mitja sèrie. Comprovat contra
+ * el portal, conjunt per conjunt:
+ *
+ *   · Liquidació (81f18313): del 2008 al 2025, però el 2008 només hi ha 2 ens i
+ *     el 2009 n'hi ha 6 —soroll, no una sèrie—. El primer any de debò és el
+ *     **2010**, amb 1.195 ens i 16.182 files, i d'allà endavant no baixa de
+ *     1.200 fins al 2025 (1.074 ens: exercici encara a mig liquidar).
+ *   · Deute viu (34db8dc5): del **2010** al 2025, entre 982 i 1.002 ens cada
+ *     any. Sèrie completa, sense cap forat.
+ *   · Padró (e0be5678): del **2009** al 2026, 946-948 ens cada any. Comença un
+ *     any abans que la liquidació, però un padró sense comptes al costat no
+ *     serveix per a cap «per habitant», i per això arrenquem tots alhora.
+ *   · PMP (eecca986): la primera mesura és del **30 de juny del 2018**. Aquí el
+ *     límit sí que és de la font, i cap valor de FROM_YEAR no el mourà.
+ *
+ * O sigui que 2010 és el terra real d'aquesta feina, i el PMP arrenca vuit anys
+ * més tard que la resta.
+ *
+ * ─── El que això costa ──────────────────────────────────────────────────────
+ * La liquidació es demana any per any (vegeu més avall el sostre de CKAN):
+ * passar del 2015 al 2010 són **cinc consultes més**, no cinc-centes. La
+ * consulta més gruixuda de tota la sèrie nova és la del 2012, amb 20.730 files,
+ * que continua ben lluny del sostre de 32.000. El deute i el padró es demanen
+ * d'una sola consulta cadascun i no n'afegeixen cap.
+ */
+const FROM_YEAR = 2010;
+
+/**
+ * Últim exercici de liquidació que demanem. El padró i el deute no en porten,
+ * de sostre: el padró ja publica el 2026 i entra sol, cosa que crea una fila
+ * d'any amb població i sense comptes. És un forat de debò —aquell exercici
+ * encara no s'ha liquidat— i qui dibuixa la despesa ja el descarta perquè el
+ * total per habitant no és positiu.
+ */
 const TO_YEAR = 2025;
+
+/**
+ * Primera mesura de període mitjà de pagament que publica el conjunt:
+ * 2018-06-30. No és una tria nostra i no es pot allargar.
+ */
+const PMP_DES_DE = 2018;
 
 type Row = Record<string, string | number | null>;
 
@@ -100,6 +143,15 @@ export async function j6Finances(db: Db): Promise<void> {
         else if (chapter <= 7) bucket.incomeCapital += amount;
         continue;
       }
+      /**
+       * El repartiment per capítols és **el mateix del 2010 al 2025**: els dos
+       * tipus de partida i els nou capítols hi són tots els anys. L'única cosa
+       * que canvia és que el capítol 5 de despesa —el fons de contingència, que
+       * va crear la Llei orgànica 2/2012 d'estabilitat pressupostària— no surt
+       * cap any abans del 2013 (0 files el 2012, 111 el 2013, 368 el 2015). No
+       * el fem servir per a res, o sigui que cap dels totals d'aquí sota no en
+       * depèn i la sèrie es pot llegir sencera.
+       */
       if (chapter === 1) bucket.expensePersonnel += amount;
       else if (chapter === 2) bucket.expenseGoods += amount;
       else if (chapter === 3) bucket.expenseInterest += amount;
@@ -141,7 +193,7 @@ export async function j6Finances(db: Db): Promise<void> {
       const municipalityId = resolve(row.CODI_ENS);
       if (!municipalityId || !row.DATA_ACTUALITZACIO) continue;
       const year = Number(String(row.DATA_ACTUALITZACIO).slice(0, 4));
-      if (!Number.isFinite(year) || year < FROM_YEAR) continue;
+      if (!Number.isFinite(year) || year < PMP_DES_DE) continue;
       const key = `${municipalityId}|${year}`;
       const list = pmpByYear.get(key);
       if (list) list.push(num(row.PERIODE_MIG_PAGAMENT));

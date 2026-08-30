@@ -95,9 +95,9 @@ const TAULES = {
   edatQuinquennal: "censph/539/5976",
   /** Indicadors d'edat: proporcions i edat mitjana. 947 municipis. */
   indicadorsEdat: "censph/16400/19880",
-  /** Padró municipal continu. 947 municipis, 1998-2025. */
+  /** Padró municipal continu. 947 municipis, 1998-2025: la demanem sencera. */
   padro: "pmh/446/477",
-  /** Padró d'espanyols residents a l'estranger (CERA). 947 municipis. */
+  /** Padró d'espanyols residents a l'estranger (CERA). 947 municipis, 2009-2026. */
   cera: "phre/3697/3577",
 } as const;
 
@@ -158,12 +158,60 @@ const MANDAT_ANTERIOR = 2019;
 const SERIE_CENS = [2021, 2022, 2023, 2024, 2025] as const;
 
 /**
- * Els anys de padró que demanem. La sèrie de l'origen va del 1998 al 2025, però
- * només ens calen els que serveixen per a alguna cosa: els tres inicis de
- * mandat i la sèrie recent. **Demanar-ne onze de cop fa que l'Idescat respongui
- * 504**; l'adaptador ho parteix de quatre en quatre.
+ * Els anys de padró que demanem: **la taula sencera, del 1998 al 2025**.
+ *
+ * Abans aquí hi havia set anys triats a mà —2015, 2019 i del 2021 al 2025— amb
+ * l'argument que «només ens calen els que serveixen per a alguna cosa». No era
+ * cert: la fitxa dibuixa la corba d'empadronats, i una corba que salta del 2015
+ * al 2019 amb una recta enmig diu que aquells quatre anys no s'hi va moure
+ * ningú. La retallàvem nosaltres, no la font.
+ *
+ * Comprovat contra l'API el 30 d'agost del 2026: `pmh/446/477` té la dimensió
+ * YEAR amb 28 categories, del 1998 al 2025, per als 948 codis MUN (947
+ * municipis més la fila TOTAL, que és Catalunya). L'`updated` que declara la
+ * taula és 2025-12-12.
+ *
+ * ─── El que això costa ──────────────────────────────────────────────────────
+ * **Demanar-ne onze de cop fa que l'Idescat respongui 504**, i per això
+ * l'adaptador ho parteix de quatre en quatre. Passar de 7 anys a 28 vol dir
+ * passar de 2 crides a 7: **cinc peticions més**, no cent. Cronometrada, la
+ * crida de 1998-2001 per als 948 municipis triga 25 s, o sigui que la sèrie
+ * sencera són uns tres minuts d'una API que ens serveix les dades de franc.
+ *
+ * ─── Els forats són de debò ─────────────────────────────────────────────────
+ * Els primers anys tenen cel·les amb estat `..` que **no són zeros**: són
+ * municipis que encara no existien. Comprovat a la crida 1998-2001: la Canonja
+ * (segregada de Tarragona) no té xifra fins al 2010, i la Palma de Cervelló i
+ * Riu de Cerdanya no en tenen el 1998. Es desen com a `valor: null` i qui les
+ * dibuixi ho ha de fer com un forat, no saltant-se l'any.
  */
-const SERIE_PADRO = [2015, 2019, 2021, 2022, 2023, 2024, 2025] as const;
+const SERIE_PADRO = Array.from({ length: 2025 - 1998 + 1 }, (_, i) => 1998 + i);
+
+/**
+ * Canvi de metodologia enmig de la sèrie del padró, tal com el declara la
+ * mateixa API al camp `note` de la taula. Va al costat de la corba: qui miri
+ * els anys del final ha de saber que no li estan comptant el mateix detall que
+ * als del principi.
+ */
+export const NOTA_PADRO =
+  "A partir del 2023 el Padró municipal d'habitants només publica la xifra de població dels municipis, " +
+  "les comarques i Aran i les províncies. Abans en publicava més desagregacions. La xifra total de " +
+  "Catalunya s'ofereix a títol informatiu.";
+
+/**
+ * Els anys del padró de residents a l'estranger (CERA), que **no** és cap taula
+ * del cens i no té per què acabar-se on s'acaba el cens.
+ *
+ * Anava enganxat a `SERIE_CENS` per comoditat nostra, i això li retallava tretze
+ * anys pel davant i un pel darrere. Comprovat contra l'API: `phre/3697/3577` té
+ * YEAR del 2009 al 2026 —divuit anys— per als 948 codis MUN, amb `updated`
+ * 2026-04-22, i la crida 2009-2011 torna 2.844 cel·les amb només 3 buides. És
+ * una sèrie anual seguida, sense cap tall de metodologia declarat.
+ *
+ * Cost: de tres en tres, són 6 crides en comptes de 2. **Quatre peticions més**,
+ * uns 19 s cadascuna.
+ */
+const SERIE_CERA = Array.from({ length: 2026 - 2009 + 1 }, (_, i) => 2009 + i);
 
 /**
  * Els anys de les taules cares (edat any a any, edat quinquennal, creuament).
@@ -829,7 +877,7 @@ async function j18Dades(db: Db, tots: Municipi[]): Promise<void> {
       2,
     );
     const padro = await demana(TAULES.padro, { SEX: ["TOTAL"] }, SERIE_PADRO, 4);
-    const cera = await demana(TAULES.cera, { SEX: ["TOTAL"] }, SERIE_CENS, 3);
+    const cera = await demana(TAULES.cera, { SEX: ["TOTAL"] }, SERIE_CERA, 3);
     const edatAnyAAny = await demana(
       TAULES.edatAnyAAny,
       { SEX: ["TOTAL"], AGE: ["Y000", "Y001", "Y002"] },
@@ -935,6 +983,10 @@ async function j18Dades(db: Db, tots: Municipi[]): Promise<void> {
         afegeix("pct65iMes", any, valorDe(fonts.edat, any, "PP_Y_GE65"));
         afegeix("pct0a15", any, valorDe(fonts.edat, any, "PP_Y00_15"));
         afegeix("edatMitjana", any, valorDe(fonts.edat, any, "AGE_MEAN"));
+      }
+      // El CERA té sèrie pròpia i molt més llarga que la del cens: es recorre a
+      // part, com el padró, i no s'escapça per fer-la coincidir amb les altres.
+      for (const any of SERIE_CERA) {
         afegeix("residentsAEstranger", any, valorDe(fonts.cera, any, "TOTAL"));
       }
       for (const any of ANYS_MANDAT) {

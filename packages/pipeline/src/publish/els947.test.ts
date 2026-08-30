@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  clauCandidatura,
   clauCerca,
+  clausOrdre,
+  ORDRES,
+  ordresDisponibles,
   filtresDisponibles,
   lectorDe,
   llindarsDe,
@@ -295,5 +299,242 @@ describe("lectorDe", () => {
     // i silenciosa. Ara la que no s'ha demanat és la que peta.
     expect(() => llegeix("costGovern")).toThrow(/KINDS_ELS947/);
     expect(() => te("mocions")).toThrow(/KINDS_ELS947/);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// El desbordament, les sigles clicables i les tres coses noves
+// ───────────────────────────────────────────────────────────────────────────
+
+/** El mateix conjunt de sempre, però amb la renda que ara publica la llista. */
+const ambRenda = conjunt.map((f, i) => ({ ...f, rn: 12000 + i * 100, ra: 2023 }));
+
+describe("les sigles, que desplaçaven la pàgina sencera", () => {
+  const html = renderEls947(ambRenda, "2026-08-30", new Set(ambRenda.map((f) => f.s)));
+  const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+
+  it("no porten «nowrap» dins de la llista, que és el que feia 522 px en una pantalla de 320", () => {
+    // «.sigla» de RADIOGRAFIA_CSS en porta i hi té raó —dins d'una frase de
+    // titular una sigla partida no es llegeix—, i aquesta pàgina l'ha de desfer
+    // per a les seves 947: n'hi ha de 63 caràcters, i amb «nowrap» fan 498 px.
+    const regla = css.slice(css.indexOf(".mana .sigla{"), css.indexOf("}", css.indexOf(".mana .sigla{")));
+    expect(regla).toContain("white-space:normal");
+    expect(regla).toContain("overflow-wrap:anywhere");
+    expect(regla).toContain("max-width:100%");
+  });
+
+  it("i la caixa de toc arriba als 44 px sense fer la fila més alta", () => {
+    const regla = css.slice(css.indexOf(".mana .sigla{"), css.indexOf("}", css.indexOf(".mana .sigla{")));
+    expect(regla).toContain("min-height:30px");
+    // 30 de pastilla més 4 amunt i 10 avall són els 44 que demana un dit. No
+    // van repartits: amunt hi ha l'enllaç de la comarca, i amb 7 la caixa hi
+    // entrava 1 px i li prenia els tocs de la vora.
+    expect(css).toContain(".mana a.sigla::after{content:\"\";position:absolute;inset:-4px -2px -10px}");
+  });
+});
+
+describe("les 947 pastilles, ara clicables", () => {
+  const ambSigles = (extra: Partial<Els947Row>): string =>
+    renderEls947([fila("x", { a: "Ada Colau Ballano", ...extra })], "2026-08-30", new Set(["x"]));
+
+  it("porten a la pàgina del partit quan sabem de quin és", () => {
+    const p = ambSigles({ g: "PSC-CP", b: "psc", ac: "#E30613" });
+    expect(p).toContain('href="./partit/psc/"');
+    expect(p).toContain('class="sigla"');
+    expect(p).toMatch(/<a class="sigla"[^>]*>PSC-CP<\/a>/);
+  });
+
+  it("el codi d'agrupació mana sobre les sigles, com a tot arreu", () => {
+    // «EPCP-C» és El Prat en Comú Podem: endevinar-ho per les sigles no surt,
+    // i el codi d'agrupació sí que ho diu.
+    expect(ambSigles({ g: "EPCP-C", b: "comuns" })).toContain('href="./partit/comuns/"');
+  });
+
+  it("una llista local es queda sense enllaç, que és el que toca", () => {
+    // Sota «AGRUPACIÓ D'ELECTORS» hi ha centenars de candidatures que no tenen
+    // res a veure: ajuntar-les diria que existeix un partit que no existeix.
+    const p = ambSigles({ g: "AGRUPACIÓ D'ELECTORS-PROGRÉS MUNICIPAL", b: "local", ac: null });
+    expect(p).not.toContain("partit/local/");
+    expect(p).toMatch(/<b class="sigla"/);
+  });
+
+  it("la cara i la pastilla comparteixen el color de la força", () => {
+    const p = ambSigles({ g: "PSC-CP", b: "psc", ac: null, ar: null });
+    const colors = [...p.matchAll(/--c:(#[0-9A-Fa-f]{6})/g)].map((m) => m[1]!.toLowerCase());
+    expect(new Set(colors).size).toBe(1);
+  });
+});
+
+describe("la renda per persona, la dada que faltava per comparar pobles", () => {
+  it("posa la mediana al filtre, i només si prou municipis la tenen", () => {
+    const l = llindarsDe(ambRenda);
+    expect(l.renda).toBe(Math.round(mediana(ambRenda.map((f) => f.rn!))!));
+    expect(l.ambRenda).toBe(ambRenda.length);
+    expect(filtresDisponibles(l).map((f) => f.clau)).toContain("renda");
+    // Amb quatre municipis amb dada, una mediana diu més del forat que dels pobles.
+    const quasiBuit = llindarsDe(conjunt.map((f, i) => ({ ...f, rn: i < 5 ? 12000 : null })));
+    expect(quasiBuit.renda).toBeNull();
+    expect(filtresDisponibles(quasiBuit).map((f) => f.clau)).not.toContain("renda");
+  });
+
+  it("un forat no és una renda baixa: sense xifra no hi ha marca", () => {
+    const l = llindarsDe(ambRenda);
+    expect(marques(ambX({ ...ambRenda[0]!, rn: null }), l)).not.toContain("renda");
+    expect(marques(ambX(ambRenda[0]!), l)).toContain("renda");
+  });
+
+  it("la pastilla porta l'any, perquè no tothom la té del mateix", () => {
+    const l = llindarsDe(ambRenda);
+    expect(pastilles(ambX({ ...ambRenda[0]!, rn: 14350, ra: 2022 }), l).join("")).toContain(
+      "14.350 € de renda per persona (2022)",
+    );
+    expect(pastilles(ambX({ ...ambRenda[0]!, rn: null }), l).join("")).not.toContain("renda per persona");
+  });
+
+  it("no diu que un poble sigui pobre, i diu que això no ho decideix l'ajuntament", () => {
+    const html = renderEls947(ambRenda, "2026-08-30", new Set());
+    expect(html).toContain("Hi entra menys de");
+    expect(html).not.toMatch(/pobl?es? (més )?pobres?|municipis pobres/i);
+    expect(html).toContain("La renda no la decideix l'ajuntament");
+  });
+
+  it("cita l'INE, que és la condició per poder-ne publicar la xifra", () => {
+    const html = renderEls947(ambRenda, "2026-08-30", new Set());
+    expect(html).toContain("Institut Nacional d'Estadística");
+    expect(html).toContain("dades extretes del web de");
+    expect(html).toContain("www.ine.es");
+  });
+
+  it("i diu quants la tenen, perquè l'INE en tapa uns quants", () => {
+    const html = renderEls947(ambRenda, "2026-08-30", new Set());
+    expect(html).toContain("secret estadístic");
+    expect(html).toContain(`La renda per persona la tenen ${ambRenda.length}`);
+  });
+});
+
+describe("ordenar la llista", () => {
+  const html = renderEls947(ambRenda, "2026-08-30", new Set(ambRenda.map((f) => f.s)));
+
+  it("cada fila porta les cinc xifres que no es poden deduir, en un sol atribut", () => {
+    // Cinc atributs «data-» per fila serien 4.735 atributs a la pàgina. I la
+    // població no hi és: l'ordre en què la llista ja ve escrita és el seu, i
+    // repetir-la eren 4,3 kB de pàgina —2,7 comprimida— per no dir res de nou.
+    expect(html.match(/ data-o="/g) ?? []).toHaveLength(ambRenda.length);
+    const primera = html.match(/ data-o="([^"]*)"/)![1]!;
+    expect(primera.split("|")).toHaveLength(5);
+    // La primera xifra és la renda, no la població: la població no hi viatja.
+    expect(primera.split("|")[0]).toBe(String(ambRenda[0]!.rn));
+    expect(primera.split("|")).not.toContain(String(ambRenda[0]!.p));
+  });
+
+  it("el buit hi va com a buit i no com a zero", () => {
+    const sense = renderEls947([fila("x", { rn: null, d: null, y: null, f: null })], "2026-08-30", new Set());
+    expect(sense).toContain('data-o="||||3"');
+    expect(clausOrdre(ambX(fila("x", { p: 10, rn: null, d: 5, y: null, f: null, t: 0 })))).toBe("|5|||0");
+  });
+
+  it("hi ha un ordre que mana des del primer moment, i el navegador ho fa complir sol", () => {
+    // Camps de ràdio: no cal cap línia de JavaScript perquè només un pugui manar.
+    expect(html).toContain('type="radio" name="ordre" id="o-pob" value="pob" checked');
+    for (const o of ORDRES) expect(html).toContain(`id="o-${o.clau}"`);
+    expect(html).toContain(`${ambRenda.length} municipis, ${ORDRES[0]!.avall}`);
+  });
+
+  it("es pot ordenar per renda, que és per al que serveix tenir-la", () => {
+    expect(ORDRES.map((o) => o.clau)).toContain("renda");
+    expect(html).toContain("de més renda per persona a menys");
+    expect(html).toContain("de menys renda per persona a més");
+  });
+
+  it("cap ordre no es presenta com un rànquing de gestió", () => {
+    expect(html).toContain("rànquing de gestió");
+    expect(html).toContain("un forat no és un zero");
+    for (const o of ORDRES) {
+      expect(o.avall).not.toMatch(/millor|pitjor|bo|dolent|rànquing/i);
+      expect(o.amunt).not.toMatch(/millor|pitjor|bo|dolent|rànquing/i);
+    }
+  });
+
+  it("el botó de capgirar arriba als 44 px, com la resta", () => {
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    const regla = css.slice(css.indexOf(".capgira{"), css.indexOf("}", css.indexOf(".capgira{")));
+    expect(regla).toContain("min-height:44px");
+  });
+
+  it("sense JavaScript no s'ensenya: uns botons que no fan res enganyen", () => {
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css).toContain(".ordre{margin:var(--e3) 0 0;display:none}");
+    expect(css).toContain(".js .ordre{display:block}");
+  });
+});
+
+describe("quants municipis queden a cada filtre", () => {
+  const html = renderEls947(ambRenda, "2026-08-30", new Set(ambRenda.map((f) => f.s)));
+
+  it("cada casella té el seu comptador, i cap altre", () => {
+    const l = llindarsDe(ambRenda);
+    for (const f of filtresDisponibles(l)) expect(html).toContain(`<span class="quants" id="q-${f.clau}"></span>`);
+    expect(html.match(/class="quants"/g) ?? []).toHaveLength(filtresDisponibles(l).length);
+  });
+
+  it("un filtre que el conjunt no aguanta tampoc no té comptador", () => {
+    const sense = renderEls947(
+      ambRenda.map((f) => ({ ...f, y: null })),
+      "2026-08-30",
+      new Set(),
+    );
+    expect(sense).not.toContain('id="q-opac"');
+    expect(sense).toContain('id="q-deute"');
+  });
+
+  it("sense JavaScript no hi surt cap parèntesi buit", () => {
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css).toContain(".quants{display:none}");
+    expect(css).toContain(".js .quants{display:inline}");
+  });
+
+  it("la pàgina explica què vol dir la xifra de cada casella", () => {
+    expect(html).toContain("quants dels que ara es veuen hi entrarien");
+  });
+});
+
+describe("la clau d'una candidatura", () => {
+  it("s'escriu una sola vegada, i per això les dues bandes coincideixen", () => {
+    // El mapa es construïa amb un byte nul enmig i es llegia amb un espai: no
+    // encertava mai, 0 de 947, i el codi d'agrupació de la Generalitat —que és
+    // el que no s'ha d'endevinar— no s'arribava a fer servir enlloc.
+    const mapa = new Map([[clauCandidatura(160, "B EN COMÚ"), "comuns"]]);
+    expect(mapa.get(clauCandidatura(160, "B EN COMÚ"))).toBe("comuns");
+    expect(mapa.get(`160 B EN COMÚ`)).toBeUndefined();
+  });
+
+  it("no confon dos municipis amb les mateixes sigles", () => {
+    // «CM», «AM» i «UP» es repeteixen a pobles que no tenen res a veure.
+    expect(clauCandidatura(1, "AM")).not.toBe(clauCandidatura(2, "AM"));
+    expect(clauCandidatura(12, "3 AM")).not.toBe(clauCandidatura(123, "AM"));
+  });
+});
+
+describe("ordresDisponibles", () => {
+  it("no ofereix ordenar per una xifra que no té ningú", () => {
+    // Passa cada cop que J23 encara no s'ha passat: un botó «Renda per
+    // persona» ordenaria 947 buits i deixaria la llista igual dient «de més
+    // renda a menys», que és una pàgina que menteix sobre el que sap.
+    const sense = conjunt.map((f) => ambX({ ...f, rn: null }));
+    expect(ordresDisponibles(sense).map((o) => o.clau)).not.toContain("renda");
+    const amb = ambRenda.map((f) => ambX(f));
+    expect(ordresDisponibles(amb).map((o) => o.clau)).toContain("renda");
+  });
+
+  it("i el primer sempre hi és, que és el que la llista ja té escrit", () => {
+    expect(ordresDisponibles([]).map((o) => o.clau)).toEqual(["pob", "nom"]);
+  });
+
+  it("«data-o» té una casella per cada ordre de xifra, sempre les mateixes", () => {
+    // Si «clausOrdre» i les posicions es podien desincronitzar, ordenar per
+    // dones al ple hauria ordenat per actes sense petar enlloc.
+    const dExifra = ORDRES.filter((o) => o.de === "xifra");
+    expect(clausOrdre(ambX(fila("x"))).split("|")).toHaveLength(dExifra.length);
+    for (const [i, o] of dExifra.entries()) expect(o.i).toBe(i);
   });
 });

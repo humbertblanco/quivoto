@@ -208,12 +208,24 @@ export function renderSilueta(slug: string, opcions: OpcionsMapa = {}): string {
     : 0;
   const cx = capsa ? Math.round(capsa.x + capsa.ample / 2) : 0;
   const cy = capsa ? Math.round(capsa.y + capsa.alt / 2) : 0;
+  /*
+   * El punt de coral per als municipis que a la pantalla no arriben a res.
+   *
+   * Dels 947, la capsa mediana fa 36 x 43 unitats —a 300 px, uns 7 px de
+   * costat— i es veu perfectament. Els petits no: Puigdalber fa 4 x 6, que és
+   * mig píxel, i dins de l'anella no s'hi veia res. Quan la diagonal de la
+   * capsa baixa de 40 unitats (7,5 px a 300 px d'amplada) s'hi posa un disc
+   * perquè el poble hi sigui i no només hi sigui l'anella. Als altres no s'hi
+   * posa, perquè taparia la forma de veritat, que és millor que un punt.
+   */
+  const menut = capsa !== null && Math.hypot(capsa.ample, capsa.alt) < 40;
 
   return `<svg class="mapa mapa-silueta" viewBox="${escape(geometria.viewBox)}" role="img"
      style="width:100%;height:auto;display:block"
      aria-label="${escape(opcions.descripcio ?? "Mapa de Catalunya")}">
   <path d="${geometria.contorn}" fill="var(--vora)" stroke="var(--ink)" stroke-width="6" stroke-linejoin="round"/>
   <path d="${cami}" fill="var(--coral)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+  ${menut ? `<circle cx="${cx}" cy="${cy}" r="15" fill="var(--coral)" stroke="var(--ink)" stroke-width="5"/>` : ""}
   ${capsa ? `<circle cx="${cx}" cy="${cy}" r="${radi}" fill="none" stroke="var(--ink)" stroke-width="7"/>` : ""}
 </svg>`;
 }

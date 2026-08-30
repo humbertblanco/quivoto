@@ -213,15 +213,46 @@ describe("classificaPagina", () => {
   });
 
   /**
-   * Reus respon 200 amb 2 kB de verificació de bot. Comptar-ho com un mòdul
-   * buit ens deia «Reus no publica càrrecs», que és fals: el que passa és que
-   * d'allà no en surt res sense navegador.
+   * Una pàgina que no arriba no és un mòdul buit: comptar-ho igual ens deia
+   * «aquest municipi no publica càrrecs», que és fals.
    */
   it("no confon una pàgina que no ha arribat amb un mòdul buit", () => {
     expect(classificaPagina('<html><body><script src="/ruxitagentjs.js"></script></body></html>')).toBe(
       "bloquejada",
     );
     expect(classificaPagina("")).toBe("bloquejada");
+  });
+
+  /**
+   * El cas de Reus, llegit de debò el 30-08-2026: no és cap verificació de bot
+   * —amb navegador i amb galetes arriba igual— sinó l'avís que aquella seu està
+   * donada de baixa. Són dues coses diferents i demanen decisions diferents:
+   * davant d'un bloqueig es torna a provar d'una altra manera; davant d'una
+   * baixa, no hi ha res a fer. La pàgina arriba amb l'agent de Dynatrace
+   * injectat al davant, i per això el text és l'única cosa que la distingeix.
+   */
+  it("reconeix una seu donada de baixa i no la compta com a bloqueig", () => {
+    const reus =
+      "<html><body>" +
+      '<script src="/ruxitagentjs_ICA15789.js"></script>' +
+      "<center><table><tr><td>Aquest lloc web és inactiu. Contacteu amb l'administrador.</td>" +
+      "</tr></table></center></body></html>";
+    expect(classificaPagina(reus)).toBe("inactiva");
+    expect(motiuDeLaPagina("inactiva")).toBe("seu-e-inactiva");
+  });
+
+  /** El mateix text amb l'accent escapat, que és com el serveixen alguns ens. */
+  it("també la reconeix amb l'accent escapat", () => {
+    expect(classificaPagina("<body>Aquest lloc web &eacute;s inactiu.</body>")).toBe("inactiva");
+  });
+
+  /**
+   * L'ordre importa: la pàgina de baixa també fa dos quilobytes i tampoc no té
+   * títol, o sigui que si la comprovació de mida anés primer no s'arribaria mai
+   * a mirar-ne el text.
+   */
+  it("la baixa mana per damunt de la comprovació de mida", () => {
+    expect(classificaPagina("Aquest lloc web és inactiu.")).toBe("inactiva");
   });
 
   it("una pàgina sencera sense càrrecs és un mòdul buit", () => {
@@ -239,9 +270,10 @@ describe("motiuDeLaPagina", () => {
    * una altra font, la pàgina bloquejada vol un navegador i el mòdul buit vol
    * que algú vagi a preguntar-ho a l'ajuntament.
    */
-  it("separa el Tableau, la pàgina que no arriba i el mòdul buit", () => {
+  it("separa el Tableau, la pàgina que no arriba, la seu de baixa i el mòdul buit", () => {
     expect(motiuDeLaPagina("tableau")).toBe("modul-tableau");
     expect(motiuDeLaPagina("bloquejada")).toBe("pagina-bloquejada");
+    expect(motiuDeLaPagina("inactiva")).toBe("seu-e-inactiva");
     expect(motiuDeLaPagina("modul-buit")).toBe("modul-buit");
   });
 });
@@ -393,10 +425,21 @@ describe("informe dels municipis més grans", () => {
 
   /** Reus i Terrassa no són el mateix problema, i la línia ho ha de dir. */
   it("quan no hi ha cap càrrec, explica quina paret hem trobat", () => {
-    expect(liniaInforme({ ...base, municipi: "Reus", poblacio: 111_601, totalCarrecs: 0, ambFoto: 0, motiu: "pagina-bloquejada" }))
-      .toBe("Reus (111.601 hab.): cap càrrec llegit — seu-e respon 200 amb un cos que no és la pàgina");
+    expect(liniaInforme({ ...base, municipi: "Reus", poblacio: 111_601, totalCarrecs: 0, ambFoto: 0, motiu: "seu-e-inactiva" }))
+      .toBe("Reus (111.601 hab.): cap càrrec llegit — seu-e diu que aquesta seu està inactiva");
     expect(liniaInforme({ ...base, municipi: "Terrassa", poblacio: 233_270, totalCarrecs: 0, ambFoto: 0, motiu: "fora-de-seu-e" }))
       .toContain("cap slug de seu-e no respon");
+  });
+
+  /**
+   * El motiu del Tableau ha de dir també què hi ha darrere: comprovat a l'API
+   * de CKAN que el conjunt que el nodreix no té columna de fotografia, i sense
+   * dir-ho la línia convida a tornar-hi a buscar cares que no existeixen.
+   */
+  it("el motiu del Tableau diu que darrere no hi ha cap fotografia", () => {
+    const linia = liniaInforme({ ...base, municipi: "Manresa", totalCarrecs: 0, ambFoto: 0, motiu: "modul-tableau" });
+    expect(linia).toContain("Tableau de l'AOC");
+    expect(linia).toContain("no té columna de fotografia");
   });
 
   /**
@@ -414,7 +457,7 @@ describe("informe dels municipis més grans", () => {
       altraFont: { font: "Tarragona · avís legal", ambFoto: 27, totalCarrecs: 27 },
     };
     expect(liniaInforme(d)).toContain("27/27 amb foto · font: Tarragona · avís legal");
-    expect(liniaInforme(d)).toContain("a seu-e, la pàgina serveix un Tableau");
+    expect(liniaInforme(d)).toContain("a seu-e, la pàgina serveix el Tableau de l'AOC");
     expect(teTotesLesCares(d)).toBe(true);
   });
 

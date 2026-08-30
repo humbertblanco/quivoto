@@ -171,23 +171,20 @@ const CAPA_PARTIT: Capa = {
 };
 
 /**
- * Les dues xifres que el mapa sap pintar i que la fila dels 947 encara no porta.
+ * El sou de l'alcaldia, que el mapa sap pintar i la fila dels 947 encara no duu.
  *
- * Són a la base —`municipality_metrics`, kind «riquesa» (J23, la renda neta per
- * persona de l'Atlas de distribución de renta de los hogares de l'INE) i kind
- * «retribucions» (J22, el que el Ministeri publica del sou de cada alcaldia)—
- * però no passen per `loadEls947()`, que és qui munta la fila que arriba aquí.
- * Afegir-les-hi és una línia a `els947.ts` i toca un fitxer que no és d'aquest
- * encàrrec, o sigui que aquí s'hi llegeixen com a camps opcionals.
+ * És a la base —`municipality_metrics`, kind «retribucions», que és el que J22
+ * desa de l'Inventari del Ministeri— però no passa per `loadEls947()`, que és
+ * qui munta la fila que arriba aquí. Afegir-l'hi són quatre línies a
+ * `els947.ts`, que és un fitxer que no és d'aquest encàrrec; la renda per
+ * persona ja hi va arribar per aquest mateix camí i es llegeix de `r.rn`.
  *
- * Mentre la fila no els porti, les dues capes no tenen dada enlloc i el filtre
- * de més avall les treu del mapa: no surt cap botó, cap llegenda ni cap taca
- * grisa. **Un botó que pinta els 947 de gris és pitjor que un botó que no hi
- * és**, perquè el lector no pot saber si el que falla és la dada o el mapa.
+ * Mentre la fila no el porti, la capa no té dada enlloc i el filtre de més
+ * avall la treu del mapa: no surt ni botó, ni llegenda, ni taca grisa. **Un
+ * botó que pinta els 947 de gris és pitjor que un botó que no hi és**, perquè
+ * el lector no pot saber si el que falla és la dada o el mapa.
  */
 type FilaAmpliada = Els947Row & {
-  /** renda neta mitjana per persona i any, en euros */
-  rn?: number | null;
   /** el que cobra l'alcaldia en un any, en euros, quan és un sou i no assistències */
   sa?: number | null;
 };
@@ -323,7 +320,7 @@ const CAPES: Capa[] = [
     peu: `Renda neta mitjana per persona i any, de l'Atlas de distribución de renta de los hogares
       de l'INE. És el que queda a la llar després d'impostos i cotitzacions, repartit entre tots els
       seus membres. No ho decideix cap ajuntament: depèn de qui hi viu i de què hi treballa.`,
-    valor: (r) => (r as FilaAmpliada).rn ?? null,
+    valor: (r) => r.rn ?? null,
     format: (v) => `${milers(v)} €`,
   },
   {

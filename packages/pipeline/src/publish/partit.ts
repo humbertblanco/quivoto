@@ -1,15 +1,19 @@
 import { eq, sql, type SQLWrapper } from "drizzle-orm";
 import {
-  candidatures, electionResults, municipalities, municipalityMetrics, type Db,
+  candidatures, councillorMandates, electionResults, municipalities, municipalityMetrics,
+  people, type Db,
 } from "@quivoto/db";
 import { BRANDS_BY_ID, PARTY_BRANDS, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
+import { buildPeerGroups, medianOf } from "../derive/peers";
+import { nomLlegible, normalizePersonName, slugify } from "../lib/text";
 import { INDEXABLE, SITE } from "./config";
-import { tintaSobre as tintaDeContrast } from "./contrast";
+import { sobreColor, tintaSobre as tintaDeContrast } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { serieTemporal } from "./grafics";
 import { geometria } from "./mapa-catalunya";
 import { assignaSlugs, clau } from "./candidatura";
+import { adrecesRegidors } from "./regidor";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -39,6 +43,18 @@ import { peu } from "./peu";
  * regidors— la pàgina podia dir que un partit té l'alcaldia d'un poble on no
  * hi té cap regidor, que és una contradicció que el lector no pot resoldre i
  * nosaltres sí.
+ *
+ * ## Les tres coses que hi ha a sobre de la xifra
+ *
+ * Un partit no és una taca al mapa. A sobre del recompte hi ha, per aquest
+ * ordre, **qui** governa (les cares de les alcaldies, amb la regla dura que el
+ * nom i el retrat han de sortir de la mateixa persona: vegeu `PartitMunicipi`),
+ * **què cobren** aquelles alcaldies (`renderRetribucions`, on la xifra del
+ * Ministeri no es pot anomenar sou i la comparació és sempre dins del mateix
+ * tram de població) i **on** governa (`renderRenda`, que és context i no un
+ * resultat del partit). Cadascun d'aquests blocs desapareix sencer quan la font
+ * no hi arriba: la pàgina no ensenya mai una casella buida ni un zero que en
+ * realitat vol dir «no ho sabem».
  */
 
 const ELECCIO = "M20231";
@@ -258,8 +274,117 @@ export type PartitMunicipi = {
   totalSeats: number;
   alcaldia: boolean;
   mayorName: string | null;
+  /**
+   * El retrat de qui hi mana, a 160 px, tal com el publica el seu ajuntament.
+   *
+   * Hi és quan **les dues fonts anomenen la mateixa persona**: la composició del
+   * ple de la Generalitat, que és d'on surt `mayorName` i d'on surt que aquesta
+   * alcaldia és d'aquesta marca, i la llista de càrrecs de la seu electrònica,
+   * que és d'on surt la cara. Als 947 municipis hi ha 464 fitxes de seu-e, 455
+   * hi marquen algú com a alcaldia i 419 lliguen pel nom amb la font oficial;
+   * en 19 municipis les dues fonts diuen noms diferents, perquè hi ha hagut
+   * relleu i una de les dues encara no ho sap.
+   *
+   * En aquells 19 no s'hi posa cara. Publicar el nom d'una persona amb el
+   * retrat d'una altra és l'error que aquesta pàgina no es pot permetre, i el
+   * preu de la prudència és petit: 293 alcaldies amb cara en comptes de 326.
+   */
+  mayorPhoto: string | null;
+  /** L'adreça de la seva fitxa de persona dins del municipi, quan en té. */
+  mayorSlug: string | null;
   /** L'alcaldia surt d'una llista que tota sola ja té la majoria absoluta. */
   majoria: boolean;
+};
+
+/**
+ * El que consta que cobra l'alcaldia d'aquesta marca, dins d'un tram de mida.
+ *
+ * El tram és obligatori i no és cap escrúpol: la retribució d'una alcaldia la
+ * marca la mida del municipi molt més que el color del partit, i una marca que
+ * governa pobles de cinc-cents habitants sortiria «barata» al costat d'una que
+ * governa ciutats de cent mil encara que totes dues paguessin exactament el que
+ * toca. Els trams són els de la LOREG —els mateixos que decideixen quants
+ * regidors té un ple— i els posa `buildPeerGroups()`, que ja els fa servir tota
+ * la resta del web.
+ */
+export type PartitTramRetribucio = {
+  tram: string;
+  /** Alcaldies d'aquesta marca en aquest tram. */
+  alcaldies: number;
+  /** Les que consten a l'inventari del Ministeri. */
+  ambImport: number;
+  mediana: number | null;
+  /** La mediana de **totes** les alcaldies del tram amb import comunicat. */
+  medianaTram: number | null;
+  alcaldiesTram: number;
+};
+
+/**
+ * Les retribucions de les alcaldies d'aquesta marca.
+ *
+ * **L'import no és un sou i no se n'hi pot dir.** L'inventari del Ministeri
+ * suma, en una sola xifra per alcaldia, la retribució del càrrec i les
+ * assistències a plens i comissions, i les dues coses no són el mateix: de les
+ * 866 alcaldies que hi consten, 659 tenen dedicació (exclusiva o parcial) i
+ * cobren un sou de debò, 149 no en tenen cap i el que hi consta són
+ * assistències que es cobren per sessió, i 58 hi consten amb zero euros.
+ *
+ * Els 81 municipis que no hi són **no són municipis on l'alcaldia no cobri**:
+ * són municipis que no ho han comunicat al Ministeri. La pàgina ho diu amb
+ * aquestes paraules i mai amb un zero, perquè un zero al costat d'un nom és una
+ * acusació.
+ */
+export type PartitRetribucions = {
+  /** L'exercici de l'inventari. */
+  any: number | null;
+  /** Alcaldies d'aquesta marca. */
+  alcaldies: number;
+  ambImport: number;
+  /** Alcaldies seves que no consten a l'inventari: no ho han comunicat. */
+  senseComunicar: number;
+  /** De les que hi consten: quantes tenen dedicació exclusiva o parcial. */
+  ambDedicacio: number;
+  /** Quantes hi consten només amb assistències —«sense dedicació» amb import. */
+  nomesAssistencies: number;
+  /** Quantes hi consten amb zero euros. */
+  senseCapImport: number;
+  mediana: number | null;
+  media: number | null;
+  /** La mediana de les 866 alcaldies de Catalunya amb import comunicat. */
+  medianaCatalunya: number | null;
+  /** Municipis catalans amb dada a l'inventari, i de quants. */
+  municipisAmbDada: number;
+  municipisTotals: number;
+  /** La comparació honesta: dins de cada tram de població. */
+  trams: PartitTramRetribucio[];
+};
+
+/**
+ * La renda dels municipis on mana aquesta marca.
+ *
+ * És **context, no resultat**: un ajuntament no decideix quant guanya la gent
+ * que hi viu, i la sèrie de l'INE s'acaba justament l'any en què es va
+ * constituir aquest mandat. Les dues coses es diuen a la pàgina, i sense
+ * elles aquest bloc no s'hauria d'escriure.
+ *
+ * La mediana és **per municipi i no per persona**: diu com és el poble típic on
+ * governa la marca, no quant guanya de mitjana la gent que hi viu. Barrejar-ho
+ * faria que una marca amb l'alcaldia d'una capital i vint pobles petits sortís
+ * amb la renda de la capital.
+ */
+export type PartitRenda = {
+  any: number;
+  /** Alcaldies d'aquesta marca. */
+  municipis: number;
+  /** Les que tenen xifra de renda: l'INE tapa la dels més petits. */
+  ambDada: number;
+  mediana: number | null;
+  /** La mediana dels municipis de Catalunya amb dada, per poder-s'hi comparar. */
+  medianaCatalunya: number | null;
+  municipisCatalunyaAmbDada: number;
+  /** Els dos extrems de la seva llista, que diuen més que la mediana sola. */
+  mesBaixa: { name: string; slug: string; valor: number } | null;
+  mesAlta: { name: string; slug: string; valor: number } | null;
 };
 
 /** Una convocatòria de la sèrie llarga. `null` vol dir «no ho sabem», no «zero». */
@@ -337,6 +462,11 @@ export type PartitData = {
   /** El que cada sèrie llarga troba al 2023, per poder dir per què no la dibuixem. */
   serieRegidories2023: number;
   serieAlcaldies2023: number;
+
+  /** Retribucions de les seves alcaldies. `null` quan no en consta cap. */
+  retribucions: PartitRetribucions | null;
+  /** La renda dels pobles que governa. `null` quan la font encara no hi és. */
+  renda: PartitRenda | null;
 
   /** Les altres marques amb pàgina, per poder-hi saltar sense tornar enrere. */
   altres: { id: string; sigles: string; color: string; alcaldies: number; regidories: number }[];
@@ -736,6 +866,93 @@ function renderEvolucio(data: PartitData): string {
 /** Quants municipis s'ensenyen abans de plegar la resta. */
 const VISIBLES = 30;
 
+/** Els euros de l'inventari, sense cèntims: la precisió no és la del cèntim. */
+const euros = (n: number): string => `${Math.round(n).toLocaleString("ca-ES")} €`;
+
+/**
+ * La cara de qui mana en un municipi, o la seva inicial.
+ *
+ * Qui no té retrat publicat surt amb les inicials i el color de la marca, mai
+ * amb un forat ni amb una silueta genèrica. És la regla que ja segueixen la
+ * composició del ple i la fitxa de persona, i el motiu és el mateix: un buit
+ * diria que d'aquella alcaldessa no en sabem res, quan el que passa és que el
+ * seu ajuntament no publica la fotografia.
+ */
+function caraDe(m: PartitMunicipi, color: string, mida: "petita" | "tira"): string {
+  const nom = m.mayorName ? nomLlegible(m.mayorName) : "";
+  const inicials = nom
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((mot) => mot[0]!.toLocaleUpperCase("ca"))
+    .join("");
+  const { fons, tinta } = sobreColor(color);
+  const classe = mida === "tira" ? "retrat retrat-tira" : "retrat";
+  // Els atributs han de dir la mida a què es dibuixa i no la del fitxer: el
+  // full d'estil ja la fixa, i posar-n'hi una altra confon qui llegeixi el HTML.
+  const px = mida === "tira" ? 64 : 34;
+  return m.mayorPhoto
+    ? `<img class="${classe}" src="${escape(m.mayorPhoto)}" alt="" loading="lazy" width="${px}" height="${px}">`
+    : `<span class="${classe} inicials sense-foto" style="--c:${fons};--t:${tinta}"
+        aria-hidden="true">${escape(inicials)}</span>`;
+}
+
+/**
+ * La tira de cares de les alcaldies d'una marca.
+ *
+ * **Per què hi és.** «ERC té 330 alcaldies» és una xifra que no es pot mirar.
+ * Qui són aquelles 330 persones no es pot veure enlloc: ni al mapa, que pinta
+ * termes municipals, ni a la llista, que és text. Aquesta tira és l'única peça
+ * de la pàgina que ensenya el partit com el que és, un conjunt de gent que
+ * governa pobles.
+ *
+ * **El criteri, dit i defensable.** Són les alcaldies dels municipis **més
+ * poblats** que en publiquen el retrat, en el mateix ordre que la llista de
+ * sota. No és una tria editorial: és el mateix ordre que ja mana a «On mana», i
+ * la població és el criteri que evita que 121 alcaldies de pobles de 300
+ * habitants semblin el mateix que 121 ciutats. El peu diu quantes en publiquen
+ * retrat de quantes n'hi ha, perquè la tira no es pugui llegir com si fossin
+ * totes les que té.
+ *
+ * **Per què no hi ha escuts.** Al costat del mapa, 330 escuts municipals
+ * competirien amb el mapa i no dirien res que el mapa no digui ja millor.
+ *
+ * No es dibuixa amb poques cares: una tira de tres retrats sembla una llista
+ * escapçada i no una fotografia del partit.
+ */
+const CARES_TIRA = 24;
+const CARES_MINIM = 8;
+
+function renderCares(data: PartitData): string {
+  const mana = data.llocs.filter((m) => m.alcaldia);
+  const ambCara = mana.filter((m) => m.mayorPhoto !== null && m.mayorName !== null);
+  if (ambCara.length < CARES_MINIM) return "";
+  const color = colorSegur(data.color);
+  const tira = ambCara.slice(0, CARES_TIRA);
+  const cara = (m: PartitMunicipi): string => {
+    const nom = nomLlegible(m.mayorName!);
+    const dins = `${caraDe(m, color, "tira")}
+      <span class="qui">${escape(nom)}</span>
+      <span class="on">${escape(m.name)}</span>`;
+    return m.mayorSlug
+      ? `<li><a href="../../m/${escape(m.slug)}/regidor/${escape(m.mayorSlug)}/">${dins}</a></li>`
+      : `<li><span class="sense-fitxa">${dins}</span></li>`;
+  };
+  return `<ul class="partit-cares">${tira.map(cara).join("")}</ul>
+  <p class="nota">${
+    tira.length === ambCara.length
+      ? `Són les ${number(ambCara.length)} alcaldies d'aquesta marca que publiquen el retrat`
+      : `Són les ${number(tira.length)} primeres de les ${number(
+          ambCara.length,
+        )} alcaldies d'aquesta marca que publiquen el retrat`
+  }, dels municipis més poblats als menys, que és el mateix ordre de la llista de sota. En
+  té ${number(mana.length)} en total: ${number(mana.length - ambCara.length)} no
+  ${plural(mana.length - ambCara.length, "surt", "surten")} aquí perquè el seu ajuntament no
+  publica la fotografia de qui hi mana, o perquè la font que la publica i la que diu qui és
+  l'alcaldia encara no diuen el mateix nom. No hi ha cap retrat que no vingui de la seu
+  electrònica del mateix ajuntament.</p>`;
+}
+
 /**
  * On mana, de més gent a menys.
  *
@@ -753,19 +970,42 @@ function renderOnMana(data: PartitData): string {
     totes a l'oposició.</p>`;
   }
 
+  const color = colorSegur(data.color);
+  /**
+   * Cada fila porta dos enllaços i no un: el municipi i la persona.
+   *
+   * Anaven tots dos dins d'un sol `<a>` i no s'hi podien posar: una àncora dins
+   * d'una altra no és HTML vàlid i el navegador la desfà com vol. Van a part,
+   * i qui no té fitxa de persona porta el nom en text pla; qui no té retrat
+   * porta la inicial amb el color de la marca.
+   */
   const fila = (m: PartitMunicipi): string => {
     const on = m.candidatura ? `../../m/${m.slug}/${m.candidatura}/` : `../../m/${m.slug}/`;
-    return `<li><a href="${escape(on)}">
-      <b>${escape(m.name)}</b>
-      <span class="hab">${number(m.population)} hab.</span>
-      <span class="detall">${escape(m.sigles)} · ${m.seats} de ${m.totalSeats}${
-        m.majoria ? " · majoria absoluta" : ""
-      }${m.comarca ? ` · ${escape(m.comarca)}` : ""}</span>
-    </a></li>`;
+    const nom = m.mayorName ? nomLlegible(m.mayorName) : null;
+    const dins = `${caraDe(m, color, "petita")}<span class="nom">${escape(nom ?? "")}</span>`;
+    return `<li>
+      <a class="lloc-on" href="${escape(on)}">
+        <b>${escape(m.name)}</b>
+        <span class="hab">${number(m.population)} hab.</span>
+        <span class="detall">${escape(m.sigles)} · ${m.seats} de ${m.totalSeats}${
+          m.majoria ? " · majoria absoluta" : ""
+        }${m.comarca ? ` · ${escape(m.comarca)}` : ""}</span>
+      </a>
+      ${
+        nom === null
+          ? ""
+          : m.mayorSlug
+            ? `<a class="lloc-qui" href="../../m/${escape(m.slug)}/regidor/${escape(
+                m.mayorSlug,
+              )}/">${dins}</a>`
+            : `<span class="lloc-qui">${dins}</span>`
+      }
+    </li>`;
   };
 
   const davant = mana.slice(0, VISIBLES).map(fila).join("");
   const resta = mana.slice(VISIBLES);
+  const ambFitxa = mana.filter((m) => m.mayorSlug !== null).length;
 
   return `<ul class="partit-llocs">${davant}</ul>
   ${
@@ -776,11 +1016,259 @@ function renderOnMana(data: PartitData): string {
   </details>`
       : ""
   }
-  <p class="nota">Cada enllaç porta a la fitxa d'aquesta marca en aquell poble: què hi va treure,
-  qui la representa al ple i si hi va caldre pacte. ${data.majories} d'aquestes
+  <p class="nota">Cada fila porta a dos llocs: el nom del municipi, a la fitxa d'aquesta marca en
+  aquell poble —què hi va treure, qui la representa al ple i si hi va caldre pacte—, i la cara, a
+  la fitxa de qui hi mana${
+    ambFitxa < mana.length
+      ? `. ${number(mana.length - ambFitxa)} ${plural(
+          mana.length - ambFitxa,
+          "alcaldia no hi porta",
+          "alcaldies no hi porten",
+        )}, perquè el nom que en dona la font de govern no lliga amb cap dels noms del ple`
+      : ""
+  }. ${data.majories} d'aquestes
   ${plural(data.majories, "alcaldia", "alcaldies")} ${plural(data.majories, "surt", "surten")} d'una
   llista que tota sola ja tenia la majoria absoluta; les altres ${data.alcaldies - data.majories}
   van necessitar un pacte, o com a mínim que algú s'abstingués.</p>`;
+}
+
+/**
+ * Amb quantes alcaldies amb import una mediana diu alguna cosa del partit.
+ *
+ * Per sota d'aquí, la «mediana d'aquesta marca» és una xifra o dues: seria fer
+ * passar el que cobra una persona concreta per una tendència d'un partit. Les
+ * xifres per municipi no s'amaguen —són públiques i són a la fitxa de cada
+ * poble—, el que no es fa és presentar-les com el que no són.
+ */
+const MINIM_MEDIANA = 5;
+
+/**
+ * Què cobren les alcaldies d'aquesta marca.
+ *
+ * **La regla dura d'aquest bloc: aquí no hi surt la paraula «sou» a seques.**
+ * L'import de l'inventari del Ministeri és una sola xifra per alcaldia que suma
+ * la retribució del càrrec **i** les assistències a plens i comissions, i
+ * anomenar-lo sou faria creure que un alcalde de poble cobra cada mes una cosa
+ * que en realitat cobra per sessió. De les 866 alcaldies que hi consten, 659
+ * tenen dedicació exclusiva o parcial —allà sí que hi ha un sou— i 149 no en
+ * tenen cap.
+ *
+ * **La segona regla: no es compara una marca amb una altra sense el tram.** El
+ * PSC té una mediana de 32.537 € i ERC de 15.295 €, i posades l'una al costat
+ * de l'altra semblen dir alguna cosa dels dos partits quan diuen la mida dels
+ * pobles que governen: el PSC té l'alcaldia de 125 municipis que de mitjana són
+ * molt més grans que els 330 d'ERC. Per això la comparació d'aquest bloc és
+ * sempre dins del mateix tram de població, i la xifra global hi va acompanyada
+ * de la frase que diu que no es pot fer servir per comparar.
+ *
+ * **La tercera: qui no ho ha comunicat no és qui no cobra.** 81 dels 947
+ * municipis no consten a l'inventari, i escriure-hi un zero seria acusar-los de
+ * no pagar l'alcaldia quan el que han fet és no enviar la dada al Ministeri.
+ */
+function renderRetribucions(data: PartitData): string {
+  const r = data.retribucions;
+  if (r === null || r.ambImport === 0) return "";
+  const prou = r.ambImport >= MINIM_MEDIANA;
+  const pctSense = r.alcaldies > 0 ? (100 * r.senseComunicar) / r.alcaldies : 0;
+
+  const resumXifres = prou
+    ? `<ul class="partit-dues">
+    <li>
+      <span class="etq">Mediana</span>
+      <span class="gran">${euros(r.mediana!)}</span>
+      <span class="secundari">l'any, a les ${number(r.ambImport)}
+      ${plural(r.ambImport, "alcaldia", "alcaldies")} d'aquesta marca que consten a l'inventari.
+      La meitat en tenen assignat més i l'altra meitat, menys</span>
+    </li>
+    <li class="governa">
+      <span class="etq">Mitjana</span>
+      <span class="gran">${euros(r.media!)}</span>
+      <span class="secundari">l'any. ${
+        // Les dues xifres hi van juntes perquè la distància entre elles és una
+        // dada: quan la mitjana passa la mediana, hi ha unes poques alcaldies
+        // grans que l'estiren; quan queda per sota, n'hi ha que no cobren gaire
+        // o no cobren res. Dir sempre el mateix seria fals la meitat de les
+        // vegades, i és exactament la frase que un lector no pot comprovar.
+        Math.round(r.media!) > Math.round(r.mediana!)
+          ? "Passa de la mediana perquè unes quantes alcaldies grans estiren la xifra amunt"
+          : Math.round(r.media!) < Math.round(r.mediana!)
+            ? "Queda per sota de la mediana: hi ha alcaldies que cobren molt poc, o res, i l'estiren avall"
+            : "Va a la par de la mediana: les seves alcaldies cobren xifres semblants"
+      }</span>
+    </li>
+  </ul>`
+    : `<p class="veredicte pacte">Amb ${number(r.ambImport)}
+    ${plural(r.ambImport, "alcaldia", "alcaldies")} amb import comunicat, una mediana no diria res
+    d'aquesta marca: seria la xifra d'una persona o dues. Les tens una per una a la fitxa de cada
+    municipi.</p>`;
+
+  return `<p class="entrada-bloc">L'inventari del Ministeri publica, per a cada ajuntament, una
+  sola xifra anual per a l'alcaldia. <b>Aquella xifra no és un sou:</b> hi entren la retribució
+  del càrrec i les assistències a plens i comissions, que es cobren per sessió i no cada mes.</p>
+  ${resumXifres}
+  <ul class="partit-desglossa">
+    <li>${
+      r.alcaldies === 1
+        ? "La seva <b>única</b> alcaldia consta"
+        : `<b>${number(r.ambImport)}</b> de les ${number(r.alcaldies)} alcaldies que té ${plural(
+            r.ambImport,
+            "consta",
+            "consten",
+          )}`
+    } a l'inventari${r.any === null ? "" : ` de l'exercici ${r.any}`}.</li>
+    ${
+      // Les files que valen zero no s'escriuen. «0 hi consten sense dedicació»
+      // no informa de res i fa que la llista es llegeixi com un formulari buit.
+      r.ambDedicacio > 0
+        ? `<li><b>${number(r.ambDedicacio)}</b> ${plural(
+            r.ambDedicacio,
+            "hi té",
+            "hi tenen",
+          )} dedicació exclusiva o parcial: allà l'import sí que és una retribució periòdica del
+          càrrec.</li>`
+        : ""
+    }
+    ${
+      r.nomesAssistencies > 0
+        ? `<li><b>${number(r.nomesAssistencies)}</b> ${plural(
+            r.nomesAssistencies,
+            "hi consta sense dedicació",
+            "hi consten sense dedicació",
+          )}: el que hi surt són assistències i indemnitzacions, cobrades per sessió, i no un sou.</li>`
+        : ""
+    }
+    ${
+      r.senseCapImport > 0
+        ? `<li><b>${number(r.senseCapImport)}</b> ${plural(
+            r.senseCapImport,
+            "hi consta",
+            "hi consten",
+          )} amb zero euros: l'alcaldia no cobra res de l'ajuntament.</li>`
+        : ""
+    }
+    ${
+      r.senseComunicar > 0
+        ? `<li class="sense"><b>${number(r.senseComunicar)}</b> ${plural(
+            r.senseComunicar,
+            "alcaldia no hi consta",
+            "alcaldies no hi consten",
+          )} —el ${percent(pctSense)} de les seves—. <b>No vol dir que no cobrin:</b> vol dir que
+          aquell ajuntament no ho ha comunicat al Ministeri. A tot Catalunya en falten
+          ${number(r.municipisTotals - r.municipisAmbDada)} de ${number(r.municipisTotals)}.</li>`
+        : `<li>Totes les seves alcaldies hi consten. A tot Catalunya en falten
+          ${number(r.municipisTotals - r.municipisAmbDada)} de ${number(
+            r.municipisTotals,
+          )}: municipis que no ho han comunicat al Ministeri, que no és el mateix que municipis on
+          l'alcaldia no cobri.</li>`
+    }
+  </ul>
+  ${
+    r.trams.length > 0
+      ? `<h3>Com queda, tram per tram</h3>
+  <p>La retribució d'una alcaldia la marca la mida del municipi molt abans que el color de qui
+  la té. Comparar la xifra global d'una marca amb la d'una altra és comparar la mida dels pobles
+  que governen, i per això aquí cada tram es compara amb ell mateix: al costat de la mediana
+  d'aquesta marca hi va la de <b>totes</b> les alcaldies del tram, siguin de qui siguin.</p>
+  <div class="taula-envolta">
+  <table class="euros-resultat">
+    <thead><tr>
+      <th scope="col">Tram de població</th>
+      <th scope="col">Alcaldies seves amb import</th>
+      <th scope="col">Mediana d'aquesta marca</th>
+      <th scope="col">Mediana del tram</th>
+    </tr></thead>
+    <tbody>${r.trams
+      .map(
+        (t) => `<tr>
+      <th scope="row">${escape(t.tram)}</th>
+      <td>${number(t.ambImport)} de ${number(t.alcaldies)}</td>
+      <td>${t.mediana === null ? '<span class="buit">—</span>' : euros(t.mediana)}</td>
+      <td>${
+        t.medianaTram === null
+          ? '<span class="buit">—</span>'
+          : `${euros(t.medianaTram)} <span class="buit">(${number(t.alcaldiesTram)})</span>`
+      }</td>
+    </tr>`,
+      )
+      .join("")}</tbody>
+  </table>
+  </div>
+  <p class="nota">Només hi surten els trams on aquesta marca té tres o més alcaldies amb
+  import comunicat. El nombre entre parèntesis és quantes alcaldies de tot Catalunya hi ha en
+  aquell tram amb import, que és el denominador de la columna del costat.</p>`
+      : `<p class="nota">No hi ha cap tram de població on aquesta marca tingui prou alcaldies amb
+  import comunicat per poder-la comparar amb les altres sense que la comparació digui la mida
+  dels pobles en comptes del partit.</p>`
+  }
+  <p class="nota">Font: inventari de retribucions dels membres de les corporacions locals (ISPA
+  2025), Ministeri per a la Transformació Digital i de la Funció Pública. La xifra és la que
+  l'ajuntament comunica al Ministeri, no la que hem calculat nosaltres; el que és nostre és
+  agrupar-la per marca i per tram. Les regidories no hi entren: aquelles files no porten nom i no
+  es poden atribuir a cap persona ni a cap llista.</p>`;
+}
+
+/**
+ * La renda dels pobles que governa.
+ *
+ * **Aquest bloc no és un resultat d'aquest partit i ho ha de dir en veu alta.**
+ * Un ajuntament no decideix quant guanya la gent que hi viu: la renda depèn de
+ * qui hi viu, de què hi treballa i de com va l'economia. El que sí que decideix
+ * el ple és què en fa a partir d'aquí —quines taxes cobra, a qui les bonifica i
+ * en què gasta—, i això és a la fitxa de cada municipi.
+ *
+ * I la sèrie de l'INE **s'acaba el 2023**, que és l'any en què es van constituir
+ * aquests ajuntaments: no hi ha ni un any de dades posterior a les eleccions. El
+ * que es veu aquí és el context on van entrar a governar, no el que ha passat
+ * des que hi són.
+ *
+ * La mediana és **per municipi i no per persona**: diu com és el poble típic on
+ * mana la marca. Fer-la per persona la convertiria en la renda de les quatre
+ * ciutats grans que hi hagi a la llista.
+ */
+function renderRenda(data: PartitData): string {
+  const r = data.renda;
+  if (r === null || r.mediana === null || r.ambDada < MINIM_MEDIANA) return "";
+  const cat = r.medianaCatalunya;
+  return `<p class="entrada-bloc"><b>La renda no la decideix l'ajuntament.</b> És el context on
+  aquesta marca ha governat, no un resultat seu: depèn de qui viu en aquells pobles, de què hi
+  treballa i de com va l'economia. I la sèrie de l'INE s'acaba el ${r.any}, l'any en què es van
+  constituir aquests ajuntaments: no hi ha cap dada posterior a les eleccions.</p>
+  <ul class="partit-dues">
+    <li>
+      <span class="etq">Els municipis on mana</span>
+      <span class="gran">${euros(r.mediana)}</span>
+      <span class="secundari">de renda neta per persona l'any ${r.any}, al municipi que queda
+      al mig dels ${number(r.ambDada)} que governa i que tenen xifra</span>
+    </li>
+    <li class="governa">
+      <span class="etq">Els 947, per comparar</span>
+      <span class="gran">${cat === null ? "—" : euros(cat)}</span>
+      <span class="secundari">${
+        cat === null
+          ? "sense mediana catalana no hi ha comparació possible"
+          : `al municipi que queda al mig dels ${number(
+              r.municipisCatalunyaAmbDada,
+            )} municipis de Catalunya amb xifra`
+      }</span>
+    </li>
+  </ul>
+  ${
+    r.mesBaixa && r.mesAlta
+      ? `<p class="veredicte">Entre els seus, va de
+    ${euros(r.mesBaixa.valor)} a <a href="../../m/${escape(r.mesBaixa.slug)}/">${escape(
+      r.mesBaixa.name,
+    )}</a> fins a ${euros(r.mesAlta.valor)} a
+    <a href="../../m/${escape(r.mesAlta.slug)}/">${escape(r.mesAlta.name)}</a>: la mediana d'una
+    marca amb alcaldies a mig Catalunya amaga una distància que la xifra sola no deixa veure.</p>`
+      : ""
+  }
+  <p class="nota">${number(r.municipis - r.ambDada)} de les seves
+  ${number(r.municipis)} ${plural(r.municipis, "alcaldia", "alcaldies")} no hi
+  ${plural(r.municipis - r.ambDada, "surt", "surten")}: l'INE tapa per secret estadístic la renda
+  dels municipis més petits, i un municipi sense xifra no és un municipi sense renda. La mediana
+  és per municipi i no per persona —diu com és el poble típic on mana aquesta marca, no quant
+  guanya de mitjana qui hi viu—, i barrejar-ho faria que una capital arrossegués vint pobles.</p>
+  <p class="nota">Font: INE, Atles de distribució de renda de les llars, sèrie 2015-2023.</p>`;
 }
 
 /**
@@ -905,25 +1393,68 @@ export const PARTIT_CSS = `
 .partit-llinatge .que a{font-weight:800;color:inherit}
 .partit-llinatge .que b{font-weight:800}
 
-/* --- on mana ------------------------------------------------------------- */
+/* --- la tira de cares -----------------------------------------------------
+   Retrats i no escuts, i a dalt de tot del bloc. Un escut municipal al costat
+   del mapa no diria res que el mapa no digui, i les cares diuen l'única cosa
+   que aquesta pàgina no podia dir enlloc: qui són les persones que hi ha
+   darrere de la xifra d'alcaldies. */
+.partit-cares{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:var(--e2) var(--e1)}
+.partit-cares li{min-width:0}
+.partit-cares a,.partit-cares .sense-fitxa{display:flex;flex-direction:column;align-items:center;
+  gap:5px;text-align:center;text-decoration:none;color:inherit}
+.partit-cares .retrat-tira{width:64px;height:64px;font-size:1.05rem}
+.partit-cares .qui{font-size:.72rem;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
+.partit-cares .on{font-size:.68rem;font-weight:700;line-height:1.2;color:var(--ink-suau);
+  overflow-wrap:anywhere}
+.partit-cares a:hover .qui{text-decoration:underline}
+@media (max-width:420px){
+  .partit-cares{grid-template-columns:repeat(auto-fill,minmax(74px,1fr))}
+  .partit-cares .retrat-tira{width:54px;height:54px}
+}
+
+/* --- on mana -------------------------------------------------------------
+   La targeta és el <li> i ja no l'enllaç: ara hi ha dos destins a cada fila
+   —la candidatura en aquell poble i la fitxa de qui hi mana— i una àncora dins
+   d'una altra no és HTML vàlid. */
 .partit-llocs{list-style:none;margin:0;padding:0;display:grid;gap:var(--e1);
   grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
-.partit-llocs a{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px;background:var(--paper-2);
+.partit-llocs li{display:flex;flex-direction:column;background:var(--paper-2);
   border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
-  padding:11px var(--e2);text-decoration:none;color:inherit;
   transition:transform .12s ease,box-shadow .12s ease}
-.partit-llocs a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.partit-llocs li:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.partit-llocs .lloc-on{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px;
+  padding:11px var(--e2);text-decoration:none;color:inherit}
+.partit-llocs .lloc-on:hover b{text-decoration:underline}
 .partit-llocs b{font-family:var(--display);font-weight:900;font-size:1.02rem;letter-spacing:-.02em;
   overflow-wrap:anywhere}
 .partit-llocs .hab{margin-left:auto;font-size:.82rem;font-weight:800;color:var(--ink-suau);
   font-variant-numeric:tabular-nums;white-space:nowrap}
 .partit-llocs .detall{flex-basis:100%;font-size:.78rem;color:var(--ink-suau);overflow-wrap:anywhere}
+/* Qui hi mana, a peu de targeta i separat amb un filet: són dos destins i s'ha
+   de veure que ho són. La cara va a l'esquerra i el nom al costat, com a la
+   composició del ple, perquè la mateixa persona es reconegui a les dues pàgines. */
+.partit-llocs .lloc-qui{display:flex;align-items:center;gap:9px;margin-top:auto;
+  padding:8px var(--e2) 10px;border-top:2px solid var(--vora);text-decoration:none;color:inherit}
+.partit-llocs .lloc-qui .retrat{width:34px;height:34px;border-width:2px;font-size:.72rem}
+.partit-llocs .lloc-qui .nom{font-size:.82rem;font-weight:800;overflow-wrap:anywhere;min-width:0}
+.partit-llocs a.lloc-qui:hover .nom{text-decoration:underline}
 .partit-resta{margin-top:var(--e2)}
 .partit-resta > summary{font-size:.85rem;font-weight:800;cursor:pointer;padding:10px 0;
   color:var(--ink-suau)}
 .partit-resta > summary:hover{color:var(--ink)}
 .partit-resta[open] > summary{margin-bottom:var(--e2)}
-@media (prefers-reduced-motion:reduce){.partit-llocs a{transition:none}}
+@media (prefers-reduced-motion:reduce){.partit-llocs li{transition:none}}
+
+/* --- el desglossament de les retribucions --------------------------------
+   L'última fila va marcada amb una vora discontínua a posta: és la que es
+   llegeix malament amb més facilitat, i «no ho han comunicat» no és «no cobra». */
+.partit-desglossa{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:6px}
+.partit-desglossa li{font-size:.9rem;line-height:1.45;padding:9px var(--e2);
+  background:var(--paper-2);border:2px solid var(--vora);border-radius:var(--r-s)}
+.partit-desglossa li b{font-family:var(--display);font-weight:900;font-size:1.05rem;
+  font-variant-numeric:tabular-nums}
+.partit-desglossa .sense{border-color:var(--ink);border-style:dashed}
 
 /* --- les dues poblacions ------------------------------------------------- */
 .partit-dues{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:var(--e2);
@@ -972,6 +1503,11 @@ export function renderPartit(data: PartitData, generatedAt: string): string {
       ? `${data.sigles} té ${number(data.alcaldies)} ${plural(data.alcaldies, "alcaldia", "alcaldies")}, ${number(data.regidories)} ${plural(data.regidories, "regidoria", "regidories")} i governa ${number(data.poblacioGovernada)} habitants de Catalunya.`
       : `${data.sigles} no té cap alcaldia a Catalunya: hi té ${number(data.regidories)} ${plural(data.regidories, "regidoria", "regidories")}, ${plural(data.regidories, "tota", "totes")} a l'oposició.`;
   const description = `Quantes alcaldies i quantes regidories té ${data.sigles} als 947 municipis de Catalunya, on mana, quanta gent governa i com li ha anat des del 1979. Només amb dades obertes.`;
+  // Els dos blocs que poden no existir es dibuixen un sol cop: l'índex de dalt i
+  // la secció han de dir el mateix, i amb dues crides separades podien acabar
+  // dient coses diferents si un dia el llindar de dins canviés.
+  const retribucions = renderRetribucions(data);
+  const renda = renderRenda(data);
 
   return `<!doctype html>
 <html lang="ca">
@@ -1036,6 +1572,8 @@ ${cercador("../../")}
   <a href="#evolucio">Des del 1979</a>
   <a href="#mana">On mana</a>
   <a href="#poblacio">Vots i habitants</a>
+  ${retribucions ? '<a href="#retribucions">Què cobren les seves alcaldies</a>' : ""}
+  ${renda ? '<a href="#renda">La renda dels pobles que governa</a>' : ""}
   <a href="#altres">Els altres partits</a>
 </nav>
 
@@ -1058,7 +1596,8 @@ ${cercador("../../")}
 <section class="bloc" id="mana">
   <h2>On mana</h2>
   <p class="entrada-bloc">Els municipis amb l'alcaldia, del que té més habitants al que en té
-  menys.</p>
+  menys, i qui hi mana.</p>
+  ${renderCares(data)}
   ${renderOnMana(data)}
 </section>
 
@@ -1066,6 +1605,24 @@ ${cercador("../../")}
   <h2>La gent que el vota i la gent que governa</h2>
   ${renderPoblacio(data)}
 </section>
+
+${
+  retribucions
+    ? `<section class="bloc" id="retribucions">
+  <h2>Què cobren les seves alcaldies</h2>
+  ${retribucions}
+</section>`
+    : ""
+}
+
+${
+  renda
+    ? `<section class="bloc" id="renda">
+  <h2>La renda dels pobles que governa</h2>
+  ${renda}
+</section>`
+    : ""
+}
 
 <section class="bloc" id="altres">
   <h2>Els altres partits</h2>
@@ -1107,6 +1664,17 @@ ${cercador("../../")}
     <li>Alcaldia de cada municipi i historial d'alcaldes des del 1979: Generalitat de Catalunya, <code>6nei-4b44</code>.</li>
     <li>Resultats de les dotze eleccions municipals des del 1979: Consorci AOC, <code>3539f7e6</code>.</li>
     <li>Padró: Generalitat de Catalunya, <code>6nei-4b44</code>.</li>
+    ${
+      data.llocs.some((m) => m.mayorPhoto !== null)
+        ? "<li>Retrats de les alcaldies: seu electrònica de cada ajuntament, servida pel Consorci AOC a <code>seu-e.cat</code>. Cada cara ve del web del seu propi ajuntament i de cap altre lloc.</li>"
+        : ""
+    }
+    ${
+      data.retribucions
+        ? "<li>Retribucions de les alcaldies: inventari de retribucions dels membres de les corporacions locals (ISPA 2025), Ministeri per a la Transformació Digital i de la Funció Pública.</li>"
+        : ""
+    }
+    ${data.renda ? `<li>Renda neta per persona: INE, Atles de distribució de renda de les llars, sèrie 2015-${data.renda.any}.</li>` : ""}
     <li>Límits municipals del mapa: <a href="${escape(geometria.fontUrl)}" target="_blank" rel="noopener">${escape(geometria.font)}</a>,
       sota <a href="${escape(geometria.llicenciaUrl)}" target="_blank" rel="noopener">${escape(geometria.llicencia)}</a>.</li>
   </ul>
@@ -1188,6 +1756,32 @@ type AlcaldeHistoric = {
   name: string;
   partyRaw: string | null;
   tookOfficeOn: string | null;
+};
+
+/**
+ * Un càrrec de la llista que publica una seu electrònica, retallat.
+ *
+ * De la fitxa de `carrecs` només se'n demanen tres camps. El document sencer
+ * porta, per cada persona, el retrat gran, l'enllaç a la seva fitxa de seu-e i
+ * el grup, i amb 464 municipis això és megabytes de JSON per quedar-se una
+ * fotografia per poble: exactament el que fa petar PGlite amb «memory access
+ * out of bounds», que és el motiu pel qual la sèrie de padró d'aquí sobre també
+ * es demana retallada.
+ *
+ * L'ordre de la llista **s'ha de conservar** i per això es retalla amb
+ * `jsonb_agg` sobre `jsonb_array_elements`, que el manté: l'adreça de la fitxa
+ * de cada persona surt de `adrecesRegidors()` sobre aquesta mateixa llista i en
+ * aquest mateix ordre, i si l'ordre canviés els enllaços anirien a la fitxa del
+ * regidor del costat.
+ */
+type CarrecFitxa = { nom: string; carrec: string; fotoPetita: string | null };
+
+/** El que consta a l'inventari del Ministeri sobre l'alcaldia d'un municipi. */
+type RetribucioAlcaldia = {
+  any: number | null;
+  euros: number;
+  /** `sou` (amb dedicació) · `assistencies` (per sessió) · `cap` (zero euros). */
+  mena: "sou" | "assistencies" | "cap";
 };
 
 /**
@@ -1330,6 +1924,97 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
       .offset(salta),
   );
 
+  /**
+   * La llista de càrrecs que publica cada ajuntament a la seva seu electrònica.
+   *
+   * Només 464 dels 947 municipis en tenen: l'AOC hi serveix un mòdul que cada
+   * ajuntament omple o no, i a Santa Coloma de Gramenet, amb 124.000 habitants,
+   * no n'hi ha cap perquè hi publiquen un tauler incrustat. D'aquí en surt la
+   * cara de l'alcaldia; el nom i les sigles ja els tenim dels 947 per la font
+   * oficial de la Generalitat.
+   */
+  const carrecRows = await enBlocs((limit, salta) =>
+    db
+      .select({
+        municipalityId: municipalityMetrics.municipalityId,
+        carrecs: sql<CarrecFitxa[] | null>`(
+          select jsonb_agg(jsonb_build_object(
+            'nom', c->>'nom', 'carrec', c->>'carrec', 'fotoPetita', c->>'fotoPetita'
+          ))
+          from jsonb_array_elements(${data}->'carrecs') as c
+        )`,
+      })
+      .from(municipalityMetrics)
+      .where(eq(municipalityMetrics.kind, "carrecs"))
+      .orderBy(municipalityMetrics.municipalityId)
+      .limit(limit)
+      .offset(salta),
+  );
+
+  /**
+   * Qui seu a cada ple, dels 947, per poder enllaçar l'alcaldia amb la seva
+   * fitxa de persona també allà on la seu electrònica no arriba.
+   *
+   * Es demanen els noms i prou. Serveixen per a dues coses i totes dues
+   * necessiten la llista sencera del municipi i no només l'alcalde: saber si
+   * aquell nom és **únic** al ple —si no ho fos, `adrecesRegidors()` hi
+   * afegiria un sufix i l'enllaç aniria a la persona equivocada— i aparellar-lo
+   * amb el nom que dona la font de govern, que no és la mateixa font.
+   */
+  const plenaris = await enBlocs((limit, salta) =>
+    db
+      .select({ municipalityId: councillorMandates.municipalityId, nom: people.fullName })
+      .from(councillorMandates)
+      .innerJoin(people, eq(people.id, councillorMandates.personId))
+      .orderBy(councillorMandates.id)
+      .limit(limit)
+      .offset(salta),
+  );
+
+  /**
+   * L'import que consta que cobra cada alcaldia, de l'inventari del Ministeri.
+   *
+   * 866 municipis dels 947. Els altres 81 **no ho han comunicat**, que no és el
+   * mateix que no cobrar; la pàgina no els compta enlloc i diu quants són.
+   */
+  const retribucioRows = await enBlocs((limit, salta) =>
+    db
+      .select({
+        municipalityId: municipalityMetrics.municipalityId,
+        any: sql<string | null>`${data}#>>'{ministeri,any}'`,
+        euros: sql<string | null>`${data}#>>'{ministeri,alcaldia,euros}'`,
+        mena: sql<string | null>`${data}#>>'{ministeri,alcaldia,mena}'`,
+      })
+      .from(municipalityMetrics)
+      .where(eq(municipalityMetrics.kind, "retribucions"))
+      .orderBy(municipalityMetrics.municipalityId)
+      .limit(limit)
+      .offset(salta),
+  );
+
+  /**
+   * La renda neta per persona de cada municipi, de l'Atles de l'INE.
+   *
+   * Es demana un sol indicador dels sis que desa J23 i sense la seva sèrie, pel
+   * mateix motiu que el padró: el document sencer porta sis indicadors amb nou
+   * anys de sèrie, percentils i comparacions per a cada municipi.
+   */
+  const rendaRows = await enBlocs((limit, salta) =>
+    db
+      .select({
+        municipalityId: municipalityMetrics.municipalityId,
+        any: sql<string | null>`${data}->>'any'`,
+        valor: sql<string | null>`jsonb_path_query_first(
+          ${data}, '$.indicadors[*] ? (@.clau == "rendaNetaPersona").valor'
+        )#>>'{}'`,
+      })
+      .from(municipalityMetrics)
+      .where(eq(municipalityMetrics.kind, "riquesa"))
+      .orderBy(municipalityMetrics.municipalityId)
+      .limit(limit)
+      .offset(salta),
+  );
+
   // ---- índexs per municipi
 
   const perMunicipi = new Map<number, typeof llistes>();
@@ -1339,6 +2024,108 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
     perMunicipi.set(l.municipalityId, seves);
   }
   const govern = new Map(governRows.map((r) => [r.municipalityId, r]));
+
+  /**
+   * La cara i la fitxa de qui mana a cada municipi.
+   *
+   * **La regla dura és que el nom i el retrat han de sortir de la mateixa
+   * persona.** El nom de l'alcaldia i les sigles amb què aquesta pàgina
+   * atribueix el municipi a una marca vénen de la composició del ple de la
+   * Generalitat; la cara ve de la seu electrònica de l'ajuntament. Quan totes
+   * dues anomenen la mateixa persona, hi va la cara; quan diuen noms diferents
+   * —hi ha hagut relleu i una de les dues no ho sap encara— no s'hi posa res.
+   *
+   * Val la pena escriure el preu: `radiografia.ts` busca la paraula «alcald»
+   * dins de la llista de la seu electrònica i això en troba 455 de 464, contra
+   * les 419 que lliguen pel nom. Allà és correcte, perquè aquella fitxa escriu
+   * el nom que dona la seu electrònica al costat de la seva pròpia cara. Aquí
+   * el nom que s'escriu és l'altre, i en 19 municipis les dues fonts no diuen
+   * la mateixa persona: agafar la cara de la seu electrònica hi posaria el
+   * retrat d'algú sota el nom d'algú altre. Són 293 alcaldies amb cara en
+   * comptes de 326, i el canvi val els 33.
+   *
+   * L'enllaç a la fitxa de persona, en canvi, arriba molt més lluny: n'hi ha
+   * per als 947 municipis —les de la seu electrònica quan n'hi ha i les de la
+   * font electoral als altres 483— i el nom de l'alcaldia lliga amb el ple en
+   * 901 dels 947. On la seu electrònica publica la llista, l'adreça ha de
+   * sortir d'ella, perquè és d'ella que surten els directoris que escriu
+   * `publish.ts`; on no, del ple, i només si el nom hi és una sola vegada.
+   */
+  const caraAlcaldia = new Map<number, { foto: string | null; adreca: string }>();
+  const noms = new Map<number, string[]>();
+  for (const fila of plenaris) {
+    const llista = noms.get(fila.municipalityId) ?? [];
+    llista.push(fila.nom);
+    noms.set(fila.municipalityId, llista);
+  }
+  const deLaSeu = new Map(carrecRows.map((r) => [r.municipalityId, r.carrecs ?? []]));
+  for (const [municipalityId, g] of govern) {
+    if (!g.mayorName) continue;
+    const clauNom = normalizePersonName(g.mayorName);
+    const carrecs = deLaSeu.get(municipalityId) ?? [];
+    if (carrecs.length > 0) {
+      const fitxa = carrecs.find((c) => normalizePersonName(c.nom) === clauNom);
+      if (fitxa) {
+        caraAlcaldia.set(municipalityId, {
+          foto: fitxa.fotoPetita,
+          adreca: adrecesRegidors(carrecs).get(fitxa)!,
+        });
+      }
+      continue;
+    }
+    // Sense seu electrònica no hi ha retrat, però la fitxa de persona hi és
+    // igual. El sufix de desambiguació de `adrecesRegidors()` només apareix
+    // quan un nom es repeteix al ple; si es repetís, l'enllaç podria anar a
+    // l'altra persona i val més no posar-n'hi cap.
+    const alPle = (noms.get(municipalityId) ?? []).filter((n) => normalizePersonName(n) === clauNom);
+    if (alPle.length === 1) caraAlcaldia.set(municipalityId, { foto: null, adreca: slugify(alPle[0]!) });
+  }
+
+  /**
+   * L'import de cada alcaldia i el tram de població del seu municipi.
+   *
+   * El tram és el de la LOREG i el reparteix `buildPeerGroups()`, que és la
+   * mateixa funció que fa servir la radiografia, la comarca i el comparador:
+   * si aquí es fessin uns altres trams, la mateixa alcaldia sortiria a un grup
+   * a una pàgina i a un altre a la del costat.
+   */
+  const retribucions = new Map<number, RetribucioAlcaldia>();
+  for (const fila of retribucioRows) {
+    const euros = toNumber(fila.euros);
+    const mena = fila.mena;
+    if (euros === null || (mena !== "sou" && mena !== "assistencies" && mena !== "cap")) continue;
+    retribucions.set(fila.municipalityId, { any: toNumber(fila.any), euros, mena });
+  }
+  const trams = buildPeerGroups(muns);
+  /** La mediana de totes les alcaldies del tram, sigui de qui sigui la marca. */
+  const importsPerTram = new Map<string, number[]>();
+  /**
+   * De més petit a més gran, per poder ordenar la taula per mida i no per
+   * casualitat. La clau del grup és «t{primer}-{últim}», amb els índexs dels
+   * trams de la LOREG, i el primer número ja diu on cau el grup.
+   */
+  const midaDelTram = new Map<string, number>();
+  for (const [municipalityId, r] of retribucions) {
+    const tram = trams.get(municipalityId);
+    if (!tram) continue;
+    const llista = importsPerTram.get(tram.label) ?? [];
+    llista.push(r.euros);
+    importsPerTram.set(tram.label, llista);
+    midaDelTram.set(tram.label, Number(/^t(\d+)/.exec(tram.key)?.[1] ?? 0));
+  }
+  const medianaCatalunyaRetribucio = medianOf([...retribucions.values()].map((r) => r.euros));
+  const anyRetribucions =
+    [...retribucions.values()].reduce<number | null>((any, r) => any ?? r.any, null) ?? null;
+
+  /** La renda neta per persona de cada municipi, quan l'INE no la tapa. */
+  const renda = new Map<number, number>();
+  let anyRenda: number | null = null;
+  for (const fila of rendaRows) {
+    anyRenda = anyRenda ?? toNumber(fila.any);
+    const valor = toNumber(fila.valor);
+    if (valor !== null) renda.set(fila.municipalityId, valor);
+  }
+  const medianaCatalunyaRenda = medianOf([...renda.values()]);
 
   /**
    * Padró per municipi i any, i el total de Catalunya del mateix any.
@@ -1381,6 +2168,7 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
    * les faria que l'últim punt de la corba pugés per un canvi de font.
    */
   const poblacioAraPerMarca = new Map<string, number>();
+  const alcaldiesPerMarca = new Map<string, number[]>();
   let votsCatalunya = 0;
 
   for (const [municipalityId, seves] of perMunicipi) {
@@ -1429,6 +2217,10 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
       if (l.id === alcaldiaDe) {
         const habitants = padro.get(municipalityId)?.get(ANY_ARA) ?? 0;
         poblacioAraPerMarca.set(marca, (poblacioAraPerMarca.get(marca) ?? 0) + habitants);
+        // Els identificadors dels municipis que governa, que és el que
+        // necessiten els blocs de retribucions i de renda: `PartitMunicipi` no
+        // porta l'`id` de la base perquè no és cap dada de la pàgina.
+        alcaldiesPerMarca.set(marca, [...(alcaldiesPerMarca.get(marca) ?? []), municipalityId]);
       }
       if (l.seats === 0 && l.id !== alcaldiaDe) continue;
       regidoriesPerMarca.set(marca, (regidoriesPerMarca.get(marca) ?? 0) + l.seats);
@@ -1444,6 +2236,8 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
         totalSeats,
         alcaldia: l.id === alcaldiaDe,
         mayorName: l.id === alcaldiaDe ? g?.mayorName ?? null : null,
+        mayorPhoto: l.id === alcaldiaDe ? caraAlcaldia.get(municipalityId)?.foto ?? null : null,
+        mayorSlug: l.id === alcaldiaDe ? caraAlcaldia.get(municipalityId)?.adreca ?? null : null,
         majoria: l.id === alcaldiaDe && majoria > 0 && l.seats >= majoria,
       });
       llocsPerMarca.set(marca, llista);
@@ -1538,6 +2332,99 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
   });
   resum.sort((a, b) => b.alcaldies - a.alcaldies || b.regidories - a.regidories);
 
+  /** El mínim d'alcaldies amb import perquè una fila de tram vulgui dir res. */
+  const MINIM_TRAM = 3;
+
+  /**
+   * Les retribucions de les alcaldies d'una marca, tram per tram.
+   *
+   * La mediana global hi és perquè és el que demana qualsevol lector —«quant
+   * cobren les alcaldies d'aquest partit»— però la comparació **no** es fa amb
+   * ella: es fa dins de cada tram de població, que és l'única manera que la
+   * xifra digui alguna cosa del partit i no de la mida dels pobles que governa.
+   * Els trams amb menys de tres alcaldies amb import no surten: una «mediana»
+   * de dues xifres és les dues xifres, i publicar-la com si fos una mitjana del
+   * partit seria fer passar una persona per una tendència.
+   */
+  const retribucionsDe = (ids: readonly number[]): PartitRetribucions | null => {
+    if (ids.length === 0) return null;
+    const seves = ids
+      .map((id) => ({ id, r: retribucions.get(id) }))
+      .filter((x): x is { id: number; r: RetribucioAlcaldia } => x.r !== undefined);
+    if (seves.length === 0) return null;
+    const imports = seves.map((x) => x.r.euros);
+    const perTram = new Map<string, number[]>();
+    for (const { id, r } of seves) {
+      const tram = trams.get(id);
+      if (!tram) continue;
+      perTram.set(tram.label, [...(perTram.get(tram.label) ?? []), r.euros]);
+    }
+    /** Quantes alcaldies té la marca a cada tram, tinguin import o no. */
+    const alcaldiesPerTram = new Map<string, number>();
+    for (const id of ids) {
+      const tram = trams.get(id);
+      if (tram) alcaldiesPerTram.set(tram.label, (alcaldiesPerTram.get(tram.label) ?? 0) + 1);
+    }
+    // Del tram més gran al més petit, com la llista d'«On mana»: la pàgina
+    // sencera va de més població a menys i la taula no pot anar a la seva.
+    const ordre = [...perTram.keys()].sort(
+      (a, b) => (midaDelTram.get(b) ?? 0) - (midaDelTram.get(a) ?? 0),
+    );
+    return {
+      any: anyRetribucions,
+      alcaldies: ids.length,
+      ambImport: seves.length,
+      senseComunicar: ids.length - seves.length,
+      ambDedicacio: seves.filter((x) => x.r.mena === "sou").length,
+      nomesAssistencies: seves.filter((x) => x.r.mena === "assistencies").length,
+      senseCapImport: seves.filter((x) => x.r.mena === "cap").length,
+      mediana: medianOf(imports),
+      media: imports.length === 0 ? null : imports.reduce((a, b) => a + b, 0) / imports.length,
+      medianaCatalunya: medianaCatalunyaRetribucio,
+      municipisAmbDada: retribucions.size,
+      municipisTotals: muns.length,
+      trams: ordre
+        .filter((label) => (perTram.get(label)?.length ?? 0) >= MINIM_TRAM)
+        .map((label) => ({
+          tram: label,
+          alcaldies: alcaldiesPerTram.get(label) ?? 0,
+          ambImport: perTram.get(label)!.length,
+          mediana: medianOf(perTram.get(label)!),
+          medianaTram: medianOf(importsPerTram.get(label) ?? []),
+          alcaldiesTram: importsPerTram.get(label)?.length ?? 0,
+        })),
+    };
+  };
+
+  /** La renda dels municipis on mana una marca. Context, mai resultat seu. */
+  const rendaDe = (ids: readonly number[]): PartitRenda | null => {
+    if (anyRenda === null || ids.length === 0) return null;
+    const seus = ids
+      .map((id) => ({ municipi: munById.get(id), valor: renda.get(id) }))
+      .filter((x): x is { municipi: NonNullable<typeof x.municipi>; valor: number } =>
+        x.municipi !== undefined && x.valor !== undefined,
+      );
+    if (seus.length === 0) return null;
+    const ordenats = [...seus].sort((a, b) => a.valor - b.valor);
+    const extrem = (x: (typeof ordenats)[number]) => ({
+      name: x.municipi.name,
+      slug: x.municipi.slug,
+      valor: x.valor,
+    });
+    return {
+      any: anyRenda,
+      municipis: ids.length,
+      ambDada: seus.length,
+      mediana: medianOf(seus.map((x) => x.valor)),
+      medianaCatalunya: medianaCatalunyaRenda,
+      municipisCatalunyaAmbDada: renda.size,
+      // Els extrems només tenen sentit quan n'hi ha uns quants: amb dues
+      // alcaldies, «la més pobra i la més rica» són les dues que té.
+      mesBaixa: seus.length >= MINIM_TRAM ? extrem(ordenats[0]!) : null,
+      mesAlta: seus.length >= MINIM_TRAM ? extrem(ordenats[ordenats.length - 1]!) : null,
+    };
+  };
+
   return ambPagina.map((brand): PartitData => {
     const llocs = [...(llocsPerMarca.get(brand.id) ?? [])].sort(
       (a, b) => b.population - a.population || a.name.localeCompare(b.name, "ca"),
@@ -1614,6 +2501,9 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
       serieAlcaldiesFiable: acorden(serieAlcaldies2023, mana.length),
       serieRegidories2023,
       serieAlcaldies2023,
+
+      retribucions: retribucionsDe(alcaldiesPerMarca.get(brand.id) ?? []),
+      renda: rendaDe(alcaldiesPerMarca.get(brand.id) ?? []),
 
       altres: resum.filter((a) => a.id !== brand.id),
     };

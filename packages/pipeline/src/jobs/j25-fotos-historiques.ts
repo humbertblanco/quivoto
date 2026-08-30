@@ -397,7 +397,7 @@ export function veredicteRetrat(dades: {
       return { lliure: true, codi: "attribution", nom: "Attribution" };
     }
   }
-  return { lliure: false, motiu: deJ20.lliure ? "llicència no reconeguda" : deJ20.motiu };
+  return { lliure: false, motiu: deJ20.motiu };
 }
 
 /** Un retrat de Commons que hem comprovat que es pot republicar. */
@@ -726,29 +726,43 @@ export async function j25FotosHistoriques(db: Db, options: OpcionsJ25 = {}): Pro
       }
     }
 
-    // 5. Les miniatures, una vegada per persona encara que surti a dos municipis.
+    /*
+     * 5. Les miniatures, una vegada per **persona** i no per fitxer: qui ha
+     *    estat alcalde de dos pobles surt a dues fitxes amb la mateixa cara, i
+     *    baixar-la dues vegades seria demanar dos cops el mateix a Commons.
+     *    La clau és el QID i no el títol del fitxer perquè dues persones poden
+     *    compartir retrat —una foto de grup retallada, posem— i llavors el
+     *    fitxer no diu de qui és la miniatura.
+     */
+    const perQid = new Map<string, PersonaAmbRetrat>();
+    for (const encert of encerts) perQid.set(encert.persona.qid, encert.persona);
     const miniatures = new Map<string, { fotoId: number; retrat: RetratCommons }>();
-    for (const fitxer of fitxers) {
-      const resultat = llicencies.get(titolNormalitzat(fitxer));
+
+    for (const persona of perQid.values()) {
+      const resultat = llicencies.get(titolNormalitzat(persona.fitxer));
       if (resultat === undefined || !resultat.ok) {
         comptador.descartats += 1;
         const descartat = resultat?.descartat ?? {
-          fitxer,
+          fitxer: persona.fitxer,
           llicencia: null,
           motiu: "llicència no consultada",
         };
-        await run.issue({ kind: "commons_retrat_descartat", severity: "baixa", detail: descartat });
+        await run.issue({
+          kind: "commons_retrat_descartat",
+          severity: "baixa",
+          entity: persona.qid,
+          detail: { nom: persona.nom, ...descartat },
+        });
         continue;
       }
       comptador.lliures += 1;
 
-      const qid = encerts.find((e) => e.persona.fitxer === fitxer)!.persona.qid;
-      const fotoId = idDeQid(qid);
+      const fotoId = idDeQid(persona.qid);
       if (fotoId === null) continue;
 
       if (await miniaturesFetes(fotoId, arrelFotos)) {
         comptador.jaHiEren += 1;
-        miniatures.set(fitxer, { fotoId, retrat: resultat.retrat });
+        miniatures.set(persona.qid, { fotoId, retrat: resultat.retrat });
         continue;
       }
 
@@ -767,7 +781,7 @@ export async function j25FotosHistoriques(db: Db, options: OpcionsJ25 = {}): Pro
       }
       if (estat === "desada" || estat === "ja-hi-era") {
         comptador.desades += 1;
-        miniatures.set(fitxer, { fotoId, retrat: resultat.retrat });
+        miniatures.set(persona.qid, { fotoId, retrat: resultat.retrat });
       } else if (estat === "petita") comptador.petites += 1;
       else comptador.illegibles += 1;
     }
@@ -780,7 +794,7 @@ export async function j25FotosHistoriques(db: Db, options: OpcionsJ25 = {}): Pro
     // 6. Una fitxa per municipi.
     const perIne = new Map<string, RetratDesat[]>();
     for (const encert of encerts) {
-      const feta = miniatures.get(encert.persona.fitxer);
+      const feta = miniatures.get(encert.persona.qid);
       if (feta === undefined) continue;
       const grup = perIne.get(encert.ine5) ?? [];
       grup.push({

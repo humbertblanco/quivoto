@@ -17,6 +17,10 @@ import type { BandaGrup } from "./grafics";
  * queda un municipi cal llegir-los tots, i fer-ho fitxa per fitxa serien 947
  * lectures de la taula sencera.
  *
+ * (Aquella cita del pla deia «2015-2025» perquè és fins on arribava la nostra
+ * ingesta, no fins on arriba el conjunt: el deute viu de l'AOC comença el 2010
+ * i des d'ara la corba també.)
+ *
  * Es publica la **meitat central** del grup —del percentil 25 al 75— i no el
  * mínim i el màxim. El màxim d'un grup de dos-cents municipis és sempre un cas
  * extrem, i una banda que va de 0 a 4.000 € no diu res de com es mouen els
@@ -26,8 +30,17 @@ import type { BandaGrup } from "./grafics";
 /** Quants municipis del grup han de tenir la dada d'un any perquè es publiqui. */
 const MINIM_PER_ANY = 12;
 
-/** Primer exercici que es dibuixa: el mateix que ja fa servir la fitxa. */
-const DES_DE = 2015;
+/**
+ * Primer exercici que es dibuixa. **Ha d'acompanyar el que ingerim**, i el que
+ * ingerim ja no és el 2015.
+ *
+ * El conjunt de deute viu de l'AOC (34db8dc5) va del 2010 al 2025, amb entre
+ * 982 i 1.002 ens cada any i sense cap forat: J6 ara el baixa sencer des del
+ * 2010. Deixar aquí el 2015 vol dir llençar cinc anys de sèrie —justament els
+ * de la ressaca de la crisi, que és quan el deute municipal es mou de debò—
+ * després d'haver-los baixat.
+ */
+const DES_DE = 2010;
 
 export type SeriesMunicipi = {
   /** Deute per habitant del municipi, any a any. */
@@ -38,6 +51,17 @@ export type SeriesMunicipi = {
   grup: string | null;
   /** Quants municipis del grup entren a la banda de l'últim any dibuixat. */
   quants: number;
+  /**
+   * Els anys que la font havia de donar per a aquest municipi, tant si els dona
+   * com si no: tots els exercicis que el conjunt de deute publica per a algú.
+   *
+   * Va directe a `anysEsperats` de `serieTemporal()`. Sense això, l'ajuntament
+   * que un any no va retre comptes desapareix d'aquell any i la línia el salta:
+   * el forat es llegeix com un tram normal i la corba inventa un pendent que no
+   * existeix. Amb la llista, el forat es dibuixa com un forat i es diu al text
+   * alternatiu.
+   */
+  anysEsperats: number[];
 };
 
 /** Percentil d'una llista **ja ordenada**, per interpolació lineal. */
@@ -124,6 +148,13 @@ export async function carregaSeriesGrup(db: Db): Promise<Map<number, SeriesMunic
     bandes.set(clau, banda);
   }
 
+  // Els anys que el conjunt publica per a algú. Es calculen mirant tots els
+  // municipis i no els d'un sol grup: si el 2013 hi ha deute de 996 ens, el
+  // municipi que aquell any no en té és un forat seu, no un any que no existeix.
+  const anysEsperats = [
+    ...new Set([...perMunicipi.values()].flatMap((serie) => serie.map((p) => p.any))),
+  ].sort((a, b) => a - b);
+
   const resultat = new Map<number, SeriesMunicipi>();
   for (const [municipalityId, grup] of grups) {
     const deute = (perMunicipi.get(municipalityId) ?? []).sort((a, b) => a.any - b.any);
@@ -134,6 +165,7 @@ export async function carregaSeriesGrup(db: Db): Promise<Map<number, SeriesMunic
       deuteGrup: banda,
       grup: grup.label,
       quants: (perGrupIAny.get(grup.key)?.get(ultimAny ?? -1) ?? []).length,
+      anysEsperats,
     });
   }
   return resultat;

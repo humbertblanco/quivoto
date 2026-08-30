@@ -126,12 +126,24 @@ const PARTICULES = new Set([
   "van", "von", "der", "den", "af", "el-", "bin", "ibn",
 ]);
 
+/**
+ * La conjunció «i» dels cognoms catalans, escrita en majúscula per la font.
+ *
+ * «Jan Santaló I Lloret» i «Josep Sánchez I Camps» és com surten a la
+ * composició del ple de **138 dels 947 municipis**, i aquella I no és cap
+ * inicial: una inicial porta punt. Es veia a la fitxa del poble, a la de la
+ * persona, a la de la comarca i a la del partit alhora.
+ */
+const conjuncioCatalana = (nom: string): string => nom.replace(/(\S)\s+I\s+(\S)/g, "$1 i $2");
+
 export function nomLlegible(text: string): string {
   const nom = text.trim().replace(/\s+/g, " ");
   // El sufix entre parèntesis no compta per decidir si el nom ja està ben
   // escrit: «ARIÀ PÉREZ ISIDRO (Ind.)» porta minúscules només a l'abreviatura
   // d'«independent», i amb elles el nom es publicava tot en majúscules.
-  if (!nom || /\p{Ll}/u.test(nom.replace(/\([^)]*\)/g, ""))) return nom;
+  if (!nom) return nom;
+  // Un nom que ja porta minúscules no s'ha de tocar... llevat de la conjunció.
+  if (/\p{Ll}/u.test(nom.replace(/\([^)]*\)/g, ""))) return conjuncioCatalana(nom);
   const capitalitza = (mot: string): string =>
     mot.charAt(0).toLocaleUpperCase("ca") + mot.slice(1).toLocaleLowerCase("ca");
   return nom

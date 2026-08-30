@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  renderComarca, renderMapaTerritori, renderPoder, renderUllada,
+  renderComarca, renderMapaComarca, renderMapaTerritori, renderPoder, renderUllada,
   type ComarcaData, type ComarcaMunicipi,
 } from "./comarques";
+import { geometria } from "./mapa";
 
 /**
  * La pàgina es genera sense cap model pel mig, així que el que s'ha de provar
@@ -276,5 +277,164 @@ describe("renderUllada", () => {
 
   it("no obre un panell de resum amb dues xifres", () => {
     expect(renderUllada([p(), p()], "Prova")).toBe("");
+  });
+});
+
+/**
+ * El mapa de la comarca amb els límits municipals de veritat.
+ *
+ * Es prova amb slugs de debò de la geometria de l'ICGC —no se'n poden inventar,
+ * perquè la funció només pinta el que hi troba— i el que s'hi comprova és el
+ * que trencaria la peça: que el retall enquadri la comarca i no el país, que
+ * cada taca sigui un enllaç i que no es dibuixin els 947 a cada pàgina.
+ */
+describe("renderMapaComarca", () => {
+  const priorat = ["falset", "gratallops", "porrera", "poboleda", "torroja-del-priorat", "margalef"];
+  const taques = priorat.map((slug, i) => ({
+    slug,
+    name: slug,
+    mayorName: "Maria Puig",
+    mayorSigles: "ERC-AM",
+    mayorBrandId: i % 2 === 0 ? "erc" : null,
+  }));
+
+  it("hi són, els slugs de la prova, o el mapa no prova res", () => {
+    for (const slug of priorat) expect(geometria.municipis[slug], slug).toBeTruthy();
+  });
+
+  it("pinta cada terme del color de qui hi mana i el fa enllaç a la seva fitxa", () => {
+    const html = renderMapaComarca(taques, "../../", "Priorat");
+    expect(html).toContain('<a href="../../m/falset/">');
+    expect(html).toContain("<title>falset — Maria Puig — ERC-AM</title>");
+    // Sense marca, el gris: mai el color de la força del costat.
+    expect(html).toContain("--c:#8b8b8b");
+  });
+
+  it("enquadra la comarca i no Catalunya sencera", () => {
+    const html = renderMapaComarca(taques, "../../", "Priorat");
+    const vb = /<svg class="gran" viewBox="([\d.-]+) ([\d.-]+) ([\d.-]+) ([\d.-]+)"/.exec(html);
+    expect(vb).not.toBeNull();
+    const [ample, alt] = [Number(vb![3]), Number(vb![4])];
+    // El llenç sencer fa 1.600: un retall que s'hi acostés voldria dir que
+    // l'enquadrament no s'ha fet i que el lector veu tot el país.
+    expect(ample).toBeLessThan(600);
+    expect(alt).toBeLessThan(600);
+    // I mai molt més alt que ample, que és el que deixava dues franges buides.
+    expect(alt / ample).toBeLessThan(1.1);
+  });
+
+  it("no dibuixa els 947 a cada pàgina de comarca", () => {
+    const html = renderMapaComarca(taques, "../../", "Priorat");
+    const camins = (html.match(/<path/g) ?? []).length;
+    expect(camins).toBeGreaterThan(priorat.length);
+    expect(camins).toBeLessThan(400);
+  });
+
+  it("diu on cau, perquè ampliada una comarca perd justament això", () => {
+    const html = renderMapaComarca(taques, "../../", "Priorat");
+    expect(html).toContain('class="on-cau"');
+    expect(html).toContain('class="anella"');
+  });
+
+  it("cita la font i la llicència del mapa, que és el que la llicència obliga", () => {
+    const html = renderMapaComarca(taques, "../../", "Priorat");
+    expect(html).toContain("ICGC");
+    expect(html).toContain(geometria.llicencia);
+  });
+
+  it("calla quan de cap municipi no en tenim el polígon", () => {
+    const inventats = [{ ...taques[0]!, slug: "no-existeix-aquest-poble" }];
+    expect(renderMapaComarca(inventats, "../../", "Priorat")).toBe("");
+  });
+
+  it("escapa el nom del municipi dins del títol de la taca", () => {
+    const dolent = [{ ...taques[0]!, name: 'A <script>alert("x")</script>', mayorSigles: "A & B" }];
+    const html = renderMapaComarca(dolent, "../../", "Priorat");
+    expect(html).not.toContain("<script>alert");
+    expect(html).toContain("&amp;");
+  });
+});
+
+/**
+ * Qui hi mana, a la llista de municipis: la cara i la pastilla.
+ *
+ * La regla que s'hi prova és la que l'encàrrec demana i la que la fitxa
+ * municipal ja aplica al ple: **mai un forat**. Qui no té fotografia rep la
+ * inicial amb el color del seu grup, que és una peça i no una absència.
+ */
+describe("la cara i el partit de cada alcaldia", () => {
+  it("ensenya el retrat quan l'ajuntament el publica", () => {
+    const html = renderComarca(
+      comarca({ municipis: [municipi({ mayorFoto: "/observatori/fotos/160/25009.webp" })] }),
+      "2026-08-29",
+    );
+    expect(html).toContain('<img class="retrat" src="/observatori/fotos/160/25009.webp"');
+  });
+
+  it("posa la inicial amb el color del partit quan no en publica, mai un buit", () => {
+    const html = renderComarca(comarca({ municipis: [municipi({ mayorFoto: null })] }), "2026-08-29");
+    expect(html).toContain('class="retrat inicials"');
+    expect(html).toContain(">MP<");
+  });
+
+  it("fa clicable la pastilla del partit, que abans no portava enlloc", () => {
+    const html = renderComarca(comarca(), "2026-08-29");
+    expect(html).toContain('href="../../partit/erc/"');
+  });
+
+  it("no enllaça les sigles que no són de cap partit conegut", () => {
+    // Sota «llistes locals» hi ha centenars de candidatures que no tenen res a
+    // veure: ajuntar-les diria que existeix un partit que no existeix.
+    const html = renderComarca(
+      comarca({ municipis: [municipi({ mayorSigles: "IND-VEÏNS", mayorBrandId: null })] }),
+      "2026-08-29",
+    );
+    expect(html).toContain("IND-VEÏNS");
+    expect(html).not.toContain('href="../../partit/null/"');
+  });
+});
+
+/**
+ * La comparació entre els municipis de la comarca.
+ *
+ * És la peça que la pàgina no tenia: deia com és la comarca contra Catalunya i
+ * mai com de diferents són els seus pobles per dins.
+ */
+describe("la dispersió entre municipis", () => {
+  const ambRenda = (valors: readonly number[]): ComarcaData =>
+    comarca({
+      municipis: valors.map((renda, i) =>
+        municipi({ slug: `poble-${i}`, name: `Poble ${i}`, renda, souAlcaldia: null }),
+      ),
+      indicadors: [],
+    });
+
+  it("posa el més baix, la mediana i el més alt, i tots tres amb la xifra escrita", () => {
+    const html = renderComarca(ambRenda([11_000, 14_000, 16_000, 24_000]), "2026-08-29");
+    expect(html).toContain("El més baix");
+    expect(html).toContain("El més alt");
+    expect(html).toContain("11.000 €");
+    expect(html).toContain("24.000 €");
+    // La mediana de quatre valors és la mitjana dels dos del mig: 15.000.
+    expect(html).toContain("15.000 €");
+  });
+
+  it("cada marca és un enllaç a la fitxa d'aquell municipi", () => {
+    const html = renderComarca(ambRenda([11_000, 14_000, 16_000, 24_000]), "2026-08-29");
+    expect(html).toContain('class="marca" style="--p:4.00%" href="../../m/poble-0/"');
+    expect(html).toContain("--p:96.00%");
+  });
+
+  it("no dibuixa una dispersió amb tres xifres ni quan totes són iguals", () => {
+    expect(renderComarca(ambRenda([11_000, 14_000, 16_000]), "2026-08-29")).not.toContain('class="dispersio"');
+    expect(renderComarca(ambRenda([9, 9, 9, 9]), "2026-08-29")).not.toContain('class="dispersio"');
+  });
+
+  it("obre la secció encara que no hi hagi cap indicador comarcal", () => {
+    // La secció penjava només dels indicadors; amb la comparació interna
+    // sola, el bloc existia i l'índex no hi portava.
+    const html = renderComarca(ambRenda([11_000, 14_000, 16_000, 24_000]), "2026-08-29");
+    expect(html).toContain('id="indicadors"');
+    expect(html).toContain('<a href="#indicadors">');
   });
 });

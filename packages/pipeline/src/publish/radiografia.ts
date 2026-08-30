@@ -1147,9 +1147,17 @@ function renderFinances(finances: FinancesMetric, seriesGrup?: SeriesMunicipi): 
    * coses es veuen —i és la peça que el pla de dades demanava, sense cap dada
    * nova.
    */
-  const series = finances.debtSeries.filter((point) => point.year >= 2015);
+  /*
+   * Tota la sèrie que la font dona, i no un tall nostre.
+   *
+   * Aquí hi havia un 2015 escrit a mà que era el mateix que hi havia a la
+   * ingesta, i quan aquella va passar al 2010 —que és on comença de debò el
+   * conjunt de deute viu, amb 982 a 1.002 ens cada any i cap forat— aquest tall
+   * s'hauria menjat els cinc anys nous sense que ho notés ningú.
+   */
+  const series = finances.debtSeries;
   const mandats = finances.bands
-    .filter((b) => b.to >= 2015)
+    .filter((b) => b.to >= (series[0]?.year ?? 0))
     .map((b) => ({
       desDe: b.from,
       finsA: b.to,
@@ -1172,7 +1180,9 @@ function renderFinances(finances: FinancesMetric, seriesGrup?: SeriesMunicipi): 
       : "";
 
   const bandLegend = finances.bands
-    .filter((b) => b.to >= 2015)
+    // El mateix que a la sèrie: el primer any el mana la font i no un número
+    // escrit aquí, que era el que amagava mitja història de cada poble.
+    .filter((b) => b.to >= (series[0]?.year ?? 0))
     .map(
       (band) => `<li class="mandat-${band.id}"><span class="tram-mandat"></span>
       <b>${escape(band.id)}</b>${band.mayor ? ` · ${escape(band.mayor)}` : ""}${band.party ? ` (${escape(band.party)})` : ""}</li>`,

@@ -118,9 +118,17 @@ describe("renderSilueta", () => {
   it("hi posa una anella per poder trobar els municipis diminuts", () => {
     // Puigdalber ocupa 4 × 6 unitats de 1600: a 300 px és un píxel i mig.
     const svg = renderSilueta("puigdalber");
-    const r = /<circle[^>]*r="(\d+)"/.exec(svg);
+    // L'anella és el cercle sense farciment; l'altre, si n'hi ha, és el punt.
+    const r = /<circle[^>]*r="(\d+)" fill="none"/.exec(svg);
     expect(r).not.toBeNull();
     expect(Number(r![1])).toBeGreaterThanOrEqual(42);
+  });
+
+  it("posa un punt als municipis massa petits per veure's, i no als altres", () => {
+    // Puigdalber fa 4 x 6 unitats de 1600: dins de l'anella no s'hi veia res.
+    // Tremp en fa 137 x 179 i la seva forma és el que s'ha de veure.
+    expect((renderSilueta("puigdalber").match(/<circle/g) ?? []).length).toBe(2);
+    expect((renderSilueta("tremp").match(/<circle/g) ?? []).length).toBe(1);
   });
 
   it("centra l'anella dins del municipi", () => {
@@ -162,7 +170,7 @@ describe("renderMapa", () => {
   it("tria la silueta quan del municipi destacat en tenim el polígon", () => {
     const svg = renderMapa(punts, { amplada: 300, destacat: slug });
     expect(svg).toContain("mapa-silueta");
-    expect((svg.match(/<circle/g) ?? []).length).toBe(1);
+    expect((svg.match(/<circle/g) ?? []).length).toBeLessThanOrEqual(2);
   });
 
   it("torna al núvol de punts quan el destacat no té geometria", () => {

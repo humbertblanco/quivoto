@@ -159,10 +159,11 @@ const KINDS_ELS947: string[] = [
   // La renda. Aquesta mètrica porta els sis indicadors de l'ADRH amb la sèrie
   // sencera del 2015 al 2023 i la comparació amb Catalunya: d'aquí només en
   // surten dues xifres —el valor de la renda neta per persona i el seu any— i
-  // la resta es llegeix i es llença, igual que passa amb «poblacio». Mesurat
-  // sobre els 947, són 3,4 MB de mètrica per 947 xifres. Si la memòria del
-  // motor torna a petar, aquesta i «poblacio» són les dues primeres a mirar:
-  // el que caldria és una consulta que demanés el camp i no la mètrica.
+  // la resta es llegeix i es llença, igual que passa amb «poblacio». Quant
+  // pesa no s'ha pogut mesurar: J23 encara no s'ha passat sobre la base amb
+  // què s'ha fet aquesta feina. Si la memòria del motor torna a petar,
+  // aquesta i «poblacio» són les dues primeres a mirar, i el que caldria és
+  // una consulta que demanés el camp i no la mètrica sencera.
   "riquesa",
 ];
 
@@ -193,6 +194,33 @@ export function lectorDe(own: Map<string, unknown> | undefined): {
       return own?.has(kind) ?? false;
     },
   };
+}
+
+/**
+ * La clau d'una candidatura: el municipi i les seves sigles.
+ *
+ * Existeix perquè el separador es decidia dues vegades i no coincidien. El
+ * mapa es construïa amb un byte nul enmig —escrit cru dins del fitxer, on no es
+ * veu— i es llegia amb un espai, i per tant **no encertava mai**: 0 de 947. El
+ * codi d'agrupació electoral, que és el que la Generalitat diu i que no s'ha
+ * d'endevinar, no s'arribava a fer servir en cap municipi i tot ho decidia
+ * `siglesFamily()` sobre l'acrònim.
+ *
+ * Amb la clau bona, 706 dels 947 tenen codi d'agrupació i la marca de
+ * l'alcaldia canvia a **12 municipis**: a Calaf «JxC-AM» constava de Junts i el
+ * codi diu que és d'ERC; al Prat de Llobregat «EPCP-C» no tenia marca i és dels
+ * comuns —l'exemple que aquest mateix fitxer ja tenia escrit com a motiu de
+ * fer-ho pel codi—; i dotze pastilles de la llista enllaçaven al partit que no
+ * era o no enllaçaven.
+ *
+ * El separador continua sent un byte nul, que és bona tria —no pot sortir mai
+ * dins d'unes sigles—, però ara s'escriu **una sola vegada i com a escapada**.
+ * Cru, `grep` veia el fitxer com a binari i no hi trobava res: buscar-hi la
+ * clau per assegurar-se que les dues bandes coincidien tornava zero línies, i
+ * aquesta és la meitat de per què això va sobreviure tant de temps.
+ */
+export function clauCandidatura(municipalityId: number, sigles: string): string {
+  return `${municipalityId}\u0000${sigles}`;
 }
 
 export async function loadEls947(db: Db): Promise<Els947Row[]> {
@@ -237,7 +265,7 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
     .from(candidatures)
     .where(eq(candidatures.electionId, "M20231"));
   const brandBySigles = new Map(
-    candidatureRows.map((r) => [`${r.municipalityId} ${r.sigles}`, r.brandId]),
+    candidatureRows.map((r) => [clauCandidatura(r.municipalityId, r.sigles), r.brandId]),
   );
 
   // La participació del 2023. No és cap mètrica derivada: són el cens i els
@@ -290,7 +318,7 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
        * de codis, i tractar-la com una negació hauria despintat Tiana, on la
        * llista es diu «JUNTS» i el codi encara no s'ha repassat.
        */
-      const marcaAgrupacio = sigles ? brandBySigles.get(`${m.id} ${sigles}`) ?? null : null;
+      const marcaAgrupacio = sigles ? brandBySigles.get(clauCandidatura(m.id, sigles)) ?? null : null;
       const marca = marcaAgrupacio && marcaAgrupacio !== "local" ? marcaAgrupacio : familia;
 
       const poblacio = llegeix("poblacio") as
@@ -560,9 +588,13 @@ export function pastilles(fila: Fila, l: Llindars): string[] {
  * servir per posar ningú en ordre, i «quin poble deu més per habitant» o «on hi
  * entren menys diners a casa» eren respostes que la pàgina tenia i no donava.
  *
- * `i` és la posició dins de `data-o`, que és com viatja cada xifra fins al
- * navegador. El nom no hi és: ja va a `data-k`, que és la clau de cerca, i
- * escriure'l dues vegades a cada fila serien 947 còpies del mateix.
+ * D'on surt cada xifra importa pel pes de la pàgina, que ja és gran: **la que
+ * no cal escriure, no s'escriu**. El nom ja va a `data-k`, que és la clau de
+ * cerca. I la població no va enlloc, perquè l'ordre en què la llista ja ve
+ * escrita **és** de més població a menys: ordenar-la per població és tornar a
+ * l'ordre de sortida. Només les cinc que no es poden deduir de res viatgen a
+ * `data-o`; escriure-hi també la població eren 4,3 kB més de pàgina —2,7 un
+ * cop comprimida— per no dir res de nou.
  *
  * **Cap ordre no és un rànquing de gestió.** «De més deute a menys» diu on cau
  * cada municipi, no qui ho fa millor: la pàgina ja ho diu de les medianes i
@@ -573,8 +605,22 @@ export function pastilles(fila: Fila, l: Llindars): string[] {
 export type Ordre = {
   clau: string;
   text: string;
-  /** La posició dins de «data-o». `null` vol dir el nom, que ja és a «data-k». */
-  i: number | null;
+  /**
+   * D'on surt la xifra: de l'ordre en què la pàgina ja ve escrita, del nom
+   * —que ja és a «data-k»— o d'una posició de «data-o».
+   */
+  de: "escrit" | "nom" | "xifra";
+  /** La posició dins de «data-o», només quan surt d'allà. */
+  i?: number;
+  /**
+   * D'on surt la xifra a la fila, quan surt de «data-o».
+   *
+   * Escriure `data-o` i llegir-lo eren dues llistes que s'havien de mantenir
+   * iguals a mà, i el dia que algú n'afegís una al mig, ordenar per dones al
+   * ple hauria ordenat per actes sense petar enlloc. Amb això només n'hi ha
+   * una: `clausOrdre()` escriu el que digui aquesta funció, en aquest ordre.
+   */
+  val?: (fila: Fila) => number | null | undefined;
   /** Si de primeres es llegeix de més a menys. */
   gran: boolean;
   /** Com es diu l'ordre al recompte, en cada sentit. */
@@ -583,34 +629,58 @@ export type Ordre = {
 };
 
 export const ORDRES: readonly Ordre[] = [
-  { clau: "pob", text: "Població", i: 0, gran: true,
+  { clau: "pob", text: "Població", de: "escrit", gran: true,
     avall: "dels més grans als més petits", amunt: "dels més petits als més grans" },
-  { clau: "nom", text: "Nom", i: null, gran: false,
+  { clau: "nom", text: "Nom", de: "nom", gran: false,
     avall: "per ordre alfabètic", amunt: "per ordre alfabètic invers" },
-  { clau: "renda", text: "Renda per persona", i: 1, gran: true,
+  { clau: "renda", text: "Renda per persona", de: "xifra", i: 0, val: (f) => f.rn, gran: true,
     avall: "de més renda per persona a menys", amunt: "de menys renda per persona a més" },
-  { clau: "deute", text: "Deute per habitant", i: 2, gran: true,
+  { clau: "deute", text: "Deute per habitant", de: "xifra", i: 1, val: (f) => f.d, gran: true,
     avall: "de més deute per habitant a menys", amunt: "de menys deute per habitant a més" },
-  { clau: "transp", text: "Transparència", i: 3, gran: true,
+  { clau: "transp", text: "Transparència", de: "xifra", i: 2, val: (f) => f.y, gran: true,
     avall: "de més compliment del portal de transparència a menys",
     amunt: "de menys compliment del portal de transparència a més" },
-  { clau: "dones", text: "Dones al ple", i: 4, gran: true,
+  { clau: "dones", text: "Dones al ple", de: "xifra", i: 3, val: (f) => f.f, gran: true,
     avall: "de més dones al ple a menys", amunt: "de menys dones al ple a més" },
-  { clau: "actes", text: "Actes indexades", i: 5, gran: true,
+  { clau: "actes", text: "Actes indexades", de: "xifra", i: 4, val: (f) => f.t, gran: true,
     avall: "de més actes indexades a menys", amunt: "de menys actes indexades a més" },
 ];
+
+/** Les que viatgen a «data-o», en l'ordre exacte en què s'hi escriuen. */
+const XIFRES_ORDRE: readonly Ordre[] = ORDRES.filter((o) => o.de === "xifra").slice()
+  .sort((a, b) => (a.i ?? 0) - (b.i ?? 0));
+
+/**
+ * Els ordres que aquest conjunt permet oferir.
+ *
+ * Un botó «Renda per persona» en una llista on ningú no té la renda ordenaria
+ * 947 buits i deixaria la pàgina igual dient «de més renda a menys»: seria una
+ * pàgina que menteix sobre el que sap. Passa de debò cada cop que J23 encara no
+ * s'ha passat, i és el mateix criteri que ja s'aplica als filtres.
+ */
+export function ordresDisponibles(files: readonly Fila[]): readonly Ordre[] {
+  return ORDRES.filter(
+    (o) => o.de !== "xifra" || files.some((f) => (o.val?.(f) ?? null) !== null),
+  );
+}
 
 /**
  * Les xifres d'una fila que es poden ordenar, en una sola cadena.
  *
- * Van totes juntes i separades per barres perquè sis atributs `data-` per fila
- * són 5.682 atributs a la pàgina; així n'és un. El buit és la cadena buida i
- * **no** un zero, que és el que fa que un municipi sense la dada es pugui
- * enviar al final en comptes de fer-lo passar per pobre o per net de deute.
+ * Van totes juntes i separades per barres perquè cinc atributs `data-` per
+ * fila són 4.735 atributs a la pàgina; així n'és un. El buit és la cadena
+ * buida i **no** un zero, que és el que fa que un municipi sense la dada es
+ * pugui enviar al final en comptes de fer-lo passar per pobre o per net de
+ * deute.
+ *
+ * La població no hi és: la llista ja ve escrita de més gran a més petit i
+ * l'ordre de sortida és exactament aquest.
  */
 export function clausOrdre(fila: Fila): string {
-  const n = (v: number | null | undefined): string => (v === null || v === undefined ? "" : String(v));
-  return [n(fila.p), n(fila.rn), n(fila.d), n(fila.y), n(fila.f), n(fila.t)].join("|");
+  return XIFRES_ORDRE.map((o) => {
+    const v = o.val?.(fila) ?? null;
+    return v === null ? "" : String(v);
+  }).join("|");
 }
 
 /**
@@ -658,9 +728,13 @@ const CSS = `
   text-decoration:none;position:relative}
 /* L'objectiu de toc, sense fer la fila més alta. La pastilla fa 30 px per
    quadrar amb la cara del costat; els 44 que demana un dit els posa aquesta
-   caixa invisible, que creix cap amunt i cap avall sobre l'espai que la fila ja
-   té buit i no desplaça res. */
-.mana a.sigla::after{content:"";position:absolute;inset:-7px -2px}
+   caixa invisible, que creix sobre l'espai que la fila ja té buit i no
+   desplaça res.
+   Creix 4 amunt i 10 avall i no 7 i 7 a posta: amb 7 amunt la caixa entrava
+   1 px dins de l'enllaç de la comarca, que és la línia de sobre i també es
+   toca, i un dit a la vora hauria obert el partit volent obrir la comarca.
+   Avall no hi ha res per prendre: les pastilles de xifres no són enllaços. */
+.mana a.sigla::after{content:"";position:absolute;inset:-4px -2px -10px}
 .mana a.sigla:hover,.mana a.sigla:focus-visible{text-decoration:underline;
   text-decoration-thickness:2px;text-underline-offset:2px}
 .mana a.sigla:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
@@ -771,6 +845,8 @@ export function renderEls947(
   const files: Fila[] = rows.map((r) => ({ ...r, x: withPage.has(r.s) ? 1 : 0 }));
   const llindars = llindarsDe(rows);
   const disponibles = filtresDisponibles(llindars);
+  // Un ordre només s'ofereix si algú té la xifra: vegeu «ordresDisponibles».
+  const ordres = ordresDisponibles(files);
 
   const totals = {
     municipis: files.length,
@@ -937,7 +1013,7 @@ ${cercador("./")}
          és cap tema. Posar-n'hi una de manllevada només diria que hi falta. -->
     <h3>Per què s'ordena</h3>
     <div class="tries" role="group" aria-label="Ordena la llista">
-      ${ORDRES.map(
+      ${ordres.map(
         (o, i) => `<input class="commutador nomes-lectors" type="radio" name="ordre" id="o-${o.clau}" value="${
           o.clau
         }"${i === 0 ? " checked" : ""}>
@@ -950,7 +1026,7 @@ ${cercador("./")}
 
   <div class="eines">
     <button class="neteja" type="reset">Treu-ho tot</button>
-    <p class="recompte" id="recompte" aria-live="polite">${totals.municipis} municipis, ${ORDRES[0]!.avall}</p>
+    <p class="recompte" id="recompte" aria-live="polite">${totals.municipis} municipis, ${ordres[0]!.avall}</p>
   </div>
 
   <p class="nota">Les medianes són el municipi que queda al mig dels ${totals.municipis}: diuen on
@@ -1050,7 +1126,9 @@ for (const clau of ${JSON.stringify(disponibles.map((f) => f.clau))}) {
  * convertir-lo dins del comparador seria fer-ho unes 9.000 vegades per cada
  * canvi d'ordre. El buit es queda com a «null» i no com a zero.
  */
-const ORDRES = ${JSON.stringify(ORDRES.map((o) => ({ c: o.clau, i: o.i, g: o.gran, a: o.avall, m: o.amunt })))};
+const ORDRES = ${JSON.stringify(
+    ordres.map((o) => ({ c: o.clau, d: o.de, i: o.i ?? 0, g: o.gran, a: o.avall, m: o.amunt })),
+  )};
 const xifres = files.map(function (el) {
   return el.getAttribute("data-o").split("|").map(function (v) {
     return v === "" ? null : Number(v);
@@ -1086,7 +1164,10 @@ function ordena() {
   const gran = o.g !== invertit;
   const ordenats = inicial.slice();
   ordenats.sort(function (a, b) {
-    if (o.i === null) {
+    // La població no viatja a «data-o»: la llista ja ve escrita de més gran a
+    // més petita, i tornar-hi és tornar a l'ordre de sortida.
+    if (o.d === "escrit") return gran ? a - b : b - a;
+    if (o.d === "nom") {
       const na = claus[a], nb = claus[b];
       if (na !== nb) return (na < nb ? -1 : 1) * (gran ? -1 : 1);
       return a - b;

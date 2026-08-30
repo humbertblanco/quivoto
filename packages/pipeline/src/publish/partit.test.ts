@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { marcaDe, renderPartit, tintaSobre, type PartitData, type PartitMunicipi } from "./partit";
+import {
+  marcaDe, renderPartit, tintaSobre,
+  type PartitData, type PartitMunicipi, type PartitRenda, type PartitRetribucions,
+} from "./partit";
 
 /**
  * Una marca de mostra amb prou dades per rendir la pàgina sencera. Les xifres
@@ -18,6 +21,8 @@ function lloc(canvis: Partial<PartitMunicipi> = {}): PartitMunicipi {
     totalSeats: 21,
     alcaldia: true,
     mayorName: "Eduard Sanz García",
+    mayorPhoto: "/observatori/fotos/160/12345.webp",
+    mayorSlug: "eduard-sanz-garcia",
     majoria: true,
     ...canvis,
   };
@@ -47,7 +52,8 @@ function mostra(canvis: Partial<PartitData> = {}): PartitData {
       lloc({ slug: "gava", name: "Gavà", population: 12_300, candidatura: "psc-cp-2", majoria: false }),
       lloc({
         slug: "vic", name: "Vic", comarca: "Osona", population: 46_100,
-        seats: 3, alcaldia: false, mayorName: null, majoria: false, candidatura: "psc-vic",
+        seats: 3, alcaldia: false, mayorName: null, mayorPhoto: null, mayorSlug: null,
+        majoria: false, candidatura: "psc-vic",
       }),
     ],
     serie: [
@@ -64,7 +70,55 @@ function mostra(canvis: Partial<PartitData> = {}): PartitData {
     serieAlcaldiesFiable: true,
     serieRegidories2023: 1_450,
     serieAlcaldies2023: 2,
+    retribucions: null,
+    renda: null,
     altres: [{ id: "erc", sigles: "ERC", color: "#ffb232", alcaldies: 307, regidories: 2_000 }],
+    ...canvis,
+  };
+}
+
+/**
+ * Retribucions versemblants d'una marca mitjana. Les xifres no són les de cap
+ * partit: el que es prova és què diu la pàgina, no què cobra ningú.
+ */
+function retribucions(canvis: Partial<PartitRetribucions> = {}): PartitRetribucions {
+  return {
+    any: 2024,
+    alcaldies: 40,
+    ambImport: 36,
+    senseComunicar: 4,
+    ambDedicacio: 28,
+    nomesAssistencies: 6,
+    senseCapImport: 2,
+    mediana: 21_000,
+    media: 24_500,
+    medianaCatalunya: 17_208.78,
+    municipisAmbDada: 866,
+    municipisTotals: 947,
+    trams: [
+      {
+        tram: "de 5.001 a 10.000 habitants",
+        alcaldies: 12, ambImport: 11, mediana: 42_340, medianaTram: 39_025, alcaldiesTram: 80,
+      },
+      {
+        tram: "de 251 a 1.000 habitants",
+        alcaldies: 28, ambImport: 25, mediana: 13_617, medianaTram: 13_129, alcaldiesTram: 271,
+      },
+    ],
+    ...canvis,
+  };
+}
+
+function renda(canvis: Partial<PartitRenda> = {}): PartitRenda {
+  return {
+    any: 2023,
+    municipis: 40,
+    ambDada: 31,
+    mediana: 15_900,
+    medianaCatalunya: 16_400,
+    municipisCatalunyaAmbDada: 720,
+    mesBaixa: { name: "Salt", slug: "salt", valor: 9_800 },
+    mesAlta: { name: "Sant Cugat del Vallès", slug: "sant-cugat-del-valles", valor: 26_100 },
     ...canvis,
   };
 }
@@ -242,7 +296,7 @@ describe("renderPartit", () => {
       const html = renderPartit(
         mostra({
           alcaldies: 0, majories: 0, comarques: 0, poblacioGovernada: 0,
-          llocs: [lloc({ alcaldia: false, majoria: false, mayorName: null })],
+          llocs: [lloc({ alcaldia: false, majoria: false, mayorName: null, mayorPhoto: null, mayorSlug: null })],
           poblacioSerie: [
             { year: 2015, alcaldies: 0, habitants: 0, catalunya: 7_508_106 },
             { year: 2019, alcaldies: 0, habitants: 0, catalunya: 7_675_217 },
@@ -312,7 +366,7 @@ describe("renderPartit", () => {
       mostra({
         id: "vox", sigles: "Vox", name: "Vox", alcaldies: 0, majories: 0, comarques: 0,
         poblacioGovernada: 0, serieAlcaldies2023: 0,
-        llocs: [lloc({ alcaldia: false, majoria: false, mayorName: null })],
+        llocs: [lloc({ alcaldia: false, majoria: false, mayorName: null, mayorPhoto: null, mayorSlug: null })],
         serie: [
           { year: 2019, regidories: 40, regidoriesCatalunya: 9_000, guanyats: 0, alcaldies: 0, municipisAmbSerie: 947 },
           { year: 2023, regidories: 121, regidoriesCatalunya: 9_000, guanyats: 0, alcaldies: 0, municipisAmbSerie: 947 },
@@ -391,5 +445,160 @@ describe("renderPartit", () => {
   it("no publica cap dada de contacte de ningú", () => {
     const html = renderPartit(mostra(), "2026-08-30");
     expect(html).not.toMatch(/mailto:|href="tel:|[\w.-]+@[\w.-]+\.\w+/);
+  });
+});
+
+describe("les cares de les alcaldies", () => {
+  /** Trenta alcaldies amb retrat, per poder provar la tira i el seu límit. */
+  const ambCares = (quantes: number, canvis: Partial<PartitMunicipi> = {}): PartitMunicipi[] =>
+    Array.from({ length: quantes }, (_, i) =>
+      lloc({
+        slug: `poble-${i}`,
+        name: `Poble ${i}`,
+        population: 40_000 - i,
+        candidatura: "psc-cp",
+        mayorName: `Alcalde ${i} Cognom`,
+        mayorPhoto: `/observatori/fotos/160/${i}.webp`,
+        mayorSlug: `alcalde-${i}-cognom`,
+        ...canvis,
+      }),
+    );
+
+  it("posa la cara de qui mana a cada fila i l'enllaça amb la seva fitxa", () => {
+    const html = renderPartit(mostra(), "2026-08-30");
+    expect(html).toContain('src="/observatori/fotos/160/12345.webp"');
+    expect(html).toContain('href="../../m/esplugues-de-llobregat/regidor/eduard-sanz-garcia/"');
+    expect(html).toContain("Eduard Sanz García");
+  });
+
+  it("qui no té retrat porta la inicial amb el color de la marca, mai un forat", () => {
+    const html = renderPartit(
+      mostra({ llocs: [lloc({ mayorPhoto: null, mayorName: "Anna Puig Roca" })] }),
+      "2026-08-30",
+    );
+    expect(html).toContain('class="retrat inicials sense-foto"');
+    // Dues inicials i el color de la marca, com a la composició del ple.
+    expect(html).toContain(">AP<");
+    expect(html).toContain("--c:#d00c3c");
+  });
+
+  it("qui no té fitxa de persona porta el nom sense enllaç, i no un enllaç trencat", () => {
+    const html = renderPartit(
+      mostra({ llocs: [lloc({ mayorSlug: null, mayorName: "Anna Puig Roca" })] }),
+      "2026-08-30",
+    );
+    expect(html).toContain('<span class="lloc-qui">');
+    expect(html).not.toContain("/regidor//");
+  });
+
+  it("no fica mai una àncora dins d'una altra: el municipi i la persona van a part", () => {
+    const html = renderPartit(mostra({ llocs: ambCares(4) }), "2026-08-30");
+    expect(html).not.toMatch(/<a\b[^>]*>(?:(?!<\/a>)[\s\S])*?<a\b/);
+  });
+
+  it("dibuixa la tira de cares només quan n'hi ha prou, i talla a vint-i-quatre", () => {
+    const poques = renderPartit(mostra({ llocs: ambCares(5) }), "2026-08-30");
+    expect(poques).not.toContain('class="partit-cares"');
+
+    const moltes = renderPartit(
+      mostra({ llocs: ambCares(30), alcaldies: 30, municipis: 30 }),
+      "2026-08-30",
+    );
+    expect(moltes).toContain('class="partit-cares"');
+    const tira = moltes.slice(
+      moltes.indexOf('<ul class="partit-cares">'),
+      moltes.indexOf("</ul>", moltes.indexOf('<ul class="partit-cares">')),
+    );
+    expect(tira.match(/retrat-tira/g)).toHaveLength(24);
+    // I diu el criteri i el denominador: 24 de 30, no «les seves alcaldies».
+    expect(moltes).toContain("Són les 24 primeres de les 30 alcaldies");
+    expect(moltes).toContain("dels municipis més poblats als menys");
+  });
+
+  it("la tira no porta cap escut de municipi, que competiria amb el mapa", () => {
+    const html = renderPartit(
+      mostra({ llocs: ambCares(30), alcaldies: 30, municipis: 30 }),
+      "2026-08-30",
+    );
+    const tira = html.slice(
+      html.indexOf('<ul class="partit-cares">'),
+      html.indexOf("</ul>", html.indexOf('<ul class="partit-cares">')),
+    );
+    expect(tira).not.toContain("escut");
+    expect(tira.match(/<img/g)).toHaveLength(24);
+  });
+});
+
+describe("què cobren les seves alcaldies", () => {
+  it("no en diu mai «sou» a seques i explica què hi ha dins de la xifra", () => {
+    const html = renderPartit(mostra({ retribucions: retribucions() }), "2026-08-30");
+    expect(html).toContain("Aquella xifra no és un sou");
+    expect(html).toContain("assistències a plens i comissions");
+    expect(html).toContain("21.000 €");
+    expect(html).toContain("24.500 €");
+  });
+
+  it("diu que qui no ho ha comunicat no és qui no cobra", () => {
+    const html = renderPartit(mostra({ retribucions: retribucions() }), "2026-08-30");
+    expect(html).toContain("No vol dir que no cobrin");
+    expect(html).toContain("no ho ha comunicat al Ministeri");
+    expect(html).toContain("81 de 947");
+  });
+
+  it("compara dins del tram de població i no la xifra global amb la d'un altre partit", () => {
+    const html = renderPartit(mostra({ retribucions: retribucions() }), "2026-08-30");
+    expect(html).toContain("de 5.001 a 10.000 habitants");
+    expect(html).toContain("39.025 €");
+    expect(html).toContain("la mida del municipi molt abans que el color");
+  });
+
+  it("amb poques alcaldies no publica cap mediana: seria la xifra d'una persona", () => {
+    const html = renderPartit(
+      mostra({
+        retribucions: retribucions({ alcaldies: 2, ambImport: 2, senseComunicar: 0, trams: [] }),
+      }),
+      "2026-08-30",
+    );
+    expect(html).toContain("una mediana no diria res");
+    expect(html).not.toContain('<span class="gran">21.000 €</span>');
+  });
+
+  it("diu en quin sentit la mitjana s'aparta de la mediana, i no sempre el mateix", () => {
+    const amunt = renderPartit(mostra({ retribucions: retribucions() }), "2026-08-30");
+    expect(amunt).toContain("estiren la xifra amunt");
+    const avall = renderPartit(
+      mostra({ retribucions: retribucions({ mediana: 30_000, media: 24_500 }) }),
+      "2026-08-30",
+    );
+    expect(avall).toContain("l'estiren avall");
+  });
+
+  it("sense cap alcaldia amb import, el bloc no existeix ni a l'índex", () => {
+    const html = renderPartit(mostra({ retribucions: null }), "2026-08-30");
+    expect(html).not.toContain('id="retribucions"');
+    expect(html).not.toContain("Què cobren les seves alcaldies");
+  });
+});
+
+describe("la renda dels pobles que governa", () => {
+  it("diu que la renda no la decideix l'ajuntament i que la sèrie s'acaba el 2023", () => {
+    const html = renderPartit(mostra({ renda: renda() }), "2026-08-30");
+    expect(html).toContain("La renda no la decideix l'ajuntament");
+    expect(html).toContain("no hi ha cap dada posterior a les eleccions");
+    expect(html).toContain("15.900 €");
+    expect(html).toContain("16.400 €");
+  });
+
+  it("diu que la mediana és per municipi i no per persona, i qui no hi surt", () => {
+    const html = renderPartit(mostra({ renda: renda() }), "2026-08-30");
+    expect(html).toContain("per municipi i no per persona");
+    expect(html).toContain("secret estadístic");
+    expect(html).toContain("9 de les seves");
+  });
+
+  it("sense la font, la pàgina no en diu res: mai un bloc buit", () => {
+    const html = renderPartit(mostra({ renda: null }), "2026-08-30");
+    expect(html).not.toContain('id="renda"');
+    expect(html).not.toContain("La renda dels pobles que governa");
   });
 });
