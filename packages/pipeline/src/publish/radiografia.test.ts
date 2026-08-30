@@ -2173,7 +2173,11 @@ describe("l'ullada: cinc xifres en paraules", () => {
     expect(u).toContain("el més habitual als de la seva mida són 348 €");
     expect(u).toContain("60,0 %");
     expect(u).toContain("8,5 punts més que el poble del mig de la seva mida");
-    expect(u).toContain('href="../../partit/psc/"');
+    // El xip de sigles és un <b>, no un <a>: la tessel·la sencera ja és un
+    // enllaç cap a #ple, i un enllaç dins d'un enllaç no és HTML vàlid —el
+    // navegador el repartia com podia i el xip sortia gegant.
+    expect(u).toContain('<b class="sigla"');
+    expect(u).not.toContain('<a class="sigla"');
     expect(u).toContain("des del 2011 · 4 legislatures");
     expect(u).toContain("la llista més votada");
     // I els dos blocs que no volien dir res ja no hi són.

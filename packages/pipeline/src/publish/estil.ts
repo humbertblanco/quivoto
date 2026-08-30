@@ -266,7 +266,10 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
 }
 /* La pastilla de sigles com a xifra, i el «des de» petit al costat: la
    pastilla no ha de fer la mida del número, que la faria un botó. */
-.ullada .xifra .sigla{font-size:.58em;vertical-align:.22em}
+.ullada .xifra .sigla{font-size:.55em;display:inline-block;width:auto;height:auto;
+  min-height:0;line-height:1.4;padding:1px 12px;vertical-align:.22em}
+/* El «des del 2019 · 2 legislatures» va sota el xip, petit i sense estirar-lo. */
+.ullada .xifra .des-de{display:block;font-size:.45em;font-weight:700;color:var(--ink-suau);margin-top:4px}
 .ullada .xifra .des-de{display:block;font-family:var(--text);font-size:.74rem;font-weight:800;
   letter-spacing:0;color:var(--ink-suau);margin-top:4px;line-height:1.3}
 .ullada li{border-top:1.5px solid var(--vora);border-left:1.5px solid var(--vora)}

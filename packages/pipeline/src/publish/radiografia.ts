@@ -2533,8 +2533,10 @@ export function renderQuiHiViu(poblacio: PoblacioMetric, riquesa: RiquesaMetric 
             xifra: percent(pctNacionalitat.valor),
             espurna: sparkline(pctNacionalitat.serie, (v) => percent(v)),
             peu: peuDe(pctNacionalitat, `${number(nacionalitat.valor)} persones`),
+            // El «què compta» de J18 és llarg i ja viu, literal, a la lletra
+            // petita del bloc: aquí només hi va el canvi i la font, que la
+            // tessel·la ha de fer de tessel·la i no de nota metodològica.
             font: `${pctNacionalitat.mandat ? canviAmbGrup(pctNacionalitat.mandat, pctNacionalitat.mandatDelGrup, "%") : ""}
-              <span class="compta">${escape(nacionalitat.compta)}</span>
               ${enllacIdescat(pctNacionalitat.enllac ?? nacionalitat.enllac)}`,
           })
         : tira({
@@ -2608,6 +2610,15 @@ export function renderQuiHiViu(poblacio: PoblacioMetric, riquesa: RiquesaMetric 
         ? " <b>Aquí la diferència és prou gran per tenir-la en compte:</b> segons quina de les dues xifres es faci servir, el poble té una mida diferent."
         : ""
     } ${escape(padro.compta)}</p>`);
+  }
+
+  // El «què compta» de la nacionalitat anava al peu de la seva tessel·la i la
+  // feia de tres pams. El text és de la metodologia i ha de ser a la pàgina,
+  // literal —és l'única cosa que impedeix llegir «nacionalitat estrangera» i
+  // «nascuts a l'estranger» com si diguessin el mateix—, però hi és aquí, a la
+  // lletra petita, un cop i sencer.
+  if (nacionalitat && nacionalitat.compta && teValor(pctNacionalitat ?? nacionalitat)) {
+    notes.push(`<p>${escape(nacionalitat.compta)}</p>`);
   }
 
   // Les xifres de percentatge d'aquest bloc surten totes del cens de població,
@@ -4170,7 +4181,10 @@ function renderUllada(
         : "";
     pastilles.push({
       etq: "Mana des de",
-      xifra: `${sigla(sigles, { base: BASE, color: colorPer(sigles) })}${desDe ? ` <small class="des-de">${desDe}</small>` : ""}`,
+      // Sense enllaç a posta: la tessel·la sencera ja és un <a> cap a #ple, i
+      // un enllaç dins d'un enllaç no és HTML vàlid —el navegador el reparteix
+      // com pot i el xip acabava vestit amb l'estil de la tessel·la, gegant.
+      xifra: `${sigla(sigles, { color: colorPer(sigles) })}${desDe ? ` <small class="des-de">${desDe}</small>` : ""}`,
       part: null,
       peu: government.winnerGoverns === false ? "no va guanyar: hi va haver pacte" : "la llista més votada",
       on: "#ple",
@@ -4766,12 +4780,12 @@ export function renderRadiografia(
     // llegit cap acta. Ara diu el que passa a aquest municipi.
     const actes = data.mocions?.actes ?? null;
     if (actes && actes.llegides > 0) {
-      return `<details class="nota"><summary>La lletra petita</summary>D'aquest municipi n'hem llegit <b>${number(actes.llegides)}</b>
+      return `<details class="nota"><summary>Les actes: què n'hem llegit</summary>D'aquest municipi n'hem llegit <b>${number(actes.llegides)}</b>
       ${actes.llegides === 1 ? "acta" : "actes"} de ple de les ${number(actes.indexades)} indexades, i
       d'aquí en surt què s'ha votat i què hi ha votat cada grup. La resta de la pàgina surt de dades
       obertes i de càlculs que qualsevol pot repetir.</details>`;
     }
-    return `<details class="nota"><summary>La lletra petita</summary>Les actes d'aquest municipi les tenim <b>indexades però no llegides</b>:
+    return `<details class="nota"><summary>Les actes: què n'hem llegit</summary>Les actes d'aquest municipi les tenim <b>indexades però no llegides</b>:
     buidar-les punt per punt es fa als municipis de més de 20.000 habitants, on una votació dividida
     és una notícia i no una excepció. Fins que hi arribem, tot el que hi ha en aquesta pàgina surt de
     dades obertes i de càlculs que qualsevol pot repetir.</details>`;
