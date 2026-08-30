@@ -688,10 +688,39 @@ function familiaDelNomDeGrup(nom: string): string | null {
 }
 
 /** Color de la candidatura: el que publica la Generalitat, o el de la marca. */
-function colorOf(candidature: CandidatureShare): string {
+/**
+ * El color d'una candidatura, i en quin ordre es decideix.
+ *
+ * Abans manava el color que porta la font per a aquella candidatura i aquella
+ * elecció, i la marca només hi entrava si aquell no hi era. Sortien dues coses
+ * mal fetes a la mateixa taula de Barcelona:
+ *
+ * - **El PP en dos blaus**: `#234b90` el 2023 i `#01a7e3` el 2019, perquè la
+ *   font en dona un de diferent cada convocatòria. El mateix partit canviant de
+ *   color entre files diu que són dos partits, que és justament el contrari del
+ *   que la taula ha de fer veure.
+ * - **Grisos que no hi havien de ser**: «BARCELONA EN COMÚ-ECG», «BCN Canvi-Cs»
+ *   i «JUNTS» sortien de color mort perquè la ingesta no els va desar cap
+ *   `brandId`, tot i que `siglesFamily()` els reconeix tots tres sense dubtar.
+ *   El color el decidia una dada desada i envellida en comptes de la funció que
+ *   sap la resposta.
+ *
+ * Ara mana la marca quan la sabem —desada o deduïda de les sigles— i el color
+ * de la font queda per a les llistes locals que no som capaços de reconèixer,
+ * que és on de debò aporta alguna cosa. El gris és per a l'últim cas i vol dir
+ * el que ha de voler dir: no sabem de qui és.
+ */
+export function colorDeCandidatura(candidature: CandidatureShare): string {
+  // `local` no és una marca: és el calaix d'«aquesta no l'hem sabuda reconèixer»,
+  // i per això no atura la pregunta a les sigles. «BCN Canvi-Cs» hi era desada i
+  // es quedava grisa tot i que és Ciutadans amb un nom de campanya al davant.
+  const desada = candidature.brandId === "local" ? null : candidature.brandId;
+  const family = desada ?? siglesFamily(candidature.sigles) ?? candidature.brandId;
+  const marca = BRANDS_BY_ID.get(family ?? "")?.color;
+  if (marca && family !== "local") return marca;
   const official = candidature.color?.trim();
   if (official && /^#[0-9a-f]{6}$/i.test(official)) return official;
-  return BRANDS_BY_ID.get(candidature.brandId ?? "")?.color ?? "#8b8b8b";
+  return "#8b8b8b";
 }
 
 /**
@@ -723,7 +752,7 @@ function renderHemicycle(candidatures: readonly CandidatureShare[], totalSeats: 
     for (let i = 0; i < candidature.seats && cursor < seats.length; i += 1, cursor += 1) {
       const seat = seats[cursor]!;
       circles.push(
-        `<circle cx="${seat.x}" cy="${seat.y}" r="${seat.r}" fill="${colorOf(candidature)}" stroke="var(--ink)" stroke-width="1.5"><title>${escape(candidature.sigles)}</title></circle>`,
+        `<circle cx="${seat.x}" cy="${seat.y}" r="${seat.r}" fill="${colorDeCandidatura(candidature)}" stroke="var(--ink)" stroke-width="1.5"><title>${escape(candidature.sigles)}</title></circle>`,
       );
     }
   }
@@ -770,11 +799,11 @@ function renderLegend(candidatures: readonly CandidatureShare[], slugPer: (sigle
   return `<ul class="llegenda">${amb
     .map(
       (c) => `<li>
-      <span class="qui"><span class="mostra" style="--c:${colorOf(c)}"></span><b><a href="${escape(
+      <span class="qui"><span class="mostra" style="--c:${colorDeCandidatura(c)}"></span><b><a href="${escape(
         slugPer(c.sigles),
       )}/">${escape(c.sigles)}</a></b></span>
       <span class="xifra"><b>${c.seats}</b> ${c.seats === 1 ? "regidoria" : "regidories"}</span>
-      <span class="proporcio" aria-hidden="true"><i style="--c:${colorOf(c)};--w:${(100 * c.share) / maxim}%"></i></span>
+      <span class="proporcio" aria-hidden="true"><i style="--c:${colorDeCandidatura(c)};--w:${(100 * c.share) / maxim}%"></i></span>
       <span class="secundari">${number(c.votes)} vots · ${percent(c.share)}</span></li>`,
     )
     .join("")}</ul>`;
@@ -789,7 +818,7 @@ function renderSeries(results: ResultsMetric): string {
       .map(
         (c) => {
           const part = (100 * c.seats) / total;
-          const { fons, tinta } = sobreColor(colorOf(c));
+          const { fons, tinta } = sobreColor(colorDeCandidatura(c));
           // Les sigles només hi caben si el tram és prou ample: per sota d'un
           // 14 % del ple hi sortia un tros de paraula tallat a mitja lletra,
           // que no diu res i embruta la barra. El títol i la llegenda de sota
@@ -809,7 +838,7 @@ function renderSeries(results: ResultsMetric): string {
     const noms = election.candidatures
       .filter((c) => c.seats > 0)
       .map(
-        (c) => `<li><span class="mostra" style="--c:${sobreColor(colorOf(c)).fons}"></span>${escape(
+        (c) => `<li><span class="mostra" style="--c:${sobreColor(colorDeCandidatura(c)).fons}"></span>${escape(
           c.sigles,
         )} <b>${c.seats}</b></li>`,
       )
@@ -3630,7 +3659,7 @@ export function renderRadiografia(
     if (!grup || /no\s*adscri/i.test(grup)) return "#8b8b8b";
     const llistes = current?.candidatures ?? [];
     const directe = llistes.find((c) => sameForce(c.sigles, grup) || sameForce(c.brandId, grup));
-    if (directe) return colorOf(directe);
+    if (directe) return colorDeCandidatura(directe);
     // La seu electrònica no escriu sigles, escriu el nom del grup municipal:
     // «Grup municipal del Partit dels Socialistes de Catalunya (PSC)». Comparat
     // amb «PSC-CP» com si fossin dues sigles no lliga mai, i a Rubí cinc dels
@@ -3639,7 +3668,7 @@ export function renderRadiografia(
     const familia = familiaDelNomDeGrup(grup);
     if (!familia) return "#8b8b8b";
     const seva = llistes.find((c) => siglesFamily(c.sigles) === familia);
-    return seva ? colorOf(seva) : BRANDS_BY_ID.get(familia)?.color ?? "#8b8b8b";
+    return seva ? colorDeCandidatura(seva) : BRANDS_BY_ID.get(familia)?.color ?? "#8b8b8b";
   };
 
   /**

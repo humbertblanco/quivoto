@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  colorDeCandidatura,
   renderEscombraries,
   renderQuePaga,
   renderQuiHiViu,
@@ -1121,5 +1122,36 @@ describe("la mediana del grup", () => {
     const html = renderRadiografia(fitxa({ participation: participacio }));
     expect(html).toContain("60,0 %");
     expect(html).not.toContain("mediana dels");
+  });
+});
+
+/**
+ * El color d'una candidatura no el pot decidir una dada desada que ha
+ * envellit: a la taula de les tres últimes eleccions de Barcelona sortien
+ * «BARCELONA EN COMÚ-ECG», «BCN Canvi-Cs» i «JUNTS» de color mort, i el PP en
+ * dos blaus diferents segons l'any.
+ */
+describe("de quin color va cada candidatura", () => {
+  const fes = (sigles: string, brandId: string | null, color: string | null) =>
+    colorDeCandidatura({ sigles, brandId, color } as never);
+
+  it("mana la marca, i no el color que la font dona a cada convocatòria", () => {
+    // El PP arriba amb blaus diferents el 2019 i el 2023; a la taula n'ha de fer un.
+    expect(fes("PP", "pp", "#01a7e3")).toBe(fes("PP", "pp", "#234b90"));
+  });
+
+  it("dedueix la família de les sigles quan la ingesta no en va desar cap", () => {
+    expect(fes("BARCELONA EN COMÚ-ECG", null, null)).toBe(fes("ECP", "comuns", null));
+    expect(fes("JUNTS", null, null)).toBe(fes("Junts", "junts", null));
+  });
+
+  it("«local» no atura la pregunta: és el calaix de les no reconegudes", () => {
+    // «BCN Canvi-Cs» hi era desada i es quedava grisa tot i ser Ciutadans.
+    expect(fes("BCN Canvi-Cs", "local", null)).toBe(fes("C's", "cs", null));
+  });
+
+  it("una llista local de debò es queda amb el seu color, o amb el gris", () => {
+    expect(fes("Som-hi Matadepera", "local", "#0a7d5e")).toBe("#0a7d5e");
+    expect(fes("Som-hi Matadepera", "local", null)).toBe("#8b8b8b");
   });
 });
