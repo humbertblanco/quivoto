@@ -3,6 +3,7 @@ import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import { de, delDia, elDia, nomLlegible, normalizePersonName, slugify } from "../lib/text";
 import { capcalera } from "./capcalera";
+import { sigla } from "./sigla";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import type { FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
@@ -945,7 +946,11 @@ ${cercador("../../../../")}
           r.grup ? `, pel grup <b>${escape(r.grup)}</b>` : ""
         }.</p>
         <div class="etiquetes">
-          ${r.grup ? `<span class="sigla" style="--c:${color};--t:${tinta(color)}">${escape(r.sigles ?? r.grup)}</span>` : ""}
+          ${
+            // Les sigles porten a la pàgina del partit a tot Catalunya, com el
+            // nom de la persona porta a la seva. Des d'aquí, quatre nivells amunt.
+            r.grup ? sigla(r.sigles ?? r.grup, { base: "../../../../", color }) : ""
+          }
           ${
             // Qui té l'alcaldia hi surt dit amb totes les lletres i no només
             // dins de la frase: és el càrrec pel qual s'entra en aquesta pàgina.
