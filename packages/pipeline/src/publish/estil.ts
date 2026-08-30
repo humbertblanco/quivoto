@@ -483,9 +483,13 @@ details.nota > :not(summary){font-size:.92rem;color:var(--ink-suau);max-width:70
 .grup .dades{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1 1 8em}
 .retrat{width:44px;height:44px;border-radius:50%;object-fit:cover;object-position:50% 22%;
   border:2px solid var(--ink);background:var(--paper);flex:none}
+/* La inicial anava esvaïda a posta, perquè quan hi havia cares no els fes la
+   competència. Ara ja no és el forat que queda quan falta una foto: és la peça
+   que porta qui no en té, amb el color del seu grup i la mateixa mida i vora que
+   el retrat. Esvaïda tornaria a dir el que volem que no digui, que és que aquell
+   regidor val menys. */
 .retrat.inicials{display:flex;align-items:center;justify-content:center;font-family:var(--display);
-  font-weight:900;font-size:.86rem;color:var(--ink-suau);background:var(--c);
-  filter:saturate(.35) opacity(.5)}
+  font-weight:900;font-size:.86rem;color:var(--t,var(--ink));background:var(--c,var(--paper-2))}
 .grup.noadscrit{border-left-style:dashed}
 /* Al govern: fons lleugerament tenyit i marca a cada regidoria. El govern pot
    ser de més d'un partit, i per això la marca va per persona i no per grup. */

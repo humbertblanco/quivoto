@@ -489,7 +489,7 @@ function renderLlinatge(data: PartitData): string {
     <h3 class="subtitol">D'on ve i cap a on va</h3>
     <ul>${passos}</ul>
     <p class="nota">${escape(vida.perque)}</p>
-    <p class="nota">Continuen sent marques separades a tot l'Observatori, i cap corba d'aquesta
+    <p class="nota">Continuen sent partits separats a tot l'Observatori, i cap corba d'aquesta
     pàgina no arrossega les xifres de l'altra. Hi ha una filiació política que tothom reconeix i,
     alhora, no són la mateixa persona jurídica: ajuntar-les en una sola sèrie afirmaria una
     continuïtat que la font no diu enlloc.</p>
@@ -1036,7 +1036,7 @@ ${cercador("../../")}
   <a href="#evolucio">Des del 1979</a>
   <a href="#mana">On mana</a>
   <a href="#poblacio">Vots i habitants</a>
-  <a href="#altres">Les altres marques</a>
+  <a href="#altres">Els altres partits</a>
 </nav>
 
 <section class="bloc" id="mapa">
@@ -1068,7 +1068,7 @@ ${cercador("../../")}
 </section>
 
 <section class="bloc" id="altres">
-  <h2>Les altres marques</h2>
+  <h2>Els altres partits</h2>
   ${
     data.altres.length > 0
       ? `<ul class="partit-altres">${data.altres

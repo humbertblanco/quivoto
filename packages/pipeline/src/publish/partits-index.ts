@@ -27,7 +27,8 @@ import { quadres } from "./quadres";
  *
  * Les quinze marques **no sumen 947**. Comptat de les pàgines publicades a
  * `web/public/observatori/partit/` el 30-08-2026, en sumen 850, i les 97
- * restants són llistes locals i candidatures sense marca supramunicipal. Si el
+ * restants són llistes locals i candidatures que no es presenten sota cap
+ * partit. Si el
  * dibuix repartís només 850 i n'ocupés tot el quadrat, la pàgina estaria dient
  * que els partits es reparteixen tota Catalunya, i no és cert: un poble de cada
  * deu el governa una llista que no és de ningú. Per això el total del treemap
@@ -60,7 +61,7 @@ export type PartitFila = {
  */
 const ALCALDIES_CATALUNYA = 947;
 
-const ETIQUETA_RESTA = "Llistes locals i marques sense pàgina";
+const ETIQUETA_RESTA = "Llistes locals i partits sense pàgina";
 
 const escape = (text: string): string =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -216,8 +217,8 @@ export function renderPartitsIndex(
   const perSigles = new Map(ordenades.map((p) => [p.sigles, p]));
 
   const title = "Els partits als ajuntaments — Observatori municipal de quivoto";
-  const description = `Com es reparteixen les ${number(ALCALDIES_CATALUNYA)} alcaldies de Catalunya entre ${number(ordenades.length)} marques polítiques: quantes n'hi té cadascuna, quantes regidories i quanta població governa. Només amb dades obertes.`;
-  const resum = `${number(ordenades.length)} marques amb pàgina pròpia es reparteixen ${number(sumaAlcaldies)} de les ${number(ALCALDIES_CATALUNYA)} alcaldies de Catalunya. Les altres ${number(resta)} són de llistes locals i de candidatures sense marca supramunicipal.`;
+  const description = `Com es reparteixen les ${number(ALCALDIES_CATALUNYA)} alcaldies de Catalunya entre ${number(ordenades.length)} partits: quantes n'hi té cadascuna, quantes regidories i quanta població governa. Només amb dades obertes.`;
+  const resum = `${number(ordenades.length)} partits amb pàgina pròpia es reparteixen ${number(sumaAlcaldies)} de les ${number(ALCALDIES_CATALUNYA)} alcaldies de Catalunya. Les altres ${number(resta)} són de llistes locals i de candidatures que no es presenten sota cap partit.`;
 
   const dibuix =
     caixes.length > 1
@@ -305,7 +306,7 @@ ${cercador("../")}
 </section>
 
 <section>
-  <h2>${number(ordenades.length)} ${plural(ordenades.length, "marca", "marques")}, de més a menys alcaldies</h2>
+  <h2>${number(ordenades.length)} ${plural(ordenades.length, "partit", "partits")}, de més a menys alcaldies</h2>
   <ul class="px-llista">${llista}</ul>
   <p class="px-nota">No hi ha cap pàgina de «llistes locals», i no és un oblit: sota aquella
   etiqueta hi ha centenars de candidatures que no tenen res a veure les unes amb les altres, i

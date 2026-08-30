@@ -1511,7 +1511,22 @@ function renderCarrecsSeue(fitxa: FitxaCarrecs, colorPer: (grup: string | null) 
   // La mateixa funció que fa servir el generador de pàgines de regidor, sobre la
   // mateixa llista i en el mateix ordre: així l'enllaç sempre existeix.
   const adreces = adrecesRegidors(fitxa.carrecs);
-  const ambFoto = fitxa.cobertura === "completa";
+  /*
+   * Les cares s'ensenyen quan les tenim, i qui no en té rep la seva inicial.
+   *
+   * Abans hi havia una regla de tot-o-res: si l'ajuntament no publicava la
+   * fotografia de TOTS els càrrecs, no se'n mostrava cap. La volia protegir una
+   * cosa justa —que qui no en té no quedi com a regidor de segona, cosa que no
+   * depèn d'ell sinó del que publica el seu ajuntament— però el preu era que a
+   * l'Hospitalet de Llobregat, amb vint-i-quatre cares de vint-i-cinc, no en
+   * sortia ni una, l'alcalde inclòs.
+   *
+   * El principi es respecta millor d'una altra manera: la inicial no és el forat
+   * que queda quan falta una foto, és una peça dissenyada, amb el color del seu
+   * grup i la mateixa mida i la mateixa vora que el retrat. Les dues formes són
+   * deliberades i cap de les dues no es llegeix com una absència.
+   */
+  const ambFoto = fitxa.ambFoto > 0;
 
   const groups = new Map<string, CarrecSeue[]>();
   for (const carrec of fitxa.carrecs) {
@@ -1546,10 +1561,10 @@ function renderCarrecsSeue(fitxa: FitxaCarrecs, colorPer: (grup: string | null) 
             .slice(0, 2)
             .map((w) => w[0]!.toUpperCase())
             .join("");
-          const retrat =
-            ambFoto && c.fotoPetita
-              ? `<img class="retrat" src="${escape(c.fotoPetita)}" alt="" loading="lazy" width="44" height="44">`
-              : `<span class="retrat inicials" aria-hidden="true">${escape(inicials)}</span>`;
+          const tint = sobreColor(colorPer(c.grup));
+          const retrat = c.fotoPetita
+            ? `<img class="retrat" src="${escape(c.fotoPetita)}" alt="" loading="lazy" width="44" height="44">`
+            : `<span class="retrat inicials" style="--c:${tint.fons};--t:${tint.tinta}" aria-hidden="true">${escape(inicials)}</span>`;
           // El nom porta a la nostra fitxa de la persona, no a la de la seu
           // electrònica: allà només hi ha el càrrec, i aquí hi ha també de quina
           // llista va sortir i què ha votat el seu grup. L'enllaç a l'original
@@ -1606,12 +1621,14 @@ function renderCarrecsSeue(fitxa: FitxaCarrecs, colorPer: (grup: string | null) 
     ambFoto
       ? `Les fotografies les publica l'ajuntament al seu portal de transparència
          (<a href="${escape(fitxa.url)}" target="_blank" rel="noopener">fitxa original</a>);
-         les reproduïm en mida petita i les retirem a la primera petició de la persona.`
-      : fitxa.ambFoto > 0
-        ? `L'ajuntament publica fotografia de ${fitxa.ambFoto} dels ${fitxa.totalCarrecs} càrrecs.
-           Com que no les té tothom, no en mostrem cap: ensenyar-ne només algunes seria un
-           tracte desigual.`
-        : ""
+         les reproduïm en mida petita i les retirem a la primera petició de la persona.${
+           fitxa.ambFoto < fitxa.totalCarrecs
+             ? ` D'aquest ple en publica ${fitxa.ambFoto} de ${fitxa.totalCarrecs}: qui no hi
+                surt no és que no en tingui, és que el seu ajuntament no l'ha publicada, i per
+                això les inicials van amb el color del seu grup i no com un buit.`
+             : ""
+         }`
+      : ""
   }
   Hi surten nom, càrrec i grup, que és el que deriva del càrrec públic; cap dada de contacte.</details>`;
 }

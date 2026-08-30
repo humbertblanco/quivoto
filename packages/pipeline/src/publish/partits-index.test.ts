@@ -69,7 +69,7 @@ describe("renderPartitsIndex", () => {
    */
   it("dibuixa el tros que no és de cap marca i diu quantes alcaldies són", () => {
     expect(html).toContain("px-resta");
-    expect(html).toContain("Llistes locals i marques sense pàgina");
+    expect(html).toContain("Llistes locals i partits sense pàgina");
     expect(html).toContain("163");
   });
 
