@@ -360,6 +360,7 @@ function renderEvolucio(data: PartitData): string {
       : `<h3 class="subtitol">Alcaldies, mandat a mandat</h3>${alcaldies}`
   }
   <h3 class="subtitol">Les xifres de cada convocatòria</h3>
+  <div class="taula-ampla">
   <table class="partit-serie">
     <caption class="nomes-lectors">Regidories, part del total català, alcaldies i municipis
     guanyats per ${escape(data.sigles)} a cada elecció municipal del ${primer} al ${ultim}</caption>
@@ -367,6 +368,7 @@ function renderEvolucio(data: PartitData): string {
       <th>Alcaldies</th><th>Municipis guanyats</th></tr></thead>
     <tbody>${files}</tbody>
   </table>
+  </div>
   <p class="nota">La columna d'alcaldies del <b>${ANY_ARA}</b> és la mateixa llista que hi ha
   més avall, comptada municipi a municipi amb les sigles de cada candidatura; les dels mandats
   anteriors surten de l'historial d'alcaldes, que només porta el nom del partit tal com el va
@@ -523,7 +525,11 @@ export const PARTIT_CSS = `
 /* --- la sèrie llarga ----------------------------------------------------- */
 .subtitol{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.02em;
   margin:var(--e3) 0 0}
-.partit-serie{width:100%;border-collapse:collapse;font-size:.95rem;margin-top:var(--e2)}
+/* La taula de les dotze eleccions fa 426px de mínim i no s'encongeix més: sota
+   els 480 estirava el document sencer i la pàgina lliscava de costat. El
+   desplaçament ha de quedar DINS de la taula, com ja passa amb les gràfiques. */
+.taula-ampla{overflow-x:auto;margin-top:var(--e2);-webkit-overflow-scrolling:touch}
+.partit-serie{width:100%;min-width:420px;border-collapse:collapse;font-size:.95rem}
 .partit-serie th,.partit-serie td{text-align:left;padding:9px 12px 9px 0;
   border-bottom:1px solid var(--vora);vertical-align:top}
 .partit-serie thead th{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;
@@ -635,7 +641,15 @@ ${cercador("../../")}
       <span class="secundari">a ${number(data.municipis)}
       ${plural(data.municipis, "municipi", "municipis")} amb representació</span></li>
     <li><span class="etq">Població governada</span><span class="gran">${number(data.poblacioGovernada)}</span>
-      <span class="secundari">habitants als municipis on té l'alcaldia</span></li>
+      <span class="secundari">${
+        // El percentatge és el que fa comparable una marca amb l'altra: 947.665
+        // habitants no diuen si això és molt o poc fins que no se sap que
+        // Catalunya en té 7,9 milions. La xifra absoluta hi queda perquè és la
+        // que es pot comprovar sumant els municipis de la llista de sota.
+        data.poblacioCatalunya > 0
+          ? `habitants, el ${percent((100 * data.poblacioGovernada) / data.poblacioCatalunya)} de Catalunya, als municipis on té l'alcaldia`
+          : "habitants als municipis on té l'alcaldia"
+      }</span></li>
   </ul>
 </section>
 
