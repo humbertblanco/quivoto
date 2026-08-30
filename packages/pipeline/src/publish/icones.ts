@@ -162,18 +162,19 @@ export const ICONES_SERVEIS: Readonly<Record<string, string>> = {
   "Parcs i jardins": svg(
     "Parcs i jardins",
     2.7,
-    `<circle cx="24" cy="20" r="15" fill="${MENTA}"/>` +
-      `<rect x="21" y="31" width="6" height="13" rx="1.5" fill="${TINTA}"/>` +
+    `<circle cx="24" cy="19" r="14" fill="${MENTA}"/>` +
+      `<rect x="20.5" y="29" width="7" height="15" rx="1.5" fill="${TINTA}"/>` +
       cara(24, 18),
   ),
-  // El tram de calçada amb la ratlla discontínua a sota. La ratlla va per sota
-  // de la boca i no pel mig, perquè pel mig partia la cara en dos.
+  // El carrer en perspectiva, que s'eixampla cap a baix. Un rectangle amb la
+  // ratlla al mig ja el tenien tres icones més d'aquesta llista i totes es
+  // confonien a 24 px; la falca, no: la silueta sola ja diu carretera.
   "Vies públiques": svg(
     "Vies públiques",
     3.6,
-    `<rect x="3" y="12" width="42" height="28" rx="3" fill="${LAVANDA}"/>` +
-      `<path d="M8 36 H15 M21 36 H29 M35 36 H41" stroke="${TINTA}" stroke-width="3" stroke-linecap="round"/>` +
-      cara(24, 21),
+    `<path d="M2 44 L16 8 H32 L46 44 Z" fill="${LAVANDA}"/>` +
+      `<path d="M24 34 V41" stroke="${TINTA}" stroke-width="3.4" stroke-linecap="round"/>` +
+      cara(24, 20),
   ),
   // L'escombra. La «Neteja» que ja hi havia és el cubell de les escombraries, i
   // la neteja viària és una partida diferent: si compartissin dibuix, dues
@@ -193,8 +194,10 @@ export const ICONES_SERVEIS: Readonly<Record<string, string>> = {
     "Tractament de residus",
     5.4,
     `<rect x="4" y="23" width="40" height="19" rx="2" fill="${MENTA}"/>` +
-      `<path d="M4 24 L14 16 L24 24 L34 16 L44 24 Z" fill="${MENTA}"/>` +
-      `<path d="M4 24 L14 16 L24 24 L34 16 L44 24" fill="none" stroke="${TINTA}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>` +
+      `<rect x="5" y="5" width="8" height="19" fill="${MENTA}"/>` +
+      `<path d="M13 24 L21 16 L29 24 L37 16 L44 24 Z" fill="${MENTA}"/>` +
+      `<path d="M13 24 L21 16 L29 24 L37 16 L44 24" fill="none" stroke="${TINTA}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>` +
+      `<path d="M5 10 H13" stroke="${TINTA}" stroke-width="2.6"/>` +
       cara(24, 31),
   ),
   // Tres llibres apilats. El llibre obert ja és l'«Educació», i la biblioteca
@@ -232,8 +235,8 @@ export const ICONES_SERVEIS: Readonly<Record<string, string>> = {
     "Despesa total",
     1.8,
     `<rect x="5" y="13" width="38" height="27" rx="5" fill="${PRESEC}"/>` +
-      `<path d="M30 22 H43 V32 H30 A5 5 0 0 1 30 22 Z" fill="${TINTA}"/>` +
-      cara(19, 23),
+      `<path d="M35 13 H38 A5 5 0 0 1 43 18 V35 A5 5 0 0 1 38 40 H35 Z" fill="${TINTA}"/>` +
+      cara(23, 23),
   ),
   // La roda dentada: els serveis públics bàsics són un sac de set programes
   // (seguretat, mobilitat, habitatge, urbanisme, aigua, residus i enllumenat) i
@@ -241,12 +244,12 @@ export const ICONES_SERVEIS: Readonly<Record<string, string>> = {
   "Serveis públics bàsics": svg(
     "Serveis públics bàsics",
     2.7,
-    `<rect x="20" y="5" width="8" height="10" rx="2" fill="${MENTA}"/>` +
-      `<rect x="20" y="33" width="8" height="10" rx="2" fill="${MENTA}"/>` +
-      `<rect x="5" y="20" width="10" height="8" rx="2" fill="${MENTA}"/>` +
-      `<rect x="33" y="20" width="10" height="8" rx="2" fill="${MENTA}"/>` +
-      `<circle cx="24" cy="24" r="14" fill="${MENTA}"/>` +
-      cara(24, 22),
+    `<rect x="19.5" y="3" width="9" height="13" rx="2" fill="${MENTA}"/>` +
+      `<rect x="19.5" y="32" width="9" height="13" rx="2" fill="${MENTA}"/>` +
+      `<rect x="3" y="19.5" width="13" height="9" rx="2" fill="${MENTA}"/>` +
+      `<rect x="32" y="19.5" width="13" height="9" rx="2" fill="${MENTA}"/>` +
+      `<circle cx="24" cy="24" r="15" fill="${MENTA}"/>` +
+      cara(24, 21),
   ),
   // La carpeta d'expedients. L'hemicicle ja és «El ple», que és on es decideix;
   // l'administració general és la casa que ho tramita.

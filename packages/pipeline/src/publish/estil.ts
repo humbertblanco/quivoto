@@ -203,23 +203,30 @@ main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
    I les files internes eren automàtiques, de manera que una pastilla sense
    percentil —que es quedava sense barra— pujava el seu peu cinc píxels respecte
    de la del costat. Ara les quatre files són fixes i la barra hi és sempre. */
-.ullada{margin:var(--e3) 0 0;border-top:2.5px solid var(--ink)}
+.ullada{margin:var(--e3) 0 0;border-top:2.5px solid var(--ink);container-type:inline-size}
+/* Les columnes les decideix l'amplada del CONTENIDOR i no la de la finestra.
+   Amb els media queries, la pàgina de comarca —que té el rail de l'índex i
+   deixa la columna molt més estreta que la fitxa— rebia tres columnes a
+   pantalla ampla i escapçava les etiquetes: «REGIDORIES EN JOC EL 23…» i
+   «GOVERNA QUI NO VA…». L'etiqueta és el que dona sentit a la xifra, i tallada
+   deixa el número sense voler dir res. */
 .ullada ul{list-style:none;margin:0;padding:0;display:grid;gap:0;
-  grid-template-columns:repeat(3,minmax(0,1fr))}
-@media (max-width:880px){ .ullada ul{grid-template-columns:repeat(2,minmax(0,1fr))} }
-@media (max-width:560px){ .ullada ul{grid-template-columns:minmax(0,1fr)} }
+  grid-template-columns:minmax(0,1fr)}
+@container (min-width:470px){ .ullada ul{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container (min-width:820px){ .ullada ul{grid-template-columns:repeat(3,minmax(0,1fr))} }
 .ullada li{border-top:1.5px solid var(--vora);border-left:1.5px solid var(--vora)}
 /* La primera fila ja té el filet de tinta del bloc a sobre, i la primera
    columna la vora del contingut: repetir-los-hi faria una doble ratlla. */
 .ullada li:nth-child(3n+1){border-left:0}
 .ullada li:nth-child(-n+3){border-top:0}
-@media (max-width:880px){
+/* Per sota de tres columnes els filets es refan: qui obre fila canvia. */
+@container (max-width:819px){
   .ullada li:nth-child(3n+1){border-left:1.5px solid var(--vora)}
   .ullada li:nth-child(-n+3){border-top:1.5px solid var(--vora)}
   .ullada li:nth-child(2n+1){border-left:0}
   .ullada li:nth-child(-n+2){border-top:0}
 }
-@media (max-width:560px){
+@container (max-width:469px){
   .ullada li{border-left:0}
   .ullada li:nth-child(-n+2){border-top:1.5px solid var(--vora)}
   .ullada li:first-child{border-top:0}
@@ -234,11 +241,11 @@ main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
   grid-template-rows:auto auto 5px auto;align-content:start;min-height:124px;
   text-decoration:none;color:inherit;padding:var(--e2) var(--e2) var(--e2) var(--e2)}
 .ullada li:nth-child(3n+1) a{padding-left:0}
-@media (max-width:880px){
+@container (max-width:819px){
   .ullada li:nth-child(3n+1) a{padding-left:var(--e2)}
   .ullada li:nth-child(2n+1) a{padding-left:0}
 }
-@media (max-width:560px){ .ullada a{padding-left:0;min-height:0} }
+@container (max-width:469px){ .ullada a{padding-left:0;min-height:0} }
 .ullada .dibuix{grid-row:1 / span 4;align-self:start;margin-top:2px}
 .ullada .dibuix .icona{width:26px;height:26px;display:block}
 .ullada .etq,.ullada .xifra,.ullada .on,.ullada .peu{grid-column:2}
@@ -250,7 +257,7 @@ main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
 .ullada .etq{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
   color:var(--ink-suau);line-height:1.25;min-height:2.5em;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-@media (max-width:560px){ .ullada .etq{min-height:0} }
+@container (max-width:469px){ .ullada .etq{min-height:0} }
 .ullada .xifra{font-family:var(--display);font-weight:900;font-size:1.9rem;line-height:1.05;
   letter-spacing:-.03em;font-variant-numeric:tabular-nums;transition:color .12s ease}
 .ullada .on{display:block;height:5px;background:var(--vora);border-radius:var(--r-max);

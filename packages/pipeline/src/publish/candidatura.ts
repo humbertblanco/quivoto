@@ -3,10 +3,10 @@ import {
   candidatures, councilTerms, councillorMandates, electionResults, municipalities,
   municipalityMetrics, people, politicalGroups, type Db,
 } from "@quivoto/db";
-import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
+import { BRANDS_BY_ID, PARTY_BRANDS, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { INDEXABLE, SITE } from "./config";
-import { tintaSobre as tintaDeContrast } from "./contrast";
+import { sobreColor, tintaSobre as tintaDeContrast } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { de, normalizePersonName, slugify } from "../lib/text";
 import { adrecesRegidors } from "./regidor";
@@ -80,6 +80,17 @@ export type CandidaturaData = {
   brandId: string | null;
   brandName: string | null;
   brandKind: string | null;
+  /**
+   * La marca que **té pàgina pròpia** a `/observatori/partit/<id>/`, si n'hi ha.
+   *
+   * Aquesta candidatura és aquell partit en aquest municipi, i fins ara no hi
+   * havia manera d'anar de l'una a l'altra: la pàgina de partit sí que enllaça
+   * les seves 2.626 candidatures i el camí de tornada no existia. És `null`
+   * quan les sigles no són de cap marca coneguda —una llista d'electors, una
+   * coalició que apunta a dues marques alhora— i llavors no hi ha pàgina on
+   * anar i no s'hi enllaça.
+   */
+  partitId: string | null;
   /** Força amb què surt a la sèrie històrica; les marques petites hi van com a «local». */
   family: string;
   /** Força de la qual prové (CiU per a Junts i PDeCAT), si n'hi ha. */
@@ -157,6 +168,30 @@ const NOM_FAMILIA: Record<string, string> = {
   cup: "CUP", pp: "PP", cs: "Ciutadans", vox: "Vox", pdecat: "PDeCAT",
   aliancacat: "Aliança Catalana", local: "llistes locals",
 };
+/**
+ * Les marques de debò, que són les que poden tenir pàgina pròpia. «local» no hi
+ * és perquè no és cap partit: és el calaix de les llistes d'electors.
+ */
+const MARQUES_AMB_PAGINA = new Set(PARTY_BRANDS.filter((b) => b.id !== "local").map((b) => b.id));
+
+/**
+ * De quina marca amb pàgina és aquesta candidatura, o `null`.
+ *
+ * És **la mateixa regla que `marcaDe()` de `partit.ts`**, i ha de continuar
+ * sent-ho: primer l'agrupació electoral que la Generalitat publica i, quan allò
+ * diu «local» o no diu res, les sigles amb `siglesFamily()`. Aquesta és la
+ * garantia que l'enllaç no cau enlloc: `loadPartits()` compta les regidories de
+ * cada marca amb aquesta mateixa funció i només fa pàgina de les marques que en
+ * tenen alguna, de manera que tota candidatura amb representació que resolgui
+ * una marca en fa existir la pàgina. Si un dia allò canvia, això ha de canviar
+ * el mateix dia.
+ */
+export function marcaAmbPagina(brandId: string | null, sigles: string): string | null {
+  if (brandId && MARQUES_AMB_PAGINA.has(brandId)) return brandId;
+  const familia = siglesFamily(sigles);
+  return familia && MARQUES_AMB_PAGINA.has(familia) ? familia : null;
+}
+
 const NOM_TIPUS: Record<string, string> = {
   state: "partit d'àmbit estatal",
   catalan: "partit d'àmbit català",
