@@ -1,6 +1,6 @@
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { MASCOTA_CSS, catalunya, papereta } from "./mascota";
+import { MASCOTA_CSS, catalunya } from "./mascota";
 import { capcalera } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -118,7 +118,7 @@ ${cercador("./")}
 
 <main id="contingut">
   <section class="portada">
-    <div class="presenta">${papereta(130, "pregunta")}${catalunya(112, "felic", null)}<div>
+    <div class="presenta">${catalunya(150, "felic", null)}<div>
       <p class="micro">Observatori</p>
       <h1>Els ${comptes.municipis} municipis</h1>
     </div></div>
