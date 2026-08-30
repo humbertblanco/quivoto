@@ -225,7 +225,7 @@ export function cercador(base: string): string {
       // municipi, que és on hi ha el que en sabem.
       var propia = electes ? electes.alc[f.i] : null;
       return { mena: "Alcaldia", text: m.a,
-               sub: "alcalde de " + m.n + (m.g === null ? "" : " · " + dades.sig[m.g]),
+               sub: "alcaldia de " + m.n + (m.g === null ? "" : " · " + dades.sig[m.g]),
                on: BASE + "m/" + m.s + "/" + (propia || "#alcaldies") };
     }
     if (f.m === "Comarca") {

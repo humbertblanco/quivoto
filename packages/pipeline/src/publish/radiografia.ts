@@ -3342,7 +3342,19 @@ export function renderSous(
  * licitacions, un percentil és una xifra inventada.
  */
 export function renderContractacio(c: ContractacioMetric | null): string {
-  if (!c || c.finestra.contractes === 0) return "";
+  // El buit es diu: 138 municipis no consten a la plataforma i el bloc
+  // desapareixia en silenci, que és exactament el que el pla de dades diu que
+  // no s'ha de fer («un bloc que desapareix sense explicació fa pensar que no
+  // hi ha res a dir»).
+  if (!c) {
+    return `<p>La plataforma de serveis de contractació pública <b>no publica cap adjudicació
+    d'aquest ajuntament</b>, i per això aquí no hi ha xifres. No vol dir que no contracti res:
+    vol dir que no ho podem llegir d'una font oberta.</p>`;
+  }
+  if (c.finestra.contractes === 0) {
+    return `<p>En la finestra que publica la font no hi consta <b>cap adjudicació</b> d'aquest
+    ajuntament. Un zero aquí no és un veredicte: és el que diu la plataforma.</p>`;
+  }
   const comp = c.comparacio;
   const finestra =
     c.finestraDates.desDe && c.finestraDates.finsA

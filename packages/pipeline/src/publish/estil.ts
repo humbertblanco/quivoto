@@ -934,9 +934,9 @@ details.nota > .serie{font-size:1rem}
 .transparencia{list-style:none;margin:0 0 var(--e2);padding:0}
 .transparencia li{display:flex;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid var(--vora)}
 .transparencia .senyal{font-weight:900;font-size:1rem;flex:none;width:1.1em;text-align:center}
-.transparencia .hi-es .senyal{color:#1d7a4f}
-.transparencia .no-hi-es .senyal{color:var(--coral-text)}
-@media (prefers-color-scheme:dark){.transparencia .hi-es .senyal{color:#7fd6a8}}
+.transparencia .hi-es .senyal{color:var(--ink)}
+.transparencia .no-hi-es .senyal{color:var(--ink-suau)}
+@media (prefers-color-scheme:dark){.transparencia .hi-es .senyal{color:var(--paper)}}
 /* flex-basis:0 en comptes d'auto: amb auto, un nom llarg («Incompatibilitats
    dels càrrecs») feia que el bloc no hi cabés i saltés de línia deixant el
    senyal sol. Ara el nom s'encongeix i el senyal es queda al seu costat. */

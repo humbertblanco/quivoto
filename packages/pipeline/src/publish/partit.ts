@@ -970,7 +970,14 @@ function renderEvolucio(data: PartitData): string {
 
   // Els forats es queden a la vista, no a la lletra petita: un guionet que
   // sembla un zero és l'error que el lector no pot resoldre sol.
-  return `${cels.length === 0 ? "" : `<div class="partit-series">${cels.join("\n")}</div>`}
+  return `${
+    cels.length === 0
+      ? ""
+      : `<div class="partit-series">${cels.join("\n")}</div>
+  <p class="font-series">Font: resultats de les dotze eleccions municipals des del 1979, Consorci
+  AOC (<code>3539f7e6</code>); població governada, padró de cada any, Generalitat
+  (<code>6nei-4b44</code>).</p>`
+  }
   ${
     capAlcaldia
       ? `<p class="nota">No ha tingut mai cap alcaldia a Catalunya, ni el ${ANY_ARA} ni cap any
@@ -1573,6 +1580,7 @@ export const PARTIT_CSS = `
   margin-top:var(--e2)}
 .partit-series .partit-grafic{min-width:0}
 .partit-series .subtitol{margin:0 0 var(--e1)}
+.font-series{font-size:.82rem;color:var(--ink-suau)}
 .partit-series .grafic{margin:0}
 .partit-series .grafic svg{max-width:100%;height:auto}
 .partit-series .grafic .ample{display:none}

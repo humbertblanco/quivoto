@@ -1333,9 +1333,16 @@ describe("què contracta, i amb quanta competència", () => {
       ...over,
     }) as NonNullable<RadiografiaData["contractacio"]>;
 
-  it("sense contractes no hi ha bloc", () => {
-    expect(renderContractacio(null)).toBe("");
-    expect(renderContractacio(contractacio({ finestra: { contractes: 0, volum: 0, licitacions: 0, ofertesMitjana: null, unaOfertaPct: null, licitacionsAmbOfertes: 0 } }))).toBe("");
+  /**
+   * El bloc desapareixia en silenci a 138 municipis, i el pla de dades ho diu
+   * clar: el buit s'ha de dir. Sense metrica i amb finestra a zero, el bloc hi
+   * és igualment, amb la frase que explica què passa.
+   */
+  it("sense contractes el bloc hi és i diu el buit", () => {
+    expect(renderContractacio(null)).toContain("no publica cap adjudicació");
+    const zero = renderContractacio(contractacio({ finestra: { contractes: 0, volum: 0, licitacions: 0, ofertesMitjana: null, unaOfertaPct: null, licitacionsAmbOfertes: 0 } }));
+    expect(zero).toContain("cap adjudicació");
+    expect(zero).toContain("no és un veredicte");
   });
 
   it("posa el volum, el volum per habitant i la mediana dels de la seva mida", () => {
@@ -1379,11 +1386,14 @@ describe("què contracta, i amb quanta competència", () => {
     expect(html).toContain("https://contractaciopublica.cat/");
   });
 
-  it("arriba a la fitxa i a l'índex", () => {
+  it("arriba a la fitxa i a l'índex, també quan el buit s'ha de dir", () => {
     const html = renderRadiografia(fitxa({ contractacio: contractacio() }));
-    expect(html).toContain('<a href="#contractacio">Què contracta</a>');
     expect(html).toContain('id="contractacio"');
-    expect(renderRadiografia(fitxa())).not.toContain('id="contractacio"');
+    expect(html).toContain('<a href="#contractacio">Què contracta</a>');
+    // Sense mètrica, el bloc no desapareix: diu el buit amb paraules.
+    const buit = renderRadiografia(fitxa());
+    expect(buit).toContain('id="contractacio"');
+    expect(buit).toContain("no publica cap adjudicació");
   });
 });
 

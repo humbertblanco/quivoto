@@ -309,6 +309,9 @@ ${cercador("../")}
 <section>
   <h2>${number(ordenades.length)} ${plural(ordenades.length, "partit", "partits")}, de més a menys alcaldies</h2>
   <ul class="px-llista">${llista}</ul>
+  <p class="px-nota">Font: alcaldies i regidories, resultats de les municipals del 28 de maig
+  del 2023 i registre d'ens de la Generalitat (<code>ntc4-rnwr</code>, <code>6nei-4b44</code>);
+  població governada, padró municipal vigent.</p>
   <p class="px-nota">No hi ha cap pàgina de «llistes locals», i no és un oblit: sota aquella
   etiqueta hi ha centenars de candidatures que no tenen res a veure les unes amb les altres, i
   ajuntar-les diria que existeix un partit que no existeix. Cadascuna té la seva pàgina al seu

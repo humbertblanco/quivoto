@@ -1574,7 +1574,7 @@ ${cercador("../../../../")}
     </div>
     ${
       r.canviDeGrup
-        ? `<p class="nota">Va ser elegit${/a$/i.test(r.carrec) ? "da" : ""} per
+        ? `<p class="nota">Va ser ${/a$/i.test(r.carrec) ? "elegida" : "elegit"} per
            <b>${escape(r.canviDeGrup.de ?? "una altra llista")}</b> i avui consta
            ${r.canviDeGrup.a ? `a <b>${escape(r.canviDeGrup.a)}</b>` : "sense grup"}.
            Ho diem perquè consta a les dues fonts, no com a retret: canviar de grup és legal i
@@ -1597,7 +1597,12 @@ ${cercador("../../../../")}
 
   ${
     !ctx.publicaDeLaPersona
-      ? ""
+      ? `<section class="bloc">
+    <h2>Què en publica el seu ajuntament</h2>
+    <p class="entrada-bloc">La seu electrònica d'aquest ajuntament no publica la fitxa de càrrecs
+    electes, i per això aquí no hi ha ni la llista de què consta i què no. No vol dir que no
+    publiqui res enlloc: vol dir que no ho podem llegir d'una font oberta.</p>
+  </section>`
       : (() => {
           const p = ctx.publicaDeLaPersona;
           const fila = (hi: boolean, text: string): string =>
