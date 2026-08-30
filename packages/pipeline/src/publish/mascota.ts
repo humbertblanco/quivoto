@@ -83,10 +83,10 @@ function cara(color: string, humor: string): string {
 }
 
 /**
- * Les animacions de la mascota.
+ * Les animacions de les dues mascotes.
  *
- * Parpelleja cada tants segons i mira de reüll, que és el que la fa semblar
- * viva sense que es mogui res més de la pàgina. Tot va dins d'un
+ * Parpellegen cada tants segons i miren de reüll, que és el que les fa semblar
+ * vives sense que es mogui res més de la pàgina. Tot va dins d'un
  * `prefers-reduced-motion`: qui demana que no li moguin la pantalla veu el
  * mateix dibuix quiet, no una versió pitjor.
  */
@@ -98,13 +98,140 @@ export const MASCOTA_CSS = `
 @keyframes parpelleig{0%,92%,100%{transform:scaleY(0)}94%,96%{transform:scaleY(1)}}
 @keyframes reull{0%,40%,100%{transform:translateX(0)}50%,60%{transform:translateX(3px)}75%,85%{transform:translateX(-3px)}}
 @keyframes sura{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-6px) rotate(-1.2deg)}}
+
+/* --- la silueta de Catalunya -----------------------------------------------
+   Comparteix els keyframes de la papereta a posta: si aquí es reescrivissin el
+   parpelleig i la surada amb altres temps, les dues mascotes semblarien de dues
+   cases diferents.
+
+   Del catàleg de «design/MOVIMENT.md» aquesta només fa el moviment 5, «Vida»:
+   respira molt a poc a poc, parpelleja i mira de reüll. Els punts de poble
+   s'encenen UNA vegada en carregar, com la creu de la papereta que es dibuixa,
+   i es queden encesos; no hi ha cap bucle fora de la cara, que és el que diu la
+   regla 6. El que no fa, i s'ha descartat expressament, és encendre els punts
+   en bucle: seria un bucle a la vista principal i, pitjor, un dibuix que sembla
+   que compta alguna cosa quan no compta res. */
+.catalunya{display:block}
+.catalunya .terra{animation:sura 7s ease-in-out infinite;transform-origin:60px 100px}
+.catalunya .parpelles circle{transform-box:fill-box;transform-origin:center;transform:scaleY(0);
+  animation:parpelleig 6.5s infinite}
+.catalunya .pupilles{transform-box:fill-box;transform-origin:center;animation:reull 9s ease-in-out infinite}
+.catalunya .pobles circle{transform-box:fill-box;transform-origin:center;opacity:0;transform:scale(.4);
+  animation:poble 240ms cubic-bezier(.4,0,.2,1) var(--retard,0s) forwards}
+@keyframes poble{to{opacity:1;transform:scale(1)}}
 .cara-escala{display:block;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
 button:hover>.cara-escala{transform:scale(1.14) rotate(-6deg)}
 button[aria-pressed="true"]>.cara-escala{transform:scale(1.06)}
 @media (prefers-reduced-motion:reduce){
   .papereta .parpelles circle,.papereta .pupilles,.papereta .cos{animation:none}
   .papereta .parpelles circle{transform:scaleY(0)}
+  .catalunya .terra,.catalunya .pupilles,.catalunya .parpelles circle,
+  .catalunya .pobles circle{animation:none}
+  .catalunya .parpelles circle{transform:scaleY(0)}
+  .catalunya .pobles circle{opacity:1;transform:none}
   .cara-escala{transition:none}
   button:hover>.cara-escala,button[aria-pressed="true"]>.cara-escala{transform:none}
 }
 `;
+
+/* ==========================================================================
+   La segona mascota: Catalunya.
+   ========================================================================== */
+
+/**
+ * Les boques de la silueta, amb les mateixes claus que les de la papereta.
+ *
+ * Són a part perquè la cara de la silueta no seu al mateix lloc que la de la
+ * papereta: si es compartissin els camins, la boca quedaria fora de la costa.
+ */
+const BOQUES_CAT: Record<string, string> = {
+  felic: `<path class="boca" d="M40 68 q10 9 20 0" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+  neutre: `<path class="boca" d="M42 70 h18" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+  pregunta: `<path class="boca" d="M44 70 q8 -5 16 0" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+};
+
+/**
+ * La silueta, dibuixada a mà i deliberadament curta de detall.
+ *
+ * No surt de simplificar el contorn de `geo/municipis.json`: aquell camí té 351
+ * punts i, reduït a 40 px, la costa i la ratlla del Pirineu es tapen les unes
+ * amb les altres i queda una taca. El que es reconeix de Catalunya a mida
+ * d'icona són quatre coses, i només n'hi ha aquestes quatre: la ratlla del
+ * Pirineu que baixa cap a llevant, la punta del cap de Creus, la diagonal
+ * llarga de la costa i la punta de baix amb el nas del delta. Tota la resta
+ * s'ha tret a posta.
+ *
+ * Els punts de referència sí que surten del contorn de debò (mostrejat i
+ * normalitzat a 0–100, i després portat a aquest quadre de 120), i per això la
+ * proporció i la inclinació són les que toquen encara que el traç no ho sigui.
+ */
+const SILUETA =
+  "M26 18 Q36 20 48 25 Q55 28 62 30 Q70 33 77 33 Q85 33 91 29 L101 37 " +
+  "Q98 47 91 57 Q84 62 75 66 Q67 72 59 77 L41 83 Q34 86 32 91 " +
+  "L37 96 L28 98 L21 103 Q14 100 14 93 L16 79 Q17 71 17 64 Q19 57 24 52 Q28 44 27 34 Z";
+
+/**
+ * Set punts de poble, que són textura i no són dada.
+ *
+ * **No són els 947 ni en són una mostra**: no estan on són els municipis, no en
+ * representen cap i no se'n pot comptar res. El mapa de debò és a
+ * `mapa-catalunya.ts` i aquest personatge no hi ha de competir. Set és el
+ * nombre que cabia sense tocar la cara ni sortir de la costa; si algun dia se
+ * n'hi posen més, el sostre d'escalonament de `design/MOVIMENT.md` són vuit.
+ */
+const POBLES: ReadonlyArray<readonly [number, number]> = [
+  [36, 30],
+  [58, 37],
+  [81, 42],
+  [33, 39],
+  [23, 68],
+  [32, 85],
+  [24, 94],
+];
+
+/**
+ * La germana de la papereta: Catalunya amb cara.
+ *
+ * Es crida igual que `papereta()` —mida i variant— perquè les dues mascotes
+ * són intercanviables a la capçalera d'una pantalla i qui les posa no hagi de
+ * recordar dues formes de fer-ho. El quadre és quadrat, i per això aquí no hi
+ * ha el factor 1,17 de la papereta.
+ *
+ * `etiqueta` a `null` la fa decorativa (`aria-hidden`). Serveix per quan al
+ * costat ja hi ha el títol que diu el mateix: un lector de pantalla que llegeix
+ * dues vegades seguides «Catalunya» no informa, entrebanca.
+ */
+export function catalunya(
+  mida = 180,
+  humor: keyof typeof BOQUES_CAT | string = "felic",
+  etiqueta: string | null = "Catalunya, mascota de quivoto",
+): string {
+  const boca = BOQUES_CAT[humor] ?? BOQUES_CAT["felic"]!;
+  // El retard de cada poble és el graó de 60 ms de «design/MOVIMENT.md», i va
+  // escrit a l'atribut «style» com el de les icones: així el CSS no ha de
+  // conèixer quants punts hi ha.
+  const pobles = POBLES.map(
+    ([x, y], i) =>
+      `<circle cx="${x}" cy="${y}" r="2.6" fill="${CORAL}" style="--retard:${(0.18 + i * 0.06).toFixed(2)}s"/>`,
+  ).join("");
+  const accessible =
+    etiqueta === null
+      ? 'aria-hidden="true"'
+      : `role="img" aria-label="${etiqueta.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;")}"`;
+  return `<svg class="catalunya" width="${mida}" height="${mida}" viewBox="0 0 120 120" ${accessible}>
+  <g class="terra">
+    <path class="costa" d="${SILUETA}" fill="${MINT}" stroke="${INK}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+    <g class="pobles">${pobles}</g>
+    <g class="cara">
+      <circle cx="40" cy="53" r="9" fill="${WHITE}" stroke="${INK}" stroke-width="3"/>
+      <circle cx="62" cy="53" r="9" fill="${WHITE}" stroke="${INK}" stroke-width="3"/>
+      <g class="pupilles"><circle cx="40" cy="54" r="4.2" fill="${INK}"/><circle cx="62" cy="54" r="4.2" fill="${INK}"/></g>
+      <g class="parpelles">
+        <circle cx="40" cy="53" r="9.6" fill="${WHITE}"/>
+        <circle cx="62" cy="53" r="9.6" fill="${WHITE}"/>
+      </g>
+      ${boca}
+    </g>
+  </g>
+</svg>`;
+}
