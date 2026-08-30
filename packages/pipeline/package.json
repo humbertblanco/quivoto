@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "vitest run --root ../.. packages/pipeline",
     "typecheck": "tsc -p tsconfig.json",
     "start": "tsx src/cli.ts"
   },

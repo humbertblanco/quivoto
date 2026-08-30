@@ -63,6 +63,26 @@ const escape = (t: string): string =>
  */
 const arrel = (base: string): string => (base === "./" ? "../" : `${base}../`);
 
+/**
+ * Les tipografies de la marca, enllaçades des de cada pàgina.
+ *
+ * `estil.ts` declara `--display:"Gabarito"` i `--text:"Nunito Sans"` des del
+ * primer dia, però cap pàgina de l'Observatori enllaçava `/assets/fonts.css`:
+ * tot es veia amb la font del sistema i només les imatges socials portaven la
+ * marca de debò. El full és el mateix que fa servir la landing, amb rutes
+ * absolutes a `/assets/fonts/`, així que serveix des de qualsevol profunditat;
+ * el que canvia és el camí fins al full, que surt de `base` com el logotip.
+ *
+ * Es pre-carrega només el fitxer llatí de Gabarito, que és el que pinta els
+ * titulars: és el text que es veu primer i el que més canvia de mida quan la
+ * tipografia arriba tard.
+ */
+export function tipografia(base: string): string {
+  const a = escape(arrel(base));
+  return `<link rel="preload" as="font" type="font/woff2" crossorigin href="${a}assets/fonts/QGYtz_0dZAGKJJ4t3HtoW4XGnfBI.woff2">
+<link rel="stylesheet" href="${a}assets/fonts.css">`;
+}
+
 export function capcalera(base: string, actual: Destí = "cap", etiqueta = "esborrany · dades obertes"): string {
   const menu = DESTINS.map((d) =>
     d.clau === actual
