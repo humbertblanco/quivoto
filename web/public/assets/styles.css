@@ -11,6 +11,9 @@
   --display:"Gabarito",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --text:"Nunito Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
   --ample:1180px;
+  /* El coral de marca sobre el paper es queda a 2,9:1: per a text petit cal
+     un to germà, el mateix que fa servir l'Observatori (estil.ts). */
+  --coral-text:#C24429;
 }
 
 *,*::before,*::after{box-sizing:border-box}
@@ -41,17 +44,43 @@ img,svg{max-width:100%}
 .nomes-lectors{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .ocult{position:absolute;left:-9999px;height:0;overflow:hidden}
 
-/* ---------- capçalera ---------- */
-.capcalera{
-  display:flex;align-items:center;justify-content:space-between;gap:var(--e2);
-  max-width:var(--ample);margin:0 auto;padding:var(--e3) var(--e3) 0;
-}
-.logo{text-decoration:none}
+/* ---------- capçalera ----------
+   La mateixa que a l'Observatori (packages/pipeline/src/publish/estil.ts):
+   la marca, el menú de set destins, l'etiqueta i, només aquí, el canvi
+   d'idioma. El menú no es plega darrere de cap botó: quan no hi cap, la fila
+   embolcalla i el menú baixa sencer. Els objectius de toc fan 44px d'alt. */
+.capcalera{display:flex;align-items:center;gap:var(--e2);flex-wrap:wrap;
+  max-width:var(--ample);margin:0 auto;padding:var(--e3) var(--e3) 0}
+.logo{text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
 .marca{font-family:var(--display);font-weight:900;letter-spacing:-.05em;display:inline-flex;align-items:center;gap:1px;line-height:1}
 .marca-o{display:inline-block;margin-bottom:-.09em}
-.capcalera nav{display:flex;align-items:center;gap:var(--e2);font-size:.9rem;font-weight:700}
-.aviat{background:var(--menta);border-radius:var(--r-max);padding:5px 12px;text-transform:uppercase;letter-spacing:.08em;font-size:.68rem}
-.idioma{text-decoration:underline}
+.capcalera .menu{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-left:auto}
+.capcalera .menu a,.capcalera .menu .ara{font-family:var(--text);font-weight:800;font-size:.82rem;
+  text-decoration:none;display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
+.capcalera .menu a:hover{color:inherit;text-decoration:underline;text-decoration-thickness:2.5px;text-underline-offset:5px}
+/* On ets, subratllat amb el coral de la casa: l'única marca de color de la fila.
+   A la landing no s'hi és enlloc, però la regla hi és per si un dia hi fos. */
+.capcalera .ara{color:var(--coral-text);text-decoration:underline;
+  text-decoration-thickness:2.5px;text-underline-offset:5px}
+.capcalera .etiqueta{background:var(--presec);color:#1E1B2E;border-radius:var(--r-max);padding:5px 12px;
+  font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.capcalera .idioma{font-weight:800;font-size:.82rem;text-decoration:underline;text-underline-offset:5px;
+  display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
+/* Per sota de 900px les quatre peces ja no caben en una fila: el menú baixa
+   sencer a la de sota i la marca, l'etiqueta i l'idioma es queden dalt. Sota
+   de 720px l'etiqueta és el primer que sobra: no diu on ets ni t'hi porta. */
+@media(max-width:900px){
+  .capcalera{gap:12px;padding:var(--e2) var(--e3) 0}
+  .capcalera .menu{order:1;flex:1 1 100%;margin-left:0;gap:4px 14px}
+  .capcalera .etiqueta{margin-left:auto}
+}
+@media(max-width:720px){
+  .capcalera .etiqueta{display:none}
+  .capcalera .idioma{margin-left:auto}
+}
+@media(max-width:420px){
+  .capcalera .menu a,.capcalera .menu .ara{font-size:.78rem}
+}
 
 /* ---------- hero ---------- */
 .hero{max-width:var(--ample);margin:0 auto;padding:var(--e4) var(--e3) var(--e5)}
@@ -178,7 +207,7 @@ img,svg{max-width:100%}
 .camps{display:grid;gap:var(--e2);margin-bottom:var(--e1)}
 @media(min-width:620px){.camps{grid-template-columns:1.25fr 1fr}}
 .camp{display:flex;flex-direction:column;gap:6px}
-.etiqueta{font-size:.72rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.camp .etiqueta{font-size:.72rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
 .camp input{font:inherit;font-size:1rem;padding:14px 18px;border:2.5px solid var(--ink);border-radius:var(--r-max);background:var(--paper-2);color:var(--ink);width:100%}
 .final-mascota{display:flex;justify-content:center;margin-top:var(--e3)}
 .final-mascota .papereta{transform:rotate(4deg)}

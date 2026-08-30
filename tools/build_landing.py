@@ -24,6 +24,7 @@ T = {
   'title':'quivoto — A qui votes al teu poble?',
   'desc':'La brúixola electoral de les municipals del 23 de maig de 2027. Respon 25 afirmacions sobre el teu municipi i descobreix quins partits i candidats pensen com tu.',
   'aviat':'Aviat',
+  'salta':'Vés al contingut','menu_aria':'Seccions de l’Observatori',
   'h1':'A qui votes<br>al teu poble?',
   'entrada':'Les municipals no van de sigles: van de si es tanca un carril, de si puja l’IBI, de si es compren pisos. <strong>quivoto</strong> et fa 25 preguntes sobre el teu municipi i et diu qui pensa com tu.',
   'compte':'Falten {dies} dies per al 23 de maig de 2027',
@@ -88,6 +89,7 @@ T = {
   'title':'quienvoto — ¿A quién votas en tu pueblo?',
   'desc':'La brújula electoral de las municipales del 23 de mayo de 2027. Responde 25 afirmaciones sobre tu municipio y descubre qué partidos y candidatos piensan como tú.',
   'aviat':'Pronto',
+  'salta':'Ir al contenido','menu_aria':'Secciones del Observatorio',
   'h1':'¿A quién votas<br>en tu pueblo?',
   'entrada':'Las municipales no van de siglas: van de si se quita un carril, de si sube el IBI, de si se compran pisos. <strong>quienvoto</strong> te hace 25 preguntas sobre tu municipio y te dice quién piensa como tú.',
   'compte':'Faltan {dies} días para el 23 de mayo de 2027',
@@ -265,6 +267,19 @@ PROVA = {
 }
 
 
+def versio(fitxer):
+    """Empremta curta d'un fitxer d'assets, per a la cadena de consulta de l'enllaç.
+
+    L'.htaccess fa que el CSS es guardi set dies a la memòria cau del navegador.
+    Sense això, qui ja hagués visitat el web veuria el HTML nou amb el full
+    d'estil vell fins a una setmana: una capçalera amb menú i sense estil, per
+    exemple. Canvia el fitxer, canvia l'adreça, i el navegador el torna a demanar.
+    """
+    import hashlib
+    with open(os.path.join(OUT, 'assets', fitxer), 'rb') as f:
+        return hashlib.sha1(f.read()).hexdigest()[:8]
+
+
 def wordmark(t, size=30):
     """El nom amb la 'o' final dibuixada com la papereta. Per sota de 64 px, 'o' normal."""
     stem = t['marca'][:-1]
@@ -275,6 +290,50 @@ def wordmark(t, size=30):
          f'<circle cx="24" cy="24" r="22" fill="{L.WHITE}" stroke="{L.INK}" stroke-width="3"/>'
          f'<path d="M34 8 l6 6" stroke="{L.PEACH}" stroke-width="6" stroke-linecap="round"/>{cara}</svg>')
     return f'<span class="marca" style="font-size:{size}px">{stem}{o}</span>'
+
+
+# El menú de l'Observatori, copiat de packages/pipeline/src/publish/capcalera.ts
+# (DESTINS): les mateixes set entrades, en el mateix ordre i amb els mateixos
+# camins. Si allà canvia un nom o l'ordre, aquí també: el web és un de sol i el
+# menú s'ha de veure igual a la portada que a la fitxa d'un poble.
+MENU = [
+  ('portada',     'Observatori',  ''),
+  ('947',         'Els 947',      'els947.html'),
+  ('mapa',        'Mapa',         'mapa/'),
+  ('comarques',   'Comarques',    'c/'),
+  ('partits',     'Partits',      'partit/'),
+  ('trajectoria', 'Trajectòries', 'trajectoria/'),
+  ('comparador',  'Comparador',   'comparador/'),
+]
+
+
+def capcalera(lang, actual='cap'):
+    """La mateixa capçalera que l'Observatori, a totes les pàgines de la landing.
+
+    La marca porta a la portada de l'idioma; el menú és el de capcalera.ts, amb
+    enllaços absoluts (t['obs_url']) perquè funcionin des de / i des de /es/:
+    '/observatori/…' en català i 'https://quivoto.cat/observatori/…' en
+    castellà, que és on viu l'Observatori. Com que encara només és en català,
+    els noms del menú no es tradueixen i a la versió castellana porten
+    hreflang="ca", igual que la resta d'enllaços de la pàgina cap allà.
+
+    `actual` és la clau del destí on som; a la landing no n'hi ha cap, perquè
+    la portada no és una secció de l'Observatori, i per tant no s'hi subratlla res.
+    """
+    t = T[lang]
+    base = t['obs_url']
+    hl = '' if lang == 'ca' else ' hreflang="ca"'
+    items = ''.join(
+      f'<span class="ara" aria-current="page">{html.escape(text)}</span>' if clau == actual
+      else f'<a href="{base}{on}"{hl}>{html.escape(text)}</a>'
+      for clau, text, on in MENU)
+    arrel = '/' if lang == 'ca' else '/es/'
+    return f'''<header class="capcalera">
+  <a class="logo" href="{arrel}">{wordmark(t, 30)}</a>
+  <nav class="menu" aria-label="{t['menu_aria']}">{items}</nav>
+  <span class="etiqueta">{t['aviat']}</span>
+  <a href="{t['altra_url']}" hreflang="{t['altra_lang']}" class="idioma">{t['altra']}</a>
+</header>'''
 
 
 def xifres(t):
@@ -604,22 +663,16 @@ PAGE = '''<!doctype html>
 <meta name="theme-color" content="#FBF7EE">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
-<link rel="stylesheet" href="/assets/styles.css">
+<link rel="stylesheet" href="/assets/styles.css?v={css_v}">
 {estil_extra}
 <script type="application/ld+json">
 {{"@context":"https://schema.org","@type":"WebSite","name":"{marca}","url":"https://{domini}/","inLanguage":"{lang}","description":"{desc}","publisher":{{"@type":"Organization","name":"Damos en el Blanco, S.L."}}}}
 </script>
 </head>
 <body>
-<a class="salta" href="#contingut">Vés al contingut</a>
+<a class="salta" href="#contingut">{salta}</a>
 
-<header class="capcalera">
-  <a class="logo" href="/">{wordmark_petit}</a>
-  <nav>
-    <span class="aviat">{aviat}</span>
-    <a href="{altra_url}" hreflang="{altra_lang}" class="idioma">{altra}</a>
-  </nav>
-</header>
+{capcalera}
 
 <main id="contingut">
 
@@ -748,10 +801,12 @@ GRACIES = '''<!doctype html>
 <meta name="robots" content="noindex">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
-<link rel="stylesheet" href="/assets/styles.css">
+<link rel="stylesheet" href="/assets/styles.css?v={css_v}">
 </head>
 <body class="pagina-simple">
-<main>
+<a class="salta" href="#contingut">{salta}</a>
+{capcalera}
+<main id="contingut">
   {mascota}
   <h1>{gracies_h}</h1>
   <p>{gracies_p}</p>
@@ -770,10 +825,11 @@ LEGAL = '''<!doctype html>
 <meta name="description" content="{titol} de {marca}.">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
-<link rel="stylesheet" href="/assets/styles.css">
+<link rel="stylesheet" href="/assets/styles.css?v={css_v}">
 </head>
 <body>
-<header class="capcalera"><a class="logo" href="/">{wordmark_petit}</a></header>
+<a class="salta" href="#contingut">{salta}</a>
+{capcalera}
 <main id="contingut" class="document">
 <h1>{titol}</h1>
 {cos}
@@ -963,7 +1019,8 @@ def build_legal(lang):
     for nom, taula in (('privadesa', PRIVADESA), ('avis-legal', AVIS)):
         titol, tornar, cos = taula[lang]
         pagina = LEGAL.format(lang=t['lang'], marca=t['marca'], titol=titol, tornar=tornar,
-                              wordmark_petit=wordmark(t, 30), peu=t['peu'],
+                              capcalera=capcalera(lang), salta=t['salta'], peu=t['peu'],
+                              css_v=versio('styles.css'),
                               cos=cos.replace('{marca}', t['marca']))
         open(os.path.join(sub, nom + '.html'), 'w', encoding='utf-8').write(pagina)
 
@@ -978,7 +1035,8 @@ def build(lang):
     ctx = dict(t)
     ctx['compte_tpl'] = html.escape(t['compte'], quote=True)
     ctx['compte'] = t['compte'].format(dies=d)
-    ctx['wordmark_petit'] = wordmark(t, 30)
+    ctx['capcalera'] = capcalera(lang)
+    ctx['css_v'] = versio('styles.css')
     ctx['mascota'] = L.papereta(210)
     ctx['dif_items'] = llista_editorial(t['dif'])
     ctx['com_steps'] = passos(t['com'])
