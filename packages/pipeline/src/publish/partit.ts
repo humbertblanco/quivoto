@@ -570,17 +570,27 @@ export const PARTIT_CSS = `
 .partit-dues .secundari{font-size:.84rem;color:var(--ink-suau)}
 
 /* --- les altres marques -------------------------------------------------- */
+/* Les targetes de les altres marques.
+   Els 200px de mínim no donaven per a «Independents de Catalunya», i com que el
+   nom portava un tall d'emergència que parteix DINS de la paraula, la targeta
+   escrivia «Ciutadan / s» i «Tots per l'Empord / à». Aquell tall és per a una
+   paraula que de debò no hi cap, no per a un nom que només necessita dues
+   línies: amb el tall normal, «Ciutadans» hi cap sencer. La columna puja a 230,
+   i com que el nom pot ocupar una línia o dues, les targetes s'estiren totes a
+   l'alçada de la seva fila en comptes de quedar cadascuna de la seva mida. */
 .partit-altres{list-style:none;margin:0;padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
-.partit-altres a{display:flex;align-items:center;gap:9px;background:var(--paper-2);
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:stretch}
+.partit-altres li{display:flex}
+.partit-altres a{display:flex;align-items:center;gap:9px;width:100%;background:var(--paper-2);
   border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
   padding:11px var(--e2);text-decoration:none;color:inherit;
   transition:transform .12s ease,box-shadow .12s ease}
 .partit-altres a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
 .partit-altres .mostra{width:14px;height:14px;border-radius:4px;background:var(--c);
   border:1.5px solid var(--ink);flex:none}
-.partit-altres b{font-weight:800;overflow-wrap:anywhere}
-.partit-altres span.quantes{margin-left:auto;color:var(--ink-suau);font-size:.84rem;white-space:nowrap}
+.partit-altres b{font-weight:800;overflow-wrap:break-word;line-height:1.25}
+.partit-altres span.quantes{margin-left:auto;padding-left:8px;color:var(--ink-suau);
+  font-size:.84rem;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.partit-altres a{transition:none}}
 `;
 
