@@ -1,5 +1,6 @@
 import { GRAFICS_CSS } from "./grafics";
 import { PEU_CSS } from "./peu";
+import { ESCUT_CSS } from "./escut";
 
 /**
  * Estil de la radiografia. Els tokens són els mateixos que la landing i que
@@ -1118,4 +1119,4 @@ details.compta > summary:hover{color:var(--coral-text);text-decoration-color:cur
 .prova-enllac{display:inline-flex;align-items:center;min-height:44px;margin-top:6px;font-weight:800;font-size:.85rem;
   border:2px solid var(--ink);border-radius:var(--r-max);padding:0 16px;text-decoration:none}
 .prova-enllac:hover{background:var(--presec);color:#1E1B2E}
-${GRAFICS_CSS}${PEU_CSS}`;
+${GRAFICS_CSS}${PEU_CSS}${ESCUT_CSS}`;
