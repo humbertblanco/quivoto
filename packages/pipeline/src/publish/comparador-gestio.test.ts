@@ -283,11 +283,13 @@ describe("la taula pintada al navegador", () => {
     expect(mandat).not.toContain("puja");
   });
 
-  it("les sigles de qui governa hi són, amb el color del partit", () => {
+  it("les sigles de qui governa hi són, amb el color del partit i portant a la seva pàgina", () => {
     const html = cos([ESPLUGUES, SANT_JUST], ["esplugues-de-llobregat", "sant-just-desvern"]);
-    expect(html).toContain('class="sigla" style="--c:#d00c3c;--t:#FBF7EE"');
-    expect(html).toContain('class="sigla" style="--c:#ffb232;--t:#1E1B2E"');
-    expect(html).toContain(">PSC-CP</b>");
+    // Quan sabem de quin partit són, la pastilla és un enllaç a la seva pàgina;
+    // el color continua sent el de la marca.
+    expect(html).toContain('href="../partit/psc/" style="--c:#d00c3c;--t:#FBF7EE"');
+    expect(html).toContain('href="../partit/erc/" style="--c:#ffb232;--t:#1E1B2E"');
+    expect(html).toContain(">PSC-CP</a>");
   });
 
   it("qui governa va abans de les xifres que se li atribuiran", () => {
