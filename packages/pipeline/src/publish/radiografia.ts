@@ -3568,7 +3568,28 @@ export function renderRadiografia(
    * quedar la resta com a fitxes de segona. Aquí és una persona sola i no hi ha
    * ningú amb qui quedi comparada.
    */
-  const carrecAlcaldia = data.carrecs?.carrecs.find((c) => /alcald/i.test(c.carrec)) ?? null;
+  /*
+   * Qui és l'alcaldia, dins de la llista de càrrecs de la seu electrònica.
+   *
+   * Buscar-hi la paraula «alcald» funciona gairebé sempre i falla justament on
+   * fa més falta: a l'Hospitalet de Llobregat l'alcaldia va canviar a mig
+   * mandat i la llista encara no marca ningú, de manera que la segona ciutat de
+   * Catalunya publicava la seva fitxa amb les inicials en comptes de la cara de
+   * l'alcalde, tot i que la seva fotografia hi era, entre les vint-i-quatre.
+   *
+   * Per això, quan la paraula no hi és, es prova pel nom que dona la font
+   * oficial de la Generalitat, que sí que està al dia. Al revés no: si la seu
+   * electrònica marca algú com a alcalde, mana ella, perquè porta el càrrec
+   * escrit tal com el firma qui el té.
+   */
+  const carrecAlcaldia =
+    data.carrecs?.carrecs.find((c) => /alcald/i.test(c.carrec)) ??
+    (government?.mayorName
+      ? data.carrecs?.carrecs.find(
+          (c) => normalizePersonName(c.nom) === normalizePersonName(government.mayorName!),
+        ) ?? null
+      : null) ??
+    null;
   const mayorPhoto = carrecAlcaldia?.foto ?? carrecAlcaldia?.fotoPetita ?? null;
   const mayorColor = government?.mayorSigles
     ? colorPerGrup(government.mayorSigles)
@@ -3627,16 +3648,44 @@ ${cercador("../../")}
   </p>
   ${summarySentence(data, colorPerGrup) ? `<p class="resum">${summarySentence(data, colorPerGrup)}</p>` : ""}
   ${
+    /*
+     * Qui mana, amb cara i nom, a TOTS els municipis.
+     *
+     * La targeta sortia només quan la seu electrònica publicava la llista de
+     * càrrecs, i per això només la tenien 804 dels 947. A l'Hospitalet de
+     * Llobregat, per exemple, les vint-i-quatre cares les tenim d'una altra font
+     * i la seu electrònica serveix un Tableau sense cap fotografia: la fitxa de
+     * la segona ciutat de Catalunya es quedava sense dir qui n'és l'alcalde a
+     * la portada.
+     *
+     * El nom i les sigles, en canvi, els tenim per als 947 de la font oficial de
+     * la Generalitat. Quan la seu electrònica hi arriba, mana ella, perquè porta
+     * el càrrec exacte, la foto i l'enllaç a la fitxa de la persona; quan no,
+     * la targeta es fa igualment amb el que sabem de cert i les inicials fan de
+     * cara. El que no passa mai és que la fitxa d'un poble calli qui hi mana.
+     */
     carrecAlcaldia
       ? renderAlcaldia(
           carrecAlcaldia.nom,
-          carrecAlcaldia.carrec,
+          // Quan la persona s'ha trobat pel nom oficial i no per la paraula
+          // «alcald», el càrrec que en diu la seu electrònica és el d'abans del
+          // relleu —o cap— i escriure'l seria dir que no ho és.
+          /alcald/i.test(carrecAlcaldia.carrec) ? carrecAlcaldia.carrec : "Alcaldia",
           government?.mayorSigles ?? null,
           mayorColor,
           mayorPhoto,
           data.carrecs ? adrecesRegidors(data.carrecs.carrecs).get(carrecAlcaldia) ?? null : null,
         )
-      : ""
+      : government?.mayorName
+        ? renderAlcaldia(
+            nomLlegible(government.mayorName),
+            "Alcaldia",
+            government.mayorSigles ?? null,
+            mayorColor,
+            null,
+            null,
+          )
+        : ""
   }
   ${
     mapa.length > 0
