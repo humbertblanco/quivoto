@@ -233,8 +233,14 @@ export const PROGRAMES: readonly Programa[] = [
   },
   {
     // Arriba com a «101» i no com a «0101»: vegeu `codiPrograma`.
+    //
+    // Es diu «Pagar el deute» i no «Deute públic», que és el nom del grup a
+    // l'ordre ministerial: a la fitxa aquest programa surt a la mateixa llista
+    // que «Deute per habitant», i amb dos rètols que comencen igual es llegien
+    // com la mateixa xifra dues vegades. No ho són: l'un és el que es deu, i
+    // l'altre el que es paga cada any per deure-ho.
     codi: "101",
-    nom: "Deute públic",
+    nom: "Pagar el deute",
     cobertura2024: 649,
     perque:
       "Interessos i amortització: els diners que van al banc en comptes d'anar a un servei. 296 dels 945 ajuntaments que van liquidar el 2024 hi tenen zero, que aquí vol dir que no deuen res.",
@@ -274,8 +280,8 @@ export function euros(brut: unknown): number | null {
  * Codi de grup de programa normalitzat.
  *
  * Parany verificat: al datastore la columna `ESTRUCTURA` és de tipus **numèric**,
- * o sigui que els codis hi perden el zero del davant. «Deute públic», que a
- * l'ordre ministerial és el grup 0101, hi arriba com a «101», i qui escrigui el
+ * o sigui que els codis hi perden el zero del davant. «Pagar el deute», que a
+ * l'ordre ministerial és el grup 0101 («Deuda pública»), hi arriba com a «101», i qui escrigui el
  * catàleg amb el zero no hi lligarà mai cap fila —sense error, simplement sense
  * dades. Per si algun dia el portal el retorna com a número de debò, també es
  * treu el «.0» final.

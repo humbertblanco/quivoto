@@ -292,6 +292,9 @@ const ALIES_SERVEIS: Readonly<Record<string, string>> = {
   "policia local i seguretat": "Seguretat",
   "organs de govern": "El ple",
   "deute public": "Deute públic",
+  // El programa 011 de J15 es diu «Pagar el deute» perquè no es confongui amb
+  // «Deute per habitant» a la mateixa llista; el dibuix és el mateix bitllet.
+  "pagar el deute": "Deute públic",
   // --- els onze serveis del cost efectiu, «Què costa cada servei»
   "recollida d'escombraries": "Neteja",
   "tractament de residus": "Tractament de residus",

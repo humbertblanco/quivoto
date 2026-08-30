@@ -129,7 +129,7 @@ describe("les icones dels serveis", () => {
     "Escombraries i residus", "Neteja viària", "Enllumenat públic", "Aigua potable",
     "Clavegueram", "Parcs i jardins", "Vies públiques", "Habitatge", "Serveis socials",
     "Escoles d'infantil i primària", "Biblioteques i arxius", "Instal·lacions esportives",
-    "Policia local i seguretat", "Òrgans de govern", "Deute públic",
+    "Policia local i seguretat", "Òrgans de govern", "Pagar el deute",
   ];
   const COST_EFECTIU = [
     "Aigua potable", "Recollida d'escombraries", "Neteja viària", "Clavegueram",
@@ -178,6 +178,14 @@ describe("les icones dels serveis", () => {
     expect(iconaDeServei("Parcs i jardins")).not.toBe(iconaDeServei("Instal·lacions esportives"));
     // El bitllet del deute no és la moneda dels impostos.
     expect(iconaDeServei("Deute públic")).not.toBe(iconaDeServei("fiscalitat"));
+  });
+
+  it("«Pagar el deute», el nom nou del programa 011, porta el mateix bitllet que l'àrea", () => {
+    // El programa es va rebatejar perquè no es confongués amb «Deute per
+    // habitant»; l'àrea de J8 es continua dient «Deute públic» i el dibuix
+    // és el mateix per a tots dos.
+    expect(iconaDeServei("Pagar el deute")).toBe(iconaDeServei("Deute públic"));
+    expect(iconaDeServei("Pagar el deute")).not.toBe(iconaDeServei("una cosa que no existeix"));
   });
 
   it("aprofita el que la casa ja tenia dibuixat i no en fa un de calcat", () => {

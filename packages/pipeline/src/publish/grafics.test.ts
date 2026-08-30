@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   anysVisibles,
   GRAFICS_CSS,
+  barresDivergents,
   distribucioGrup,
+  escalaDivergent,
   marquesEix,
   pendent,
   serieTemporal,
   type BandaGrup,
+  type FilaDivergent,
   type PuntSerie,
 } from "./grafics";
 
@@ -561,5 +564,106 @@ describe("distribucioGrup", () => {
     });
     expect(html).toMatch(/aria-label="Participació: 52 %\. \d+ dels 60 municipis/);
     expect(html).toContain("la mediana del grup és");
+  });
+});
+
+describe("barresDivergents", () => {
+  const files: FilaDivergent[] = [
+    { etiqueta: "Escombraries i residus", valor: 13.7, grup: 8.1, enllac: "#escombraries" },
+    { etiqueta: "Habitatge", valor: 5.2, grup: 0.9 },
+    { etiqueta: "Aigua potable", valor: 0, grup: 0.4 },
+    { etiqueta: "Pagar el deute", valor: -20, grup: -3.5 },
+  ];
+  const opcions = {
+    titol: "Canvi de la despesa per habitant",
+    format: (v: number) => v.toFixed(1).replace(".", ","),
+    unitat: "€/hab",
+    nomGrup: "de més de 50.000 habitants",
+  };
+
+  it("no dibuixa res sense files", () => {
+    expect(barresDivergents([], opcions)).toBe("");
+  });
+
+  it("l'escala és el valor absolut més gran, grup inclòs, i el zero és al mig", () => {
+    // El màxim absolut és −20: la fila de −20 omple la meitat esquerra
+    // sencera (50 %) i la de +13,7 en fa 34,25 a la dreta.
+    expect(escalaDivergent(files)).toBe(20);
+    const html = barresDivergents(files, opcions);
+    expect(html).toContain('class="negatiu"');
+    expect(html).toContain("--w:50%");
+    expect(html).toContain("--w:34.25%");
+    // La marca del grup es col·loca a 50 + 50·g/escala: +8,1 sobre 20 és 70,25.
+    expect(html).toContain("--m:70.25%");
+    // I −3,5 sobre 20 cau a l'esquerra del zero: 41,25.
+    expect(html).toContain("--m:41.25%");
+  });
+
+  it("un canvi de zero no dibuixa cap barra i s'escriu sense signe", () => {
+    const html = barresDivergents(files, opcions);
+    const zero = html.slice(html.indexOf('class="zero"'), html.indexOf("</li>", html.indexOf('class="zero"')));
+    expect(zero).toContain("--w:0%");
+    expect(zero).toContain("0,0 €/hab");
+    expect(zero).not.toContain("+0,0");
+    expect(zero).not.toContain("−0,0");
+  });
+
+  it("amb una escala compartida, dues llistes es dibuixen igual", () => {
+    // Les vuit files més grans a la vista i la resta plegades: si cadascuna
+    // es fes la seva escala, la fila de +5,2 de la segona llista sortiria
+    // tan llarga com la de +13,7 de la primera.
+    const escala = escalaDivergent(files);
+    const primera = barresDivergents(files.slice(0, 2), { ...opcions, escala });
+    const segona = barresDivergents(files.slice(2), { ...opcions, escala });
+    expect(primera).toContain("--w:34.25%"); // 13,7 / 20
+    expect(primera).toContain("--w:13%"); // 5,2 / 20
+    expect(segona).toContain("--w:50%"); // 20 / 20
+    // Sense l'escala, la segona llista faria el seu propi màxim.
+    expect(barresDivergents(files.slice(0, 2), opcions)).toContain("--w:50%"); // 13,7 / 13,7
+  });
+
+  it("la xifra va sempre escrita al costat, amb el signe i la unitat", () => {
+    const html = barresDivergents(files, opcions);
+    expect(html).toContain("+13,7 €/hab");
+    expect(html).toContain("−20,0 €/hab");
+    expect(html).toContain("seus +8,1 €/hab");
+    expect(html).toContain("seus −3,5 €/hab");
+  });
+
+  it("es pot llegir sense veure-hi: la taula va dins del div que amaga, amb els enllaços", () => {
+    const html = barresDivergents(files, opcions);
+    expect(html).toContain('<ul class="barres-divergents" aria-hidden="true">');
+    expect(html).toContain('<div class="nomes-lectors"><table>');
+    expect(html).toContain("<caption>Canvi de la despesa per habitant, amb el mateix canvi als municipis de més de 50.000 habitants</caption>");
+    expect(html).toContain("<th scope=\"col\">Municipis de més de 50.000 habitants</th>");
+    expect(html).toContain('<th scope="row"><a href="#escombraries">Escombraries i residus</a></th>');
+    // Al dibuix l'enllaç hi és però no rep el focus: el que el rep és el de
+    // la taula, que és el que pot llegir qui hi arriba amb teclat.
+    expect(html).toContain('<a href="#escombraries" tabindex="-1">Escombraries i residus</a>');
+    expect(html.match(/<td>/g)?.length).toBe(files.length * 2);
+  });
+
+  it("sense cap grup no s'inventa cap comparació", () => {
+    const html = barresDivergents(
+      files.map((f) => ({ ...f, grup: null })),
+      { ...opcions, nomGrup: null },
+    );
+    expect(html).not.toContain("marca-grup");
+    expect(html).not.toContain("seus ");
+    expect(html).not.toContain("El seu grup");
+    expect(html).not.toContain("mostra-tick");
+  });
+
+  it("escapa el que ve de la base de dades", () => {
+    const html = barresDivergents([{ etiqueta: "Parcs <i> & jardins", valor: 1, grup: null }], opcions);
+    expect(html).toContain("Parcs &lt;i&gt; &amp; jardins");
+    expect(html).not.toContain("<i> &");
+  });
+
+  it("el CSS porta la regla del zero, de la barra i de la marca del grup", () => {
+    expect(GRAFICS_CSS).toContain(".barres-divergents .zero .barra{display:none}");
+    expect(GRAFICS_CSS).toContain(".barres-divergents .positiu .barra{left:50%");
+    expect(GRAFICS_CSS).toContain(".barres-divergents .negatiu .barra{right:50%");
+    expect(GRAFICS_CSS).toContain(".barres-divergents .marca-grup{position:absolute;top:-5px;left:var(--m)");
   });
 });

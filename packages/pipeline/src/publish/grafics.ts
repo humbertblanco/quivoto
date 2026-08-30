@@ -686,6 +686,145 @@ export function distribucioGrup(
   </figure>`;
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Barres divergents: un canvi per fila, amb el zero al mig
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Una fila de les barres divergents: què ha canviat, quant, i quant als seus. */
+export type FilaDivergent = {
+  etiqueta: string;
+  /** El canvi d'aquest municipi. Pot ser negatiu, i pot ser zero. */
+  valor: number;
+  /** El mateix canvi al grup de comparació, o `null` si no se'n té. */
+  grup: number | null;
+  /** On porta l'etiqueta, si porta enlloc: l'àncora del bloc que ho explica. */
+  enllac?: string;
+};
+
+export type OpcionsDivergents = {
+  /** Què es mesura: «Canvi de la despesa per habitant, servei a servei». */
+  titol: string;
+  /** Com s'escriu un valor **en valor absolut**: el signe el posa el dibuix. */
+  format: (valor: number) => string;
+  /** La unitat, escrita després de cada xifra: «€/hab». */
+  unitat?: string;
+  /** Com es diu el grup: «de 20.001 a 50.000 habitants». */
+  nomGrup?: string | null;
+  /**
+   * L'escala compartida: el valor absolut que ocupa tota la meitat del canal.
+   *
+   * Si una llista es parteix en dues —les vuit files més grans a la vista i
+   * la resta plegades— **totes dues han de rebre la mateixa**: dos dibuixos
+   * amb escales diferents posats un sota l'altre es llegeixen com si es
+   * poguessin comparar, i és l'engany que prohibeix la regla 2 del capçal.
+   * Sense escala, es pren el valor absolut més gran de la llista, grup inclòs.
+   */
+  escala?: number;
+};
+
+/** El signe tipogràfic: el menys de debò, no el guionet. */
+const signe = (n: number): string => (n > 0 ? "+" : n < 0 ? "−" : "");
+
+/**
+ * El valor absolut més gran d'una llista de files, grup inclòs.
+ *
+ * És l'escala que fa servir `barresDivergents` quan no se n'hi passa cap, i
+ * es publica perquè qui parteixi la llista en dues la pugui calcular sobre la
+ * llista sencera i passar-la a totes dues crides.
+ */
+export function escalaDivergent(files: readonly FilaDivergent[]): number {
+  const maxim = Math.max(0, ...files.flatMap((f) => [Math.abs(f.valor), f.grup === null ? 0 : Math.abs(f.grup)]));
+  return maxim > 0 ? maxim : 1;
+}
+
+/**
+ * Un canvi per fila, dibuixat com una barra que surt del zero cap a una banda
+ * o cap a l'altra, amb el mateix canvi al grup marcat com una ratlla grisa.
+ *
+ * Substitueix una llista de divuit files de text —«+13,7 €/hab, de 71 el 2023
+ * a 85 el 2025, als 20 de la seva mida +8,1»— que s'havia de llegir fila per
+ * fila per saber on han posat els diners. Amb el zero al mig, el que ha
+ * crescut va a la dreta i el que ha baixat a l'esquerra, i es veu de reüll
+ * quines partides s'han mogut i quines no.
+ *
+ * Tres decisions, i per què:
+ *
+ *   · **Una sola tinta.** La barra va sempre de lavanda, tant si puja com si
+ *     baixa: el sentit el diu la posició respecte del zero, i pintar les
+ *     pujades d'un color i les baixades d'un altre seria posar-hi un
+ *     veredicte —gastar més en un servei no és ni bo ni dolent— amb el
+ *     verd i el vermell que la metodologia prohibeix.
+ *   · **La xifra sempre escrita.** «design/MOVIMENT.md»: una barra sola no
+ *     és una dada llegible. Cada fila porta el número al costat, amb el signe
+ *     i la unitat, i el del grup en petit a sota.
+ *   · **El zero al 50 %.** L'escala és simètrica encara que totes les files
+ *     vagin cap a la mateixa banda: si el zero es mogués per aprofitar
+ *     l'espai, dues llistes de la mateixa pàgina no es podrien comparar.
+ *
+ * La llista visible és el dibuix i va amagada a la lectura amb veu, com els
+ * SVG de la resta del mòdul; la dada per a qui llegeix amb veu és la taula
+ * de sota, amagada als ulls, que porta els mateixos enllaços. Quan el teclat
+ * hi entra, la taula es fa visible: un enllaç que rep el focus no pot ser
+ * invisible.
+ */
+export function barresDivergents(files: readonly FilaDivergent[], opcions: OpcionsDivergents): string {
+  if (files.length === 0) return "";
+  const escala = opcions.escala !== undefined && opcions.escala > 0 ? opcions.escala : escalaDivergent(files);
+  const unitat = opcions.unitat ? ` ${opcions.unitat}` : "";
+  const xifra = (v: number): string => `${signe(v)}${opcions.format(Math.abs(v))}${unitat}`;
+  // Un valor més gran que l'escala que ha passat qui crida es dibuixa fins a
+  // la vora i no més enllà del canal: la xifra de debò és escrita al costat.
+  const dins = (n: number): number => Math.max(0, Math.min(100, n));
+  const ambGrup = files.some((f) => f.grup !== null);
+
+  const nom = (f: FilaDivergent, focusable: boolean): string =>
+    f.enllac
+      ? `<a href="${escape(f.enllac)}"${focusable ? "" : ' tabindex="-1"'}>${escape(f.etiqueta)}</a>`
+      : escape(f.etiqueta);
+
+  const llista = files
+    .map((f) => {
+      const sentit = f.valor > 0 ? "positiu" : f.valor < 0 ? "negatiu" : "zero";
+      const w = dins((50 * Math.abs(f.valor)) / escala);
+      const marca =
+        f.grup === null
+          ? ""
+          : `<b class="marca-grup" style="--m:${n2(dins(50 + (50 * f.grup) / escala))}%"></b>`;
+      const delGrup = f.grup === null ? "" : `<span class="del-grup">seus ${xifra(f.grup)}</span>`;
+      return `<li class="${sentit}">
+      <span class="etq">${nom(f, false)}</span>
+      <span class="canal"><i class="barra" style="--w:${n2(w)}%"></i>${marca}</span>
+      <span class="xifra">${xifra(f.valor)}</span>
+      ${delGrup}
+    </li>`;
+    })
+    .join("");
+
+  const capGrup = ambGrup ? `<th scope="col">${escape(opcions.nomGrup ? `Municipis ${opcions.nomGrup}` : "El seu grup")}</th>` : "";
+  const taula = `<div class="nomes-lectors"><table>
+    <caption>${escape(opcions.titol)}${ambGrup && opcions.nomGrup ? `, amb el mateix canvi als municipis ${escape(opcions.nomGrup)}` : ""}</caption>
+    <thead><tr><th scope="col">Què</th><th scope="col">${escape(opcions.titol)}</th>${capGrup}</tr></thead>
+    <tbody>${files
+      .map(
+        (f) => `<tr><th scope="row">${nom(f, true)}</th><td>${xifra(f.valor)}</td>${
+          ambGrup ? `<td>${f.grup === null ? "sense dada" : xifra(f.grup)}</td>` : ""
+        }</tr>`,
+      )
+      .join("")}</tbody></table></div>`;
+
+  const clau = `<span class="mostra mostra-zero"></span> el zero
+    <span class="mostra mostra-barra"></span> aquest municipi${
+      ambGrup ? ` <span class="mostra mostra-tick"></span> el mateix canvi als municipis ${escape(opcions.nomGrup ?? "de la seva mida")}` : ""
+    }`;
+
+  return `<figure class="grafic divergents">
+    <ul class="barres-divergents" aria-hidden="true">${llista}</ul>
+    <figcaption class="clau-grafic">${clau}</figcaption>
+    ${taula}
+  </figure>`;
+}
+
 /**
  * CSS dels gràfics. Va a part del full de la fitxa perquè aquest fitxer es
  * pugui llegir sencer sense obrir-ne un altre.
@@ -763,6 +902,50 @@ export const GRAFICS_CSS = `
 .distribucio .etiqueta-aqui{font-family:var(--display);font-size:13px;font-weight:900;
   fill:var(--ink);font-variant-numeric:tabular-nums}
 .distribucio .clau-grafic{display:block}
+
+/* --- les barres divergents ----------------------------------------------- */
+/* El canal sencer és l'escala i el zero és al mig: el que puja surt cap a la
+   dreta i el que baixa cap a l'esquerra, amb una sola tinta. La ratlla grisa
+   és el mateix canvi al grup, i la xifra va sempre escrita al costat perquè
+   una barra sola no és una dada llegible. */
+.divergents{margin:var(--e2) 0 0}
+.barres-divergents{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.barres-divergents li{display:grid;grid-template-columns:minmax(8em,13em) minmax(0,1fr) auto;
+  gap:1px var(--e2);align-items:center}
+.barres-divergents .etq{font-weight:800;font-size:.9rem;line-height:1.2;overflow-wrap:anywhere}
+.barres-divergents .etq a{color:inherit;text-decoration:none;border-bottom:1.5px solid var(--vora)}
+.barres-divergents .canal{position:relative;height:16px;background:var(--vora);border-radius:var(--r-max)}
+.barres-divergents .canal::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;
+  margin-left:-1px;background:var(--ink);border-radius:2px}
+.barres-divergents .barra{position:absolute;top:0;bottom:0;width:var(--w);background:var(--lavanda);
+  border:1.5px solid var(--ink);border-radius:var(--r-max)}
+.barres-divergents .positiu .barra{left:50%;border-top-left-radius:0;border-bottom-left-radius:0}
+.barres-divergents .negatiu .barra{right:50%;border-top-right-radius:0;border-bottom-right-radius:0}
+/* Un canvi de zero no dibuixa cap barra: un tros mínim al costat del zero es
+   llegiria com un canvi petit, i no n'hi ha hagut cap. */
+.barres-divergents .zero .barra{display:none}
+.barres-divergents .marca-grup{position:absolute;top:-5px;left:var(--m);width:3px;height:26px;
+  margin-left:-1.5px;background:var(--ink-suau);border-radius:2px}
+.barres-divergents .xifra{font-family:var(--display);font-weight:900;font-size:1.05rem;text-align:right;
+  font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em}
+.barres-divergents .del-grup{grid-column:3;font-size:.72rem;color:var(--ink-suau);font-weight:700;
+  text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.divergents .mostra-zero{width:2px;height:14px;background:var(--ink)}
+.divergents .mostra-barra{height:12px;background:var(--lavanda);border:1.5px solid var(--ink)}
+.divergents .mostra-tick{width:3px;height:14px;background:var(--ink-suau)}
+/* La taula per a qui llegeix amb veu porta els mateixos enllaços que el dibuix
+   i és l'única còpia que el teclat pot arribar a tocar: quan hi arriba, es fa
+   visible, perquè un enllaç amb el focus no pot ser un punt invisible. */
+.divergents .nomes-lectors:focus-within{position:static;width:auto;height:auto;overflow:visible;
+  clip:auto;clip-path:none;white-space:normal;margin:var(--e2) 0 0}
+.divergents .nomes-lectors:focus-within table{width:100%;border-collapse:collapse;font-size:.9rem}
+.divergents .nomes-lectors:focus-within th,.divergents .nomes-lectors:focus-within td{text-align:left;
+  padding:6px 10px 6px 0;border-bottom:1px solid var(--vora)}
+@media (max-width:560px){
+  .barres-divergents li{grid-template-columns:minmax(0,1fr) auto}
+  .barres-divergents .canal{grid-column:1/-1}
+  .barres-divergents .del-grup{grid-column:2}
+}
 
 /* --- una amplada, un dibuix ---------------------------------------------- */
 /* De les sèries en surten dos dibuixos i se n'ensenya un. Un SVG no pot canviar
