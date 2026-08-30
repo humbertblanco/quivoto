@@ -6,6 +6,8 @@ import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
 import { dataCurta, slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { capcalera } from "./capcalera";
+import { cercador } from "./cercador";
 
 /**
  * Les 43 comarques: qui mana a la meva comarca.
@@ -750,10 +752,8 @@ export function renderComarca(data: ComarcaData, generatedAt: string): string {
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
 
-<header class="capcalera">
-  <a class="logo" href="../../">Observatori</a>
-  <span class="etiqueta">esborrany · dades obertes</span>
-</header>
+${capcalera("../../", "cap")}
+${cercador("../../")}
 
 <main id="contingut">
 

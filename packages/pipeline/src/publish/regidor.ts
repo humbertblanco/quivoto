@@ -2,6 +2,8 @@ import { tintaSobre } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import { de, slugify } from "../lib/text";
+import { capcalera } from "./capcalera";
+import { cercador } from "./cercador";
 
 /**
  * Una pàgina per a cada persona que seu al ple.
@@ -299,10 +301,8 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
-<header class="capcalera">
-  <a class="logo" href="/observatori/">Observatori</a>
-  <span class="etiqueta">càrrec electe</span>
-</header>
+${capcalera("../../../../", "cap", "càrrec electe")}
+${cercador("../../../../")}
 
 <main id="contingut">
   <section class="portada">

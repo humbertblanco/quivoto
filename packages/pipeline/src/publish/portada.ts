@@ -1,6 +1,8 @@
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import { MASCOTA_CSS, papereta } from "./mascota";
+import { capcalera } from "./capcalera";
+import { cercador } from "./cercador";
 
 /**
  * La portada de l'Observatori.
@@ -110,10 +112,8 @@ export function renderPortada(comptes: ComptesPortada, generatedAt: string): str
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
-<header class="capcalera">
-  <a class="logo" href="/">quivoto</a>
-  <span class="etiqueta">esborrany · dades obertes</span>
-</header>
+${capcalera("./", "portada")}
+${cercador("./")}
 
 <main id="contingut">
   <section class="portada">

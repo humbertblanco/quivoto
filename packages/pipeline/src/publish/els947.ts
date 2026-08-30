@@ -8,6 +8,8 @@ import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
 import { SITE } from "./config";
 import { nomLlegible, slugify } from "../lib/text";
+import { capcalera } from "./capcalera";
+import { cercador } from "./cercador";
 
 /**
  * «Els 947» — l'índex de tots els municipis de Catalunya amb el que en sabem.
@@ -573,10 +575,8 @@ ${qui}
 <body>
 <a class="salta" href="#llista">Ves a la llista</a>
 
-<header class="capcalera">
-  <a class="logo" href="./">Observatori</a>
-  <span class="etiqueta">esborrany · dades obertes</span>
-</header>
+${capcalera("./", "947")}
+${cercador("./")}
 
 <main>
 <section class="portada">

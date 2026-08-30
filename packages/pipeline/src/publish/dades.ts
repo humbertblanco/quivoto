@@ -3,6 +3,8 @@ import { asc, eq } from "drizzle-orm";
 import { dataIssues, electionParticipation, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
 import type { RadiografiaData } from "./radiografia";
+import { capcalera } from "./capcalera";
+import { cercador } from "./cercador";
 
 /**
  * La descàrrega de dades.
@@ -1205,10 +1207,8 @@ th{font-family:var(--display);font-weight:900}
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
 
-<header class="capcalera">
-  <a class="logo" href="../">Observatori</a>
-  <span class="etiqueta">dades obertes</span>
-</header>
+${capcalera("../", "dades", "dades obertes")}
+${cercador("../")}
 
 <main id="contingut">
 

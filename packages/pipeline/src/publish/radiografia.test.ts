@@ -1078,7 +1078,11 @@ describe("la fitxa sencera", () => {
     // un bloc canvia d'id i l'índex no, l'enllaç deixa de portar enlloc i el
     // rail es queda mut: no peta res i no ho veu ningú fins que es fa scroll.
     const html = renderRadiografia(fitxa());
-    const index = html.slice(html.indexOf('<nav class="index"'), html.indexOf("</nav>"));
+    // Des de l'índex fins al SEU tancament: la capçalera compartida també porta
+    // un <nav> (el menú) i va abans, de manera que el primer </nav> del document
+    // no és el d'aquí.
+    const on = html.indexOf('<nav class="index"');
+    const index = html.slice(on, html.indexOf("</nav>", on));
     const ancores = [...index.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]!);
     expect(ancores.length).toBeGreaterThan(3);
     for (const ancora of ancores) expect(html, ancora).toContain(`id="${ancora}"`);

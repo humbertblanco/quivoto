@@ -10,6 +10,8 @@ import { tintaSobre as tintaDeContrast } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { de, normalizePersonName, slugify } from "../lib/text";
 import { adrecesRegidors } from "./regidor";
+import { capcalera } from "./capcalera";
+import { cercador } from "./cercador";
 
 /**
  * La pàgina d'**una candidatura a un municipi**.
@@ -489,10 +491,8 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
 <a class="salta" href="#contingut">Ves al contingut</a>
 <div class="cand-dalt" aria-hidden="true"></div>
 
-<header class="capcalera">
-  <a class="logo" href="../../../">Observatori</a>
-  <span class="etiqueta">esborrany · dades obertes</span>
-</header>
+${capcalera("../../../", "cap")}
+${cercador("../../../")}
 
 <main id="contingut">
 

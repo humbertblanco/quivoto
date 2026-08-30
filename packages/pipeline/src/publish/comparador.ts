@@ -5,6 +5,8 @@ import { carregaMetriques } from "./metriques";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { capcalera } from "./capcalera";
+import { cercador } from "./cercador";
 
 /**
  * El comparador: de dos a quatre municipis, un al costat de l'altre.
@@ -810,10 +812,8 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
 <body>
 <a class="salta" href="#comparacio">Ves a la comparació</a>
 
-<header class="capcalera">
-  <a class="logo" href="../">Observatori</a>
-  <span class="etiqueta">esborrany · dades obertes</span>
-</header>
+${capcalera("../", "comparador")}
+${cercador("../")}
 
 <main>
 <section class="portada">

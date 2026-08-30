@@ -4,6 +4,8 @@ import { siglesFamily } from "@quivoto/shared-schemas/brands";
 import { SITE } from "./config";
 import type { Els947Row } from "./els947";
 import { MASCOTA_CSS, papereta } from "./mascota";
+import { capcalera } from "./capcalera";
+import { cercador } from "./cercador";
 
 /**
  * El mapa dels 947, pintat per indicador.
@@ -321,10 +323,8 @@ export function renderMapaCatalunya(files: readonly Els947Row[], generatedAt: st
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
-<header class="capcalera">
-  <a class="logo" href="/observatori/">Observatori</a>
-  <span class="etiqueta">esborrany · dades obertes</span>
-</header>
+${capcalera("../", "mapa")}
+${cercador("../")}
 
 <main id="contingut">
   <section class="portada">

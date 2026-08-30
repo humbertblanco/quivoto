@@ -62,7 +62,40 @@ a{color:inherit;text-underline-offset:3px}
 .nomes-lectors{position:absolute;width:1px;height:1px;overflow:hidden;
   clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px;padding:0;border:0}
 
-.capcalera{display:flex;justify-content:space-between;align-items:center;gap:var(--e2);max-width:var(--ample);margin:0 auto;padding:var(--e3)}
+/* --- la capçalera compartida -------------------------------------------
+   Quatre peces en una fila: la marca, la secció, el menú i la casella. La marca
+   és «quivoto» i no «Observatori» perquè qui arriba a la pàgina d'un regidor
+   per un enllaç ha de poder saber a casa de qui és; l'Observatori hi va al
+   costat, com a rastre.
+
+   El menú no es plega darrere de cap botó: quatre enllaços caben, i un botó que
+   amaga quatre coses és més feina per a qui llegeix que les quatre coses. Quan
+   no hi caben, la fila embolcalla i el menú baixa sencer. */
+.capcalera{display:flex;align-items:center;gap:var(--e2);flex-wrap:wrap;
+  max-width:var(--ample);margin:0 auto;padding:var(--e3)}
+.capcalera .seccio{font-family:var(--text);font-weight:800;font-size:.82rem;color:var(--ink-suau);
+  text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.capcalera .menu{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-left:auto}
+.capcalera .menu a,.capcalera .menu .ara{font-family:var(--text);font-weight:800;font-size:.82rem;
+  text-decoration:none;display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
+.capcalera .menu a:hover{text-decoration:underline;text-decoration-thickness:2.5px;text-underline-offset:5px}
+/* On ets, subratllat amb el coral de la casa. És l'única marca de color de la
+   fila: si tot hi cridés, no s'hi sabria on ets. */
+.capcalera .ara{color:var(--coral-text);text-decoration:underline;
+  text-decoration-thickness:2.5px;text-underline-offset:5px}
+.capcalera .ranura-cerca{display:inline-flex;align-items:center}
+/* Sota de 720px la fila ja va justa i l'etiqueta d'esborrany és el primer que
+   sobra: no diu on ets ni t'hi porta. El menú es queda, que és el que hi fa
+   falta, i el logotip i la casella no es mouen mai de lloc. */
+@media (max-width:720px){
+  .capcalera{gap:12px;padding:var(--e2) var(--e3)}
+  .capcalera .etiqueta{display:none}
+  .capcalera .menu{gap:14px}
+}
+@media (max-width:420px){
+  .capcalera .seccio{display:none}
+  .capcalera .menu{font-size:.78rem}
+}
 /* Els objectius de toc que van sols (no els enllaços dins d'una frase) han de
    fer 44px d'alt: la mida on un dit hi encerta sense ampliar la pàgina. */
 .logo{font-family:var(--display);font-weight:900;letter-spacing:-.05em;font-size:1.3rem;text-decoration:none;

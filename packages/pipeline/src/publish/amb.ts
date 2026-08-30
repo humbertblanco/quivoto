@@ -7,6 +7,8 @@ import { RADIOGRAFIA_CSS } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
 import type { ComarcaData, ComarcaMunicipi } from "./comarques";
+import { capcalera } from "./capcalera";
+import { cercador } from "./cercador";
 
 /**
  * L'Àrea Metropolitana de Barcelona: un ens propi, al costat de les comarques.
@@ -854,10 +856,8 @@ export function renderAmb(data: AmbData, generatedAt: string): string {
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
 
-<header class="capcalera">
-  <a class="logo" href="../">Observatori</a>
-  <span class="etiqueta">esborrany · dades obertes</span>
-</header>
+${capcalera("../", "cap")}
+${cercador("../")}
 
 <main id="contingut">
 

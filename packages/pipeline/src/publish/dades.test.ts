@@ -175,7 +175,10 @@ describe("renderDadesIndex", () => {
   it("és una pàgina autònoma i sense recursos de fora", () => {
     expect(html.startsWith("<!doctype html>")).toBe(true);
     expect(html).toContain('<html lang="ca">');
-    expect(html).not.toMatch(/<script/i);
+    // El que ha de ser autònom és el fitxer, no que no hi hagi cap guió: la
+    // casella de cerca de la capçalera compartida en porta un, i va incrustat
+    // com tot el CSS. El que no hi pot haver és res que es baixi de fora.
+    expect(html).not.toMatch(/<script[^>]*\ssrc=/i);
     expect(html).not.toMatch(/https?:\/\/[^"']*\.(?:css|js)/i);
   });
 });

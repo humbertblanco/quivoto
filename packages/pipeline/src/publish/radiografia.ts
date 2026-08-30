@@ -19,6 +19,8 @@ import { adrecesRegidors } from "./regidor";
 import { dataCurta, delDia, elDia, nomLlegible, normalizePersonName, slugify } from "../lib/text";
 import { INDEXABLE, SITE } from "./config";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { capcalera } from "./capcalera";
+import { cercador } from "./cercador";
 
 /**
  * Radiografia d'un municipi: una pàgina feta només amb dades obertes i càlculs
@@ -3466,115 +3468,6 @@ function renderUllada(data: RadiografiaData, medianes?: MedianesMunicipi): strin
  * carregar la pàgina: són 80 kB que la immensa majoria de qui llegeix una
  * fitxa no necessitarà mai.
  */
-const CERCADOR = `
-<dialog class="cercador" aria-label="Cerca un municipi o un bloc d'aquesta pàgina">
-  <form method="dialog" class="cerca-cap">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>
-    <input type="search" id="cerca-camp" autocomplete="off" spellcheck="false"
-           placeholder="Un municipi, o què busques en aquesta pàgina" aria-label="Cerca">
-    <button value="tanca" class="cerca-tanca">Esc</button>
-  </form>
-  <div class="cerca-resultats" role="listbox" aria-label="Resultats"></div>
-</dialog>
-<script>
-(function(){
-  var dialeg = document.querySelector(".cercador");
-  if (!dialeg || typeof dialeg.showModal !== "function") return;
-  var camp = dialeg.querySelector("#cerca-camp");
-  var caixa = dialeg.querySelector(".cerca-resultats");
-
-  // El botó el posa el guió: sense ell seria un control que no fa res.
-  var boto = document.createElement("button");
-  boto.type = "button";
-  boto.className = "obre-cerca";
-  boto.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg><span>Cerca</span>';
-  boto.setAttribute("aria-label", "Cerca un municipi o un bloc");
-  var capcalera = document.querySelector(".capcalera");
-  if (capcalera) capcalera.insertBefore(boto, capcalera.querySelector(".etiqueta"));
-
-  // Els blocs d'aquesta pàgina surten de l'índex, que ja els llista tots.
-  var blocs = [].map.call(document.querySelectorAll(".index a[href^='#']"), function(a){
-    return { text: a.textContent.trim(), on: a.getAttribute("href") };
-  });
-
-  var municipis = null, baixant = false;
-  function clau(t){
-    return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
-      .replace(/['’]/g, " ").replace(/^(l|el|la|els|les|es|sa)\\s+/, "")
-      .replace(/\\s+/g, " ").trim();
-  }
-  function baixa(){
-    if (municipis || baixant) return;
-    baixant = true;
-    fetch("../../cerca.json").then(function(r){ return r.json(); }).then(function(d){
-      municipis = d; baixant = false; pinta();
-    }).catch(function(){ baixant = false; municipis = []; pinta(); });
-  }
-
-  var tria = -1, files = [];
-  function pinta(){
-    var q = clau(camp.value);
-    files = [];
-    if (q.length > 0) {
-      blocs.forEach(function(b){
-        if (clau(b.text).indexOf(q) !== -1) files.push({ mena: "bloc", text: b.text, on: b.on, sub: "en aquesta pàgina" });
-      });
-      if (municipis) {
-        for (var i = 0; i < municipis.length && files.length < 12; i++) {
-          var m = municipis[i];
-          if (m.k.indexOf(q) === 0) files.push({ mena: "municipi", text: m.n, on: "../" + m.s + "/", sub: m.c + " · " + m.h.toLocaleString("ca-ES") + " habitants" });
-        }
-        for (var j = 0; j < municipis.length && files.length < 12; j++) {
-          var n = municipis[j];
-          if (n.k.indexOf(q) > 0) files.push({ mena: "municipi", text: n.n, on: "../" + n.s + "/", sub: n.c + " · " + n.h.toLocaleString("ca-ES") + " habitants" });
-        }
-      }
-    }
-    tria = files.length > 0 ? 0 : -1;
-    if (q.length === 0) {
-      caixa.innerHTML = "<p class=\\"cerca-buit\\">Escriu el nom d'un poble per anar-hi, o una paraula per trobar-la en aquesta pàgina.</p>";
-      return;
-    }
-    if (files.length === 0) {
-      caixa.innerHTML = '<p class="cerca-buit">' + (municipis === null ? "Carregant els 947 municipis…" : "Cap resultat.") + '</p>';
-      return;
-    }
-    caixa.innerHTML = files.map(function(f, i){
-      return '<a class="cerca-fila' + (i === 0 ? " tria" : "") + '" role="option" href="' + f.on + '">' +
-        '<span class="mena">' + (f.mena === "bloc" ? "Bloc" : "Municipi") + '</span>' +
-        '<span class="qui"><b>' + f.text.replace(/[&<>]/g, "") + '</b><span>' + f.sub.replace(/[&<>]/g, "") + '</span></span></a>';
-    }).join("");
-  }
-  function mou(d){
-    var nodes = caixa.querySelectorAll(".cerca-fila");
-    if (!nodes.length) return;
-    if (nodes[tria]) nodes[tria].classList.remove("tria");
-    tria = (tria + d + nodes.length) % nodes.length;
-    nodes[tria].classList.add("tria");
-    nodes[tria].scrollIntoView({ block: "nearest" });
-  }
-
-  function obre(){ dialeg.showModal(); camp.value = ""; pinta(); baixa(); camp.focus(); }
-  boto.addEventListener("click", obre);
-  camp.addEventListener("input", pinta);
-  dialeg.addEventListener("keydown", function(e){
-    if (e.key === "ArrowDown") { e.preventDefault(); mou(1); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); mou(-1); }
-    else if (e.key === "Enter") {
-      var n = caixa.querySelectorAll(".cerca-fila")[tria];
-      if (n) { e.preventDefault(); window.location.href = n.getAttribute("href"); }
-    }
-  });
-  // La barra inclinada obre la cerca, com a tot arreu; no si s'està escrivint.
-  document.addEventListener("keydown", function(e){
-    var dins = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "");
-    if (!dialeg.open && !dins && (e.key === "/" || (e.key === "k" && (e.metaKey || e.ctrlKey)))) {
-      e.preventDefault(); obre();
-    }
-  });
-})();
-</script>`;
 
 /**
  * Quina secció s'està llegint, marcada a l'índex.
@@ -3724,10 +3617,8 @@ ${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
 
-<header class="capcalera">
-  <a class="logo" href="../../">Observatori</a>
-  <span class="etiqueta">esborrany · dades obertes</span>
-</header>
+${capcalera("../../", "cap")}
+${cercador("../../")}
 
 <main id="contingut">
 
@@ -4172,7 +4063,6 @@ ${data.parity ? (() => {
 <footer class="peu">
   <p>quivoto · pàgina generada el ${escape(data.generatedAt)} · esborrany intern, no indexat</p>
 </footer>
-${CERCADOR}
 ${SEGUIDOR_INDEX}
 </body>
 </html>`;
