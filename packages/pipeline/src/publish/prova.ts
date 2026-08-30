@@ -6,6 +6,9 @@ import { posicions, type Grup } from "./posicions";
 import { puntDe, type PuntActa } from "./enllac-actes";
 import { CARES, MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
+import { capcalera, tipografia } from "./capcalera";
+import { cercador } from "./cercador";
+import { peu } from "./peu";
 
 /**
  * La demo del test: les preguntes d'un municipi, per respondre de veritat.
@@ -122,6 +125,14 @@ const ESCALA = CARES.map((c) => ({ valor: c.valor, text: c.text, svg: c.svg }));
 /** Text negre o blanc segons què es llegeixi millor sobre el color del grup. */
 const sobre = (color: string): string => tintaSobre(color);
 
+/**
+ * El camí fins a `/observatori/` des de `preguntes/<slug>/prova/`: tres nivells.
+ * La taula de bases és al capçal de `capcalera.ts`. Abans la pàgina duia una
+ * capçalera pròpia amb un camí absolut i un peu d'una línia, i era, amb la de
+ * les preguntes, l'única del web des d'on no es podia anar enlloc.
+ */
+const BASE = "../../../";
+
 export function renderProva(
   conjunt: ConjuntAmbSlug,
   grups: readonly Grup[],
@@ -232,14 +243,13 @@ export function renderProva(
 <title>Prova el test · ${escape(conjunt.municipi)} — quivoto</title>
 <meta name="description" content="Respon ${dades.length} preguntes sobre ${escape(conjunt.municipi)} i mira amb quin grup del ple coincideixes més.">
 <link rel="canonical" href="${SITE}/observatori/preguntes/${escape(conjunt.slug)}/prova/">
+${tipografia(BASE)}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
-<header class="capcalera">
-  <a class="logo" href="/observatori/">Observatori</a>
-  <span class="etiqueta">avaluació del mandat</span>
-</header>
+${capcalera(BASE, "cap", "esborrany")}
+${cercador(BASE)}
 
 <main class="prova" id="contingut">
   <section id="intro">
@@ -323,7 +333,7 @@ export function renderProva(
   </section>
 </main>
 
-<footer class="peu"><p>quivoto · demostració generada el ${escape(generatedAt)} · les afirmacions no estan validades</p></footer>
+${peu(BASE, generatedAt, [{ text: `La fitxa de ${conjunt.municipi}`, on: `${BASE}m/${conjunt.slug}/` }])}
 
 <script>
 const D = ${JSON.stringify(dades)};

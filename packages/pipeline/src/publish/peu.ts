@@ -71,16 +71,11 @@ footer.peu .lema{color:var(--ink-suau);font-size:.94rem;line-height:1.5;margin:0
 footer.peu .lema b{color:var(--ink)}
 /* El presec amb tinta fosca escrita a mà: en fosc el fons es queda clar i el
    gris heretat hi cauria per sota del mínim. Mateix truc que «.etiqueta». */
-footer.peu .baixa{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
-  background:var(--presec);color:#1E1B2E;border:2.5px solid var(--ink);border-radius:var(--r-max);
-  box-shadow:var(--ombra);padding:0 20px;min-height:48px;font-weight:800;font-size:.95rem;
-  text-decoration:none;transition:transform .12s ease,box-shadow .12s ease}
-footer.peu .baixa:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-@media (prefers-reduced-motion:reduce){footer.peu .baixa{transition:none}}
+@media (prefers-reduced-motion:reduce){}
 
 /* Les quatre xifres vives: el que hi ha comptat, dins la mateixa targeta. Cap
    no va sola —cada una porta de què és— que és la regla dura de la casa. */
-footer.peu .xifres{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);
+footer.peu .xifres{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);
   gap:var(--e2);list-style:none;margin:0;padding:var(--e2) 0 0;border-top:2px solid var(--vora)}
 footer.peu .xifres b{display:block;font-family:var(--display);font-weight:900;font-size:1.45rem;
   letter-spacing:-.03em;line-height:1.1}
@@ -113,8 +108,7 @@ footer.peu .legal a{color:inherit;font-weight:700}
    l'esquerra, sota el dibuix i el text. */
 @media (max-width:760px){
   footer.peu .crida{grid-template-columns:auto 1fr}
-  footer.peu .baixa{grid-column:1/-1;justify-self:start}
-}
+  }
 @media (max-width:560px){
   footer.peu > div{padding:var(--e3) var(--e2)}
   footer.peu .crida{padding:var(--e2)}
@@ -204,22 +198,21 @@ export function peu(
         la gent i què s'hi va prometre. <b>Sense cap model de llenguatge pel mig</b>: fonts oficials,
         cada xifra amb la seva al costat, i càlculs que qualsevol pot repetir.</p>
       </div>
-      <a class="baixa" href="${escape(`${base}dades/`)}">Baixa't les dades <span aria-hidden="true">&rarr;</span></a>
       <ul class="xifres">
         ${compte(xifres.municipis, "municipis")}
         ${compte(xifres.electes, "electes")}
         ${compte(xifres.candidatures, "candidatures")}
-        ${compte(xifres.fitxersDades, "fitxers per baixar")}
       </ul>
     </div>
     <nav class="anar" aria-label="Més de l'Observatori">
       ${extres.map((e) => pastilla(e.text, e.on, true)).join("\n      ")}
-      ${pastilla("Els 947 municipis", `${base}els947.html`)}
+      ${pastilla("Els 947", `${base}els947.html`)}
       ${pastilla("El mapa", `${base}mapa/`)}
       ${pastilla("El comparador", `${base}comparador/`)}
-      ${pastilla("Les comarques", `${base}c/barcelones/`)}
+      ${pastilla("Les comarques", `${base}c/`)}
       ${pastilla("L'Àrea Metropolitana", `${base}amb/`)}
       ${pastilla("Les preguntes", `${base}preguntes/`)}
+      ${pastilla("Les dades", `${base}dades/`)}
     </nav>
     <p class="lletra"><b>Generat el ${escape(generatedAt)}</b> a partir de les dades obertes de la
     Generalitat de Catalunya, el Consorci AOC, l'Idescat, el Ministeri d'Hisenda i el Síndic de

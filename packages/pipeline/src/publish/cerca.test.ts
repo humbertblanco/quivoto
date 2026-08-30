@@ -25,7 +25,8 @@ const fila = (
   p = 1000,
   a: string | null = null,
   g: string | null = null,
-): Els947Row => ({ s, n, c, p, a, g }) as unknown as Els947Row;
+  ad: string | null = null,
+): Els947Row => ({ s, n, c, p, a, g, ad }) as unknown as Els947Row;
 
 /** Un candidat ja aplanat, com el que munta el guió del navegador. */
 const cand = (m: Candidat["m"], t: string, w: number, i = 0): Candidat =>
@@ -190,7 +191,7 @@ describe("indexDeCerca", () => {
 
 describe("indexDeCercaElectes", () => {
   const files = [
-    fila("barcelona", "Barcelona", "Barcelonès", 1_731_649, "Jaume Collboni", "PSC-CP"),
+    fila("barcelona", "Barcelona", "Barcelonès", 1_731_649, "Jaume Collboni", "PSC-CP", "regidor/jaume-collboni/"),
     fila("alins", "Alins", "Pallars Sobirà", 250, "Joan Pons", "ERC-AM"),
   ];
   const dades: DadesElectes = {
@@ -248,9 +249,11 @@ describe("indexDeCercaElectes", () => {
   });
 
   it("l'alcaldia amb fitxa pròpia hi va; la que no en té, no s'inventa", () => {
-    expect(index.alc[1]).toBe("jaume-collboni");
-    // A Alins l'alcalde és en Joan Pons i la seu electrònica només publica la
-    // Marta Sol: sense fitxa, el resultat ha d'anar a l'apartat d'alcaldies.
+    // El camí el porta la fila dels 947, decidit per `resolAlcaldia()`: aquí
+    // no es torna a calcular, només es copia a la posició del municipi.
+    expect(index.alc[1]).toBe("regidor/jaume-collboni/");
+    // A Alins la fila no en porta cap: el resultat ha d'anar a l'apartat
+    // d'alcaldies, i no s'endevina res a partir de la llista de la seu.
     expect(index.alc[0]).toBeUndefined();
   });
 

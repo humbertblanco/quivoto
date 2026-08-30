@@ -287,7 +287,10 @@ export type IndexElectes = {
   reg: [string, number, number][];
   /** sigles i posició del municipi a `mun` */
   cand: [number, number][];
-  /** posició del municipi → adreça de la fitxa de qui hi té l'alcaldia */
+  /**
+   * posició del municipi → camí de la fitxa de qui hi té l'alcaldia, relatiu a
+   * `m/<slug>/` («regidor/<persona>/»). Qui no hi és va a `#alcaldies`.
+   */
   alc: Record<number, string>;
   /** les poques files on el slug no és `slugify()` del que es veu */
   exr: Record<number, string>;
@@ -394,12 +397,25 @@ export function indexDeCercaElectes(
     else if (siglesPerPersona.get(clau) !== m.sigles) siglesPerPersona.set(clau, null);
   }
 
-  const alcaldePerSlug = new Map<string, string>();
-  for (const f of files) if (f.a) alcaldePerSlug.set(f.s, f.a);
+  /**
+   * On va l'alcaldia de cada municipi.
+   *
+   * Aquí es tornava a decidir, aparellant el nom oficial amb la llista de la
+   * seu electrònica, i era la tercera manera de decidir-ho del web: la fitxa
+   * del municipi en tenia una, la llista dels 947 una altra i aquesta la
+   * tercera. Ara ho decideix `resolAlcaldia()` una sola vegada, a
+   * `loadEls947()`, i la fila ja ho porta: el cercador envia exactament on
+   * envia el nom de l'alcaldia a la llista, amb la fitxa de persona dels
+   * municipis sense seu inclosa. Qui no en té va a l'apartat d'alcaldies.
+   */
+  const alc: Record<number, string> = {};
+  for (const f of files) {
+    const iMun = posPerSlug.get(f.s);
+    if (iMun !== undefined && f.ad) alc[iMun] = f.ad;
+  }
 
   const reg: [string, number, number][] = [];
   const exr: Record<number, string> = {};
-  const alc: Record<number, string> = {};
   for (const fitxa of dades.carrecs) {
     const slug = slugPerId.get(fitxa.municipalityId);
     if (slug === undefined) continue;
@@ -409,7 +425,6 @@ export function indexDeCercaElectes(
     // La mateixa funció que decideix el nom del directori: si aquí es
     // recalculés d'una altra manera, l'enllaç aniria a una pàgina que no hi és.
     const adreces = adrecesRegidors(fitxa.carrecs);
-    const adrecaPerNom = new Map<string, string | null>();
     for (const [carrec, adreca] of adreces) {
       const i = reg.length;
       const seves = siglesPerPersona.get(
@@ -417,23 +432,6 @@ export function indexDeCercaElectes(
       );
       reg.push([carrec.nom, iMun, sigles.id(seves ?? null)]);
       if (adreca !== slugify(carrec.nom)) exr[i] = adreca;
-      const clauNom = normalizePersonName(carrec.nom);
-      adrecaPerNom.set(clauNom, adrecaPerNom.has(clauNom) ? null : adreca);
-    }
-
-    /**
-     * L'alcaldia amb fitxa pròpia: 418 dels 947.
-     *
-     * La resta d'alcaldes no surten a la fitxa de càrrecs de la seva seu
-     * electrònica —o hi surten amb el nom escrit d'una altra manera— i el seu
-     * resultat ha d'anar a l'apartat d'alcaldies del municipi. S'aparella pel
-     * nom normalitzat i, si el nom lliga amb dues persones del mateix ple, no
-     * s'hi posa res: enviar a la fitxa d'un altre seria el pitjor dels errors.
-     */
-    const alcalde = alcaldePerSlug.get(slug);
-    if (alcalde !== undefined) {
-      const seva = adrecaPerNom.get(normalizePersonName(alcalde));
-      if (seva) alc[iMun] = seva;
     }
   }
 

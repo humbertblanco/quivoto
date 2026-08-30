@@ -30,6 +30,7 @@ for (const m of readdirSync(join(ARREL, "m"))) {
     ).length;
   } catch {}
 }
+const partits = compta("partit", (n) => statSync(join(ARREL, "partit", n)).isDirectory());
 const preguntes = carregaPreguntes();
 const data = new Date().toISOString().slice(0, 10);
 
@@ -42,8 +43,14 @@ writeFileSync(
       candidatures,
       fitxersDades,
       conjuntsPreguntes: preguntes.length,
-      // Aquest generador ràpid no obre la base de dades i no en sap res.
+      // Aquest generador ràpid no obre la base de dades i no en sap res: ni de
+      // l'AMB ni de quantes persones té la trajectòria, i sense el recompte
+      // l'enllaç no surt. Tampoc no li passa la mostra —les ciutats amb cara,
+      // el mapa, les marques—, i per això aquesta portada surt amb els enllaços
+      // a les seccions i prou. El «publica» sencer ho posa tot.
       amb: null,
+      partits,
+      trajectoria: null,
       exemple: preguntes[0] ? { slug: preguntes[0].slug, nom: preguntes[0].municipi } : null,
       provaDestacada: preguntes[0] ? { slug: preguntes[0].slug, nom: preguntes[0].municipi } : null,
     },

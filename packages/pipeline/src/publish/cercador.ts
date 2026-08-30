@@ -219,12 +219,14 @@ export function cercador(base: string): string {
     }
     if (f.m === "Alcaldia") {
       m = dades.mun[f.i];
-      // Només 418 dels 947 alcaldes tenen fitxa pròpia; la resta va a l'apartat
-      // d'alcaldies del seu municipi, que és on hi ha el que en sabem.
+      // El camí de la fitxa de la persona el porta l'índex d'electes, decidit
+      // per la mateixa regla que la llista dels 947; mentre no ha arribat, o
+      // quan l'alcaldia no té pàgina, es va a l'apartat d'alcaldies del seu
+      // municipi, que és on hi ha el que en sabem.
       var propia = electes ? electes.alc[f.i] : null;
       return { mena: "Alcaldia", text: m.a,
                sub: "alcalde de " + m.n + (m.g === null ? "" : " · " + dades.sig[m.g]),
-               on: BASE + "m/" + m.s + "/" + (propia ? "regidor/" + propia + "/" : "#alcaldies") };
+               on: BASE + "m/" + m.s + "/" + (propia || "#alcaldies") };
     }
     if (f.m === "Comarca") {
       var c = comarques[f.i];
@@ -296,6 +298,15 @@ export function cercador(base: string): string {
 
   function obre(){ dialeg.showModal(); camp.value = ""; pinta(); baixa(); camp.focus(); }
   boto.addEventListener("click", obre);
+  // Els botons que una pàgina posa dins del seu contingut —la portada en té
+  // un a la targeta de la fitxa: «Escriu el nom del teu poble»— neixen amb
+  // «hidden» i s'ensenyen aquí, per la mateixa regla que el de dalt: sense
+  // guió no hi ha cap control que no faci res.
+  var propis = document.querySelectorAll("[data-obre-cerca]");
+  for (var p = 0; p < propis.length; p++) {
+    propis[p].hidden = false;
+    propis[p].addEventListener("click", obre);
+  }
   camp.addEventListener("input", pinta);
   dialeg.addEventListener("keydown", function(e){
     if (e.key === "ArrowDown") { e.preventDefault(); mou(1); }

@@ -8,6 +8,9 @@ import { verifica } from "./verificacio";
 import { verificaCites } from "./cites";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
+import { capcalera, tipografia } from "./capcalera";
+import { cercador } from "./cercador";
+import { peu, type EnllacPeu } from "./peu";
 
 /**
  * Les preguntes de prova, tal com estan: en esborrany i sense validar.
@@ -87,7 +90,20 @@ export function carregaPreguntes(): ConjuntAmbSlug[] {
     .sort((a, b) => b.veredicte.resum.ambVotCitable - a.veredicte.resum.ambVotCitable);
 }
 
-function capcalera(titol: string, descripcio: string, canonical: string): string {
+/**
+ * El capçal sencer de les dues pàgines: el `<head>` i l'obertura del `<body>`
+ * amb la capçalera, el cercador i el peu compartits de la resta de
+ * l'Observatori.
+ *
+ * Aquestes pàgines duien una capçalera pròpia —un logotip que deia
+ * «Observatori» i una etiqueta— i un peu d'una línia, de manera que des de les
+ * preguntes no es podia anar enlloc: ni al mapa, ni a un altre poble, ni a les
+ * dades. Eren les úniques del web que no feien servir la capa compartida.
+ *
+ * `base` és el camí fins a `/observatori/` (taula al capçal de `capcalera.ts`):
+ * `../` des de `preguntes/` i `../../` des de `preguntes/<slug>/`.
+ */
+function capsalPreguntes(titol: string, descripcio: string, canonical: string, base: string): string {
   return `<!doctype html>
 <html lang="ca">
 <head>
@@ -97,14 +113,13 @@ function capcalera(titol: string, descripcio: string, canonical: string): string
 <title>${escape(titol)}</title>
 <meta name="description" content="${escape(descripcio)}">
 <link rel="canonical" href="${canonical}">
+${tipografia(base)}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${EXTRA_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
-<header class="capcalera">
-  <a class="logo" href="/observatori/">Observatori</a>
-  <span class="etiqueta">dades obertes</span>
-</header>`;
+${capcalera(base, "cap", "esborrany")}
+${cercador(base)}`;
 }
 
 const EXTRA_CSS = `
@@ -166,11 +181,20 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
     .join("");
 
   const bloquejos = v.incompliments.filter((i) => i.gravetat === "bloqueja");
+  const estat = verifica(conjunt);
+  // Els enllaços que només té aquesta pàgina: la fitxa del poble i, si la
+  // demostració existeix, la demostració. La resta —les altres proves, el
+  // mapa, els 947— ja és al peu de totes les pàgines.
+  const fitxa: EnllacPeu = { text: `La fitxa de ${conjunt.municipi}`, on: `../../m/${conjunt.slug}/` };
+  const extres: EnllacPeu[] = estat.jugable
+    ? [{ text: "Respon les preguntes", on: "prova/" }, fitxa]
+    : [fitxa];
 
-  return `${capcalera(
+  return `${capsalPreguntes(
     `Preguntes de prova · ${conjunt.municipi} — quivoto`,
     `Les 25 preguntes que la brúixola de quivoto faria a ${conjunt.municipi}, en esborrany i amb l'evidència de cadascuna.`,
     `${SITE}/observatori/preguntes/${conjunt.slug}/`,
+    "../../",
   )}
 <main id="contingut">
   <section class="portada">
@@ -188,12 +212,12 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
            aquí sota per saber per què.`
     }</p>
     ${
-      verifica(conjunt).jugable
+      estat.jugable
         ? `<p><a class="boto-prova" href="prova/">Respon-les i mira amb qui coincideixes →</a></p>
     <p class="nota">És una demostració del que es pot fer avui, amb el que hi ha. Les
     afirmacions encara no estan validades.</p>`
         : `<p class="nota"><b>Aquest conjunt no es pot respondre.</b>
-    ${escape(verifica(conjunt).motiu ?? "")}, i sense acta no podem dir què ha votat cada grup:
+    ${escape(estat.motiu ?? "")}, i sense acta no podem dir què ha votat cada grup:
     el que ensenyaríem seria què n'ha dit la premsa, que és una altra cosa. Les afirmacions es
     queden aquí perquè es vegin i es puguin criticar.</p>`
     }
@@ -226,10 +250,14 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
     <ul class="destins">
       <li><a href="../../m/${escape(conjunt.slug)}/"><b>La fitxa de ${escape(conjunt.municipi)}</b>
         <span>Qui mana, els comptes, el ple i com queda respecte dels municipis de la seva mida</span></a></li>
-      <li><a href="prova/"><b>Respon les preguntes</b>
-        <span>La demostració: compara't amb els grups del ple a partir de com han votat</span></a></li>
-      <li><a href="../"><b>Les altres proves</b>
-        <span>Els municipis on ja hem escrit les preguntes</span></a></li>
+      ${
+        // Només quan la demostració existeix: si no, l'enllaç seria un 404 i
+        // la portada d'aquesta mateixa pàgina ja diu per què no hi és.
+        estat.jugable
+          ? `<li><a href="prova/"><b>Respon les preguntes</b>
+        <span>La demostració: compara't amb els grups del ple a partir de com han votat</span></a></li>`
+          : ""
+      }
     </ul>
   </section>
 
@@ -242,7 +270,7 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
     sobra i què hi falta: escriu-nos a hola@quivoto.cat.</p>
   </section>
 </main>
-<footer class="peu"><p>quivoto · generat el ${escape(generatedAt)} · esborrany, no indexat</p></footer>
+${peu("../../", generatedAt, extres)}
 </body></html>`;
 }
 
@@ -259,10 +287,11 @@ export function renderIndexPreguntes(conjunts: readonly ConjuntAmbSlug[], genera
     )
     .join("");
 
-  return `${capcalera(
+  return `${capsalPreguntes(
     "Preguntes de prova · Observatori de quivoto",
     "Les preguntes que la brúixola de quivoto faria a cada municipi, en esborrany i amb l'evidència de cadascuna.",
     `${SITE}/observatori/preguntes/`,
+    "../",
   )}
 <main id="contingut">
   <section class="portada">
@@ -289,6 +318,6 @@ export function renderIndexPreguntes(conjunts: readonly ConjuntAmbSlug[], genera
     no hi és.</p>
   </section>
 </main>
-<footer class="peu"><p>quivoto · generat el ${escape(generatedAt)} · esborrany, no indexat</p></footer>
+${peu("../", generatedAt)}
 </body></html>`;
 }

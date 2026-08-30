@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { dataIssues, electionParticipation, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
 import type { RadiografiaData } from "./radiografia";
-import { capcalera } from "./capcalera";
+import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { RADIOGRAFIA_CSS } from "./estil";
@@ -114,6 +114,64 @@ const FONTS = {
     id: "943d6174", titol: "Ajuntaments sense regidors de l'oposició (Síndic de Greuges)", portal: AOC,
     llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/sindic-de-greuges-ajuntaments-sense-regidors-de-l-oposicio",
   },
+  liquidacioEconomica: {
+    id: "8squ-bk4r", titol: "Liquidació del pressupost, econòmic i per programes", portal: SOCRATA,
+    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
+    url: "https://analisi.transparenciacatalunya.cat/d/8squ-bk4r",
+  },
+  liquidacioProgrames: {
+    // Comprovat al CKAN de l'AOC el 30-08-2026: el paquet `f65ae930` és `cc-zero`.
+    id: "5b96829f", titol: "Liquidació del pressupost per programes (grups de programa)", portal: AOC,
+    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/ge-p-liquidacions-per-programes-detallat",
+  },
+  ambEns: {
+    id: "2r5q-tsxs", titol: "Ens on participa cada ens local", portal: SOCRATA,
+    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
+    url: "https://analisi.transparenciacatalunya.cat/d/2r5q-tsxs",
+  },
+  arc: {
+    id: "69zu-w48s", titol: "Estadística de residus municipals (Agència de Residus de Catalunya)", portal: SOCRATA,
+    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
+    url: "https://analisi.transparenciacatalunya.cat/d/69zu-w48s",
+  },
+  fiances: {
+    id: "qww9-bvhh", titol: "Preu mitjà del lloguer, per les fiances dipositades (Agència de l'Habitatge)", portal: SOCRATA,
+    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
+    url: "https://analisi.transparenciacatalunya.cat/d/qww9-bvhh",
+  },
+  aca: {
+    id: "aca-preus", titol: "Observatori del preu de l'aigua", portal: "Agència Catalana de l'Aigua · aca.gencat.cat",
+    llicencia: "Llicència oberta d'ús d'informació – Catalunya (avís legal de gencat.cat): citar la font i no alterar-ne el sentit",
+    url: "https://aca.gencat.cat/ca/laigua/consulta-de-dades/observatori-del-preu-de-laigua/",
+  },
+  /*
+   * L'Idescat no és CC: les condicions de les seves API obliguen a presentar
+   * cada xifra amb l'enllaç que l'API ha donat, tal com l'ha donat. Aquí hi va
+   * la pàgina general; l'enllaç de cada municipi va al JSON del municipi.
+   */
+  idescatPoblacio: {
+    id: "censph/5992/5987", titol: "Cens de població: nacionalitat espanyola i estrangera", portal: "Idescat · idescat.cat",
+    llicencia: "Condicions d'ús de l'Idescat: cal enllaçar la pàgina de l'Idescat al costat de la xifra",
+    // La mateixa pàgina que l'API dona per municipi (`&geo=mun:…`), sense el municipi.
+    url: "https://www.idescat.cat/pub/?id=censph&n=479",
+  },
+  idescatIbi: {
+    id: "ibi/173", titol: "Impost de béns immobles de naturalesa urbana (IBI), taula 173", portal: "Idescat · idescat.cat",
+    llicencia: "Condicions d'ús de l'Idescat: cal enllaçar la pàgina de l'Idescat al costat de la xifra",
+    url: "https://www.idescat.cat/pub/?id=ibi&n=173",
+  },
+  /*
+   * L'INE permet reutilitzar citant la font i la data de l'última actualització,
+   * i imposa la forma de la citació quan les dades s'elaboren, que és el cas:
+   * la fórmula literal va a la llicència i la data de la taula, al JSON del
+   * municipi.
+   */
+  ineAdrh: {
+    id: "ADRH", titol: "Atlas de distribución de renta de los hogares (ADRH)", portal: "INE · ine.es",
+    llicencia: "Reutilització lliure citant la font i la data d'actualització: «Elaboración propia con datos extraídos del sitio web del INE: www.ine.es»",
+    // El catàleg de l'operació, que és d'on J23 treu les quatre taules provincials.
+    url: "https://servicios.ine.es/wstempus/js/ES/TABLAS_OPERACION/ADRH",
+  },
 } as const satisfies Record<string, Font>;
 
 type ClauFont = keyof typeof FONTS;
@@ -156,6 +214,12 @@ const BLOCS: readonly Bloc[] = [
         descripcio: "Municipis de la mateixa mida amb qui és honest comparar-lo. El criteri és el tram de població de la LOREG, i els trams amb menys de 12 municipis s'ajunten amb el veí." },
       { clau: "grup_mida", etiqueta: "Municipis del grup de comparació", unitat: "municipis", font: "ensLocals", global: true, propi: true,
         descripcio: "Quants municipis hi ha al grup. Un percentil sobre quatre municipis és soroll, i cal poder-ho veure." },
+      { clau: "poblacio_estrangera_pct", etiqueta: "Població de nacionalitat estrangera", unitat: "%", font: "idescatPoblacio", global: true,
+        descripcio: "Persones sense nacionalitat espanyola sobre el total de població censada. No és el mateix que «nascuts a l'estranger». Res d'això no ho decideix l'ajuntament: és el context en què governa." },
+      { clau: "renda_neta_persona", etiqueta: "Renda neta mitjana per persona", unitat: "€/any", font: "ineAdrh", global: true,
+        descripcio: "Renda de la llar després d'impostos i cotitzacions, repartida entre tots els seus membres. L'INE tapa per secret estadístic els municipis més petits: un municipi sense xifra no és un municipi sense renda." },
+      { clau: "renda_any", etiqueta: "Any de la renda", unitat: "any", font: "ineAdrh", global: true,
+        descripcio: "L'any a què es refereix la renda, repetit al fitxer global perquè hi càpiga: la sèrie de l'INE arriba amb dos o tres anys de retard i sovint acaba abans de les eleccions del 2023." },
     ],
   },
   {
@@ -292,6 +356,8 @@ const BLOCS: readonly Bloc[] = [
         descripcio: "Interessos i amortització." },
       { clau: "despesa_actuacions_economiques", etiqueta: "Actuacions econòmiques", unitat: "€/habitant", font: "liquidacionsGencat",
         descripcio: "Comerç, turisme, ocupació i altres actuacions de caràcter econòmic." },
+      { clau: "cost_govern_habitant", etiqueta: "Cost dels òrgans de govern", unitat: "€/habitant", font: "liquidacioEconomica", global: true, propi: true,
+        descripcio: "Retribucions dels membres dels òrgans de govern (concepte 1000 de la liquidació) dividides pel padró, de l'últim exercici complet. És el que costa el govern en conjunt, no el que cobra cap regidor. Euros corrents, sense descomptar la inflació." },
     ],
   },
   {
@@ -325,6 +391,50 @@ const BLOCS: readonly Bloc[] = [
         descripcio: "Coeficient de situació màxim de l'IAE." },
       { clau: "revisio_cadastral", etiqueta: "Última revisió cadastral", unitat: "any", font: "impostos", global: true,
         descripcio: "Any de l'última ponència de valors. Com més antiga, més desajustada està la base sobre la qual s'aplica el tipus de l'IBI." },
+      { clau: "preu_aigua_subministrament", etiqueta: "Preu de l'aigua (subministrament)", unitat: "€/m³", font: "aca", global: true,
+        descripcio: "El tram de subministrament del preu de l'aigua per a un consum domèstic de 12 m³ al mes, que és l'únic tram comparable entre municipis. No hi entren el cànon ni el clavegueram: el rebut sencer és més alt." },
+      { clau: "rebut_ibi_mitja", etiqueta: "Rebut mitjà d'IBI urbà", unitat: "€", font: "idescatIbi", global: true,
+        descripcio: "Quota íntegra dividida pels rebuts. No és el tipus impositiu. Només es publica quan la variació és atribuïble al ple i no a una revisió cadastral; als altres municipis la fila no hi és." },
+    ],
+  },
+  {
+    titol: "Com es governa",
+    nota: "El que es veu del govern més enllà dels comptes: què fa amb els residus, què costa viure-hi, si una part del que paga no ho decideix el ple, quant fa que mana la mateixa força i quants vots no van arribar a cap regidoria. Els residus i el lloguer són context —l'ajuntament hi pesa, no els decideix sol— i les files de despesa per programa van una per programa.",
+    camps: [
+      { clau: "residus_selectiva_pct", etiqueta: "Recollida selectiva", unitat: "%", font: "arc", global: true,
+        descripcio: "Part dels residus municipals que es recullen separats, l'últim any amb dada de l'Agència de Residus." },
+      { clau: "residus_kg_habitant", etiqueta: "Residus generats", unitat: "kg/habitant", font: "arc", global: true,
+        descripcio: "Quilos de residus municipals per habitant i any." },
+      { clau: "lloguer_mitja", etiqueta: "Lloguer mitjà", unitat: "€/mes", font: "fiances", global: true,
+        descripcio: "Preu mitjà dels contractes de lloguer amb fiança dipositada a l'Incasòl, l'últim any amb dada. Als municipis amb pocs contractes la font no en publica." },
+      { clau: "amb_membre", etiqueta: "Membre de l'Àrea Metropolitana de Barcelona", unitat: "sí/no", font: "ambEns", global: true,
+        descripcio: "Cert als 36 municipis que la Llei 31/2010 posa dins de l'AMB. Allà el transport, l'aigua i el tractament de residus no els decideix el ple, sinó un consell que no vota ningú en una papereta." },
+      { clau: "alcaldia_forca_anys", etiqueta: "Anys de la mateixa força a l'alcaldia", unitat: "anys", font: "alcaldies", global: true, propi: true,
+        descripcio: "Anys sencers que la força política de l'alcaldia actual porta al càrrec sense interrupció. Es compta per força i no per sigles, perquè les coalicions locals es rebategen. Quan la font no dona data de presa de possessió, s'aproxima per la legislatura." },
+      { clau: "alcaldia_forca_des_de", etiqueta: "La força de l'alcaldia hi és des de", unitat: "any", font: "alcaldies", propi: true,
+        descripcio: "Any de la legislatura en què va començar la ratxa de la força que ocupa l'alcaldia." },
+      { clau: "alcaldia_persona_anys", etiqueta: "Anys de la mateixa persona a l'alcaldia", unitat: "anys", font: "alcaldies", global: true, propi: true,
+        descripcio: "Anys sencers que la persona que ocupa l'alcaldia hi és sense interrupció." },
+      { clau: "alcaldia_forces", etiqueta: "Forces diferents a l'alcaldia des del 1979", unitat: "forces", font: "alcaldies", propi: true,
+        descripcio: "Quantes forces polítiques diferents han ocupat l'alcaldia a l'historial." },
+      { clau: "alcaldia_alternances", etiqueta: "Canvis de força a l'alcaldia des del 1979", unitat: "vegades", font: "alcaldies", global: true, propi: true,
+        descripcio: "Cops que l'alcaldia ha passat d'una força a una altra. No és el mateix que `alternances`, que compta canvis de llista més votada: es pot guanyar i no governar." },
+      { clau: "volatilitat_ultima", etiqueta: "Volatilitat electoral", unitat: "índex", font: "historic", global: true, propi: true,
+        descripcio: "Índex de Pedersen entre les dues últimes eleccions amb càlcul fiable, sobre quotes d'escons: 0 és un ple calcat i 100, cap resta del repartiment anterior. L'any és el de la segona elecció del parell." },
+      { clau: "volatilitat_mitjana", etiqueta: "Volatilitat electoral mitjana", unitat: "índex", font: "historic", global: true, propi: true,
+        descripcio: "Mitjana de l'índex de Pedersen als trams fiables des del 1979. Els trams amb massa escons de llistes locals no hi compten." },
+      { clau: "vot_perdut_pct", etiqueta: "Vot sense representació", unitat: "%", font: "resultats", propi: true,
+        descripcio: "Part dels vots emesos que no va arribar a cap regidoria: llistes sense escó, més nuls, més blancs. Una fila per convocatòria. Només quan els vots per candidatura de la font quadren amb els que ella mateixa declara; als 178 municipis de llistes obertes no quadren mai." },
+      { clau: "vot_sense_esco_pct", etiqueta: "Vot a llistes sense escó", unitat: "%", font: "resultats", propi: true,
+        descripcio: "Part dels vots emesos que va anar a candidatures que no van treure cap regidor. Una fila per convocatòria." },
+      { clau: "vot_perdut_2023_pct", etiqueta: "Vot sense representació el 2023", unitat: "%", font: "resultats", global: true, propi: true,
+        descripcio: "El mateix indicador de la convocatòria del 2023, repetit al fitxer global perquè hi càpiga en una sola columna." },
+      { clau: "vot_perdut_regidories", etiqueta: "Regidories que valdria el vot sense representació", unitat: "regidories", font: "resultats", global: true, propi: true,
+        descripcio: "Quants escons del ple representaria el vot sense representació del 2023 si hagués tingut traducció. És la manera més entenedora de dir què val." },
+      { clau: "despesa_programa", etiqueta: "Despesa del programa", unitat: "€/habitant", font: "liquidacioProgrames",
+        descripcio: "Despesa liquidada d'un grup de programa de la classificació funcional, per habitant, l'últim exercici liquidat. Una fila per programa, amb el codi i el nom entre parèntesis. Un exercici sense liquidació no és un zero: la fila no hi és." },
+      { clau: "despesa_programa_mandat", etiqueta: "Variació al mandat del programa", unitat: "%", font: "liquidacioProgrames", propi: true,
+        descripcio: "Com ha canviat la despesa per habitant del programa des del primer exercici del mandat fins a l'últim liquidat. Una fila per programa. Euros corrents." },
     ],
   },
   {
@@ -430,8 +540,50 @@ type Fitxa = Pick<
   | "municipality" | "results" | "government" | "parity" | "mayors" | "finances"
   | "history" | "taxes" | "transparency" | "singleList" | "revenue" | "spending"
   | "services" | "councilChanges" | "participation" | "issues"
+  | "residus" | "habitatge" | "preuAigua" | "rebutIbi" | "costGovern" | "continuitat" | "votPerdut"
 > & {
   grup: { label: string; size: number } | null;
+  /**
+   * `null` quan no sabem res de l'AMB (la feina no ha desat cap municipi);
+   * `member: false` quan sí que ho sabem i aquest no hi és. La diferència
+   * importa: un «no» en un fitxer de dades és una afirmació.
+   */
+  amb: { member: boolean } | null;
+  poblacio: PoblacioResum | null;
+  riquesa: RiquesaResum | null;
+  despesaProgrames: ProgramesResum | null;
+};
+
+/*
+ * Tres `kind` es carreguen retallats i no sencers. Els documents de població i
+ * de renda porten sèries de catorze i sis indicadors per municipi —3,4 MB per
+ * `kind`— i el de programes, una sèrie per programa; d'aquí només en surt el
+ * que publiquem, projectat amb `jsonb` a la mateixa consulta, com fa
+ * `comarques.ts`. Els tipus són els d'aquesta projecció, no els de la fitxa.
+ */
+
+/** L'indicador de nacionalitat estrangera de J18, amb l'enllaç que l'Idescat obliga a mostrar. */
+type PoblacioResum = {
+  estrangera: { valor: number | null; darrerAny: number | null; enllac: { href: string } | null } | null;
+  /** El primer enllaç del municipi que l'API de l'Idescat ha donat, per si l'indicador no en porta. */
+  enllacIdescat: string | null;
+};
+
+/** La renda neta per persona de J23 i la taula provincial de l'INE d'on surt, amb la seva data. */
+type RiquesaResum = {
+  valor: number | null;
+  any: number | null;
+  taules: { provincia: string; urlTaula: string; actualitzada: string | null }[];
+};
+
+/** Els programes de J15, cadascun amb només l'últim exercici i la variació al mandat. */
+type ProgramesResum = {
+  programes: {
+    codi: string;
+    nom: string;
+    darrer: { any: number; liquidacio: boolean; perHabitant: number | null } | null;
+    mandat: { fins: number; percentual: number | null } | null;
+  }[];
 };
 
 /** Etiqueta d'una sèrie: l'indicador amb el detall entre parèntesis. */
@@ -620,6 +772,74 @@ function indicadorsDe(fitxa: Fitxa): Fila[] {
     afegeix(files, "candidates_total", paritat.candidates, mandat);
     afegeix(files, "caps_llista_dones", paritat.womenHeads, mandat);
     afegeix(files, "caps_llista", paritat.heads, mandat);
+  }
+
+  // --- el municipi, segona part: el context que l'ajuntament no decideix
+  afegeix(files, "poblacio_estrangera_pct", fitxa.poblacio?.estrangera?.valor, fitxa.poblacio?.estrangera?.darrerAny ?? null);
+  if (fitxa.riquesa?.any != null) {
+    afegeix(files, "renda_neta_persona", fitxa.riquesa.valor, fitxa.riquesa.any);
+    if (fitxa.riquesa.valor != null) afegeix(files, "renda_any", fitxa.riquesa.any, null);
+  }
+
+  // --- què es paga aquí, segona part
+  afegeix(files, "preu_aigua_subministrament", fitxa.preuAigua?.preu.subministrament, fitxa.preuAigua?.darrerAny ?? null);
+  // El rebut mitjà només quan J19 el dona per publicable: si ha pujat perquè
+  // el cadastre ha revalorat, no és una decisió del ple i publicar-lo sense
+  // el context de la fitxa seria atribuir-l'hi.
+  if (fitxa.rebutIbi?.publicable) afegeix(files, "rebut_ibi_mitja", fitxa.rebutIbi.rebutMitja, fitxa.rebutIbi.darrerAny);
+
+  // --- on van els diners, segona part
+  const govern = fitxa.costGovern?.darrer;
+  // Una xifra sospitosa (per sobre del llindar de J14) la fitxa l'ensenya amb
+  // l'advertiment al costat; un fitxer no pot, i s'estima més no dur-la.
+  if (govern && !govern.parcial && !govern.sospitos) {
+    afegeix(files, "cost_govern_habitant", govern.organs?.perHabitant, govern.any);
+  }
+
+  // --- com es governa
+  afegeix(files, "residus_selectiva_pct", fitxa.residus?.taxaSelectiva, fitxa.residus?.darrerAny ?? null);
+  afegeix(files, "residus_kg_habitant", fitxa.residus?.kgHabAny, fitxa.residus?.darrerAny ?? null);
+  afegeix(files, "lloguer_mitja", fitxa.habitatge?.preu, fitxa.habitatge?.darrerAny ?? null);
+  afegeix(files, "amb_membre", fitxa.amb?.member, null);
+
+  const continuitat = fitxa.continuitat;
+  if (continuitat) {
+    afegeix(files, "alcaldia_forca_anys", continuitat.partit?.anys, null);
+    afegeix(files, "alcaldia_forca_des_de", continuitat.partit?.desDeAny, null);
+    afegeix(files, "alcaldia_persona_anys", continuitat.persona?.anys, null);
+    afegeix(files, "alcaldia_forces", continuitat.forcesDiferents, null);
+    afegeix(files, "alcaldia_alternances", continuitat.alternances, null);
+    const ultima = continuitat.volatilitat.ultima;
+    afegeix(files, "volatilitat_ultima", ultima?.index, ultima?.a ?? null);
+    afegeix(files, "volatilitat_mitjana", continuitat.volatilitat.mitjana, null);
+  }
+
+  const votPerdut = fitxa.votPerdut;
+  if (votPerdut) {
+    for (const [electionId, eleccio] of Object.entries(votPerdut.eleccions)) {
+      const any = anyElectoral(electionId);
+      // `total` és nul quan la font no quadra i `senseEsco` també: publicar-hi
+      // només els nuls i blancs faria semblar que el vot perdut és petit.
+      afegeix(files, "vot_perdut_pct", eleccio.total?.pct, any);
+      afegeix(files, "vot_sense_esco_pct", eleccio.senseEsco?.pct, any);
+    }
+    const darrera = votPerdut.darrera ? votPerdut.eleccions[votPerdut.darrera] : null;
+    if (darrera && votPerdut.darrera && anyElectoral(votPerdut.darrera) === mandat) {
+      afegeix(files, "vot_perdut_2023_pct", darrera.total?.pct, mandat);
+      afegeix(files, "vot_perdut_regidories", votPerdut.regidorsEquivalents, mandat);
+    }
+  }
+
+  for (const programa of fitxa.despesaProgrames?.programes ?? []) {
+    const nom = `${programa.codi} ${programa.nom}`;
+    // Un exercici sense liquidació no és un zero: el punt no es publica.
+    if (programa.darrer?.liquidacio) {
+      afegeix(files, "despesa_programa", programa.darrer.perHabitant, programa.darrer.any, amb("Despesa del programa", nom));
+    }
+    if (programa.mandat) {
+      afegeix(files, "despesa_programa_mandat", programa.mandat.percentual, programa.mandat.fins,
+        amb("Variació al mandat del programa", nom));
+    }
   }
 
   // --- què en sabem
@@ -849,6 +1069,28 @@ Ho publiquem perquè un fitxer de dades que amaga el que ja sabem que no quadra
 val menys que un que ho diu. Si el municipi que mireu en té una de gravetat alta,
 mireu-vos la xifra amb lupa abans de publicar-la.
 
+## Els enllaços que la llicència obliga a mostrar
+
+Dues fonts no són CC i demanen alguna cosa més que citar-les. L'Idescat obliga a
+presentar cada xifra **amb l'enllaç que la seva API ha donat**, tal com l'ha
+donat; l'INE obliga a citar la font amb una fórmula literal **i la data
+d'actualització de la taula**. Al fitxer per municipi no hi cap una columna
+més, i per això van a la capçalera del JSON:
+
+\`\`\`json
+"enllacos": {
+  "idescat": "l'enllaç del municipi que ha donat l'API de l'Idescat, tal com l'ha donat",
+  "idescat_ibi": "la pàgina de l'Idescat del rebut d'IBI d'aquest municipi",
+  "ine": "la taula provincial de l'ADRH d'on surt la renda"
+},
+"ine": { "citacio": "Elaboración propia con datos extraídos del sitio web del INE: www.ine.es", "actualitzat": "la data d'actualització de la taula, ISO" }
+\`\`\`
+
+Els enllaços van **tal com els han donat les fonts**: no en construïm cap.
+Si torneu a publicar \`poblacio_estrangera_pct\`, \`rebut_ibi_mitja\` o
+\`renda_neta_persona\`, porteu-vos l'enllaç i la citació amb la xifra. Els
+camps són \`null\` als municipis sense la dada.
+
 ## Comparar sense fer trampa
 
 Comparar un municipi amb la mediana de tot Catalunya barreja Barcelona amb un
@@ -879,7 +1121,12 @@ columna de font hi va l'identificador del recurs i no el nom, que no és unívoc
 
 Els conjunts de la Generalitat es publiquen sota les condicions d'ús del portal
 de transparència, que permeten la reutilització citant-ne l'origen i sense
-alterar el sentit de la informació (Llei 37/2007 i Llei 19/2014).
+alterar el sentit de la informació (Llei 37/2007 i Llei 19/2014). El full de
+l'ACA va amb la llicència oberta de gencat.cat, que demana el mateix.
+
+L'Idescat i l'INE no són CC i demanen una cosa més cadascun: l'enllaç que dona
+l'API, i la citació literal amb la data de la taula. Tots dos van a la capçalera
+del JSON de cada municipi, a la secció de dalt.
 
 ## Llicència i com citar-nos
 
@@ -895,18 +1142,34 @@ seva llicència, que és la de la taula de dalt.
   Ni correus, ni adreces, ni telèfons, encara que la font els publiqui.
 - **Canvis de grup al ple.** Les fonts escriuen les mateixes sigles de maneres
   diferents i qualsevol xifra que en donéssim seria una acusació sense fonament.
-- **Retribucions dels càrrecs.** Només quatre municipis les publiquen, amb
-  esquemes que no es poden comparar.
+- **El que cobra cada electe.** Ni les retribucions que publica cada seu
+  electrònica, ni les de l'inventari del Ministeri, ni els sous de les
+  diputacions, ni qui acumula un càrrec en un altre ens: són dades d'una
+  persona amb nom i cognoms, cada ajuntament les publica amb un esquema
+  diferent i fora de la fitxa —sense el context de la dedicació— es
+  converteixen en una llista de sous. El que sí que hi ha és el cost del
+  govern en conjunt (\`cost_govern_habitant\`).
+- **Els càrrecs i els retrats** de la seu electrònica de cada ajuntament, el
+  cartipàs, els organismes dependents i les ordenances. Són llistes amb noms i
+  amb esquemes que canvien a cada seu, i no hi ha cap manera de comparar-les.
+- **Les mocions** dels plens i **la contractació** de la Plataforma de serveis
+  de contractació pública. Es llegeixen a la fitxa amb el context de cada
+  sessió i cada expedient; sense ell, una xifra sola diu més del que sabem.
 - **Cap dada que no puguem dir d'on surt.**
 `;
 }
 
 // ------------------------------------------------------------------ càrrega
 
-/** Els indicadors que fem servir. La resta de `kind` no entren a la descàrrega. */
+/**
+ * Els `kind` que es carreguen sencers. La resta no entren a la descàrrega, tret
+ * dels tres que es carreguen retallats (`poblacio`, `riquesa`,
+ * `despesaProgrames`) i que tenen la seva consulta més avall.
+ */
 const KINDS = [
   "results", "government", "parity", "mayors", "finances", "electoralHistory",
   "taxes", "transparency", "singleList", "revenue", "spending", "services", "councilChanges",
+  "residus", "habitatge", "preuAigua", "rebutIbi", "costGovern", "amb", "continuitat", "votPerdut",
 ] as const;
 
 /**
@@ -917,7 +1180,8 @@ const KINDS = [
  * Les mètriques es demanen **una consulta per `kind`**. Portar-se tota la taula
  * d'un cop rebenta el WASM de PGlite amb un «memory access out of bounds»: hi ha
  * `kind` que desen llistes senceres —ordenances, contractes— i el resultat no hi
- * cap. Aquí, a més, només demanem els tretze que publiquem.
+ * cap. Aquí, a més, només demanem els que publiquem, i els tres més grossos
+ * arriben ja retallats des de la consulta.
  */
 async function carregaFitxes(db: Db): Promise<Fitxa[]> {
   const municipis = await db.select().from(municipalities).orderBy(asc(municipalities.name));
@@ -965,6 +1229,49 @@ async function carregaFitxes(db: Db): Promise<Fitxa[]> {
     else participacioPer.set(fila.municipalityId, [fila]);
   }
 
+  // Si J17 no ha desat cap municipi, no sabem qui és de l'AMB i no ho diem;
+  // si n'ha desat, els que no hi són no hi són, i això sí que és una dada.
+  const hiHaAmb = [...perMunicipi.values()].some((mapa) => mapa.has("amb"));
+
+  const data = municipalityMetrics.data;
+  const poblacioPer = new Map<number, PoblacioResum>();
+  for (const fila of await db
+    .select({
+      municipalityId: municipalityMetrics.municipalityId,
+      estrangera: sql<PoblacioResum["estrangera"]>`jsonb_path_query_first(${data}, '$.indicadors[*] ? (@.clau == "pctNacionalitatEstrangera")')`,
+      enllacIdescat: sql<string | null>`${data}->'font'->'enllacosMunicipi'->0->>'href'`,
+    })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "poblacio"))) {
+    poblacioPer.set(fila.municipalityId, { estrangera: fila.estrangera ?? null, enllacIdescat: fila.enllacIdescat });
+  }
+
+  const riquesaPer = new Map<number, RiquesaResum>();
+  for (const fila of await db
+    .select({
+      municipalityId: municipalityMetrics.municipalityId,
+      valor: sql<string | null>`(jsonb_path_query_first(${data}, '$.indicadors[*] ? (@.clau == "rendaNetaPersona")'))->>'valor'`,
+      any: sql<string | null>`${data}->>'any'`,
+      taules: sql<RiquesaResum["taules"] | null>`${data}->'font'->'ine'->'taules'`,
+    })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "riquesa"))) {
+    riquesaPer.set(fila.municipalityId, { valor: numero(fila.valor), any: numero(fila.any), taules: fila.taules ?? [] });
+  }
+
+  const programesPer = new Map<number, ProgramesResum>();
+  for (const fila of await db
+    .select({
+      municipalityId: municipalityMetrics.municipalityId,
+      programes: sql<ProgramesResum["programes"] | null>`(SELECT jsonb_agg(jsonb_build_object(
+        'codi', p->>'codi', 'nom', p->>'nom', 'darrer', p->'darrer', 'mandat', p->'mandat'))
+        FROM jsonb_array_elements(${data}->'programes') AS p)`,
+    })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "despesaProgrames"))) {
+    programesPer.set(fila.municipalityId, { programes: fila.programes ?? [] });
+  }
+
   const grups = buildPeerGroups(municipis.map((m) => ({ id: m.id, population: m.population })));
 
   return municipis.map((municipality): Fitxa => {
@@ -987,11 +1294,56 @@ async function carregaFitxes(db: Db): Promise<Fitxa[]> {
       spending: get<"spending">("spending"),
       services: get<"services">("services"),
       councilChanges: get<"councilChanges">("councilChanges"),
+      residus: get<"residus">("residus"),
+      habitatge: get<"habitatge">("habitatge"),
+      preuAigua: get<"preuAigua">("preuAigua"),
+      rebutIbi: get<"rebutIbi">("rebutIbi"),
+      costGovern: get<"costGovern">("costGovern"),
+      continuitat: get<"continuitat">("continuitat"),
+      votPerdut: get<"votPerdut">("votPerdut"),
+      amb: get<"amb">("amb") ?? (hiHaAmb ? { member: false } : null),
+      poblacio: poblacioPer.get(municipality.id) ?? null,
+      riquesa: riquesaPer.get(municipality.id) ?? null,
+      despesaProgrames: programesPer.get(municipality.id) ?? null,
       participation: participacioPer.get(municipality.id) ?? [],
       issues: incidenciesPer.get(municipality.id) ?? [],
       grup: grup ? { label: grup.label, size: grup.size } : null,
     };
   });
+}
+
+/** Els `->>` tornen text als dos motors; el número surt d'aquí o no surt. */
+function numero(text: string | null): number | null {
+  if (text === null) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Els enllaços i la citació que dues llicències obliguen a mostrar al costat de
+ * la xifra. Van a la capçalera del JSON del municipi: el CSV llarg té set
+ * columnes i no en guanya cap per això.
+ */
+function obligacions(fitxa: Fitxa): {
+  enllacos: { idescat: string | null; idescat_ibi: string | null; ine: string | null };
+  ine: { citacio: string; actualitzat: string | null } | null;
+} {
+  const poblacio = fitxa.poblacio;
+  const idescat = poblacio?.estrangera?.enllac?.href ?? poblacio?.enllacIdescat ?? null;
+  // La taula de l'INE és provincial: la del municipi és la que comença pels
+  // dos dígits de província del seu codi INE.
+  const taula = fitxa.riquesa?.taules.find((t) => t.provincia === fitxa.municipality.ine5.slice(0, 2)) ?? null;
+  const ambRenda = fitxa.riquesa?.valor != null;
+  return {
+    enllacos: {
+      idescat,
+      idescat_ibi: fitxa.rebutIbi?.publicable ? fitxa.rebutIbi.font.url : null,
+      ine: ambRenda ? (taula?.urlTaula ?? FONTS.ineAdrh.url) : null,
+    },
+    ine: ambRenda
+      ? { citacio: "Elaboración propia con datos extraídos del sitio web del INE: www.ine.es", actualitzat: taula?.actualitzada ?? null }
+      : null,
+  };
 }
 
 // ---------------------------------------------------------------- descàrrega
@@ -1080,6 +1432,7 @@ export async function writeDownloads(
           llicencia: "CC BY 4.0",
           esquema: "https://quivoto.cat/observatori/dades/ESQUEMA.md",
           fitxa: `https://quivoto.cat/observatori/m/${m.slug}/`,
+          ...obligacions(fitxa),
           incidencies: fitxa.issues.map((i) => ({ tipus: i.kind, gravetat: i.severity, entitat: i.entity })),
         },
         "indicadors",
@@ -1185,6 +1538,7 @@ export function renderDadesIndex(generatedAt: string, stats: { municipis: number
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Descarrega les dades · Observatori de quivoto</title>
 <meta name="description" content="Els indicadors dels ${municipis} municipis de l'Observatori en CSV i JSON, amb l'esquema documentat i la font de cada camp. Fitxers, no una API.">
+${tipografia("../")}
 <style>${DADES_CSS}</style>
 </head>
 <body>
@@ -1255,7 +1609,7 @@ quivoto.cat/observatori/dades/m/<b>barcelona</b>.json</code></pre>
   <table>
     <tbody>
       <tr><th>Les nostres dades derivades</th><td>Creative Commons BY 4.0. Feu-ne el que vulgueu, digueu d'on surten.</td></tr>
-      <tr><th>Les dades d'origen</th><td>Mantenen la seva llicència. Els conjunts de l'AOC que fem servir són CC0; els de la Generalitat, les condicions d'ús del portal de transparència.</td></tr>
+      <tr><th>Les dades d'origen</th><td>Mantenen la seva llicència. Els conjunts de l'AOC que fem servir són CC0; els de la Generalitat, les condicions d'ús del portal de transparència. L'Idescat demana el seu enllaç al costat de la xifra i l'INE, una citació literal amb la data de la taula: tots dos van al JSON de cada municipi.</td></tr>
       <tr><th>Cap dada personal</th><td>Només càrrecs electes, i només nom, càrrec i candidatura. Cap correu, cap adreça, cap telèfon, encara que la font els publiqui.</td></tr>
     </tbody>
   </table>
@@ -1272,12 +1626,6 @@ quivoto.cat/observatori/dades/m/<b>barcelona</b>.json</code></pre>
   prometem que, si canvien, l'esquema ho dirà. No fem el portal de dades obertes més complet
   de Catalunya; fem que es pugui comprovar el que publiquem.</p>
 </section>
-
-<div class="peu">
-  <p>Generat el ${escapa(generatedAt)}. Fonts: Generalitat de Catalunya, Consorci AOC,
-  Ministeri d'Hisenda i Síndic de Greuges, totes citades una a una a
-  <a href="ESQUEMA.md">l'esquema</a>.</p>
-</div>
 
 </main>
 ${peu("../", generatedAt)}

@@ -44,7 +44,7 @@ describe("peu", () => {
     }
   });
 
-  it("ensenya les quatre xifres i cap no hi va sola", () => {
+  it("ensenya les tres xifres i cap no hi va sola", () => {
     const html = peu("./", "avui", [], {
       municipis: 947,
       electes: 4807,
@@ -54,11 +54,14 @@ describe("peu", () => {
     // Milers amb punt, com a la resta del web.
     expect(html).toContain("<b>4.807</b><span>electes</span>");
     expect(html).toContain("<b>2.626</b><span>candidatures</span>");
-    expect(html).toContain("<b>1.897</b><span>fitxers per baixar</span>");
+    // La descàrrega ja no és un botó ni una xifra al peu: és una pastilla més.
+    expect(html).not.toContain("fitxers per baixar");
+    expect(html).not.toContain('class="baixa"');
+    expect(html).toContain('>Les dades</a>');
     // Cap xifra sense el seu nom: tants «<b>» com «<span>» dins de la llista.
     const llista = html.slice(html.indexOf('<ul class="xifres">'), html.indexOf("</ul>"));
-    expect(llista.match(/<b>/g)).toHaveLength(4);
-    expect(llista.match(/<span>/g)).toHaveLength(4);
+    expect(llista.match(/<b>/g)).toHaveLength(3);
+    expect(llista.match(/<span>/g)).toHaveLength(3);
   });
 
   it("es queda amb les de l'última publicació quan no li'n passen cap", () => {
@@ -79,8 +82,28 @@ describe("peu", () => {
     expect(html).toContain('href="x.html?a=1&amp;b=&quot;2&quot;"');
   });
 
-  it("porta la crida a baixar-se les dades i no només un enllaç més", () => {
-    expect(peu("./", "avui")).toContain('<a class="baixa" href="./dades/">');
+  /**
+   * La descàrrega era un botó gros a cada peu, i la gent que hi arriba no ve a
+   * baixar-se res: ve a mirar. Ara és una pastilla més, l'última.
+   */
+  it("la descàrrega és una pastilla més i no una crida", () => {
+    const html = peu("./", "avui");
+    expect(html).not.toContain('class="baixa"');
+    expect(html).toContain('href="./dades/">Les dades</a>');
+  });
+
+  /**
+   * Les comarques anaven al Barcelonès, com si fos l'única de les 43: era
+   * l'única manera d'enllaçar-les quan no hi havia índex. Ara n'hi ha.
+   */
+  it("envia a l'índex de les comarques i no a una comarca concreta", () => {
+    const html = peu("../../", "avui");
+    expect(html).toContain('href="../../c/">Les comarques</a>');
+    expect(html).not.toContain("barcelones");
+  });
+
+  it("anomena la taula dels 947 com la capçalera i la portada", () => {
+    expect(peu("./", "avui")).toContain('href="./els947.html">Els 947</a>');
   });
 
   /**

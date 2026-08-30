@@ -13,14 +13,23 @@
  * poder saber a casa de qui és. La secció, en canvi, és la primera entrada del
  * menú.
  *
- * El menú és curt a propòsit: quatre destins i cap desplegable. Amb això s'hi
+ * El menú és curt a propòsit: sis destins i cap desplegable. Amb això s'hi
  * arriba a tot el que és una pàgina de debò, i el que no hi cap no hi ha de ser.
  *
  * La portada de l'Observatori hi va com a primera entrada i no com a etiqueta al
- * costat del logotip: escrita al costat semblava un rètol i no un enllaç, i el
- * primer destí del menú es deia «Els 947» quan la portada es diu «Els 947
- * municipis». Dues coses amb el mateix nom i només una clicable. Ara la portada
- * és «Observatori» i la taula filtrable és «La llista», que és el que és.
+ * costat del logotip: escrita al costat semblava un rètol i no un enllaç.
+ *
+ * La taula filtrable es va dir «La llista» una temporada, perquè la portada es
+ * deia «Els 947 municipis» i dues coses amb el mateix nom i només una clicable
+ * confonien. Ara la portada es diu «Observatori municipal» i el nom «Els 947»
+ * torna a la taula, que és la pàgina que la gent en diu així: al peu, a la
+ * portada i aquí es diu igual, i «La llista» no deia de què.
+ *
+ * «Comarques» és la sisena entrada, i és nova per una raó concreta: hi havia 43
+ * pàgines de comarca i la de l'Àrea Metropolitana i **cap índex**. El peu i la
+ * portada enviaven al Barcelonès i prou, com si fos l'única, i a la resta només
+ * s'hi arribava pel cercador o des d'una fitxa. La capçalera ja fa embolcallar
+ * la fila quan no hi cap, així que sis hi caben igual que cinc.
  *
  * ## `base`
  *
@@ -38,7 +47,7 @@
  * | `m/<slug>/regidor/<persona>/`     | `../../../../`  |
  */
 
-export type Destí = "portada" | "947" | "mapa" | "comparador" | "partits" | "dades" | "cap";
+export type Destí = "portada" | "947" | "mapa" | "comarques" | "comparador" | "partits" | "dades" | "trajectoria" | "cap";
 
 /**
  * Les descàrregues **no hi són**, i no és un oblit: qui es baixa 1.897 fitxers
@@ -48,9 +57,11 @@ export type Destí = "portada" | "947" | "mapa" | "comparador" | "partits" | "da
  */
 const DESTINS: ReadonlyArray<{ clau: Destí; text: string; on: string }> = [
   { clau: "portada", text: "Observatori", on: "" },
-  { clau: "947", text: "La llista", on: "els947.html" },
+  { clau: "947", text: "Els 947", on: "els947.html" },
   { clau: "mapa", text: "Mapa", on: "mapa/" },
+  { clau: "comarques", text: "Comarques", on: "c/" },
   { clau: "partits", text: "Partits", on: "partit/" },
+  { clau: "trajectoria", text: "Trajectòries", on: "trajectoria/" },
   { clau: "comparador", text: "Comparador", on: "comparador/" },
 ];
 
