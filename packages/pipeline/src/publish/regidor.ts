@@ -423,6 +423,14 @@ type SouPublicat = {
   motiuSenseImport: string | null;
   font: { nom: string; url: string | null; llicencia?: string | null } | null;
   declaracioBens?: string | null;
+  /**
+   * Si l'avís de la xifra parcial pot citar el cas de Rubí.
+   *
+   * És l'exemple que ho explica en una frase, però a la pàgina d'algú de Rubí
+   * sonaria a que parlem d'una altra persona quan parlaríem d'ella mateixa,
+   * i no sabem què cobra: allà l'avís es diu sense l'exemple.
+   */
+  exempleRubi?: boolean;
 };
 
 /**
@@ -445,8 +453,11 @@ function targetaSou(s: SouPublicat): string {
         s.parcial
           ? `<span class="adverteix">Això <b>no és el que cobra</b>: la seu electrònica només hi recull
              la part que paga l'ajuntament, i el que li pagui una diputació, un consell comarcal o una
-             àrea metropolitana per un càrrec que li ve d'aquesta regidoria no hi surt. A Rubí
-             l'alcaldessa hi consta amb 17.027 € quan en cobra 107.968.</span>`
+             àrea metropolitana per un càrrec que li ve d'aquesta regidoria no hi surt.${
+               s.exempleRubi
+                 ? " A Rubí l'alcaldessa hi consta amb 17.027 € quan en cobra 107.968."
+                 : ""
+             }</span>`
           : ""
       }
       ${
@@ -508,6 +519,7 @@ function queCobra(r: Regidor, ctx: ContextRegidor): string {
       motiuSenseImport: ctx.retribucio.motiuSenseImport ?? null,
       font: ctx.retribucio.font,
       declaracioBens: ctx.retribucio.declaracioBens ?? null,
+      exempleRubi: !/^rub[íi]$/i.test(ctx.municipi.trim()),
     });
   }
   for (const a of ctx.altresCarrecs) {
@@ -634,8 +646,14 @@ function pasPelPle(r: Regidor, ctx: ContextRegidor, generatedAt: string): string
       "Punts votats",
       ctx.votsDelGrup.length === 0 ? "cap" : String(ctx.votsDelGrup.length),
       ctx.votsDelGrup.length === 0
-        ? `de ${ctx.actesLlegides} ${ctx.actesLlegides === 1 ? "acta llegida" : "actes llegides"}, cap no desglossa el vot per grup`
-        : `punts del ple amb el sentit del vot del seu grup, tret de ${ctx.actesLlegides} ${
+        ? ctx.actesLlegides === 0
+          ? "d'aquest ajuntament encara no n'hem pogut llegir cap acta"
+          : `de ${ctx.actesLlegides} ${
+              ctx.actesLlegides === 1 ? "acta llegida" : "actes llegides"
+            }, cap no desglossa el vot per grup`
+        : `${
+            ctx.votsDelGrup.length === 1 ? "punt del ple" : "punts del ple"
+          } on l'acta desglossa el vot del seu grup, de ${ctx.actesLlegides} ${
             ctx.actesLlegides === 1 ? "acta llegida" : "actes llegides"
           }`,
     ),
@@ -667,8 +685,11 @@ function pasPelPle(r: Regidor, ctx: ContextRegidor, generatedAt: string): string
               ctx.assistencia.de === 1 ? "acta" : "actes"
             } amb la llista de qui hi era, i amb tan poques una absència no vol dir res: no en
             publiquem el compte fins que en tinguem cinc.</p>`
-          : `<p class="nota">De l'assistència no en podem dir res: cap de les actes que hem llegit
-            d'aquest ajuntament no porta la llista de qui hi era.</p>`
+          : `<p class="nota">De l'assistència no en podem dir res: ${
+              ctx.actesLlegides === 0
+                ? "d'aquest ajuntament encara no hem pogut llegir cap acta"
+                : "cap de les actes que hem llegit d'aquest ajuntament no porta la llista de qui hi era"
+            }.</p>`
     }
   </section>`;
 }
@@ -702,6 +723,26 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
     </li>`;
     })
     .join("");
+
+  // El resum que quaranta files seguides no donen: de quants punts es pot dir
+  // què va votar aquesta persona, i quantes vegades va dir que sí i que no.
+  // Només compta els punts on el grup hi va votar sencer, que són els únics on
+  // el vot queda determinat; als altres el compte seria del grup i no seu.
+  const propis = ctx.votsDelGrup.filter((v) => v.tot);
+  const compte = (sentit: string): number => propis.filter((v) => v.sentit === sentit).length;
+  const abstencions = compte("abstencio");
+  const resumDelVot =
+    propis.length === 0
+      ? ""
+      : `<p class="destacat">${
+          ctx.votsDelGrup.length === 1
+            ? "De l'únic punt que n'hem pogut llegir"
+            : `Dels ${ctx.votsDelGrup.length} punts`
+        }, ${
+          propis.length === ctx.votsDelGrup.length ? "en tots" : `en <b>${propis.length}</b>`
+        } el seu grup hi va votar sencer i el vot queda determinat:
+        <b>${compte("favor")}</b> a favor, <b>${compte("contra")}</b> en contra i
+        <b>${abstencions}</b> ${abstencions === 1 ? "abstenció" : "abstencions"}.</p>`;
 
   return `<!doctype html>
 <html lang="ca">
@@ -763,52 +804,9 @@ ${cercador("../../../../")}
     }
   </section>
 
-  ${
-    ctx.assistencia && ctx.assistencia.de >= 5
-      ? `<section class="bloc">
-    <h2>Quants plens ha fet</h2>
-    <p class="entrada-bloc"><b>${ctx.assistencia.hi} de ${ctx.assistencia.de}</b> plens en què consta
-    la llista d'assistents.</p>
-    <p class="nota">Ho diu l'acta de cada sessió al seu capçal. No en tenim la llista de tots els
-    plens: ${ctx.assistencia.de} de ${ctx.actesLlegides} actes llegides la porten, i les altres no
-    diuen qui hi era. <b>Una absència no és una falta</b>: hi ha baixes, permisos i motius que
-    l'acta no explica, i nosaltres tampoc.</p>
-  </section>`
-      : ""
-  }
+  ${queCobra(r, ctx)}
 
-  ${
-    ctx.altresCarrecs.length === 0
-      ? ""
-      : `<section class="bloc">
-    <h2>Què cobra d'un altre ens</h2>
-    <p class="entrada-bloc">${
-      ctx.altresCarrecs.length === 1 ? "Ocupa també un càrrec" : `Ocupa també ${ctx.altresCarrecs.length} càrrecs`
-    } fora de l'ajuntament. Aquí hi ha el que en publica qui el paga.</p>
-    <ul class="altres-carrecs">${ctx.altresCarrecs
-      .map(
-        (a) => `<li>
-        <span class="ens">${escape(a.ens)}${a.carrec ? `<span class="quin">${escape(a.carrec)}</span>` : ""}</span>
-        ${
-          a.anualBrut === null
-            ? `<span class="buit">${escape(a.motiuSenseImport ?? "l'ens que el paga no en publica cap import")}</span>`
-            : `<span class="import"><b>${euros(a.anualBrut)}</b> l'any bruts</span>
-               <span class="concepte">${escape(a.concepte ?? "")}${
-                 a.dedicacio ? ` (${escape(a.dedicacio)})` : ""
-               }</span>`
-        }
-        ${a.font ? `<a class="font" href="${escape(a.font.url)}" rel="noopener nofollow">${escape(a.font.nom)}</a>` : ""}
-      </li>`,
-      )
-      .join("")}</ul>
-    ${
-      // L'avís de la font ja diu que no s'hi suma cap total i per què el sou
-      // municipal no hi surt: escriure-ho una segona vegada amb altres paraules
-      // era dir dues vegades el mateix a dos paràgrafs seguits.
-      ctx.avisRetribucions ? `<p class="nota oberta">${escape(ctx.avisRetribucions)}</p>` : ""
-    }
-  </section>`
-  }
+  ${pasPelPle(r, ctx, generatedAt)}
 
   ${
     !ctx.publicaDeLaPersona
@@ -869,6 +867,7 @@ ${cercador("../../../../")}
         : `<p class="entrada-bloc">Els punts que el ple va votar de manera dividida i on consta el
            sentit del vot del seu grup, <b>començant pels més renyits</b>. Un punt aprovat per
            tothom no separa ningú; un decidit per un vot o dos és on es veu qui és qui.</p>
+           ${resumDelVot}
            <ul class="vots">${vots}</ul>
            ${ctx.votsDelGrup.length > 40 ? `<p class="nota">Se n'ensenyen 40 dels ${ctx.votsDelGrup.length}.</p>` : ""}`
     }

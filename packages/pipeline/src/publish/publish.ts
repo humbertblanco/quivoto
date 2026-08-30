@@ -3,7 +3,7 @@ import { desc, isNotNull } from "drizzle-orm";
 import { municipalities, type Db } from "@quivoto/db";
 import { loadRadiografia, renderRadiografia } from "./radiografia";
 import { carregaMedianes } from "./medianes";
-import { escriuCerca } from "./cerca";
+import { escriuCerca, escriuCercaElectes } from "./cerca";
 import { carregaSeriesGrup } from "./series-grup";
 import { loadEls947, renderEls947 } from "./els947";
 import { INDEXABLE, SITE } from "./config";
@@ -12,6 +12,7 @@ import { loadAmb, renderAmb } from "./amb";
 import { loadComparador, renderComparador } from "./comparador";
 import { renderDadesIndex, writeDownloads } from "./dades";
 import { loadCandidatures, renderCandidatura } from "./candidatura";
+import { loadPartits, renderPartit } from "./partit";
 import { writeOgImages } from "./og";
 import type { PuntMapa } from "./mapa";
 import { carregaPreguntes, renderIndexPreguntes, renderPreguntes } from "./preguntes";
@@ -133,6 +134,17 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     // la consulta dels 947 acabada de llegir i no la torna a demanar.
     const quants = await escriuCerca(carregats, `${OUT_DIR}../cerca.json`);
     run.say(`índex de cerca amb ${quants} municipis`);
+    /*
+     * El segon índex: qui seu als plens i amb quina llista s'hi va presentar.
+     *
+     * Va a part i no dins del primer perquè no el necessita tothom: qui obre la
+     * casella per anar al seu poble ja té resposta amb els 947 i l'alcaldia, i
+     * els 4.807 regidors i les 2.626 candidatures són el doble de pes per a una
+     * pregunta que es fa molta menys gent. El navegador se'l baixa en segon pla
+     * quan el primer ja ha arribat.
+     */
+    const electes = await escriuCercaElectes(db, carregats, `${OUT_DIR}../cerca-electes.json`);
+    run.say(`índex d'electes amb ${electes.regidors} regidors i ${electes.candidatures} candidatures`);
 
     let regidorsEscrits = 0;
     for (const slug of wanted) {
@@ -177,6 +189,23 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       await writeFile(`${dir}/index.html`, renderCandidatura(candidatura, generatedAt), "utf8");
     }
     run.say(`${totes.length} pàgines de candidatura`);
+
+    /*
+     * Una pàgina per marca política, que és el subjecte del qual parlen tots els
+     * titulars —«ERC perd pobles», «el PSC recupera el territori»— i que fins ara
+     * no es podia comprovar enlloc del web, tot i que la dada hi era sencera.
+     *
+     * La germana petita ja existia: la pàgina de candidatura és aquesta mateixa
+     * marca en UN municipi, i n'hi ha 2.626. El que faltava era el nivell de
+     * sobre, i és el que fa que buscar «esquerra» al cercador porti a algun lloc.
+     */
+    const partits = await loadPartits(db);
+    for (const partit of partits) {
+      const dir = `${OUT_DIR}../partit/${partit.id}`;
+      await mkdir(dir, { recursive: true });
+      await writeFile(`${dir}/index.html`, renderPartit(partit, generatedAt), "utf8");
+    }
+    run.say(`${partits.length} pàgines de partit`);
 
     // Pàgines de comarca: «qui mana a la meva comarca» no ho respon ningú.
     const comarques = await loadComarques(db);
@@ -267,6 +296,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       `${SITE}/observatori/els947.html`,
       `${SITE}/observatori/mapa/`,
       `${SITE}/observatori/comparador/`,
+      ...partits.map((p) => `${SITE}/observatori/partit/${p.id}/`),
       ...(amb ? [`${SITE}/observatori/amb/`] : []),
       ...comarques.map((c) => `${SITE}/observatori/c/${slugify((c as { name?: string; nom?: string }).name ?? (c as { nom?: string }).nom ?? "")}/`),
       ...publicades.map((slug) => `${SITE}/observatori/m/${slug}/`),

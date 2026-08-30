@@ -13,7 +13,8 @@
  *      equivalent en text: no un `title` —que al mòbil no existeix i que molts
  *      lectors de pantalla no diuen mai— sinó una taula de debò, amagada als
  *      ulls i present a l'arbre. Si el gràfic no es pot escriure en una taula,
- *      és que no sabem què estem dibuixant.
+ *      és que no sabem què estem dibuixant. La classe d'amagar va **al div que
+ *      l'embolcalla, mai a la taula**: una taula no es creu `width:1px`.
  *   2. **L'escala no és una opinió.** Un eix que no comença a zero fa semblar
  *      un terratrèmol el que és un sotrac, i és la manera més fàcil de mentir
  *      amb una dada certa. Aquí es comença a zero sempre que el zero vulgui dir
@@ -39,17 +40,50 @@ export type BandaGrup = { any: number; p25: number; p50: number; p75: number };
 /** Un tros de l'eix que pertany a un mandat, per dir de qui és cada pendent. */
 export type TramMandat = { desDe: number; finsA: number; etiqueta: string };
 
+/**
+ * Quant de lloc ocupa una sèrie.
+ *
+ * La mateixa funció dibuixa la gràfica gran del deute i la ratlleta que va al
+ * costat d'una xifra. Fins ara només hi havia la gran, i per això a tot arreu
+ * on hi havia una sèrie hi acabava havent una taula o una espurna feta a part,
+ * cadascuna amb la seva idea de què és una línia. Una sola funció amb tres
+ * mides vol dir que la línia del deute i la de la població es llegeixen igual.
+ *
+ *   - `gran`: 720×300. Porta banda del grup, mediana, marques de mandat i
+ *     llegenda. És la que ocupa una secció sencera.
+ *   - `mitjana`: 720×180, amb menys marques i menys anys escrits i sense
+ *     llegenda. Per a tot allò que avui és una taula de cinc files o una
+ *     espurna que es queda curta.
+ *   - `espurna`: 118×34, sense eixos ni etiquetes. **Només** dins d'una
+ *     targeta que ja escriu la xifra: sense la xifra al costat, una línia sense
+ *     escala no diu res.
+ */
+export type MidaSerie = "gran" | "mitjana" | "espurna";
+
 export type OpcionsSerie = {
   /** Com s'escriu un valor: «1.204 €», «38,5 %»… */
   format: (valor: number) => string;
   /** Què es dibuixa, per a l'etiqueta de l'eix i per al text alternatiu. */
   titol: string;
+  /** Quant de lloc ocupa. Per defecte, la gran de sempre. */
+  mida?: MidaSerie;
   /** La banda del grup de mida, si se'n té. */
   banda?: readonly BandaGrup[];
   /** Com es diu el grup: «de 20.001 a 50.000 habitants». */
   grup?: string | null;
   /** Els mandats que travessa la sèrie, marcats amb una línia i una etiqueta. */
   mandats?: readonly TramMandat[];
+  /**
+   * Els anys que la font havia de donar, tant si els dona com si no.
+   *
+   * Sense això, un any que la font no publica desapareix i la línia el salta
+   * com si no hagués existit mai: el 2020 de la liquidació d'un ajuntament que
+   * no va liquidar es llegia com un any normal entre el 2019 i el 2021. Amb la
+   * llista del que s'esperava, el forat es dibuixa —cercle buit i línia
+   * partida— i es compta a la taula com a «sense dada». Un forat s'ha de veure
+   * com un forat.
+   */
+  anysEsperats?: readonly number[];
   /**
    * Fals per als valors que poden ser negatius o que no tenen un zero
    * significatiu. Per defecte l'eix comença a zero, que és el que impedeix
@@ -64,6 +98,99 @@ const MARGE = { dalt: 18, dreta: 14, baix: 46, esquerra: 62 } as const;
 
 /** Un nombre net per a l'SVG: dos decimals i prou. */
 const n2 = (v: number): string => (Math.round(v * 100) / 100).toString();
+
+/** Tot el que canvia entre una mida i una altra, i entre ample i estret. */
+type Disseny = {
+  ample: number;
+  alt: number;
+  marge: { dalt: number; dreta: number; baix: number; esquerra: number };
+  /** Quantes divisions se li demanen a l'eix vertical. */
+  marques: number;
+  /** Quants anys s'escriuen a l'eix horitzontal. */
+  anys: number;
+  /** Si hi ha graella, eix i xifres. L'espurna no en té cap. */
+  eix: boolean;
+  /** Les xifres de l'eix damunt de la seva ratlla, en comptes de al marge. */
+  etiquetesDalt: boolean;
+  /** Si es dibuixa la banda del grup i la seva mediana. */
+  fons: boolean;
+  mandats: "tots" | "primer-canvi" | "cap";
+  nusos: "tots" | "ultim";
+  /** El radi del punt de cada any. A la mitjana la tinta es fa nosa abans. */
+  radiNus: number;
+  /** Si al peu hi va la clau de colors. */
+  llegenda: boolean;
+  /** Si en surt una segona versió per a sota de 480 px. */
+  respon: boolean;
+};
+
+const DISSENYS: Record<MidaSerie, Disseny> = {
+  gran: {
+    ample: AMPLE,
+    alt: ALT,
+    marge: { ...MARGE },
+    marques: 4,
+    anys: 7,
+    eix: true,
+    etiquetesDalt: false,
+    fons: true,
+    mandats: "tots",
+    nusos: "tots",
+    radiNus: 3.4,
+    llegenda: true,
+    respon: true,
+  },
+  mitjana: {
+    ample: AMPLE,
+    alt: 180,
+    marge: { dalt: 14, dreta: 14, baix: 34, esquerra: MARGE.esquerra },
+    marques: 3,
+    anys: 5,
+    eix: true,
+    etiquetesDalt: false,
+    fons: true,
+    mandats: "tots",
+    nusos: "tots",
+    radiNus: 3,
+    llegenda: false,
+    respon: true,
+  },
+  espurna: {
+    ample: 118,
+    alt: 34,
+    // El marge no és decoració: el cercle del darrer punt fa 3 de radi i encara
+    // hi posa el gruix del contorn a sobre. Amb menys de 5, en surt escapçat.
+    marge: { dalt: 5, dreta: 5, baix: 5, esquerra: 5 },
+    marques: 0,
+    anys: 0,
+    eix: false,
+    etiquetesDalt: false,
+    fons: false,
+    mandats: "cap",
+    nusos: "ultim",
+    radiNus: 3,
+    llegenda: false,
+    respon: false,
+  },
+};
+
+/**
+ * El mateix gràfic per a una finestra estreta.
+ *
+ * A 375 px, el dibuix de 720 unitats es veu a mitja mida: el marge esquerre de
+ * 62 unitats són 31 px reals que no dibuixen res, cinc marques verticals es
+ * toquen i cada canvi de mandat escriu un cognom damunt de l'altre. Es retalla
+ * el que sobra i es guarda el que informa. Les xifres de l'eix passen a sobre
+ * de la seva ratlla perquè al marge de 40 no hi caben: «1.204 €» en vol 45.
+ */
+const estret = (d: Disseny): Disseny => ({
+  ...d,
+  marge: { ...d.marge, esquerra: 40 },
+  marques: 3,
+  anys: 4,
+  etiquetesDalt: true,
+  mandats: d.mandats === "cap" ? "cap" : "primer-canvi",
+});
 
 /**
  * Marques de l'eix vertical: quatre o cinc, en xifres rodones.
@@ -137,82 +264,171 @@ export function serieTemporal(punts: readonly PuntSerie[], opcions: OpcionsSerie
   const serie = [...punts].sort((a, b) => a.any - b.any);
   if (serie.length < 2) return "";
 
-  const banda = (opcions.banda ?? []).filter((b) => b.any >= serie[0]!.any && b.any <= serie[serie.length - 1]!.any);
+  const mida = opcions.mida ?? "gran";
+  const base = DISSENYS[mida];
+
+  // --- els anys: els que la font dona i els que havia de donar
+  const anysAmbDada = new Set(serie.map((p) => p.any));
+  const esperats = [...new Set(opcions.anysEsperats ?? [])].sort((a, b) => a - b);
+  const anyMin = Math.min(serie[0]!.any, ...esperats);
+  const anyMax = Math.max(serie[serie.length - 1]!.any, ...esperats);
+  const forats = esperats.filter((any) => !anysAmbDada.has(any));
+  const anysEix = [...new Set([...serie.map((p) => p.any), ...forats])].sort((a, b) => a - b);
+
+  const banda = base.fons ? (opcions.banda ?? []).filter((b) => b.any >= anyMin && b.any <= anyMax) : [];
+  const capBanda = banda.length >= 2;
   const desDeZero = opcions.desDeZero ?? true;
 
-  const valors = [
-    ...serie.map((p) => p.valor),
-    ...banda.flatMap((b) => [b.p25, b.p50, b.p75]),
-  ];
+  const valors = [...serie.map((p) => p.valor), ...banda.flatMap((b) => [b.p25, b.p50, b.p75])];
   const brutMax = Math.max(...valors);
   const brutMin = Math.min(...valors);
-  const zeroSignificatiu = desDeZero && brutMin >= 0;
+  // L'espurna no té eix, i per tant no hi ha cap zero per ensenyar ni cap escala
+  // per llegir: el que diu és **com** s'ha mogut la sèrie, i el quant és la
+  // xifra que té al costat a la targeta. Ficar-hi el zero només l'aplanaria
+  // fins a fer-la inútil. La resta de mides sí que comencen a zero.
+  const zeroSignificatiu = base.eix && desDeZero && brutMin >= 0;
   const min = zeroSignificatiu ? 0 : brutMin - (brutMax - brutMin) * 0.08;
   const max = brutMax + (brutMax - min) * 0.08 || 1;
 
-  const anyMin = serie[0]!.any;
-  const anyMax = serie[serie.length - 1]!.any;
-  const x = (any: number): number =>
-    anyMax === anyMin
-      ? MARGE.esquerra
-      : MARGE.esquerra + ((any - anyMin) / (anyMax - anyMin)) * (AMPLE - MARGE.esquerra - MARGE.dreta);
-  const y = (valor: number): number =>
-    max === min
-      ? (ALT - MARGE.baix + MARGE.dalt) / 2
-      : ALT - MARGE.baix - ((valor - min) / (max - min)) * (ALT - MARGE.dalt - MARGE.baix);
-
-  // --- la banda del grup, i la seva mediana
-  let bandaSvg = "";
-  if (banda.length >= 2) {
-    const dalt = banda.map((b) => `${n2(x(b.any))} ${n2(y(b.p75))}`);
-    const baix = [...banda].reverse().map((b) => `${n2(x(b.any))} ${n2(y(b.p25))}`);
-    const mediana = banda.map((b, i) => `${i === 0 ? "M" : "L"}${n2(x(b.any))} ${n2(y(b.p50))}`).join(" ");
-    bandaSvg = `<path class="banda" d="M${dalt.join(" L")} L${baix.join(" L")} Z"/>
-      <path class="mediana-grup" d="${mediana}"/>`;
-  }
-
-  // --- els eixos
-  const marques = marquesEix(min, max, 4);
-  const graella = marques
-    .map(
-      (v) => `<line class="graella" x1="${MARGE.esquerra}" x2="${AMPLE - MARGE.dreta}" y1="${n2(y(v))}" y2="${n2(y(v))}"/>
-      <text class="etiqueta-eix" x="${MARGE.esquerra - 8}" y="${n2(y(v) + 4)}" text-anchor="end">${escape(opcions.format(v))}</text>`,
-    )
-    .join("");
-
-  const anys = serie.map((p) => p.any);
-  const escrits = new Set(anysVisibles(anys));
-  const eixX = anys
-    .map((any) => {
-      const marca = `<line class="marca-any" x1="${n2(x(any))}" x2="${n2(x(any))}" y1="${ALT - MARGE.baix}" y2="${ALT - MARGE.baix + 5}"/>`;
-      if (!escrits.has(any)) return marca;
-      return `${marca}<text class="etiqueta-eix" x="${n2(x(any))}" y="${ALT - MARGE.baix + 19}" text-anchor="middle">${any}</text>`;
-    })
-    .join("");
-
-  // --- els mandats: una ratlla vertical on comença cadascun, amb qui hi havia
-  const dins = (opcions.mandats ?? []).filter((m) => m.desDe > anyMin && m.desDe <= anyMax);
-  const mandats = dins
-    .map((m, i) => {
-      const linia = `<line class="tall-mandat" x1="${n2(x(m.desDe))}" x2="${n2(x(m.desDe))}"
-        y1="${MARGE.dalt}" y2="${ALT - MARGE.baix}"/>`;
-      // Quan qui governa repeteix, el nom repetit no diu res de nou i només fa
-      // soroll damunt de la línia. La ratlla sí que hi va: marca on comença un
-      // mandat, i que el mateix nom governi els dos es veu perquè no n'hi ha
-      // cap altre entremig.
-      const anterior = i === 0 ? null : dins[i - 1]!.etiqueta;
-      if (m.etiqueta === anterior || m.etiqueta === "") return linia;
-      return `${linia}<text class="etiqueta-mandat" x="${n2(x(m.desDe) + 5)}" y="${MARGE.dalt + 11}">${escape(m.etiqueta)}</text>`;
-    })
-    .join("");
-
-  // --- la línia del municipi
-  const linia = serie.map((p, i) => `${i === 0 ? "M" : "L"}${n2(x(p.any))} ${n2(y(p.valor))}`).join(" ");
-  const nusos = serie
-    .map((p) => `<circle class="nus" cx="${n2(x(p.any))}" cy="${n2(y(p.valor))}" r="3.4"/>`)
-    .join("");
-  const ultim = serie[serie.length - 1]!;
   const primer = serie[0]!;
+  const ultim = serie[serie.length - 1]!;
+  // Els anys que falten es diuen al text alternatiu, no només al dibuix: qui no
+  // veu el cercle buit ha de saber igualment que hi ha un any sense xifra.
+  const llistaForats =
+    forats.length <= 1
+      ? forats.join("")
+      : `${forats.slice(0, -1).join(", ")} i ${forats[forats.length - 1]}`;
+  const resum = `${escape(opcions.titol)}: de ${escape(opcions.format(primer.valor))} el ${primer.any} a ${escape(
+    opcions.format(ultim.valor),
+  )} el ${ultim.any}.${
+    forats.length > 0
+      ? ` ${forats.length === 1 ? "De l'any" : "Dels anys"} ${llistaForats} no en consta cap xifra.`
+      : ""
+  }`;
+
+  /**
+   * Un dibuix sencer, per a una amplada de pantalla.
+   *
+   * Surt dues vegades —l'ample i l'estret— i el CSS n'ensenya un a cada mida.
+   * Un SVG no pot canviar de `viewBox` amb una consulta de mitjans i el marge
+   * esquerre, les marques i els anys escrits han de canviar de veritat, no
+   * només amagar-se: el que es guanya a l'esquerra és amplada de dibuix.
+   */
+  const dibuix = (d: Disseny, classe: string): string => {
+    const x = (any: number): number =>
+      anyMax === anyMin
+        ? d.marge.esquerra
+        : d.marge.esquerra + ((any - anyMin) / (anyMax - anyMin)) * (d.ample - d.marge.esquerra - d.marge.dreta);
+    const y = (valor: number): number =>
+      max === min
+        ? (d.alt - d.marge.baix + d.marge.dalt) / 2
+        : d.alt - d.marge.baix - ((valor - min) / (max - min)) * (d.alt - d.marge.dalt - d.marge.baix);
+    const terra = d.alt - d.marge.baix;
+
+    // --- la banda del grup, i la seva mediana
+    let bandaSvg = "";
+    if (capBanda) {
+      const dalt = banda.map((b) => `${n2(x(b.any))} ${n2(y(b.p75))}`);
+      const baix = [...banda].reverse().map((b) => `${n2(x(b.any))} ${n2(y(b.p25))}`);
+      const mediana = banda.map((b, i) => `${i === 0 ? "M" : "L"}${n2(x(b.any))} ${n2(y(b.p50))}`).join(" ");
+      bandaSvg = `<path class="banda" d="M${dalt.join(" L")} L${baix.join(" L")} Z"/>
+      <path class="mediana-grup" d="${mediana}"/>`;
+    }
+
+    // --- els eixos
+    let graella = "";
+    let eixX = "";
+    let eix = "";
+    if (d.eix) {
+      graella = marquesEix(min, max, d.marques)
+        .map((v) => {
+          const ratlla = `<line class="graella" x1="${d.marge.esquerra}" x2="${d.ample - d.marge.dreta}" y1="${n2(y(v))}" y2="${n2(y(v))}"/>`;
+          const xifra = escape(opcions.format(v));
+          // Al marge de 40 no hi cap «1.204 €», i una xifra que surt del dibuix
+          // per l'esquerra és pitjor que una xifra a sobre de la seva ratlla.
+          return d.etiquetesDalt
+            ? `${ratlla}<text class="etiqueta-eix" x="0" y="${n2(y(v) - 5)}">${xifra}</text>`
+            : `${ratlla}<text class="etiqueta-eix" x="${d.marge.esquerra - 8}" y="${n2(y(v) + 4)}" text-anchor="end">${xifra}</text>`;
+        })
+        .join("");
+
+      const escrits = new Set(anysVisibles(anysEix, d.anys));
+      eixX = anysEix
+        .map((any) => {
+          const marca = `<line class="marca-any" x1="${n2(x(any))}" x2="${n2(x(any))}" y1="${terra}" y2="${terra + 5}"/>`;
+          if (!escrits.has(any)) return marca;
+          return `${marca}<text class="etiqueta-eix" x="${n2(x(any))}" y="${terra + 19}" text-anchor="middle">${any}</text>`;
+        })
+        .join("");
+
+      eix = `<line class="eix" x1="${d.marge.esquerra}" x2="${d.ample - d.marge.dreta}" y1="${terra}" y2="${terra}"/>`;
+    }
+
+    // --- els mandats: una ratlla vertical on comença cadascun, amb qui hi havia
+    const dins = d.mandats === "cap" ? [] : (opcions.mandats ?? []).filter((m) => m.desDe > anyMin && m.desDe <= anyMax);
+    // Quan qui governa repeteix, el nom repetit no diu res de nou i només fa
+    // soroll damunt de la línia. La ratlla sí que hi va: marca on comença un
+    // mandat, i que el mateix nom governi els dos es veu perquè no n'hi ha cap
+    // altre entremig.
+    const canvia = (m: TramMandat, i: number): boolean =>
+      m.etiqueta !== "" && m.etiqueta !== (i === 0 ? null : dins[i - 1]!.etiqueta);
+    const primerCanvi = dins.findIndex(canvia);
+    const mandats = dins
+      .map((m, i) => {
+        const linia = `<line class="tall-mandat" x1="${n2(x(m.desDe))}" x2="${n2(x(m.desDe))}"
+        y1="${d.marge.dalt}" y2="${terra}"/>`;
+        const escriu = d.mandats === "tots" ? canvia(m, i) : i === primerCanvi;
+        if (!escriu) return linia;
+        // A prop del final, un cognom escrit cap a la dreta se'n va fora del
+        // dibuix. Allà s'ancora a l'altra banda de la seva ratlla.
+        const alFinal = x(m.desDe) > d.ample * 0.68;
+        return `${linia}<text class="etiqueta-mandat" x="${n2(alFinal ? x(m.desDe) - 5 : x(m.desDe) + 5)}" y="${d.marge.dalt + 11}"${
+          alFinal ? ' text-anchor="end"' : ""
+        }>${escape(m.etiqueta)}</text>`;
+      })
+      .join("");
+
+    // --- els forats: els anys que la font havia de donar i no dona
+    const foratsSvg = forats
+      .map(
+        (any) => `<line class="buit" x1="${n2(x(any))}" x2="${n2(x(any))}" y1="${d.marge.dalt}" y2="${terra}"/>
+      <circle class="forat" cx="${n2(x(any))}" cy="${n2((d.marge.dalt + terra) / 2)}" r="${d.eix ? 4 : 2.6}"/>`,
+      )
+      .join("");
+
+    // --- la línia del municipi, partida allà on falta un any
+    // Passar per damunt d'un any que sabem que falta seria dibuixar una dada que
+    // ningú no ha publicat: la línia s'atura i torna a començar a l'altra banda.
+    const trams: PuntSerie[][] = [];
+    for (const p of serie) {
+      const tram = trams[trams.length - 1];
+      const anterior = tram?.[tram.length - 1];
+      if (tram && anterior && !forats.some((f) => f > anterior.any && f < p.any)) tram.push(p);
+      else trams.push([p]);
+    }
+    const linia = trams
+      .filter((t) => t.length >= 2)
+      .map((t) => t.map((p, i) => `${i === 0 ? "M" : "L"}${n2(x(p.any))} ${n2(y(p.valor))}`).join(" "))
+      .join(" ");
+
+    const nusos =
+      d.nusos === "ultim"
+        ? ""
+        : serie.map((p) => `<circle class="nus" cx="${n2(x(p.any))}" cy="${n2(y(p.valor))}" r="${d.radiNus}"/>`).join("");
+
+    return `<svg class="dibuix ${classe}" viewBox="0 0 ${d.ample} ${d.alt}" role="img" aria-label="${resum}"
+      preserveAspectRatio="xMidYMid meet">
+      ${graella}
+      ${bandaSvg}
+      ${mandats}
+      ${foratsSvg}
+      ${eix}
+      ${eixX}
+      <path class="linia" d="${linia}"/>
+      ${nusos}
+      <circle class="nus ara" cx="${n2(x(ultim.any))}" cy="${n2(y(ultim.valor))}" r="${d.eix ? d.radiNus + 2 : 3}"/>
+    </svg>`;
+  };
 
   /**
    * L'equivalent en text, que no és una nota al peu sinó la mateixa dada.
@@ -224,44 +440,170 @@ export function serieTemporal(punts: readonly PuntSerie[], opcions: OpcionsSerie
    * feia 673 i lliscava de costat sense que es veiés res que l'empenyés. I n'hi
    * ha una per gràfica.
    */
-  const capBanda = banda.length >= 2;
   const taula = `<div class="nomes-lectors"><table>
     <caption>${escape(opcions.titol)}${opcions.grup ? `, amb la meitat central dels municipis ${escape(opcions.grup)}` : ""}</caption>
     <thead><tr><th scope="col">Any</th><th scope="col">${escape(opcions.titol)}</th>
     ${capBanda ? "<th scope=\"col\">Mediana del grup</th>" : ""}</tr></thead>
-    <tbody>${serie
-      .map((p) => {
-        const b = banda.find((x2) => x2.any === p.any);
-        return `<tr><th scope="row">${p.any}</th><td>${escape(opcions.format(p.valor))}</td>
+    <tbody>${anysEix
+      .map((any) => {
+        const p = serie.find((q) => q.any === any);
+        const b = banda.find((x2) => x2.any === any);
+        return `<tr><th scope="row">${any}</th><td>${p ? escape(opcions.format(p.valor)) : "sense dada"}</td>
         ${capBanda ? `<td>${b ? escape(opcions.format(b.p50)) : "sense dada"}</td>` : ""}</tr>`;
       })
       .join("")}</tbody></table></div>`;
 
-  const resum = `${escape(opcions.titol)}: de ${escape(opcions.format(primer.valor))} el ${primer.any} a ${escape(
-    opcions.format(ultim.valor),
-  )} el ${ultim.any}.`;
-
-  return `<figure class="grafic">
-    <svg viewBox="0 0 ${AMPLE} ${ALT}" role="img" aria-label="${resum}" preserveAspectRatio="xMidYMid meet">
-      ${graella}
-      ${bandaSvg}
-      ${mandats}
-      <line class="eix" x1="${MARGE.esquerra}" x2="${AMPLE - MARGE.dreta}" y1="${ALT - MARGE.baix}" y2="${ALT - MARGE.baix}"/>
-      ${eixX}
-      <path class="linia" d="${linia}"/>
-      ${nusos}
-      <circle class="nus ara" cx="${n2(x(ultim.any))}" cy="${n2(y(ultim.valor))}" r="5.4"/>
-    </svg>
-    ${
-      capBanda
-        ? `<figcaption class="clau-grafic">
-      <span class="mostra mostra-linia"></span> aquest municipi
+  const clau = [
+    base.llegenda && capBanda
+      ? `<span class="mostra mostra-linia"></span> aquest municipi
       <span class="mostra mostra-banda"></span> la meitat central dels municipis ${escape(opcions.grup ?? "de la seva mida")}
-      <span class="mostra mostra-mediana"></span> la seva mediana
-    </figcaption>`
-        : ""
-    }
-    ${zeroSignificatiu ? "" : `<p class="compta">L'eix no comença a zero: aquesta xifra pot ser negativa i el zero no en marca cap límit.</p>`}
+      <span class="mostra mostra-mediana"></span> la seva mediana`
+      : "",
+    base.eix && forats.length > 0
+      ? `<span class="mostra mostra-forat"></span> ${
+          forats.length === 1 ? "l'any que la font no publica" : "els anys que la font no publica"
+        }`
+      : "",
+  ]
+    .filter((t) => t !== "")
+    .join(" ");
+
+  const dibuixos = base.respon
+    ? `${dibuix(base, "ample")}
+    ${dibuix(estret(base), "estret")}`
+    : dibuix(base, "unic");
+
+  return `<figure class="grafic serie serie-${mida}">
+    ${dibuixos}
+    ${clau === "" ? "" : `<figcaption class="clau-grafic">${clau}</figcaption>`}
+    ${zeroSignificatiu || !base.eix ? "" : `<p class="compta">L'eix no comença a zero: aquesta xifra pot ser negativa i el zero no en marca cap límit.</p>`}
+    ${taula}
+  </figure>`;
+}
+
+/** Els dos extrems d'un salt: d'on ve un valor i on ha anat a parar. */
+export type SaltPendent = { inici: number; final: number };
+
+export type OpcionsPendent = {
+  /** Què es mesura: «Deute per habitant». */
+  titol: string;
+  /** De qui és la fila, si el dibuix no va acompanyat del nom: «Sabadell». */
+  etiqueta?: string | null;
+  format: (valor: number) => string;
+  /** Els dos anys que es comparen. */
+  anys: SaltPendent;
+  /** El salt del municipi. */
+  municipi: SaltPendent;
+  /** El mateix salt al grup de comparació, si se'n té. */
+  grup?: SaltPendent | null;
+  /** Com es diu el grup, per a la taula i el text. */
+  nomGrup?: string | null;
+  /**
+   * L'escala compartida per tota la llista.
+   *
+   * Si es dibuixa una fila per municipi, **totes han de portar la mateixa**:
+   * dos dibuixos amb escales diferents posats un sota l'altre es llegeixen com
+   * si es poguessin comparar, i és exactament l'engany que prohibeix la regla 2
+   * del capçal. Sense escala, cada dibuix es fa la seva i només serveix sol.
+   */
+  escala?: { min: number; max: number } | null;
+};
+
+const AMPLE_P = 300;
+const ALT_P = 56;
+/** Lloc per al cercle i per a la xifra que hi va a sobre, a banda i banda. */
+const MARGE_P = 30;
+
+/**
+ * El salt d'una xifra entre dos anys, en una fila de 300×56.
+ *
+ * Això substitueix una taula de cinc columnes —municipi, any vell, any nou,
+ * variació i grup— que ningú no llegia sencera: per veure qui s'ha mogut més
+ * calia restar vint parells de números de cap. Amb el dibuix, el que és llarg
+ * és llarg i el que va enrere va enrere, i es veu de reüll.
+ *
+ * La posició diu **el valor** (no l'any): el cercle buit és d'on venia i el
+ * cercle de coral és on és ara, que és el color que la fitxa fa servir sempre
+ * per a «tu ets aquí». A sota, amb traça fina i discontínua, el mateix salt del
+ * grup: si tothom ha pujat, haver pujat no és cap notícia.
+ *
+ * Els dos anys no s'escriuen a dins. En una llista de files són sempre els
+ * mateixos i es diuen un cop al capçal; a dins hi caben les xifres, que sí que
+ * canvien de fila en fila. La taula amagada els porta igualment.
+ */
+export function pendent(opcions: OpcionsPendent): string {
+  const { municipi, grup, format } = opcions;
+  const propis = [municipi.inici, municipi.final];
+  const tots = [...propis, ...(grup ? [grup.inici, grup.final] : [])];
+  if (tots.some((v) => !Number.isFinite(v))) return "";
+
+  const min = opcions.escala?.min ?? Math.min(...tots);
+  const max = opcions.escala?.max ?? Math.max(...tots);
+  // Un valor que cau fora de l'escala que ha passat qui crida es dibuixa al
+  // límit: val més un dibuix que toca la vora que un cercle fora del quadre.
+  // La xifra de debò és a la taula, que és la que mana.
+  const x = (v: number): number =>
+    max <= min
+      ? AMPLE_P / 2
+      : MARGE_P +
+        ((Math.max(min, Math.min(max, v)) - min) / (max - min)) * (AMPLE_P - 2 * MARGE_P);
+
+  const CARRIL_MUNICIPI = 24;
+  const CARRIL_GRUP = 42;
+  const carril = (y: number, classe: string): string =>
+    `<line class="carril ${classe}" x1="${MARGE_P}" x2="${AMPLE_P - MARGE_P}" y1="${y}" y2="${y}"/>`;
+
+  const xi = x(municipi.inici);
+  const xf = x(municipi.final);
+  // Les dues xifres a sobre només hi caben si els cercles no s'encavalquen; si
+  // el salt és curt, es queda la d'ara, que és la que la fila explica.
+  const capAbans = Math.abs(xf - xi) >= 56;
+  const aDins = (v: number): string => n2(Math.max(26, Math.min(AMPLE_P - 26, v)));
+  const xifres = `${
+    capAbans
+      ? `<text class="xifra abans" x="${aDins(xi)}" y="12" text-anchor="middle">${escape(format(municipi.inici))}</text>`
+      : ""
+  }<text class="xifra ara" x="${aDins(xf)}" y="12" text-anchor="middle">${escape(format(municipi.final))}</text>`;
+
+  const grupSvg = grup
+    ? `${carril(CARRIL_GRUP, "carril-grup")}
+      <line class="salt-grup" x1="${n2(x(grup.inici))}" x2="${n2(x(grup.final))}" y1="${CARRIL_GRUP}" y2="${CARRIL_GRUP}"/>
+      <circle class="cap-inici grup" cx="${n2(x(grup.inici))}" cy="${CARRIL_GRUP}" r="3"/>
+      <circle class="cap-final grup" cx="${n2(x(grup.final))}" cy="${CARRIL_GRUP}" r="3.2"/>`
+    : "";
+
+  const nom = opcions.etiqueta ? `${escape(opcions.etiqueta)}, ` : "";
+  const resum = `${nom}${escape(opcions.titol)}: de ${escape(format(municipi.inici))} el ${opcions.anys.inici} a ${escape(
+    format(municipi.final),
+  )} el ${opcions.anys.final}.${
+    grup
+      ? ` Els municipis ${escape(opcions.nomGrup ?? "del seu grup")}, de ${escape(format(grup.inici))} a ${escape(
+          format(grup.final),
+        )}.`
+      : ""
+  }`;
+
+  const capGrup = grup ? `<th scope="col">${escape(opcions.nomGrup ?? "El seu grup")}</th>` : "";
+  const fila = (any: number, propi: number, delGrup: number | null): string =>
+    `<tr><th scope="row">${any}</th><td>${escape(format(propi))}</td>${
+      delGrup === null ? "" : `<td>${escape(format(delGrup))}</td>`
+    }</tr>`;
+  const taula = `<div class="nomes-lectors"><table>
+    <caption>${nom}${escape(opcions.titol)}</caption>
+    <thead><tr><th scope="col">Any</th><th scope="col">${escape(opcions.titol)}</th>${capGrup}</tr></thead>
+    <tbody>${fila(opcions.anys.inici, municipi.inici, grup ? grup.inici : null)}
+    ${fila(opcions.anys.final, municipi.final, grup ? grup.final : null)}</tbody></table></div>`;
+
+  return `<figure class="grafic pendent">
+    <svg class="dibuix unic" viewBox="0 0 ${AMPLE_P} ${ALT_P}" role="img" aria-label="${resum}"
+      preserveAspectRatio="xMidYMid meet">
+      ${carril(CARRIL_MUNICIPI, "carril-municipi")}
+      ${grupSvg}
+      ${xifres}
+      <line class="salt" x1="${n2(xi)}" x2="${n2(xf)}" y1="${CARRIL_MUNICIPI}" y2="${CARRIL_MUNICIPI}"/>
+      <circle class="cap-inici" cx="${n2(xi)}" cy="${CARRIL_MUNICIPI}" r="4.5"/>
+      <circle class="cap-final" cx="${n2(xf)}" cy="${CARRIL_MUNICIPI}" r="5"/>
+    </svg>
     ${taula}
   </figure>`;
 }
@@ -319,6 +661,9 @@ export function distribucioGrup(
 
   const mediana = ordenats[Math.floor((ordenats.length - 1) / 2)]!;
   const perSota = ordenats.filter((v) => v < valor).length;
+  // La fletxa fa cinc unitats d'ample cap a cada banda: si la punta es clava a
+  // la vora, l'ala esquerra se'n va fora del quadre. Per això no baixa de 6.
+  const puntaFletxa = Math.max(6, Math.min(AMPLE_D - 6, x(valor)));
 
   return `<figure class="grafic distribucio">
     <svg viewBox="0 0 ${AMPLE_D} ${ALT_D}" role="img" preserveAspectRatio="xMidYMid meet"
@@ -332,7 +677,7 @@ export function distribucioGrup(
       <text class="etiqueta-eix" x="${AMPLE_D}" y="${ALT_D - BAIX + 17}" text-anchor="end">${escape(opcions.format(max))}</text>
       <text class="etiqueta-aqui" x="${n2(Math.max(46, Math.min(AMPLE_D - 46, x(valor))))}" y="${ALT_D - 6}"
         text-anchor="middle">${escape(opcions.format(valor))}</text>
-      <path class="fletxa-aqui" d="M${n2(Math.max(4, Math.min(AMPLE_D - 4, x(valor))))} ${ALT_D - BAIX + 2}
+      <path class="fletxa-aqui" d="M${n2(puntaFletxa)} ${ALT_D - BAIX + 2}
         l-5 8 h10 Z"/>
     </svg>
     <figcaption class="clau-grafic">${perSota} dels ${ordenats.length} municipis ${escape(opcions.grup)}
@@ -369,6 +714,11 @@ export const GRAFICS_CSS = `
 .grafic .tall-mandat{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:3 4;opacity:.45}
 .grafic .etiqueta-mandat{font-family:var(--display);font-size:11px;font-weight:900;
   fill:var(--ink-suau);letter-spacing:.02em}
+/* L'any que la font no publica: un cercle buit i una columna puntejada, que no
+   es pot confondre ni amb un valor a zero ni amb el guió d'un canvi de mandat. */
+.grafic .buit{stroke:var(--ink-suau);stroke-width:1;stroke-dasharray:1 5;
+  stroke-linecap:round;opacity:.5}
+.grafic .forat{fill:none;stroke:var(--ink-suau);stroke-width:1.5;stroke-dasharray:2 3}
 .clau-grafic{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;
   margin:var(--e1) 0 0;font-size:.8rem;font-weight:700;color:var(--ink-suau)}
 .clau-grafic .mostra{display:inline-block;width:22px;height:0;border-radius:2px;vertical-align:middle}
@@ -376,6 +726,32 @@ export const GRAFICS_CSS = `
 .clau-grafic .mostra-banda{height:12px;background:var(--lavanda);opacity:.6}
 @media (prefers-color-scheme:dark){ .clau-grafic .mostra-banda{background:#4b467a} }
 .clau-grafic .mostra-mediana{border-top:2px dashed var(--ink-suau)}
+.clau-grafic .mostra-forat{width:11px;height:11px;border:1.5px dashed var(--ink-suau);
+  border-radius:50%}
+/* --- les tres mides de la sèrie ------------------------------------------ */
+/* La mitjana i l'espurna no són la gran feta petita: hi ha menys tinta per
+   unitat i, com que el dibuix s'ensenya sencer, la tinta que queda ha de ser
+   més gruixuda per veure-s'hi igual. */
+.serie-mitjana .linia{stroke-width:2.6}
+.serie-espurna{margin:6px 0 0}
+.serie-espurna .linia{stroke-width:2.4}
+.serie-espurna svg{max-width:160px}
+/* --- el salt entre dos anys ---------------------------------------------- */
+/* El carril és el que fa comparables dues files: ensenya tot el tram de
+   l'escala, i així un salt curt a dalt de tot i un salt curt a baix no es
+   llegeixen igual. */
+.pendent{margin:var(--e1) 0 0}
+.pendent svg{max-width:320px}
+.pendent .carril{stroke:var(--vora);stroke-width:1;stroke-linecap:round}
+.pendent .salt{stroke:var(--ink);stroke-width:4;stroke-linecap:round}
+.pendent .salt-grup{stroke:var(--ink-suau);stroke-width:1.5;stroke-dasharray:4 4;stroke-linecap:round}
+.pendent .cap-inici{fill:var(--paper);stroke:var(--ink);stroke-width:2}
+.pendent .cap-final{fill:var(--coral);stroke:var(--ink);stroke-width:2}
+.pendent .cap-inici.grup{stroke:var(--ink-suau);stroke-width:1.5}
+.pendent .cap-final.grup{fill:var(--ink-suau);stroke:none}
+.pendent .xifra{font-family:var(--display);font-size:12px;font-weight:900;
+  fill:var(--ink);font-variant-numeric:tabular-nums}
+.pendent .xifra.abans{font-weight:700;fill:var(--ink-suau)}
 /* --- la distribució del grup --------------------------------------------- */
 /* Les caselles van del color de la casa i la del municipi va de coral, que és
    el color que la fitxa fa servir sempre per a «tu ets aquí». Perquè no depengui
@@ -388,10 +764,24 @@ export const GRAFICS_CSS = `
   fill:var(--ink);font-variant-numeric:tabular-nums}
 .distribucio .clau-grafic{display:block}
 
-/* A 320px un eix de 720 unitats amb text de 12 hi cabria a 5px reals. El gràfic
-   es desplaça dins del seu contenidor abans que això passi. */
+/* --- una amplada, un dibuix ---------------------------------------------- */
+/* De les sèries en surten dos dibuixos i se n'ensenya un. Un SVG no pot canviar
+   de «viewBox» amb una consulta de mitjans, i el que canvia sota 480 px no és
+   només què s'amaga: el marge esquerre passa de 62 a 40 i el dibuix guanya
+   amplada de veritat. */
+.grafic .estret{display:none}
+@media (max-width:480px){
+  .grafic .ample{display:none}
+  .grafic .estret{display:block}
+}
+/* A 320px un eix de 720 unitats amb text de 12 hi cabria a 5px reals. Abans que
+   això passi, el gràfic llisca **dins de la seva caixa**: la figura no pot fer
+   més ample que la columna, o qui llisca és la pàgina sencera i la fitxa se'n
+   va de costat sense que es vegi res que l'empenyi. */
 @media (max-width:520px){
-  .grafic{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .grafic svg{min-width:460px}
+  .grafic{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch}
+  .grafic .dibuix{min-width:420px}
+  .serie-espurna .dibuix,.pendent .dibuix{min-width:0}
 }
 `;

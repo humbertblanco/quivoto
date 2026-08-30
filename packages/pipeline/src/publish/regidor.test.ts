@@ -259,3 +259,260 @@ describe("el nom es publica com s'escriu un nom", () => {
     expect(html).toContain("<h1>Marta Alarcón i Puerto</h1>");
   });
 });
+
+/**
+ * El bloc «Què cobra».
+ *
+ * L'usuari ho ha demanat tres vegades i és la dada que la gent busca a la
+ * pàgina d'un càrrec electe. També és on és més fàcil publicar una xifra
+ * falsa: sumant dues fonts que no es poden sumar, o copiant la de la seu
+ * electrònica —que només recull la part que paga l'ajuntament— com si fos el
+ * sou. Cada prova d'aquí és una d'aquestes maneres d'equivocar-se.
+ */
+const SOU_BARCELONA = {
+  anualBrut: 102_120,
+  abast: "tot" as const,
+  paga: "Ajuntament de Barcelona",
+  dedicacio: "Dedicació exclusiva",
+  any: 2024,
+  font: {
+    nom: "Ajuntament de Barcelona, retribucions dels càrrecs electes",
+    url: "https://opendata-ajuntament.barcelona.cat/",
+    llicencia: "CC BY 4.0",
+  },
+  avis: null,
+};
+
+describe("què cobra", () => {
+  it("el bloc hi és encara que no en tinguem cap import: que no ho publiqui ningú també és una dada", () => {
+    const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
+    expect(html).toContain("<h2>Què cobra</h2>");
+    expect(html).toContain("no en tenim cap import comprovat");
+    expect(html).toContain("no vol dir que no en cobri");
+  });
+
+  it("no suma mai dos imports de fonts diferents", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        retribucio: { ...SOU_BARCELONA, anualBrut: 50_000, paga: "Ajuntament d'Esplugues de Llobregat" },
+        altresCarrecs: [
+          {
+            ens: "Diputació de Barcelona",
+            carrec: "Diputada",
+            anualBrut: 20_000,
+            concepte: "Retribució per dedicació parcial",
+            dedicacio: null,
+            motiuSenseImport: null,
+            font: { nom: "Diputació de Barcelona", url: "https://www.diba.cat/" },
+          },
+        ],
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("50.000 €");
+    expect(html).toContain("20.000 €");
+    // 70.000 € no ho ha publicat ningú: seria una xifra nostra.
+    expect(html).not.toContain("70.000");
+    expect(html).toContain("No n'hi ha cap total");
+    // I cada import va amb qui el paga al costat, no en una llista anònima.
+    expect(html).toContain("Ajuntament d'Esplugues de Llobregat");
+    expect(html).toContain("Diputació de Barcelona");
+  });
+
+  it("la xifra de la seu electrònica no s'anomena mai el que cobra, ni es compara amb res", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, nom: "Ana María Martínez", carrec: "Alcaldessa" },
+      {
+        ...CONTEXT,
+        municipi: "Rubí",
+        retribucio: {
+          ...SOU_BARCELONA,
+          anualBrut: 17_027,
+          abast: "nomes-ajuntament",
+          paga: "Ajuntament de Rubí",
+          font: { nom: "seu-e.cat", url: "https://seu-e.cat/", llicencia: null },
+        },
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("no és el que cobra");
+    expect(html).toContain("17.027 €");
+    // Comparar-la amb el salari mínim seria tornar-la a presentar com un sou.
+    expect(html).not.toContain("vegades el salari mínim");
+    expect(html).not.toContain("del salari mínim del");
+  });
+
+  it("un import sencer sí que es diu en vegades el salari mínim del seu any", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, retribucio: SOU_BARCELONA }, "2026-08-30");
+    expect(html).toContain("102.120 €");
+    expect(html).toContain("6,4 vegades");
+    expect(html).toContain("15.876 €");
+    expect(html).toContain("del 2024");
+  });
+
+  it("i no es compara amb el salari mínim d'un altre any: sense any, sense comparació", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, retribucio: { ...SOU_BARCELONA, any: null } },
+      "2026-08-30",
+    );
+    expect(html).toContain("102.120 €");
+    expect(html).not.toContain("salari mínim");
+  });
+
+  it("un any que no hem comprovat al BOE deixa l'import sense comparació, no amb una d'inventada", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, retribucio: { ...SOU_BARCELONA, any: 2026 } },
+      "2026-08-30",
+    );
+    expect(html).toContain("102.120 €");
+    expect(html).not.toContain("salari mínim");
+  });
+
+  it("quan la font no en publica cap import, hi diu el motiu i no un buit", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        altresCarrecs: [
+          {
+            ens: "Consell Comarcal del Baix Llobregat",
+            carrec: "Consellera comarcal",
+            anualBrut: null,
+            concepte: null,
+            dedicacio: null,
+            motiuSenseImport: "el consell comarcal no publica les retribucions dels seus consellers",
+            font: { nom: "Consell Comarcal del Baix Llobregat", url: "https://www.elbaixllobregat.cat/" },
+          },
+        ],
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("no publica les retribucions dels seus consellers");
+  });
+
+  it("cita la llicència i enllaça la declaració de béns quan la font la dona", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        retribucio: { ...SOU_BARCELONA, declaracioBens: "https://example.org/bens.pdf" },
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("CC BY 4.0");
+    expect(html).toContain("https://example.org/bens.pdf");
+  });
+});
+
+/**
+ * La resta de la fitxa: quant fa que hi seu, quants plens ha fet i de quants
+ * punts en sabem el vot. A Esplugues eren quatre seccions i mitja pantalla en
+ * blanc, i tot això ja era al context sense que ho llegís ningú.
+ */
+describe("el seu pas pel ple", () => {
+  const MANDAT = { constitucio: "2023-06-17", nom: "2023-2027" };
+
+  it("diu quant fa que hi seu, comptat des de la constitució del ple", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, mandat: MANDAT },
+      "2026-08-30",
+    );
+    expect(html).toContain("3 anys i 2 mesos");
+    expect(html).toContain("del 17 de juny del 2023");
+  });
+
+  it("a qui va entrar a mig mandat no li compta el mandat sencer", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, entradaTardana: true },
+      { ...CONTEXT, mandat: MANDAT },
+      "2026-08-30",
+    );
+    expect(html).not.toContain("3 anys i 2 mesos");
+    expect(html).toContain("sense la data no ens l'inventem");
+  });
+
+  it("i quan sí que en sabem el dia, el compta des d'aquell dia", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, entradaTardana: true, desDe: "2025-06-30" },
+      { ...CONTEXT, mandat: MANDAT },
+      "2026-08-30",
+    );
+    expect(html).toContain("1 any i 2 mesos");
+    expect(html).toContain("va prendre possessió");
+  });
+
+  it("compta els punts votats i els que es van decidir per no res", () => {
+    const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
+    expect(html).toContain("Punts votats");
+    expect(html).toContain("Decidits per no res");
+  });
+
+  it("resumeix el sentit del vot dels punts on el grup hi va votar sencer", () => {
+    const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
+    expect(html).toContain("el vot queda determinat");
+    expect(html).toContain("<b>1</b> en contra");
+  });
+
+  it("i no en fa cap resum quan de cap punt no se'n pot dir el vot de la persona", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, votsDelGrup: [{ ...CONTEXT.votsDelGrup[0]!, tot: false }] },
+      "2026-08-30",
+    );
+    expect(html).not.toContain("el vot queda determinat");
+  });
+
+  it("sense cap acta amb llista d'assistents, ho diu en comptes de callar", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, assistencia: null }, "2026-08-30");
+    expect(html).toContain("cap de les actes que hem llegit");
+  });
+});
+
+/**
+ * L'avís de la xifra parcial cita el cas de Rubí perquè és el que ho explica en
+ * una frase. A la pàgina d'algú de Rubí, però, sonaria a que parlem d'una altra
+ * persona quan parlaríem d'ella mateixa —i què cobra no ho sabem.
+ */
+describe("l'exemple que explica la xifra parcial", () => {
+  const parcial = {
+    anualBrut: 17_027,
+    abast: "nomes-ajuntament" as const,
+    paga: "Ajuntament de Rubí",
+    dedicacio: null,
+    any: null,
+    font: { nom: "seu-e.cat", url: "https://seu-e.cat/", llicencia: null },
+    avis: null,
+  };
+
+  it("se cita a la pàgina de qualsevol altre municipi", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, retribucio: parcial }, "2026-08-30");
+    expect(html).toContain("A Rubí l'alcaldessa hi consta amb 17.027 €");
+  });
+
+  it("i no a la de Rubí, on l'avís es diu sense l'exemple", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, municipi: "Rubí", retribucio: parcial },
+      "2026-08-30",
+    );
+    expect(html).toContain("no és el que cobra");
+    expect(html).not.toContain("A Rubí l'alcaldessa hi consta");
+  });
+});
+
+describe("quan no s'ha llegit cap acta, no es compta res sobre zero", () => {
+  it("no diu «de 0 actes llegides»", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, votsDelGrup: [], actesLlegides: 0, assistencia: null },
+      "2026-08-30",
+    );
+    expect(html).not.toContain("de 0 actes llegides");
+    expect(html).toContain("encara no n'hem pogut llegir cap acta");
+  });
+});
