@@ -237,3 +237,25 @@ describe("el que es llegeix a sobre de tot", () => {
     expect(html).not.toContain('<span class="grup"');
   });
 });
+
+/**
+ * Els noms arriben de la font tal com els escriu cada ajuntament, i n'hi ha que
+ * els escriuen tots en majúscules: «JUAN ANTONIO CORCHADO PONCE» era el titular
+ * de la pàgina de l'alcalde de les Franqueses del Vallès.
+ */
+describe("el nom es publica com s'escriu un nom", () => {
+  it("les majúscules de la font no arriben al titular", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, nom: "JUAN ANTONIO CORCHADO PONCE" },
+      CONTEXT,
+      "2026-08-30",
+    );
+    expect(html).toContain("<h1>Juan Antonio Corchado Ponce</h1>");
+    expect(html).not.toContain("JUAN ANTONIO CORCHADO PONCE");
+  });
+
+  it("i un nom ja ben escrit no es toca", () => {
+    const html = renderRegidor({ ...REGIDORA, nom: "Marta Alarcón i Puerto" }, CONTEXT, "2026-08-30");
+    expect(html).toContain("<h1>Marta Alarcón i Puerto</h1>");
+  });
+});

@@ -3348,7 +3348,7 @@ function renderUllada(data: RadiografiaData, medianes?: MedianesMunicipi): strin
   const comptes = data.finances;
   if (comptes) {
     const perClau = new Map(comptes.comparison.map((c) => [c.key, c]));
-    for (const clau of ["deute-habitant", "estalvi-net"]) {
+    for (const clau of ["deute-habitant"]) {
       const ind = comptes.indicators.find((i) => i.key === clau);
       if (!ind || ind.value === null) continue;
       const peer = perClau.get(clau);
@@ -3380,7 +3380,7 @@ function renderUllada(data: RadiografiaData, medianes?: MedianesMunicipi): strin
     const m = medianes?.participacio["M20231"] ?? null;
     const dif = m ? Math.round(10 * (pct - m.mediana)) / 10 : null;
     pastilles.push({
-      etq: "Van anar a votar",
+      etq: "Participació",
       xifra: percent(pct),
       part: Math.min(100, pct),
       peu: dif === null ? "el 2023" : `${punts(dif)} punts ${dif >= 0 ? "sobre" : "sota"} la mediana dels de la seva mida`,
@@ -3396,7 +3396,7 @@ function renderUllada(data: RadiografiaData, medianes?: MedianesMunicipi): strin
     const mediana = data.costGovern?.medianesGrup?.perHabitant ?? null;
     const grup = data.costGovern?.grup ?? null;
     pastilles.push({
-      etq: "Òrgans de govern, per habitant",
+      etq: "Cost del govern",
       xifra: `${decimal(govern.organs.perHabitant, 1)} €`,
       part: mediana ? Math.min(100, (100 * govern.organs.perHabitant) / (2 * mediana)) : null,
       peu:
@@ -3411,7 +3411,7 @@ function renderUllada(data: RadiografiaData, medianes?: MedianesMunicipi): strin
   const t = data.transparency;
   if (t && t.pct !== null) {
     pastilles.push({
-      etq: "Portal de transparència",
+      etq: "Transparència",
       xifra: percent(t.pct),
       part: Math.min(100, t.pct),
       peu: `${number(t.published)} dels ${number(t.items)} apartats que li tocarien`,
@@ -3420,19 +3420,6 @@ function renderUllada(data: RadiografiaData, medianes?: MedianesMunicipi): strin
     });
   }
 
-  const cens = data.poblacio ? indicadorDe(data.poblacio, "censHabitants") : null;
-  if (cens?.valor != null && cens.darrerAny !== null) {
-    pastilles.push({
-      etq: "Qui hi viu",
-      xifra: number(cens.valor),
-      part: null,
-      peu: cens.mandat
-        ? `${signeDe(cens.mandat.diferencia)}${number(Math.abs(Math.round(cens.mandat.diferencia)))} des del ${cens.mandat.desDe}`
-        : `persones el ${cens.darrerAny}`,
-      on: "#qui-hi-viu",
-      tema: "serveis socials",
-    });
-  }
 
   if (pastilles.length < 3) return "";
   return `<section class="ullada" aria-label="El poble en quatre xifres">

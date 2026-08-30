@@ -128,7 +128,10 @@ const PARTICULES = new Set([
 
 export function nomLlegible(text: string): string {
   const nom = text.trim().replace(/\s+/g, " ");
-  if (!nom || /\p{Ll}/u.test(nom)) return nom;
+  // El sufix entre parèntesis no compta per decidir si el nom ja està ben
+  // escrit: «ARIÀ PÉREZ ISIDRO (Ind.)» porta minúscules només a l'abreviatura
+  // d'«independent», i amb elles el nom es publicava tot en majúscules.
+  if (!nom || /\p{Ll}/u.test(nom.replace(/\([^)]*\)/g, ""))) return nom;
   const capitalitza = (mot: string): string =>
     mot.charAt(0).toLocaleUpperCase("ca") + mot.slice(1).toLocaleLowerCase("ca");
   return nom

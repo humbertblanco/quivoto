@@ -511,7 +511,7 @@ async function escriuRegidors(
           majoria: Math.floor(totalSeats / 2) + 1,
           votsDelGrup: carrec.grup ? votsPerGrup.get(carrec.grup) ?? [] : [],
           actesLlegides: dades.mocions?.actes.llegides ?? 0,
-          assistencia: assistenciaDe(dades, carrec.nom),
+          assistencia: assistenciaDe(dades, carrec.nom, totalSeats),
           adreca: adreces.get(carrec)!,
           governConegut: carrecs.some((c) => c.equipGovern),
           publicaDeLaPersona: publicaDe(dades, carrec.nom),
@@ -596,14 +596,101 @@ function retribucionsDe(
  * persona de la llista no es diu res: comptar-li a algú les absències d'un altre
  * és el pitjor error possible en una pàgina amb el seu nom al títol.
  */
+/**
+ * A quants plens ha anat aquesta persona, si ens en podem refiar.
+ *
+ * La comprovació de plausibilitat no és una precaució genèrica: a les Franqueses
+ * del Vallès **els catorze regidors sortien amb «1 de 49 plens»**, l'alcalde
+ * inclòs. No era absentisme, és clar; era que la llista d'assistents d'aquelles
+ * actes no s'havia sabut llegir. I la diferència importa molt, perquè publicar
+ * que un alcalde va assistir a un ple de quaranta-nou no és una dada fluixa: és
+ * una acusació, i és falsa.
+ *
+ * El garbell és la llei. Un ple no es pot constituir sense **quòrum d'un terç
+ * dels membres, i mai menys de tres** (art. 46.2.c de la Llei de bases del règim
+ * local). Si de les actes en surt que hi havia menys gent que el quòrum, el que
+ * és impossible no és el ple: és la nostra lectura. Llavors no es publica res,
+ * que és el que la fitxa fa sempre que la dada no aguanta.
+ */
+/**
+ * El nom d'un assistent, sense el càrrec que l'acta li enganxa al darrere.
+ *
+ * Les llistes d'assistents escriuen «Juan Antonio Corchado Ponce, alcalde» i
+ * «Eva Navarrete Bachs, regidora». El nom del ple, en canvi, és només el nom, i
+ * la comparació era exacta: **no lligava cap dels bons**. El que lligava era
+ * alguna altra variant del mateix nom que apareixia un sol cop, i per això
+ * l'alcalde de les Franqueses sortia publicat amb «1 de 49 plens» quan la seva
+ * fila de debò en deia 48.
+ */
+export const nomAssistent = (text: string): string => text.split(",")[0]!.trim();
+
+/**
+ * Això sembla el nom d'una persona?
+ *
+ * Al costat dels assistents de veritat, la lectura de les actes hi cola
+ * capçaleres de taula i restes del document: a les Franqueses hi havia «Nom i
+ * Cognoms» amb 49 plens —una columna comptada com si fos algú—, i a Esplugues
+ * les dues úniques «persones» eren «ACORD ÚNIC.- DICTAMEN QUE PROPOSA» i «El
+ * documento ha sido firmado por :». Cap d'aquestes no arriba a la pàgina de
+ * ningú, però totes compten al denominador i desplacen la persona bona.
+ */
+export function semblaUnNom(text: string): boolean {
+  const nom = nomAssistent(text);
+  if (nom.length < 5 || nom.length > 70) return false;
+  if (/[:;.·)(\d]/.test(nom)) return false;
+  const mots = nom.split(/\s+/).filter(Boolean);
+  if (mots.length < 2 || mots.length > 7) return false;
+  // «Nom i Cognoms» és literalment la capçalera de la columna.
+  return !/^(nom|nombre)\b/i.test(nom);
+}
+
+/**
+ * A quants plens ha anat aquesta persona, si ens en podem refiar.
+ *
+ * Les comprovacions no són una precaució genèrica: a les Franqueses del Vallès
+ * **els catorze regidors sortien amb «1 de 49 plens»**, l'alcalde inclòs. No era
+ * absentisme; era que la llista d'assistents no s'havia sabut llegir. I la
+ * diferència importa molt, perquè publicar que un alcalde va assistir a un ple
+ * de quaranta-nou no és una dada fluixa: és una acusació, i és falsa.
+ *
+ * L'últim garbell és la llei. Un ple no es constitueix sense **quòrum d'un terç
+ * dels membres, i mai menys de tres** (art. 46.2.c de la Llei de bases del règim
+ * local). Si de les actes en surt que hi havia menys gent que el quòrum, el que
+ * és impossible no és el ple: és la nostra lectura, i llavors no es publica res.
+ */
 function assistenciaDe(
   dades: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>,
   nom: string,
+  regidories: number,
 ): { hi: number; de: number } | null {
   const assistencia = dades.mocions?.assistencia ?? null;
   if (!assistencia || assistencia.plensAmbLlista < 5) return null;
+
+  const gent = assistencia.persones.filter((p) => semblaUnNom(p.nom));
+  if (gent.length === 0) return null;
+
+  const quorum = Math.max(3, Math.ceil(regidories / 3));
+  const presentsPerPle = gent.reduce((a, p) => a + p.plens, 0) / assistencia.plensAmbLlista;
+  if (presentsPerPle < quorum) return null;
+
+  /*
+   * Una persona hi surt sota tantes formes com càrrecs ha tingut.
+   *
+   * A les Franqueses, Dolors Amaro Fitó hi consta com a «regidora» en 31 plens,
+   * com a «tinenta d'alcalde (SPLF)» en 17 i sense càrrec en 1: **31 + 17 + 1 =
+   * 49**, que són exactament tots els plens amb llista. No són tres persones ni
+   * tres comptes que competeixen: són tres trams de la mateixa persona, i el que
+   * val és la suma.
+   *
+   * Que la suma no pugui passar del nombre de plens és el que ho fa segur, i és
+   * la mateixa comprovació que ho valida: si dues formes s'haguessin comptat el
+   * mateix dia, la suma se n'aniria per sobre i llavors no en sabem prou per
+   * publicar-ho.
+   */
   const clau = normalizePersonName(nom);
-  const encaixen = assistencia.persones.filter((p) => normalizePersonName(p.nom) === clau);
-  if (encaixen.length !== 1) return null;
-  return { hi: encaixen[0]!.plens, de: assistencia.plensAmbLlista };
+  const seves = gent.filter((p) => normalizePersonName(nomAssistent(p.nom)) === clau);
+  if (seves.length === 0) return null;
+  const hi = seves.reduce((a, p) => a + p.plens, 0);
+  if (hi > assistencia.plensAmbLlista) return null;
+  return { hi, de: assistencia.plensAmbLlista };
 }
