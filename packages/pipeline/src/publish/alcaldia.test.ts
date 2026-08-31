@@ -50,14 +50,57 @@ describe("resolAlcaldia", () => {
     expect(r.fotoPetita).toBe("/observatori/fotos/160/25.webp");
   });
 
-  it("però si la seu marca algú com a alcaldia, mana ella i no el nom", () => {
-    // El relleu al revés: la seu ja marca el nou i el registre oficial encara
-    // no s'ha actualitzat. El càrrec escrit tal com el firma qui el té és la
-    // font més propera al ple.
-    const llista = [carrec("Vell Alcalde", "Regidor"), carrec("Nova Alcaldessa", "Alcaldessa")];
-    const r = resolAlcaldia(llista, { mayorName: "Vell Alcalde", mayorSigles: null });
+  it("el Catllar: la seu encara marca l'alcaldia del mandat passat, i el nom oficial mana", () => {
+    // Després d'un relleu el registre de la Generalitat es posa al dia i hi ha
+    // seus que no: la d'el Catllar duia «ALCALDIA» al costat de qui manava
+    // abans, i la fitxa ensenyava una cara mentre la llista dels 947 i la
+    // taula d'alcaldies de la mateixa pàgina deien un altre nom.
+    const llista = [
+      carrec("Alba López Domínguez", "ALCALDIA", "/observatori/fotos/160/3.webp"),
+      carrec("Jordi Ruiz Domènech", "Regidor", "/observatori/fotos/160/4.webp"),
+    ];
+    const r = resolAlcaldia(llista, { mayorName: "JORDI RUIZ DOMÈNECH", mayorSigles: null });
     expect(r.carrec).toBe(llista[1]);
-    expect(r.nom).toBe("Nova Alcaldessa");
+    expect(r.nom).toBe("Jordi Ruiz Domènech");
+    expect(r.fotoPetita).toBe("/observatori/fotos/160/4.webp");
+    expect(r.adreca).toBe("regidor/jordi-ruiz-domenech/");
+  });
+
+  it("Castellgalí: l'alcaldia oficial no és a la llista de la seu; surt el nom pelat i no la cara de qui ja no ho és", () => {
+    const llista = [carrec("Marcos Álvarez Rebolo", "Alcalde i Regidor delegat d'Hisenda", "/observatori/fotos/160/5.webp")];
+    const r = resolAlcaldia(llista, { mayorName: "Cristòfol Gimeno Iglesias", mayorSigles: null });
+    expect(r.carrec).toBeNull();
+    expect(r.nom).toBe("Cristòfol Gimeno Iglesias");
+    expect(r.foto).toBeNull();
+    expect(r.adreca).toBeNull();
+  });
+
+  it("Albons: el mateix nom escrit en català per la seu i en castellà pel registre és la mateixa persona", () => {
+    // «Josep Ramon» contra «José Ramón» no lliga per la clau normalitzada,
+    // però els cognoms sí: la seu no s'ha quedat enrere i es queda la cara i
+    // el càrrec, com sempre.
+    const llista = [carrec("Josep Ramon Llavero Rodríguez", "Alcalde", "/observatori/fotos/160/6.webp")];
+    const r = resolAlcaldia(llista, { mayorName: "JOSÉ RAMÓN LLAVERO RODRÍGUEZ", mayorSigles: null });
+    expect(r.carrec).toBe(llista[0]);
+    expect(r.nom).toBe("Josep Ramon Llavero Rodríguez");
+    expect(r.fotoPetita).toBe("/observatori/fotos/160/6.webp");
+  });
+
+  it("Cardedeu, la Sénia i Viladecans: ni «Vicealcalde», ni «Tinença Alcaldia», ni «Tta.Alcaldessa» són l'alcaldia", () => {
+    // El vicealcalde de Cardedeu surt escrit abans que l'alcalde i sortia amb
+    // la cara de qui mana a la portada de la fitxa.
+    const cardedeu = [carrec("Josep Quesada Tornero", "Vicealcalde"), carrec("Xavier Orozco Delclòs", "Alcalde")];
+    expect(resolAlcaldia(cardedeu, { mayorName: "XAVIER OROZCO DELCLÒS", mayorSigles: null }).carrec).toBe(cardedeu[1]);
+    const senia = [
+      carrec("Artur Martínez Hernández", "1ª Tinença Alcaldia. Regidories: Hisenda"),
+      carrec("Maria Victòria Almuni Balada", "Alcaldessa. Regidories: Governació i Cultura"),
+    ];
+    expect(resolAlcaldia(senia, { mayorName: "Maria Victoria Almuni i Balada", mayorSigles: null }).carrec).toBe(senia[1]);
+    const viladecans = [
+      carrec("Joana Sánchez Morillo", "5aTta.Alcaldessa.Vpdta.Àmbit Presidència i Ciutat 2030"),
+      carrec("Olga Morales Segura", "Regidora"),
+    ];
+    expect(resolAlcaldia(viladecans, { mayorName: "Olga Morales i Segura", mayorSigles: null }).carrec).toBe(viladecans[1]);
   });
 
   it("«Tinent d'alcalde» i «regidor d'Alcaldia» porten la paraula i no són l'alcaldia", () => {
@@ -69,7 +112,7 @@ describe("resolAlcaldia", () => {
       carrec("Tercer", "Regidor d’Alcaldia i Comunicació"),
       carrec("Qui mana", "Alcalde"),
     ];
-    expect(resolAlcaldia(llista, { mayorName: "Segona", mayorSigles: null }).carrec).toBe(llista[2]);
+    expect(resolAlcaldia(llista, { mayorName: "Qui mana", mayorSigles: null }).carrec).toBe(llista[2]);
     // I si l'alcalde no porta càrrec, el tinent no ocupa el seu lloc: es
     // busca pel nom oficial.
     const senseCarrec = [carrec("Segona", "Tinent d'alcalde"), carrec("Qui mana", "Regidor")];

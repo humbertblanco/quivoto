@@ -411,7 +411,11 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         c: m.comarca ?? "",
         p: m.population ?? 0,
         r: government ? (government as unknown as { totalSeats: number }).totalSeats : (m.councilSeats ?? 0),
-        a: m.mayorName,
+        // El nom que decideix `resolAlcaldia`, el mateix que la portada de la
+        // fitxa: quan la seu escriu «Josep Ramon» i el registre «José Ramón»,
+        // la llista i la fitxa deien la mateixa persona amb dos noms. El del
+        // registre només queda quan no hi ha cap altra font.
+        a: alcaldia.nom ?? m.mayorName,
         g: sigles,
         ar: alcaldia.fotoPetita,
         ad: alcaldia.adreca,

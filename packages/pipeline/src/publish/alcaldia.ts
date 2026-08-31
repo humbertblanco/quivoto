@@ -20,7 +20,13 @@ import { adrecesRegidors } from "./regidor";
  * Aquí es decideix un cop i la resta de pàgines ho llegeixen. La regla:
  *
  *   1. Si la seu electrònica marca algú amb la paraula «alcald», mana ella:
- *      porta el càrrec escrit tal com el firma qui el té.
+ *      porta el càrrec escrit tal com el firma qui el té. **Llevat que la font
+ *      oficial de la Generalitat digui que l'alcaldia és una altra persona**:
+ *      llavors mana el nom oficial, perquè el registre es posa al dia després
+ *      d'un relleu i hi ha seus que es queden amb l'«Alcalde» d'abans. Al
+ *      Catllar, a Castellgalí o a Torredembarra la seu encara marcava
+ *      l'alcaldia del mandat passat i la fitxa ensenyava una cara mentre la
+ *      llista dels 947 i la taula d'alcaldies deien un altre nom.
  *   2. Si no, es busca a la mateixa llista la persona que la font oficial de
  *      la Generalitat diu que té l'alcaldia, pel nom normalitzat. La font
  *      oficial sí que està al dia; el que no té és ni la foto ni la fitxa.
@@ -70,9 +76,16 @@ export type Alcaldia<T extends CarrecAlcaldia = CarrecAlcaldia> = {
  * que l'alcalde —o en una seu on l'alcalde no porta cap càrrec— sortia amb la
  * cara de qui mana. Aquí es descarten els dos casos; qui quedi sense càrrec es
  * troba pel nom, al pas següent.
+ *
+ * «tinen» sense acabar cobreix el «1ª Tinença Alcaldia» de la Sénia; «tta» és
+ * l'abreviatura «5aTta.Alcaldessa» amb què Viladecans escriu les tinences; i
+ * «vice» és el «Vicealcalde» de Cardedeu, que sortia a la portada de la fitxa
+ * en lloc de l'alcalde perquè la seu l'escriu abans. S'ha comprovat sobre els
+ * càrrecs de les 947 fitxes publicades que cap alcaldia de debò no porta cap
+ * d'aquests trossos al seu càrrec.
  */
-const esAlcaldia = (carrec: string | null | undefined): boolean =>
-  /alcald/i.test(carrec ?? "") && !/tinent|tinenta|d.alcald|adjunt/i.test(carrec ?? "");
+export const esAlcaldia = (carrec: string | null | undefined): boolean =>
+  /alcald/i.test(carrec ?? "") && !/tinen|tta|vice|d.alcald|adjunt/i.test(carrec ?? "");
 
 /** Qui surt primer amb aquest nom. Dues persones del mateix ple que es diguin igual no passa avui a cap dels 947. */
 function pelNom<T extends { nom: string }>(llista: readonly T[], nom: string | null): T | null {
@@ -80,6 +93,31 @@ function pelNom<T extends { nom: string }>(llista: readonly T[], nom: string | n
   const clau = normalizePersonName(nom);
   if (clau === "") return null;
   return llista.find((c) => normalizePersonName(c.nom) === clau) ?? null;
+}
+
+/**
+ * Si dos noms escrits per dues fonts poden ser la mateixa persona.
+ *
+ * La seu escriu «Josep Ramon Llavero Rodríguez» i el registre «José Ramón
+ * Llavero Rodríguez»: la clau normalitzada no lliga —el nom de pila canvia
+ * d'idioma— però els cognoms sí. El llindar són **dos trossos compartits** de
+ * més de dues lletres: sobre les 947 fitxes publicades separa totes les
+ * variants d'escriptura reals —Albons, Begues, Montgat, «Falgàs Marco
+ * Margaleff» girat de Torrelles— de tots els relleus de debò —el Catllar,
+ * Castellgalí, Torredembarra—, on els dos noms no comparteixen ni un cognom.
+ * Un nom molt curt es conforma amb el que té: «Margarida Feliu» i «Margarida
+ * Feliu Portabella» comparteixen tot el que el primer pot compartir.
+ */
+function mateixaPersona(a: string, b: string): boolean {
+  const na = normalizePersonName(a);
+  const nb = normalizePersonName(b);
+  if (na === "" || nb === "") return false;
+  if (na === nb) return true;
+  const trossos = (s: string): string[] => s.split(" ").filter((t) => t.length > 2);
+  const ta = trossos(na);
+  const tb = new Set(trossos(nb));
+  const compartits = ta.filter((t) => tb.has(t)).length;
+  return compartits > 0 && compartits >= Math.min(2, ta.length, tb.size);
 }
 
 export function resolAlcaldia<T extends CarrecAlcaldia>(
@@ -90,7 +128,17 @@ export function resolAlcaldia<T extends CarrecAlcaldia>(
   const oficial = government?.mayorName?.trim() || null;
   const seu = carrecs ?? [];
 
-  const trobat = seu.find((c) => esAlcaldia(c.carrec)) ?? pelNom(seu, oficial);
+  // El càrrec de la seu mana mentre no digui el contrari del registre. Quan la
+  // seu marca la persona A i la font oficial diu que l'alcaldia és la persona
+  // B —dos noms que no s'assemblen, no dues grafies del mateix—, la seu s'ha
+  // quedat enrere: el registre es posa al dia després d'un relleu i el càrrec
+  // de la seu és el d'abans. Llavors es busca la persona B a la mateixa
+  // llista; si no hi és, val més el nom oficial pelat que la cara d'algú que
+  // ja no ho és.
+  const marcat = seu.find((c) => esAlcaldia(c.carrec)) ?? null;
+  const oficialALaSeu = pelNom(seu, oficial);
+  const trobat =
+    marcat && oficial && !mateixaPersona(marcat.nom, oficial) ? oficialALaSeu : (marcat ?? oficialALaSeu);
   if (trobat) {
     return {
       carrec: trobat,
