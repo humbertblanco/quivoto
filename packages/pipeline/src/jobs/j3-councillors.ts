@@ -27,7 +27,7 @@ type CarrecRow = {
 };
 
 /** «EVA LABRADOR CUADRADO (Ind.)» → nom net i anotació entre parèntesis a part. */
-function splitName(raw: string): { name: string; note: string | null } {
+export function splitName(raw: string): { name: string; note: string | null } {
   const match = raw.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
   if (!match) return { name: raw.trim(), note: null };
   return { name: match[1]!.trim(), note: match[2]!.trim() };
@@ -42,6 +42,12 @@ function splitName(raw: string): { name: string; note: string | null } {
  * **no porta cap correu electrònic** (`count(e_mail) = 0`), contra el que
  * suposava el pla. Els contactes per a l'outreach del 2027 hauran de sortir
  * d'una altra banda, i mentrestant queda registrat com a incidència.
+ *
+ * I comprovat el 31-08-2026: `nm3n-3vbj` només porta **la composició d'avui**
+ * —les columnes són codi d'ens, nom, càrrec, partit, ordre i data de
+ * nomenament, sense cap identificador d'elecció ni de mandat—, així que J3 no
+ * pot ingerir els plens del 2015 ni del 2019. Qui hi seia llavors surt de les
+ * candidatures amb `electe` de J4, que sí que en porta les tres eleccions.
  */
 export async function j3Councillors(db: Db): Promise<void> {
   await withRun(db, "J3 composició dels plens", async (run) => {
