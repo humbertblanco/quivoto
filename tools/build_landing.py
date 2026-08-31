@@ -379,12 +379,13 @@ def cerca_home(lang):
   if(!input||!out) return;
   var data=null, electes=null;
   function norm(s){{return String(s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();}}
+  function slug(s){{return norm(s).replace(/\\s+/g,'-').replace(/-+/g,'-');}}
   function esc(s){{return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}}
   function render(){{
     var q=norm(input.value).trim(); if(q.length<2){{out.innerHTML='';return;}}
     var rows=[];
     if(data&&data.mun) data.mun.forEach(function(m){{if(norm(m.n).includes(q)||(m.a&&norm(m.a).includes(q))) rows.push({{t:m.n,s:m.c||'',u:'/observatori/m/'+m.s+'/',k:'Municipi'}});}});
-    if(electes&&electes.reg) electes.reg.forEach(function(r,ri){{if(norm(r[0]).includes(q)){{var m=data.mun[r[1]];if(m) rows.push({{t:r[0],s:m.n+(r[2]<0?'':' · '+electes.sig[r[2]]),u:'/observatori/m/'+m.s+'/regidor/'+(electes.exr[ri]||'')+'/',k:'Regidor'}});}}}});
+    if(electes&&electes.reg) electes.reg.forEach(function(r,ri){{if(norm(r[0]).includes(q)){{var m=data.mun[r[1]];if(m) rows.push({{t:r[0],s:m.n+(r[2]<0?'':' · '+electes.sig[r[2]]),u:'/observatori/m/'+m.s+'/regidor/'+(electes.exr[ri]||slug(r[0]))+'/',k:'Regidor'}});}}}});
     rows=rows.slice(0,8);
     out.innerHTML=rows.length?rows.map(function(r){{return '<a class="cerca-home-fila" role="option" href="'+r.u+'"><b>'+esc(r.t)+'</b><span>'+esc(r.k+' · '+r.s)+'</span></a>';}}).join(''):'<p class="cerca-home-buit">{'No hi ha cap coincidència.' if ca else 'No hay coincidencias.'}</p>';
   }}
