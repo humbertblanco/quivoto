@@ -24,6 +24,7 @@ Fet el **26 d'agost de 2026**.
 - `http://` → **301** cap a `https://`
 - Portada, `/es/`, privadesa, avís legal, CSS, tipografies, `og.png`, `robots.txt`, `sitemap.xml`: **200**
 - Capçaleres de seguretat actives (CSP, HSTS, nosniff, referrer-policy, permissions-policy)
+- Google Analytics actiu amb la propietat `G-9ZB1XZ3LHT`; la CSP permet només el carregador i els endpoints d'Analytics necessaris.
 - Formulari: alta correcta, desada a SQLite **fora** de l'arrel web
 - La base de dades **no** és accessible des del web
 - Alta de prova esborrada

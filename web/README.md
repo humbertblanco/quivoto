@@ -66,7 +66,7 @@ soles amb `prefers-reduced-motion`.
 
 ## Privadesa i legal
 
-- Cap cookie, cap analítica de tercers, cap tipografia externa.
+- Google Analytics (G-9ZB1XZ3LHT) per a mètriques agregades; cap píxel publicitari ni tipografia externa.
 - `privadesa.html` i `avis-legal.html` tenen camps entre claudàtors —
   `[NOM DEL RESPONSABLE]`, `[NIF]`, `[ADREÇA]`, `[PROVEÏDOR D'ALLOTJAMENT]` —
   que **s'han d'omplir abans de publicar**.
