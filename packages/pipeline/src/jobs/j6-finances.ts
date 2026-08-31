@@ -34,7 +34,21 @@ const PADRO = "e0be5678-0bdd-48e0-99af-05cd5404a9a5";
  *     **2010**, amb 1.195 ens i 16.182 files, i d'allà endavant no baixa de
  *     1.200 fins al 2025 (1.074 ens: exercici encara a mig liquidar).
  *   · Deute viu (34db8dc5): del **2010** al 2025, entre 982 i 1.002 ens cada
- *     any. Sèrie completa, sense cap forat.
+ *     any. Sèrie completa, sense cap forat. Reverificat el 31-08-2026 amb un
+ *     `GROUP BY "ANY"`: el primer any del conjunt és el 2010, amb 994 ens.
+ *
+ * ─── Per què el deute no s'allarga al 2008-2009 ─────────────────────────────
+ * Hisenda sí que publica «deuda viva» per ajuntament del 2008 i el 2009
+ * (comprovat el 31-08-2026: `deuda_aytos_2008_con_poblacion.xls` i
+ * `deuda_aytos_2009.xls` a hacienda.gob.es, fulls de càlcul solts identificats
+ * per nom i codi INE, no per CODI_ENS). Però el conjunt de l'AOC que és la
+ * font d'aquesta feina comença el 2010, i empalmar-hi dos anys d'un altre
+ * editor voldria dir un adaptador nou d'XLS, un creuament d'ens diferent i cap
+ * garantia que aquelles primeres fotos comptin els mateixos ens que la sèrie
+ * (982-1.002 cada any des del 2010). Dos anys més no valen una sèrie amb dues
+ * vares de mesurar: el deute es queda començant el 2010, i si l'AOC un dia hi
+ * afegeix el 2008-2009, entraran sols per `FROM_YEAR`... que llavors caldrà
+ * abaixar expressament.
  *   · Padró (e0be5678): del **2009** al 2026, 946-948 ens cada any. Comença un
  *     any abans que la liquidació, però un padró sense comptes al costat no
  *     serveix per a cap «per habitant», i per això arrenquem tots alhora.

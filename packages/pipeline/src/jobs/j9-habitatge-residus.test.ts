@@ -1,5 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { arrodoneix, mitjanaPonderada, taxaSelectiva, variacioEntre, type PuntSerie } from "./j9-habitatge-residus";
+import {
+  LLOGUER_DES_DE,
+  RESIDUS_DES_DE,
+  arrodoneix,
+  mitjanaPonderada,
+  taxaSelectiva,
+  variacioEntre,
+  type PuntSerie,
+} from "./j9-habitatge-residus";
+
+describe("des d'on arrenca cada sèrie", () => {
+  /**
+   * El límit el posa la font, no nosaltres. Comprovat contra el portal el
+   * 31-08-2026: la primera fila municipal del lloguer és del 2007 (i fins al
+   * 2018 només hi ha la fila anual, cap trimestre) i la dels residus del 2000,
+   * amb totes les columnes plenes des del primer any. Si aquesta prova falla
+   * perquè algú ha tornat a escurçar la sèrie «perquè amb menys n'hi ha prou»,
+   * que llegeixi primer el comentari de les dues constants.
+   */
+  it("demana el lloguer des del primer any que la font publica, el 2007", () => {
+    expect(LLOGUER_DES_DE).toBe(2007);
+  });
+
+  it("demana els residus des del primer any que la font publica, el 2000", () => {
+    expect(RESIDUS_DES_DE).toBe(2000);
+  });
+
+  it("totes dues sèries cobreixen sencer el mandat anterior", () => {
+    expect(LLOGUER_DES_DE).toBeLessThanOrEqual(2019);
+    expect(RESIDUS_DES_DE).toBeLessThanOrEqual(2019);
+  });
+});
 
 describe("taxaSelectiva", () => {
   it("dona el percentatge que publica l'origen", () => {

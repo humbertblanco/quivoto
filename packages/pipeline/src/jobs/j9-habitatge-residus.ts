@@ -29,8 +29,37 @@ const LLOGUER = "qww9-bvhh";
 /** Estadística de residus municipals de l'Agència de Residus de Catalunya. */
 const RESIDUS = "69zu-w48s";
 
-/** Des d'aquí la sèrie cobreix tres mandats sencers: 2015, 2019 i 2023. */
-const SERIE_DES_DE = 2015;
+/**
+ * Des d'on demanem cada conjunt. **El límit el posa la font, no nosaltres.**
+ *
+ * Fins ara hi havia un sol «2015» per a tots dos, amb l'argument que tres
+ * mandats sencers eren prou context. Era una decisió nostra que amagava mitja
+ * sèrie: la corba que en sortia deia que abans del 2015 no havia passat res, i
+ * la retallàvem nosaltres, no la font. Comprovat contra el portal, conjunt per
+ * conjunt, el 31 d'agost del 2026:
+ *
+ *   · **Lloguer (qww9-bvhh)**: la primera fila municipal és del **2007** —no
+ *     n'hi ha cap del 2005 ni del 2006, a cap àmbit—. Del 2007 al 2018 el
+ *     conjunt només publica la fila anual «gener-desembre», sense cap
+ *     trimestre, amb 662-836 municipis per any; els trimestres i els acumulats
+ *     comencen el 2019. La regla de l'any tancat ja ho cobreix: fila anual o
+ *     quatre trimestres. I en aquells anys la renda surt suprimida a la meitat
+ *     dels municipis (la fila hi és, amb contractes, però sense preu): es desa
+ *     com a forat, no com a zero, i qui dibuixi la corba l'ha de dibuixar amb
+ *     el forat.
+ *   · **Residus (69zu-w48s)**: la sèrie arrenca el **2000**, amb 947 files
+ *     cada any i totes les columnes que fem servir —selectiva, generació,
+ *     kg/hab i les nou fraccions— plenes des del primer any i amb les mateixes
+ *     unitats (tones). Comprovat amb Abrera: 7.070 t generades el 2000 i 5.953
+ *     el 2024, cap salt d'unitat enmig.
+ *
+ * ─── El que això costa ──────────────────────────────────────────────────────
+ * Socrata es pagina de 5.000 en 5.000 amb 250 ms de pausa: el lloguer passa de
+ * ~40.100 a ~46.100 files (una pàgina més) i els residus de ~9.500 a ~23.700
+ * (tres pàgines més). Quatre crides més en total, no quatre-centes.
+ */
+export const LLOGUER_DES_DE = 2007;
+export const RESIDUS_DES_DE = 2000;
 
 /**
  * Anys de constitució dels ajuntaments. Els ajuntaments es constitueixen al juny,
@@ -308,7 +337,7 @@ export async function j9HabitatgeResidus(db: Db): Promise<void> {
   await withRun(db, "J9 preu del lloguer", async (run) => {
     const files = await socrataAll<FilaLloguer>(LLOGUER, {
       select: "codi_territorial,nom_territori,any,periode,habitatges,renda",
-      where: `ambit_territorial='Municipi' AND any >= '${SERIE_DES_DE}'`,
+      where: `ambit_territorial='Municipi' AND any >= '${LLOGUER_DES_DE}'`,
       order: "codi_territorial,any,periode",
     });
     run.rowsIn = files.length;
@@ -450,7 +479,7 @@ export async function j9HabitatgeResidus(db: Db): Promise<void> {
     ];
     const files = await socrataAll<FilaResidus>(RESIDUS, {
       select: columnes.join(","),
-      where: `any >= '${SERIE_DES_DE}'`,
+      where: `any >= '${RESIDUS_DES_DE}'`,
       order: "codi_municipi,any",
     });
     run.rowsIn = files.length;
