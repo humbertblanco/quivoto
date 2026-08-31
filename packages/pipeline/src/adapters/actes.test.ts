@@ -172,6 +172,40 @@ describe("parteixLlista", () => {
 });
 
 describe("extreuVotacio", () => {
+  it("prioritza la votació del ple davant d'un recompte citat dins la moció (Esplugues)", () => {
+    const votacio = extreuVotacio(fixture("esplugues-mocio-cita-congres.txt"));
+    expect(votacio).toBeNull();
+  });
+
+  it("llegeix els recomptes nominals escrits en lletres (Esplugues)", () => {
+    const rebutjada = extreuVotacio(fixture("esplugues-mocio-rebutjada.txt"))!;
+    expect(rebutjada.resultat).toBe("rebutjat");
+    expect(rebutjada.recompte.favor).toBe(8);
+    expect(rebutjada.recompte.contra).toBe(12);
+
+    const tresSentits = extreuVotacio(fixture("esplugues-nominal-tres-sentits.txt"))!;
+    expect(tresSentits.resultat).toBe("aprovat");
+    expect(tresSentits.recompte.favor).toBe(14);
+    expect(tresSentits.recompte.abstencio).toBe(5);
+    expect(tresSentits.recompte.contra).toBe(1);
+    expect(tresSentits.unanimitat).toBe(false);
+    expect(tresSentits.perGrup).toEqual([]);
+  });
+
+  it("no confon una indemnització a favor de LIDL amb un vot de grup (Esplugues)", () => {
+    const votacio = extreuVotacio(fixture("esplugues-nominal-unanimitat-lidl.txt"))!;
+    expect(votacio.resultat).toBe("aprovat");
+    expect(votacio.unanimitat).toBe(true);
+    expect(votacio.recompte.favor).toBe(20);
+    expect(votacio.perGrup).toEqual([]);
+  });
+
+  it("reconeix la unanimitat expressada com tots els membres presents (Esplugues)", () => {
+    const votacio = extreuVotacio(fixture("esplugues-unanimitat-tots-membres.txt"))!;
+    expect(votacio.resultat).toBe("aprovat");
+    expect(votacio.unanimitat).toBe(true);
+  });
+
   it("llegeix la prosa amb grups entre parèntesis (Olot)", () => {
     const votacio = extreuVotacio(fixture("olot-prosa.txt"))!;
     expect(votacio.resultat).toBe("aprovat");

@@ -1063,7 +1063,10 @@ export const GRAFICS_CSS = `
    l'amplada a totes les files, així que la igualtat de llargades i el zero
    recte no depenen de compartir columnes. Amb la graella compartida, la
    col·locació automàtica enviava la xifra a una fila per sota del canal. */
-@media (max-width:560px){
+/* A 560–700 px les tres columnes encara no hi caben: la xifra en negreta
+   acaba damunt del canal (especialment amb €/hab). Passem al dibuix apilat
+   abans que el text i la barra es puguin tocar. */
+@media (max-width:760px){
   .barres-divergents{display:block}
   .barres-divergents li{display:grid;grid-template-columns:minmax(0,1fr) auto;
     gap:3px var(--e2);align-items:center;margin:0 0 12px}

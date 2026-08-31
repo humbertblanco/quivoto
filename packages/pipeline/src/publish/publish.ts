@@ -1,4 +1,4 @@
-import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, stat, writeFile as writeFileRaw } from "node:fs/promises";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import {
   candidacies, candidatures, electionResults, municipalities,
@@ -50,6 +50,24 @@ import { withRun } from "../lib/run";
  */
 
 const OUT_DIR = new URL("../../../../web/public/observatori/m/", import.meta.url).pathname;
+
+const GOOGLE_TAG = `<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-9ZB1XZ3LHT"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-9ZB1XZ3LHT');
+</script>`;
+
+/** Cap pàgina HTML generada pot perdre l'analítica en una publicació futura. */
+async function writeFile(path: string, data: string | Uint8Array, encoding?: BufferEncoding): Promise<void> {
+  const output = path.endsWith(".html") && typeof data === "string" && !data.includes("G-9ZB1XZ3LHT")
+    ? data.replace("</head>", `${GOOGLE_TAG}\n</head>`)
+    : data;
+  await writeFileRaw(path, output, encoding);
+}
 
 /** Municipis del primer lot, si no se'n demana cap en concret. */
 const DEFAULT_SLUGS = ["esplugues-de-llobregat", "sabadell", "girona", "reus", "barcelona", "rubi"];

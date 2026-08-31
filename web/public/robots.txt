@@ -5,3 +5,4 @@ Disallow: /gracies.html
 Disallow: /es/gracies.html
 
 Sitemap: https://quivoto.cat/sitemap.xml
+Sitemap: https://quivoto.cat/observatori/sitemap.xml

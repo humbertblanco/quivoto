@@ -678,6 +678,7 @@ describe("barresDivergents", () => {
     // files són a les mateixes tres columnes i el zero és una vertical recta.
     expect(GRAFICS_CSS).toContain(".barres-divergents li{display:contents}");
     expect(GRAFICS_CSS).toContain(".barres-divergents{list-style:none;margin:0;padding:0;display:grid;");
+    expect(GRAFICS_CSS).toContain("@media (max-width:760px)");
   });
 });
 

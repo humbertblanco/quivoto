@@ -19,8 +19,9 @@
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), interest-cohort=()"
   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
-  # Tot és local: ni scripts ni tipografies de tercers.
-  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'self'; base-uri 'self'"
+  # Google Analytics és l'únic recurs de tercers. L'inline és el bootstrap
+  # oficial de gtag; la resta d'orígens continuen tancats.
+  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: https://www.google-analytics.com; style-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; font-src 'self'; form-action 'self'; frame-ancestors 'self'; base-uri 'self'"
 </IfModule>
 
 # ---- Memòria cau ----

@@ -1082,7 +1082,7 @@ const PROSA_SENTIT =
  * ple dret, encara que no digui quants regidors són.
  */
 const PROSA_SENSE_XIFRA =
-  /(?:amb\s+)?(?:els?\s+)?(?:vots?\s+)?(a\s+favor|en\s+contra|l[’']abstenci(?:ó|o)|abstenci(?:ó|o)|el\s+vot\s+contrari)\s+(?:de(?:l|ls)?|d[’'])\s+([^.;]{2,220}?)(?=\s*(?:\.|;|\n[ \t]*\n|,?\s*(?:i\s+)?amb\b|$))/gi;
+  /(?:amb\s+)?(?:els?\s+)?(?:vots?\s+)(a\s+favor|en\s+contra)\s+(?:de(?:l|ls)?|d[’'])\s+([^.;]{2,220}?)(?=\s*(?:\.|;|\n[ \t]*\n|,?\s*(?:i\s+)?amb\b|$))|(?:amb\s+)?(?:l[’']abstenci(?:ó|o)|abstenci(?:ó|o)|el\s+vot\s+contrari)\s+(?:de(?:l|ls)?|d[’'])\s+([^.;]{2,220}?)(?=\s*(?:\.|;|\n[ \t]*\n|,?\s*(?:i\s+)?amb\b|$))/gi;
 
 /**
  * El recompte agregat d'esPublico Gestiona, en una sola línia i amb els quatre
@@ -1129,13 +1129,16 @@ const citaDe = (text: string): string => text.replace(/\s+/g, " ").trim().slice(
  * —que és fiable— i no al títol, tal com recomana la mesura empírica.
  */
 function finestraDeVotacio(segment: string): string | null {
-  let millor = -1;
+  // Les àncores estan ordenades de més explícita a més feble. Una moció pot
+  // citar abans una votació del Congrés o de l'ONU («143 vots a favor») i
+  // contenir després el «Sotmesa a votació la moció» que ens interessa. Si
+  // triéssim simplement la primera coincidència del text, publicaríem el
+  // recompte citat com si fos el del ple.
   for (const ancora of ANCORES) {
     const m = segment.match(ancora);
-    if (m && m.index !== undefined && (millor === -1 || m.index < millor)) millor = m.index;
+    if (m && m.index !== undefined) return segment.slice(m.index, m.index + 2500);
   }
-  if (millor === -1) return null;
-  return segment.slice(millor, millor + 2500);
+  return null;
 }
 
 function recompteBuit(): Record<SentitVot, number | null> {
@@ -1166,6 +1169,20 @@ export function extreuVotacio(segment: string): Votacio | null {
   const recompte = recompteBuit();
   const perGrup: VotGrup[] = [];
   let patro = "cap";
+
+  // Esplugues enumera les persones i només dona el total al final de cada
+  // frase: «voten a favor [noms], és a dir catorze vots». No intentem
+  // convertir els noms en grups, però el total declarat sí que és inequívoc.
+  const nominal = [
+    { sentit: "favor" as const, re: /vot(?:a|en)\s+a\s+favor[\s\S]{0,900}?[ée]s\s+a\s+dir\s+(\d+|[a-zà-úï·\-]+)\s+vots?/i },
+    { sentit: "contra" as const, re: /vot(?:a|en)\s+en\s+contra[\s\S]{0,900}?[ée]s\s+a\s+dir\s+(\d+|[a-zà-úï·\-]+)\s+vots?/i },
+    { sentit: "abstencio" as const, re: /(?:s[’']hi\s+abstenen|s[’']abstenen)[\s\S]{0,900}?[ée]s\s+a\s+dir\s+(\d+|[a-zà-úï·\-]+)\s+vots?/i },
+  ];
+  for (const patróNominal of nominal) {
+    const trobat = zona.match(patróNominal.re);
+    const total = aNombre(trobat?.[1]);
+    if (total !== null) recompte[patróNominal.sentit] = total;
+  }
 
   // Vot nominal d'esPublico: el sentit va en una columna a la dreta i
   // `pdftotext -layout` l'intercala enmig dels noms («…Juan Antonio  A favor
@@ -1317,13 +1334,13 @@ export function extreuVotacio(segment: string): Votacio | null {
   if (perGrup.length === 0 || etiquetes < 2) {
     PROSA_SENSE_XIFRA.lastIndex = 0;
     while ((m = PROSA_SENSE_XIFRA.exec(zona)) !== null) {
-      const brut = m[1]!.toLowerCase();
+      const brut = (m[1] ?? m[0]).toLowerCase();
       const sentit: SentitVot = brut.includes("contra")
         ? "contra"
         : brut.includes("abstenci")
           ? "abstencio"
           : "favor";
-      let llista = m[2]!;
+      let llista = (m[2] ?? m[3])!;
       const encadenat = llista.search(SENTIT_ENCADENAT);
       if (encadenat > 0) llista = llista.slice(0, encadenat);
       // Un grup que ja consta amb un altre sentit no se sobreescriu: si les dues
@@ -1357,6 +1374,11 @@ export function extreuVotacio(segment: string): Votacio | null {
   }
 
   const hiHaRecompte = Object.values(recompte).some((n) => n !== null);
+  // Cap ple municipal català no té més de 41 membres. Una suma superior és
+  // necessàriament un recompte citat al cos d'una moció (ONU, Congrés...), no
+  // la decisió del consistori.
+  const totalRecompte = Object.values(recompte).reduce<number>((suma, n) => suma + (n ?? 0), 0);
+  if (totalRecompte > 41) return null;
   // Un recompte llegit ja és una votació encara que la narració no digui com
   // acaba: «Vots a favor: 21. Vots en contra: cap» és informació, i abans es
   // llençava sencera perquè el text no contenia cap fórmula d'aprovació.

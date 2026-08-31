@@ -642,6 +642,16 @@ PROVA_JS = r'''
 })();
 '''
 
+GOOGLE_TAG = '''<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-9ZB1XZ3LHT"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-9ZB1XZ3LHT');
+</script>'''
+
 PAGE = '''<!doctype html>
 <html lang="{lang}">
 <head>
@@ -668,6 +678,7 @@ PAGE = '''<!doctype html>
 <script type="application/ld+json">
 {{"@context":"https://schema.org","@type":"WebSite","name":"{marca}","url":"https://{domini}/","inLanguage":"{lang}","description":"{desc}","publisher":{{"@type":"Organization","name":"Damos en el Blanco, S.L."}}}}
 </script>
+{google_tag}
 </head>
 <body>
 <a class="salta" href="#contingut">{salta}</a>
@@ -799,9 +810,11 @@ GRACIES = '''<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{gracies_h} — {marca}</title>
 <meta name="robots" content="noindex">
+<meta name="description" content="{gracies_p}">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/styles.css?v={css_v}">
+{google_tag}
 </head>
 <body class="pagina-simple">
 <a class="salta" href="#contingut">{salta}</a>
@@ -823,9 +836,11 @@ LEGAL = '''<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{titol} — {marca}</title>
 <meta name="description" content="{titol} de {marca}.">
+<link rel="canonical" href="https://quivoto.cat/{canonical}">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/styles.css?v={css_v}">
+{google_tag}
 </head>
 <body>
 <a class="salta" href="#contingut">{salta}</a>
@@ -880,7 +895,7 @@ PRIVADESA = {
 <li><strong>Idioma</strong>: per escriure’t en la llengua en què ens has escrit.</li>
 <li><strong>Empremta tècnica</strong>: un hash irreversible de la teva adreça IP amb sal diària i el nom del navegador, només per aturar enviaments automatitzats. No desem la IP.</li>
 </ul>
-<p>Consultar l’Observatori no demana res de tot això: s’hi entra sense registre, sense compte i sense cookies.</p>
+<p>Consultar l’Observatori no demana registre ni compte. Google Analytics recull dades d’ús de manera agregada per ajudar-nos a entendre quines pàgines funcionen i millorar el servei.</p>
 <h2>Base legal de la llista d’espera</h2>
 <p>El teu consentiment exprés (art. 6.1.a del RGPD), que dones marcant la casella del formulari i que pots retirar quan vulguis.</p>
 <h2>Les dades dels càrrecs electes</h2>
@@ -901,13 +916,13 @@ PRIVADESA = {
 <h2>Quant de temps</h2>
 <p>El teu correu, fins que et donis de baixa o, com a molt tard, el 31 de desembre de 2027. Després esborrem la llista sencera. Les dades de càrrecs electes es mantenen mentre l’interès públic ho justifiqui: l’històric electoral des del 1979 té valor d’arxiu i no el buidem, però una petició de retirada s’atén cas per cas amb els terminis d’aquí sobre.</p>
 <h2>Amb qui les compartim</h2>
-<p>Amb ningú. No hi ha analítica de tercers, ni píxels, ni xarxes socials incrustades. Les tipografies es serveixen des d’aquest mateix domini, o sigui que la teva visita no arriba a cap altra empresa. Les dades es desen en un servidor d’OVH SAS a França (Unió Europea), gestionat per estic.online.</p>
+<p>Fem servir <strong>Google Analytics</strong>, un servei de Google, per mesurar de manera agregada les visites i l’ús del web. Això pot comportar la comunicació a Google de dades tècniques de la visita, com ara el dispositiu, el navegador i una adreça IP abreujada. No hi ha píxels publicitaris ni xarxes socials incrustades. Les tipografies es serveixen des d’aquest mateix domini. La resta de dades es desen en un servidor d’OVH SAS a França (Unió Europea), gestionat per estic.online.</p>
 <h2>Cookies</h2>
-<p>Cap. Aquesta web no en posa.</p>
+<p>Google Analytics pot utilitzar identificadors o emmagatzematge local per distingir visites i elaborar estadístiques agregades. Pots bloquejar-los des de la configuració del navegador o amb un bloquejador de contingut.</p>
 <h2>Els teus drets</h2>
 <p>Pots demanar accés, rectificació, supressió, oposició, limitació i portabilitat escrivint a <a href="mailto:hola@quivoto.cat">hola@quivoto.cat</a>. Per donar-te de baixa a l’instant, fes servir l’enllaç de qualsevol correu que t’enviem. Si creus que no t’hem atès bé, pots reclamar a l’<a href="https://apdcat.gencat.cat">Autoritat Catalana de Protecció de Dades</a>.</p>
 """ + FONTS_CA + """
-<p class="peu-doc">Darrera actualització: 29 d’agost de 2026.</p>
+<p class="peu-doc">Darrera actualització: 31 d’agost de 2026.</p>
 """),
  'es': ("Política de privacidad", "Volver al inicio", """
 <p class="lead">De esta web solo sale un dato tuyo: el correo, si nos lo das, para avisarte cuando abramos tu municipio. Aparte de eso, en el <a href="https://quivoto.cat/observatori/">Observatorio</a> publicamos datos de cargos electos que ya son públicos, y aquí te explicamos exactamente cuáles, por qué podemos hacerlo y cómo pedir su corrección o su retirada.</p>
@@ -920,7 +935,7 @@ PRIVADESA = {
 <li><strong>Idioma</strong>: para escribirte en la lengua en que nos has escrito.</li>
 <li><strong>Huella técnica</strong>: un hash irreversible de tu dirección IP con sal diaria y el nombre del navegador, solo para frenar envíos automatizados. No guardamos la IP.</li>
 </ul>
-<p>Consultar el Observatorio no pide nada de todo esto: se entra sin registro, sin cuenta y sin cookies.</p>
+<p>Consultar el Observatorio no requiere registro ni cuenta. Google Analytics recoge datos de uso de forma agregada para ayudarnos a entender qué páginas funcionan y mejorar el servicio.</p>
 <h2>Base legal de la lista de espera</h2>
 <p>Tu consentimiento expreso (art. 6.1.a del RGPD), que das marcando la casilla del formulario y que puedes retirar cuando quieras.</p>
 <h2>Los datos de los cargos electos</h2>
@@ -941,9 +956,9 @@ PRIVADESA = {
 <h2>Cuánto tiempo</h2>
 <p>Tu correo, hasta que te des de baja o, como muy tarde, el 31 de diciembre de 2027. Después borramos la lista entera. Los datos de cargos electos se mantienen mientras el interés público lo justifique: el histórico electoral desde 1979 tiene valor de archivo y no lo vaciamos, pero una petición de retirada se atiende caso por caso con los plazos de aquí arriba.</p>
 <h2>Con quién los compartimos</h2>
-<p>Con nadie. No hay analítica de terceros, ni píxeles, ni redes sociales incrustadas. Las tipografías se sirven desde este mismo dominio, así que tu visita no llega a ninguna otra empresa. Los datos se guardan en un servidor de OVH SAS en Francia (Unión Europea), gestionado por estic.online.</p>
+<p>Usamos <strong>Google Analytics</strong>, un servicio de Google, para medir de forma agregada las visitas y el uso de la web. Esto puede implicar la comunicación a Google de datos técnicos de la visita, como el dispositivo, el navegador y una dirección IP abreviada. No hay píxeles publicitarios ni redes sociales incrustadas. Las tipografías se sirven desde este mismo dominio. El resto de datos se guardan en un servidor de OVH SAS en Francia (Unión Europea), gestionado por estic.online.</p>
 <h2>Cookies</h2>
-<p>Ninguna. Esta web no pone.</p>
+<p>Google Analytics puede utilizar identificadores o almacenamiento local para distinguir visitas y elaborar estadísticas agregadas. Puedes bloquearlos desde la configuración del navegador o con un bloqueador de contenido.</p>
 <h2>Tus derechos</h2>
 <p>Puedes pedir acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a <a href="mailto:hola@quivoto.cat">hola@quivoto.cat</a>. Para darte de baja al instante, usa el enlace de cualquier correo que te enviemos. Si crees que no te hemos atendido bien, puedes reclamar ante la <a href="https://www.aepd.es">Agencia Española de Protección de Datos</a>.</p>
 """ + FONTS_ES + """
@@ -1020,7 +1035,8 @@ def build_legal(lang):
         titol, tornar, cos = taula[lang]
         pagina = LEGAL.format(lang=t['lang'], marca=t['marca'], titol=titol, tornar=tornar,
                               capcalera=capcalera(lang), salta=t['salta'], peu=t['peu'],
-                              css_v=versio('styles.css'),
+                              css_v=versio('styles.css'), google_tag=GOOGLE_TAG,
+                              canonical=("" if lang == "ca" else "es/") + nom + ".html",
                               cos=cos.replace('{marca}', t['marca']))
         open(os.path.join(sub, nom + '.html'), 'w', encoding='utf-8').write(pagina)
 
@@ -1033,6 +1049,7 @@ def build(lang):
     t = dict(T[lang])
     d = dies_restants()
     ctx = dict(t)
+    ctx['google_tag'] = GOOGLE_TAG
     ctx['compte_tpl'] = html.escape(t['compte'], quote=True)
     ctx['compte'] = t['compte'].format(dies=d)
     ctx['capcalera'] = capcalera(lang)
