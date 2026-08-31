@@ -1190,6 +1190,18 @@ h2.amb-icona .icona{width:40px;height:40px;flex:0 0 auto}
   font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .gent .sub,.origens .sub,.preus .sub{font-size:.82rem;color:var(--ink-suau);font-weight:700}
 .gent .canvi b,.origens .canvi b,.preus .canvi b{color:var(--ink)}
+.preus .sou-diputacio{border-color:var(--coral);background:color-mix(in srgb,var(--coral) 8%,var(--paper-2))}
+.preus .sou-diputacio .etq{color:var(--coral)}
+.vots-resum{margin-top:var(--e2)}
+.punts-ple{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e2)}
+.punts-ple>li{border-left:5px solid var(--ink);padding:var(--e2) var(--e3);background:var(--paper-2);display:grid;gap:6px}
+.punt-cap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--ink-suau);font-size:.78rem;font-weight:800}
+.punt-tipus,.vot-unanim{border:1.5px solid var(--vora);border-radius:999px;padding:2px 7px}
+.vot-unanim{color:var(--green);border-color:var(--green)}
+.resultat-vot{font-weight:800;color:var(--ink-suau)}
+.vots-grups{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}
+.vot-grup{font-size:.76rem;padding:3px 7px;border:1px solid var(--vora);border-radius:4px;background:var(--paper)}
+.font-acta{font-size:.78rem;font-weight:800;color:var(--coral)}
 /* Què compta exactament la xifra: no és lletra petita decorativa, és el que
    impedeix confondre nacionalitat amb lloc de naixement. Per això es llegeix. */
 /* Què compta exactament una xifra. A les dues targetes de l'origen es llegeix

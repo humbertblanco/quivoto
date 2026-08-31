@@ -797,6 +797,28 @@ type MocionsMetric = {
   }[];
 };
 
+/** Lectura humana dels punts de les actes, centrada en el vot i no només en el títol. */
+function renderVotsPle(mocions: MocionsMetric | null): string {
+  if (!mocions) {
+    return `<p>No tenim encara cap acta de ple llegida d'aquest municipi. Les actes indexades són
+    una porta d'entrada, però no les presentem com si coneguéssim els vots.</p>`;
+  }
+  const llista = Array.isArray(mocions.llista) ? mocions.llista : [];
+  const puntsLlegits = mocions.punts ?? { desats: 0, omesos: 0, ambVotPerGrup: 0 };
+  const llegibles = llista.filter((p) => p.cita || p.resultat || p.vots.length > 0);
+  const visibles = llegibles.slice(-12).reverse();
+  const resum = `<ul class="preus vots-resum">
+    <li><span class="etq">Actes llegides</span><span class="gran">${number(mocions.actes.llegides)}</span><span class="sub">de ${number(mocions.actes.indexades)} indexades</span></li>
+    <li><span class="etq">Punts de l'ordre del dia</span><span class="gran">${number(puntsLlegits.desats)}</span><span class="sub">${number(puntsLlegits.ambVotPerGrup)} amb vot per grup</span></li>
+    <li><span class="etq">Punts unànimes</span><span class="gran">${number(llegibles.filter((p) => p.unanimitat).length)}</span><span class="sub">dels punts llegits</span></li>
+  </ul>`;
+  const punts = visibles.length === 0 ? `<p class="compta">No hi ha prou informació de vot per mostrar punts concrets.</p>` : `<ol class="punts-ple">${visibles.map((p) => {
+    const vots = p.vots.filter((v) => v.vots !== null).map((v) => `<span class="vot-grup" title="${escape(`${v.grup}: ${v.sentit}`)}"><b>${escape(v.grup)}</b> ${number(v.vots!)}</span>`).join("");
+    return `<li><div class="punt-cap"><time datetime="${escape(p.data)}">${escape(p.data)}</time><span class="punt-tipus">${escape(p.tipus)}</span>${p.unanimitat ? '<span class="vot-unanim">unànime</span>' : ""}</div><b>${escape(p.titol)}</b>${p.resultat ? `<span class="resultat-vot">${escape(p.resultat)}</span>` : ""}${vots ? `<div class="vots-grups">${vots}</div>` : ""}${p.cita ? `<details class="nota"><summary>Què diu l'acta</summary>${escape(p.cita)}</details>` : ""}<a class="font-acta" href="${escape(p.url)}" rel="noopener nofollow">Veure l'acta</a></li>`;
+  }).join("")}</ol>`;
+  return `${resum}<p class="entrada-bloc">Aquí no mesurem només quants punts hi ha: mirem si l'acta permet saber <b>què va votar cada grup</b> i si el resultat va ser unànime.</p>${punts}<details class="nota"><summary>Com llegim les actes</summary>Hem llegit ${number(mocions.actes.llegides)} actes i desat ${number(puntsLlegits.desats)} punts. Els punts omesos (${number(puntsLlegits.omesos)}) no entren al recompte. Un vot no apareix si l'acta no el diu explícitament.</details>`;
+}
+
 type Councillor = {
   name: string;
   role: string | null;
@@ -3184,6 +3206,27 @@ export function renderSous(
     }
   }
 
+  // Quan l'alcaldia també és diputada provincial, ho avancem al resum: és una
+  // dada que sovint es perd dins la llista de càrrecs acumulats. L'import és
+  // sempre el que publica la diputació i queda separat del sou municipal.
+  const alcaldiaDiputacio = diputacions?.alcaldia?.diputacio ?? null;
+  if (diputacions?.alcaldia && alcaldiaDiputacio) {
+    const d = alcaldiaDiputacio;
+    const importDiputacio =
+      d.retribucioAnualBruta !== null
+        ? `<span class="gran">${eurosSencers(d.retribucioAnualBruta)}</span>
+           <span class="sub">l'any bruts · ${escape(d.dedicacio ?? "retribució anual bruta")} · segons la diputació</span>`
+        : d.maximPerAssistencies !== null
+          ? `<span class="gran">${eurosSencers(d.maximPerAssistencies)}</span>
+             <span class="sub">màxim anual per assistències; no és un sou ni el que ha cobrat</span>`
+          : `<span class="gran">—</span><span class="sub">la diputació no publica cap import anual</span>`;
+    targetes.push(`<li class="sou-diputacio">
+      <span class="etq">L'alcaldia també és a la diputació</span>
+      ${importDiputacio}
+      <span class="comparativa"><a href="${escape(d.font.url)}" rel="noopener nofollow">${escape(d.font.nom)}</a></span>
+    </li>`);
+  }
+
   if (targetes.length > 0 || souLinia !== "") {
     const fontMinisteri = ministeri
       ? ` ${escape(ministeri.advertiment)} El que declara aquest ajuntament al Ministeri:
@@ -4787,6 +4830,7 @@ export function renderRadiografia(
   ]
     .filter((t) => t !== "")
     .join("\n  ");
+  const votsPle = renderVotsPle(data.mocions);
 
   // Què ha fet aquest govern amb els comptes: el balanç del mandat, com queda
   // respecte dels seus i el deute any a any. Eren tres blocs —«Balanç»,
@@ -4979,6 +5023,7 @@ export function renderRadiografia(
   const seccions: Seccio[] = (
     [
       { id: "ple", titol: "Qui mana, i com hi va arribar", curt: "Qui mana", icona: "el ple", html: quiMana },
+      { id: "vots-ple", titol: "Què es vota al ple", curt: "Vots al ple", icona: "el ple", html: votsPle },
       { id: "comptes", titol: "Què ha fet aquest govern amb els comptes", curt: "Els comptes", html: comptes },
       {
         id: "mandat",
