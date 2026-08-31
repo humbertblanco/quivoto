@@ -281,7 +281,7 @@ recalcularà sobre la intersecció d'afirmacions i es mostrarà l'avís correspo
 ## Retirar les afirmacions que no discriminen
 
 > ⏳ **Encara no construït, i depèn d'una peça que tampoc existeix.** El portal **no té avui
-> cap analítica**: `web/public/assets/app.js` no envia cap esdeveniment. Sense analítica
+> sense analítica de la brúixola**: `web/public/assets/app.js` no envia cap esdeveniment de respostes. Google Analytics només mesura visites de manera agregada.
 > agregada, els dos primers indicadors d'aquesta taula no es poden calcular. Mentre no
 > existeixi, l'única via de detecció serà que algú llegeixi les afirmacions i ens ho digui.
 
