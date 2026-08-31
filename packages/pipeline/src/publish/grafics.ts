@@ -795,8 +795,7 @@ export function barresDivergents(files: readonly FilaDivergent[], opcions: Opcio
       return `<li class="${sentit}">
       <span class="etq">${nom(f, false)}</span>
       <span class="canal"><i class="barra" style="--w:${n2(w)}%"></i>${marca}</span>
-      <span class="xifra">${xifra(f.valor)}</span>
-      ${delGrup}
+      <span class="xifres"><b class="xifra">${xifra(f.valor)}</b>${delGrup}</span>
     </li>`;
     })
     .join("");
@@ -823,6 +822,108 @@ export function barresDivergents(files: readonly FilaDivergent[], opcions: Opcio
     <figcaption class="clau-grafic">${clau}</figcaption>
     ${taula}
   </figure>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// El regle de dispersió: una marca per municipi, del més baix al més alt
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Una marca del regle: un valor, de qui és i si és el «tu ets aquí». */
+export type ValorDispersio = {
+  valor: number;
+  /** El nom del municipi. Buit quan la font només dona la xifra, sense dir de qui. */
+  nom: string;
+  /** El slug de la seva fitxa, si la marca ha de ser un enllaç. */
+  slug?: string;
+  /** Cert per a «tu ets aquí»: la marca es pinta de coral i sobresurt. */
+  aquest?: boolean;
+};
+
+export type OpcionsDispersio = {
+  format: (valor: number) => string;
+  /** Prefix del camí fins a l'arrel, per als enllaços: «../../» a les comarques. */
+  base?: string;
+  /** El recompte del peu del títol, escrit per qui crida: «23 de 30 municipis amb dada». */
+  quants?: string;
+  /** Com es diu la fila del mig: «La mediana d'aquí» per defecte. */
+  etiquetaMediana?: string;
+  /** El subtítol de la mediana: «el municipi del mig» per defecte. */
+  sotaMediana?: string;
+};
+
+/**
+ * Un regle del valor més baix al més alt del grup, amb una marca per municipi.
+ *
+ * Va néixer a la pàgina de comarca («I entre els seus municipis») i viu aquí
+ * perquè la fitxa municipal el pugui dibuixar també: és l'única peça que
+ * ensenya el grup sencer i no un resum, i una mediana amb la forma del grup al
+ * costat diu el que la mediana sola no pot dir.
+ *
+ * El regle va del més baix al més alt del grup, no de zero: la pregunta és qui
+ * és a dalt i qui a baix d'aquí, i estirar-lo fins al zero aplanaria totes les
+ * diferències en un pam de barra. Les tres xifres —mínim, mediana, màxim— van
+ * sempre escrites a sota, perquè el dibuix mai no sigui l'única manera de
+ * llegir-les. Amb menys de quatre valors no hi ha dispersió, hi ha tres
+ * xifres: val més dir-les, i es torna cadena buida.
+ *
+ * Una marca amb `slug` és un enllaç a la fitxa d'aquell municipi; sense slug és
+ * una marca i prou, que és el cas de la fitxa municipal: `MedianaGrup.valors`
+ * guarda les xifres del grup però no de quin municipi és cadascuna.
+ */
+export function regleDispersio(
+  titol: string,
+  valors: readonly ValorDispersio[],
+  opcions: OpcionsDispersio,
+): string {
+  if (valors.length < 4) return "";
+  const ordenats = [...valors].sort((a, b) => a.valor - b.valor);
+  const baix = ordenats[0]!;
+  const alt = ordenats[ordenats.length - 1]!;
+  if (alt.valor === baix.valor) return "";
+  // La mediana del que es dibuixa: amb un nombre parell, la mitjana dels dos del mig.
+  const meitat = Math.floor(ordenats.length / 2);
+  const mig =
+    ordenats.length % 2 === 0
+      ? (ordenats[meitat - 1]!.valor + ordenats[meitat]!.valor) / 2
+      : ordenats[meitat]!.valor;
+  // Del 4 % al 96 % i no de 0 a 100: la marca fa 14 px i als extrems mitja
+  // marca quedava fora de la caixa arrodonida.
+  const on = (v: number): string => (4 + (92 * (v - baix.valor)) / (alt.valor - baix.valor)).toFixed(2);
+  const base = opcions.base ?? "../../";
+  const fmt = opcions.format;
+
+  const ambAquest = ordenats.some((v) => v.aquest);
+  const marques = ordenats
+    .map((v) => {
+      const classe = v.aquest ? "marca aquest" : "marca";
+      const veu = v.nom ? `<span class="nomes-lectors">${escape(v.nom)}, ${fmt(v.valor)}</span>` : "";
+      return v.slug
+        ? `<a class="${classe}" style="--p:${on(v.valor)}%" href="${base}m/${escape(v.slug)}/"
+      >${veu}</a>`
+        : `<i class="${classe}" style="--p:${on(v.valor)}%">${veu}</i>`;
+    })
+    .join("");
+
+  const extrem = (v: ValorDispersio): string =>
+    v.slug
+      ? `<a href="${base}m/${escape(v.slug)}/">${escape(v.nom)}</a>`
+      : v.nom
+        ? `<span>${escape(v.nom)}</span>`
+        : "";
+
+  return `<figure class="dispersio">
+  <figcaption class="titol">${escape(titol)}
+    ${opcions.quants ? `<span class="secundari">${escape(opcions.quants)}</span>` : ""}</figcaption>
+  <div class="regle-dispersio${ambAquest ? " amb-aquest" : ""}"><i class="mig" style="--p:${on(mig)}%"></i>${marques}</div>
+  <ul class="extrems">
+    <li><span class="cap">El més baix</span>
+      ${extrem(baix)}<b>${fmt(baix.valor)}</b></li>
+    <li><span class="cap">${escape(opcions.etiquetaMediana ?? "La mediana d'aquí")}</span>
+      <span class="secundari">${escape(opcions.sotaMediana ?? "el municipi del mig")}</span><b>${fmt(mig)}</b></li>
+    <li><span class="cap">El més alt</span>
+      ${extrem(alt)}<b>${fmt(alt.valor)}</b></li>
+  </ul>
+</figure>`;
 }
 
 /**
@@ -909,26 +1010,42 @@ export const GRAFICS_CSS = `
    és el mateix canvi al grup, i la xifra va sempre escrita al costat perquè
    una barra sola no és una dada llegible. */
 .divergents{margin:var(--e2) 0 0}
-.barres-divergents{list-style:none;margin:0;padding:0;display:grid;gap:7px}
-.barres-divergents li{display:grid;grid-template-columns:minmax(8em,13em) minmax(0,1fr) auto;
-  gap:1px var(--e2);align-items:center}
-.barres-divergents .etq{font-weight:800;font-size:.9rem;line-height:1.2;overflow-wrap:anywhere}
+/* Una sola graella per a tota la llista, no una per fila. Amb la graella al
+   <li>, la columna de l'etiqueta s'amidava fila a fila —«Habitatge» curt,
+   «Administració general» llarg— i cada canal sortia d'una llargada diferent:
+   el zero, que ha de ser una vertical de dalt a baix, feia esses. Amb els <li>
+   com a «display:contents» totes les files comparteixen les tres columnes,
+   tots els canals fan exactament igual i el zero és una sola línia recta. */
+.barres-divergents{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:minmax(9em,14em) minmax(0,1fr) auto;gap:9px var(--e2);align-items:center}
+.barres-divergents li{display:contents}
+.barres-divergents .etq{grid-column:1;font-weight:800;font-size:.9rem;line-height:1.2;overflow-wrap:anywhere}
 .barres-divergents .etq a{color:inherit;text-decoration:none;border-bottom:1.5px solid var(--vora)}
-.barres-divergents .canal{position:relative;height:16px;background:var(--vora);border-radius:var(--r-max)}
+.barres-divergents .canal{grid-column:2;position:relative;height:16px;background:var(--vora);border-radius:var(--r-max)}
 .barres-divergents .canal::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;
-  margin-left:-1px;background:var(--ink);border-radius:2px}
-.barres-divergents .barra{position:absolute;top:0;bottom:0;width:var(--w);background:var(--lavanda);
-  border:1.5px solid var(--ink);border-radius:var(--r-max)}
-.barres-divergents .positiu .barra{left:50%;border-top-left-radius:0;border-bottom-left-radius:0}
-.barres-divergents .negatiu .barra{right:50%;border-top-right-radius:0;border-bottom-right-radius:0}
+  margin-left:-1px;background:var(--ink);border-radius:2px;z-index:1}
+/* El mateix radi petit als dos extrems de la barra: el radi de píldora amb el
+   costat del zero escapçat feia semblar cada barra mig rosegada. L'alçada i el
+   «display» van escrits encara que el «top/bottom» ja ho digui: el full de la
+   fitxa té un altre «.barra» —el de les columnes d'eleccions, 46px i flex— i
+   sense això la barra sortia inflada per sota del canal. */
+.barres-divergents .barra{position:absolute;top:0;bottom:0;height:auto;display:block;width:var(--w);
+  background:var(--lavanda);border:1.5px solid var(--ink);border-radius:4px}
+.barres-divergents .positiu .barra{left:50%}
+.barres-divergents .negatiu .barra{right:50%}
 /* Un canvi de zero no dibuixa cap barra: un tros mínim al costat del zero es
    llegiria com un canvi petit, i no n'hi ha hagut cap. */
 .barres-divergents .zero .barra{display:none}
-.barres-divergents .marca-grup{position:absolute;top:-5px;left:var(--m);width:3px;height:26px;
+/* La marca del grup viu DINS del canal, centrada en vertical: sobresortint per
+   dalt i per baix es confonia amb el zero i muntava sobre la fila del costat. */
+.barres-divergents .marca-grup{position:absolute;top:2px;bottom:2px;left:var(--m);width:3px;
   margin-left:-1.5px;background:var(--ink-suau);border-radius:2px}
+/* La xifra i el «seus» comparteixen cel·la: així cada fila és una sola fila de
+   graella i la xifra queda alineada a la dreta amb totes les altres. */
+.barres-divergents .xifres{grid-column:3;display:flex;flex-direction:column;align-items:flex-end;gap:1px}
 .barres-divergents .xifra{font-family:var(--display);font-weight:900;font-size:1.05rem;text-align:right;
   font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em}
-.barres-divergents .del-grup{grid-column:3;font-size:.72rem;color:var(--ink-suau);font-weight:700;
+.barres-divergents .del-grup{font-size:.72rem;color:var(--ink-suau);font-weight:700;
   text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .divergents .mostra-zero{width:2px;height:14px;background:var(--ink)}
 .divergents .mostra-barra{height:12px;background:var(--lavanda);border:1.5px solid var(--ink)}
@@ -941,11 +1058,54 @@ export const GRAFICS_CSS = `
 .divergents .nomes-lectors:focus-within table{width:100%;border-collapse:collapse;font-size:.9rem}
 .divergents .nomes-lectors:focus-within th,.divergents .nomes-lectors:focus-within td{text-align:left;
   padding:6px 10px 6px 0;border-bottom:1px solid var(--vora)}
+/* En estret cada fila torna a ser la seva graella: l'etiqueta i la xifra a
+   dalt i el canal a sota, d'una vora a l'altra. Aquí el canal ocupa tota
+   l'amplada a totes les files, així que la igualtat de llargades i el zero
+   recte no depenen de compartir columnes. Amb la graella compartida, la
+   col·locació automàtica enviava la xifra a una fila per sota del canal. */
 @media (max-width:560px){
-  .barres-divergents li{grid-template-columns:minmax(0,1fr) auto}
-  .barres-divergents .canal{grid-column:1/-1}
-  .barres-divergents .del-grup{grid-column:2}
+  .barres-divergents{display:block}
+  .barres-divergents li{display:grid;grid-template-columns:minmax(0,1fr) auto;
+    gap:3px var(--e2);align-items:center;margin:0 0 12px}
+  .barres-divergents li:last-child{margin-bottom:0}
+  .barres-divergents .xifres{grid-column:2;grid-row:1}
+  .barres-divergents .canal{grid-column:1/-1;grid-row:2}
 }
+
+/* --- el regle de dispersió ------------------------------------------------ */
+/* Cada marca és un municipi col·locat entre el més baix i el més alt del grup.
+   La marca fa 14 px d'ample encara que la ratlla en faci 4: per sota d'això no
+   és un enllaç que es pugui tocar amb el dit. El contenidor es diu
+   «regle-dispersio» i no «regle» perquè la fitxa ja té un .regle —el de
+   percentatges— amb marges i alçades seus que aquí farien nosa. */
+.dispersio{margin:0 0 var(--e3)}
+.dispersio .titol{font-weight:800;font-size:.95rem;margin:0 0 10px;display:flex;
+  flex-wrap:wrap;gap:0 8px;align-items:baseline}
+.dispersio .regle-dispersio{position:relative;height:46px;border:2.5px solid var(--ink);border-radius:var(--r-s);
+  background:linear-gradient(90deg,var(--paper-2),var(--lavanda))}
+.dispersio .marca{position:absolute;left:var(--p);top:0;bottom:0;width:14px;margin-left:-7px}
+.dispersio .marca::before{content:"";position:absolute;left:5px;top:5px;bottom:5px;width:4px;
+  border-radius:2px;background:var(--ink);opacity:.5}
+.dispersio a.marca:hover::before,.dispersio a.marca:focus-visible::before{background:var(--coral-text);
+  opacity:1;left:4px;width:6px;top:2px;bottom:2px}
+/* La mediana surt de la caixa per dalt i per baix: ha de guanyar visualment a
+   les 900 marques d'una comarca gran sense pintar-se d'un altre color. */
+.dispersio .mig{position:absolute;left:var(--p);top:-7px;bottom:-7px;width:8px;margin-left:-4px;
+  background:var(--coral);border:2px solid var(--ink);border-radius:4px}
+/* «Tu ets aquí»: quan el regle porta la marca del municipi de la fitxa, el
+   coral és per a ell —és el color que la casa hi reserva— i la mediana passa
+   a paper, perquè no hi hagi dues marques de coral dient coses diferents. */
+.dispersio .amb-aquest .mig{background:var(--paper-2)}
+.dispersio .marca.aquest{z-index:1}
+.dispersio .marca.aquest::before{background:var(--coral);opacity:1;left:3px;width:8px;top:-5px;bottom:-5px;
+  border:2px solid var(--ink);border-radius:4px}
+.dispersio .extrems{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:var(--e1);
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.dispersio .extrems li{display:flex;flex-direction:column;gap:1px}
+.dispersio .cap{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--ink-suau)}
+.dispersio .extrems b{font-family:var(--display);font-weight:900;font-size:1.1rem;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 
 /* --- una amplada, un dibuix ---------------------------------------------- */
 /* De les sèries en surten dos dibuixos i se n'ensenya un. Un SVG no pot canviar

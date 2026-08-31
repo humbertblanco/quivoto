@@ -8,6 +8,7 @@ import { slugify } from "../lib/text";
 import { carregaCarrecsAlcaldia, carregaPleDelRegistre, resolAlcaldia } from "./alcaldia";
 import { sobreColor } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { regleDispersio } from "./grafics";
 import { icona } from "./icones";
 import { capsaCami, geometria, projecta } from "./mapa";
 import { sigla } from "./sigla";
@@ -1146,39 +1147,18 @@ function renderDispersio(
   valors: readonly { slug: string; name: string; value: number }[],
   total: number,
 ): string {
-  // Amb tres municipis no hi ha dispersió, hi ha tres xifres: val més dir-les.
-  if (valors.length < 4) return "";
-  const ordenats = [...valors].sort((a, b) => a.value - b.value);
-  const baix = ordenats[0]!;
-  const alt = ordenats[ordenats.length - 1]!;
-  if (alt.value === baix.value) return "";
-  const mig = medianOf(ordenats.map((v) => v.value));
-  // Del 4 % al 96 % i no de 0 a 100: la marca fa 14 px i als extrems mitja
-  // marca quedava fora de la caixa arrodonida.
-  const on = (v: number): string =>
-    (4 + (92 * (v - baix.value)) / (alt.value - baix.value)).toFixed(2);
-  const euros = (v: number): string => `${number(Math.round(v))} €`;
-
-  const marques = ordenats
-    .map(
-      (v) => `<a class="marca" style="--p:${on(v.value)}%" href="../../m/${escape(v.slug)}/"
-      ><span class="nomes-lectors">${escape(v.name)}, ${euros(v.value)}</span></a>`,
-    )
-    .join("");
-
-  return `<figure class="dispersio">
-  <figcaption class="titol">${escape(titol)}
-    <span class="secundari">${valors.length} de ${total} ${plural(valors.length, "municipi amb dada", "municipis amb dada")}</span></figcaption>
-  <div class="regle">${mig === null ? "" : `<i class="mig" style="--p:${on(mig)}%"></i>`}${marques}</div>
-  <ul class="extrems">
-    <li><span class="cap">El més baix</span>
-      <a href="../../m/${escape(baix.slug)}/">${escape(baix.name)}</a><b>${euros(baix.value)}</b></li>
-    <li><span class="cap">La mediana d'aquí</span>
-      <span class="secundari">el municipi del mig</span><b>${mig === null ? "—" : euros(mig)}</b></li>
-    <li><span class="cap">El més alt</span>
-      <a href="../../m/${escape(alt.slug)}/">${escape(alt.name)}</a><b>${euros(alt.value)}</b></li>
-  </ul>
-</figure>`;
+  // El regle és el compartit de `grafics.ts` —la fitxa municipal el dibuixa
+  // igual—; aquí només hi va el que és de la comarca: els euros, el camí a
+  // les fitxes i el recompte del peu del títol.
+  return regleDispersio(
+    titol,
+    valors.map((v) => ({ valor: v.value, nom: v.name, slug: v.slug })),
+    {
+      format: (v) => `${number(Math.round(v))} €`,
+      base: "../../",
+      quants: `${valors.length} de ${total} ${plural(valors.length, "municipi amb dada", "municipis amb dada")}`,
+    },
+  );
 }
 
 /** Les dues comparacions internes que tenim en euros: la renda i el sou. */
@@ -1280,30 +1260,9 @@ const COMARCA_CSS = TERRITORI_CSS + GLOSSARI_CSS + `
 .mapa-comarca figcaption{font-size:.8rem;color:var(--ink-suau);line-height:1.4;margin-top:var(--e1)}
 .mapa-comarca figcaption a{font-weight:800}
 
-/* La dispersió: cada marca és un municipi col·locat entre el més baix i el més
-   alt de la comarca. La marca fa 14 px d'ample encara que la ratlla en faci 4:
-   per sota d'això no és un enllaç que es pugui tocar amb el dit. */
-.dispersio{margin:0 0 var(--e3)}
-.dispersio .titol{font-weight:800;font-size:.95rem;margin:0 0 10px;display:flex;
-  flex-wrap:wrap;gap:0 8px;align-items:baseline}
-.dispersio .regle{position:relative;height:46px;border:2.5px solid var(--ink);border-radius:var(--r-s);
-  background:linear-gradient(90deg,var(--paper-2),var(--lavanda))}
-.dispersio .marca{position:absolute;left:var(--p);top:0;bottom:0;width:14px;margin-left:-7px}
-.dispersio .marca::before{content:"";position:absolute;left:5px;top:5px;bottom:5px;width:4px;
-  border-radius:2px;background:var(--ink);opacity:.5}
-.dispersio .marca:hover::before,.dispersio .marca:focus-visible::before{background:var(--coral-text);
-  opacity:1;left:4px;width:6px;top:2px;bottom:2px}
-/* La mediana surt de la caixa per dalt i per baix: ha de guanyar visualment a
-   les 900 marques d'una comarca gran sense pintar-se d'un altre color. */
-.dispersio .mig{position:absolute;left:var(--p);top:-7px;bottom:-7px;width:8px;margin-left:-4px;
-  background:var(--coral);border:2px solid var(--ink);border-radius:4px}
-.dispersio .extrems{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
-.dispersio .extrems li{display:flex;flex-direction:column;gap:1px}
-.dispersio .cap{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--ink-suau)}
-.dispersio .extrems b{font-family:var(--display);font-weight:900;font-size:1.1rem;
-  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+/* La dispersió («I entre els seus municipis») viu a grafics.ts: el mateix
+   regle es dibuixa també a la fitxa municipal, i el seu CSS viatja amb ell
+   dins de GRAFICS_CSS, que aquest full ja porta via RADIOGRAFIA_CSS. */
 
 /* Qui hi mana, a la llista de municipis: la cara i la pastilla del partit. El
    retrat hi va a 34 px i no a 44 perquè són fins a 68 files seguides. */

@@ -509,6 +509,9 @@ details.nota > .serie{font-size:1rem}
    dels diners, on l'etiqueta penja de la marca i pot anar al 94 % del recorregut. */
 .participacio .regle,.paritat .regle{margin:16px 22px 2px}
 .participacio .comparativa,.paritat .comparativa{font-size:.78rem;line-height:1.35;color:var(--ink-suau)}
+/* El regle de dispersió del grup va sota les targetes de participació i ha de
+   respirar: sense marge, el seu títol tocava la vora de la targeta de sobre. */
+.participacio + .dispersio{margin-top:var(--e3)}
 .paritat .etq{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-suau)}
 .gran{font-family:var(--display);font-weight:900;font-size:2.1rem;line-height:1;letter-spacing:-.03em}
 /* Una xifra de set dígits («2.416.005») no cap en una targeta de mòbil i
@@ -869,6 +872,15 @@ details.nota > .serie{font-size:1rem}
 .joc-banda .pastilles-context a:hover{background:#1E1B2E;color:#FBF7EE}
 .joc-banda .pastilles-context a:hover span{color:inherit}
 @media (prefers-reduced-motion:reduce){.joc-banda .boto-joc{transition:none}}
+/* Les pastilles de la banda del joc a un mòbil: 2+2 i no una columna de
+   quatre, que era mitja pantalla de caixes blanques. Dins de la banda el
+   mínim general de 160 px no hi cap mai —la mascota ja es menja 80— i per
+   això es fixen dues columnes i es rebaixa el coixí. */
+@media (max-width:620px){
+  .joc-banda .tires{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .joc-banda .tires > li{padding:12px}
+  .joc-banda .tires .xifra{font-size:1.4rem}
+}
 @media (max-width:560px){
   .joc-banda{grid-template-columns:64px minmax(0,1fr);column-gap:var(--e2);padding:var(--e2)}
   .joc-banda .papereta{width:64px;height:75px}
@@ -881,10 +893,14 @@ details.nota > .serie{font-size:1rem}
    la lletra petita. La graella s'omple amb les que hi ha: cinc caben en una
    fila a 900 px i en dues a un telèfon. */
 .tires{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--e2);align-items:start}
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--e2)}
+/* Les capses d'una mateixa fila fan la mateixa alçada —l'estirament per
+   defecte de la graella— i el peu es queda enganxat a baix: l'espai que sobra
+   queda entre la xifra i el peu, no penjant sota una capsa més curta. */
 .tires > li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:3px;min-width:0}
-.tires > li > a{display:flex;flex-direction:column;gap:3px;text-decoration:none;color:inherit}
+.tires > li > a{display:flex;flex-direction:column;gap:3px;text-decoration:none;color:inherit;flex:1 1 auto}
+.tires .peu:last-child{margin-top:auto}
 .tires .etq{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
   color:var(--ink-suau);line-height:1.25}
 .tires .xifra{font-family:var(--display);font-weight:900;font-size:1.7rem;line-height:1.05;
@@ -1126,9 +1142,12 @@ h2.amb-icona .icona{width:40px;height:40px;flex:0 0 auto}
 /* Quatre targetes en tres columnes deixen la darrera fila amb una sola i dos
    forats al costat, que és el que més crida l'atenció de tot el bloc. Amb la
    mida mínima més gran en surten dues columnes i les quatre queden quadrades. */
-/* Les targetes sense espurna —les que no tenen prou anys de sèrie— s'estiraven
-   fins a l'alçada de la que en té, i hi quedava un pam de targeta buida. */
-.gent,.origens,.preus{align-items:start}
+/* Les capses d'una fila fan totes la mateixa alçada. Havien anat amb
+   «align-items:start» perquè una targeta sense espurna no s'estirés buida;
+   el resultat eren capses desiguals de costat, que és pitjor de llegir: ara
+   s'estiren totes, i el que sobra queda dins de la targeta amb el darrer peu
+   —i l'enllaç de la font, que ja porta «margin-top:auto»— enganxat a baix. */
+.gent .sub:last-child,.origens .sub:last-child,.preus .sub:last-child{margin-top:auto}
 .gent{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
 .origens{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
 /* Les targetes de «Què costa el govern», «Què contracta» i «Quant fa que

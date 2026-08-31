@@ -7,6 +7,7 @@ import {
   escalaDivergent,
   marquesEix,
   pendent,
+  regleDispersio,
   serieTemporal,
   type BandaGrup,
   type FilaDivergent,
@@ -624,6 +625,9 @@ describe("barresDivergents", () => {
 
   it("la xifra va sempre escrita al costat, amb el signe i la unitat", () => {
     const html = barresDivergents(files, opcions);
+    // La xifra i el «seus» comparteixen cel·la: cada fila és una sola fila de
+    // graella i totes les xifres queden alineades a la mateixa columna.
+    expect(html).toContain('<span class="xifres"><b class="xifra">');
     expect(html).toContain("+13,7 €/hab");
     expect(html).toContain("−20,0 €/hab");
     expect(html).toContain("seus +8,1 €/hab");
@@ -662,8 +666,77 @@ describe("barresDivergents", () => {
 
   it("el CSS porta la regla del zero, de la barra i de la marca del grup", () => {
     expect(GRAFICS_CSS).toContain(".barres-divergents .zero .barra{display:none}");
-    expect(GRAFICS_CSS).toContain(".barres-divergents .positiu .barra{left:50%");
-    expect(GRAFICS_CSS).toContain(".barres-divergents .negatiu .barra{right:50%");
-    expect(GRAFICS_CSS).toContain(".barres-divergents .marca-grup{position:absolute;top:-5px;left:var(--m)");
+    expect(GRAFICS_CSS).toContain(".barres-divergents .positiu .barra{left:50%}");
+    expect(GRAFICS_CSS).toContain(".barres-divergents .negatiu .barra{right:50%}");
+    // La marca del grup viu dins del canal, centrada, no muntada per sobre.
+    expect(GRAFICS_CSS).toContain(".barres-divergents .marca-grup{position:absolute;top:2px;bottom:2px;left:var(--m)");
+  });
+
+  it("totes les files comparteixen una sola graella: cap canal d'una llargada diferent", () => {
+    // Amb una graella per <li>, la columna de l'etiqueta s'amidava fila a fila
+    // i el zero feia esses; amb els <li> com a «display:contents» totes les
+    // files són a les mateixes tres columnes i el zero és una vertical recta.
+    expect(GRAFICS_CSS).toContain(".barres-divergents li{display:contents}");
+    expect(GRAFICS_CSS).toContain(".barres-divergents{list-style:none;margin:0;padding:0;display:grid;");
+  });
+});
+
+describe("regleDispersio", () => {
+  const municipis = [
+    { valor: 11_000, nom: "Poble 0", slug: "poble-0" },
+    { valor: 14_000, nom: "Poble 1", slug: "poble-1" },
+    { valor: 16_000, nom: "Poble 2", slug: "poble-2" },
+    { valor: 24_000, nom: "Poble 3", slug: "poble-3" },
+  ];
+  const opcions = { format: euros, base: "../../", quants: "4 de 6 municipis amb dada" };
+
+  it("no dibuixa una dispersió amb tres xifres ni quan totes són iguals", () => {
+    expect(regleDispersio("Renda", municipis.slice(0, 3), opcions)).toBe("");
+    expect(regleDispersio("Renda", municipis.map((m) => ({ ...m, valor: 9 })), opcions)).toBe("");
+  });
+
+  it("una marca per municipi, com a enllaç a la seva fitxa, del 4 % al 96 %", () => {
+    const html = regleDispersio("Renda neta per persona", municipis, opcions);
+    expect(html).toContain('class="marca" style="--p:4.00%" href="../../m/poble-0/"');
+    expect(html).toContain("--p:96.00%");
+    // La dada sencera hi és per a qui llegeix amb veu: qui i quant.
+    expect(html).toContain("Poble 0, 11.000 €");
+  });
+
+  it("el més baix, la mediana i el més alt van sempre escrits a sota", () => {
+    const html = regleDispersio("Renda neta per persona", municipis, opcions);
+    expect(html).toContain("El més baix");
+    expect(html).toContain("El més alt");
+    // La mediana de quatre valors és la mitjana dels dos del mig: 15.000.
+    expect(html).toContain("15.000 €");
+    expect(html).toContain("4 de 6 municipis amb dada");
+  });
+
+  it("sense slug la marca no és cap enllaç: la fitxa no sap de qui és cada valor", () => {
+    const punts = municipis.map(({ valor }) => ({ valor, nom: "" }));
+    const html = regleDispersio("Participació", punts, { format: euros });
+    expect(html).not.toContain("<a");
+    expect(html).toContain('<i class="marca"');
+  });
+
+  it("la marca d'«aquest» es pinta a part i la mediana li cedeix el coral", () => {
+    const punts = [
+      { valor: 11_000, nom: "" },
+      { valor: 14_000, nom: "" },
+      { valor: 16_000, nom: "aquest municipi", aquest: true },
+      { valor: 24_000, nom: "" },
+    ];
+    const html = regleDispersio("Participació", punts, { format: euros });
+    expect(html).toContain('class="marca aquest"');
+    expect(html).toContain('class="regle-dispersio amb-aquest"');
+    // El coral és del «tu ets aquí»: la mediana passa a paper per no competir.
+    expect(GRAFICS_CSS).toContain(".dispersio .amb-aquest .mig{background:var(--paper-2)}");
+  });
+
+  it("escapa el que ve de la base de dades", () => {
+    const bruts = municipis.map((m, i) => (i === 0 ? { ...m, nom: '<script>alert("x")</script>' } : m));
+    const html = regleDispersio("Renda", bruts, opcions);
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
   });
 });

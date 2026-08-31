@@ -518,7 +518,7 @@ function fitxa(over: Partial<RadiografiaData> = {}): RadiografiaData {
     residus: residus(), habitatge: null,
     poblacio: poblacio(), riquesa: null, criminalitat: null, preuAigua: aigua(), rebutIbi: ibi(), despesaProgrames: despesa(),
     costGovern: null, transparenciaRetribucions: null, carrecsAcumulats: null, contractacio: null,
-    retribucions: null, sousDiputacions: null, imatges: null,
+    retribucions: null, sousDiputacions: null, sousConsells: null, imatges: null,
     continuitat: null, votPerdut: null, ordenances: null, cartipas: null, organismes: null,
     amb: null, participation: [], issues: [], generatedAt: "29 d'agost del 2026",
     ...over,
@@ -1301,6 +1301,50 @@ describe("què costa el govern, i què se'n pot saber", () => {
     expect(nomes).toContain("90.940 €");
   });
 
+  it("els consells comarcals (J30) entren com les diputacions: per nom i amb l'import de qui el paga", () => {
+    const font = {
+      nom: "Consell Comarcal del Baix Llobregat, seu electrònica",
+      url: "https://www.elbaixllobregat.cat/transparencia",
+      format: "html", llicencia: "", consultat: "2026-08-31",
+    };
+    const consells = {
+      persones: [
+        {
+          nom: "EVA MARIA MARTINEZ MORALES", carrecMunicipal: "Regidora", alcaldia: false,
+          nomAlConsell: "Eva M. Martínez Morales",
+          consell: {
+            ens: "Consell Comarcal del Baix Llobregat", tipus: "consell comarcal", carrec: "Presidenta",
+            dedicacio: "dedicació exclusiva", retribucioAnualBruta: 47_150, maximPerAssistencies: null,
+            motiu: null, font, metode: "nom",
+          },
+        },
+      ],
+      alcaldia: null,
+      catalunya: { consellersQueTambeSonRegidors: 900, ambImportPublicat: 40, nomsAmbigusDescartats: 3, consultat: "2026-08-31" },
+      advertiment: "Cada import és el que publica el consell comarcal que el paga, i només ell.",
+    } as NonNullable<RadiografiaData["sousConsells"]>;
+    const html = renderSous(null, null, null, null, undefined, null, null, consells);
+    expect(html).toContain("Qui té un càrrec en un altre ens");
+    expect(html).toContain("Consell Comarcal del Baix Llobregat");
+    expect(html).toContain("47.150 €");
+    expect(html).toContain("retribució anual bruta");
+    expect(html).toContain("https://www.elbaixllobregat.cat/transparencia");
+    // I es fusiona amb la fila de J14 del mateix ens, en comptes de duplicar-la.
+    const ac = acumulats();
+    // Només la persona del cas: el fixture compartit en porta més i aquí
+    // comptem targetes.
+    ac.persones = [ac.persones[0]!];
+    ac.persones[0]!.altres = [{
+      ens: "Consell Comarcal del Baix Llobregat", tipus: "consell comarcal", carrec: "Consellera",
+      retribucio: null, senseRetribucioPublicada: { motiu: "no publica les retribucions", font: { nom: "J14", url: "https://example.org/", consultat: "2026-08-30" } },
+    }];
+    ac.persones[0]!.nom = "EVA MARIA MARTINEZ MORALES";
+    const fusionat = renderSous(null, null, ac, null, undefined, null, null, consells);
+    expect(fusionat.match(/class="cap-persona"/g)?.length).toBe(1);
+    expect(fusionat).toContain("47.150 €");
+    expect(fusionat).not.toContain("no publica les retribucions");
+  });
+
   it("el nom s'escriu com l'escriu la seu electrònica, amb els seus accents", () => {
     const seu = [{ nom: "Marta Farrés Falgueras", carrec: "Alcaldessa", grup: "Grup Municipal del PSC", equipGovern: true, foto: null, fotoPetita: null, fitxa: null }];
     const ac = acumulats();
@@ -1690,9 +1734,29 @@ describe("la fitxa sencera", () => {
 
     // I una de plena —ple, comptes, govern, història, tipus— que és la que
     // s'assembla a una fitxa de debò i la que val per mesurar-ne el pes.
+    // La despesa per programes porta prou files perquè les barres divergents
+    // surtin amb la llista visible i la plegada, que és com es miren de debò.
+    const dPlena = despesa();
+    const programaPlena = (codi: string, nom: string, inici: number, final: number, grup: number | null) =>
+      ({
+        codi, nom, nomOrigen: nom, perque: "", relacionatAmb: null, serie: [], darrer: null,
+        mandat: variacio(2023, 2025, inici, final),
+        mandatDelGrup: grup === null ? null : { fins: 2025, diferencia: grup, percentual: null, municipis: 20 },
+        mandatAnterior: null, comparacio: null, cobertura: null,
+      }) as unknown as NonNullable<RadiografiaData["despesaProgrames"]>["programes"][number];
+    dPlena.programes.push(
+      programaPlena("011", "Pagar el deute", 60, 40, -3),
+      programaPlena("1301", "Policia local", 80, 83, 2.5),
+      programaPlena("3301", "Cultura", 30, 28, -1),
+      programaPlena("3401", "Esports", 20, 21.5, 0.5),
+      programaPlena("1650", "Enllumenat públic", 12, 12.4, 0.2),
+      programaPlena("2310", "Serveis socials", 90, 89.1, 4),
+      programaPlena("1710", "Parcs i jardins", 25, 32, 1),
+      programaPlena("9200", "Administració general", 200, 202.2, 3),
+    );
     const plena = renderRadiografia(
       fitxa({
-        finances: finances(), government: govern(), taxes: taxes(),
+        finances: finances(), government: govern(), taxes: taxes(), despesaProgrames: dPlena,
         results: { M20231: { totalVotes: 90_000, seats: 27, candidatures: [
           { sigles: "PSC-CP", brandId: "psc", color: null, votes: 40_000, seats: 14, share: 44.4 },
           { sigles: "ERC-AM", brandId: "erc", color: null, votes: 20_000, seats: 6, share: 22.2 },
@@ -1731,12 +1795,35 @@ describe("la fitxa sencera", () => {
       }),
       [],
       new Map([["sabadell", { jugable: true, quantes: 25 }]]),
+      // Les medianes amb els valors del grup: són el que fa sortir el regle de
+      // dispersió de la participació i l'histograma de la paritat a la plena.
+      {
+        participacio: {
+          M20231: {
+            mediana: 55.3, quants: 23, etiqueta: "de més de 50.000 habitants", percentil: 54,
+            valors: [
+              41.2, 44.9, 46.8, 48.1, 49.5, 50.2, 51.7, 52.4, 53.0, 53.8, 54.6, 55.3,
+              55.9, 56.6, 57.2, 58.4, 59.1, 60.3, 61.8, 63.0, 64.7, 67.9, 71.4,
+            ],
+          },
+        },
+        donesAlPle: {
+          mediana: 45.8, quants: 23, etiqueta: "de més de 50.000 habitants", percentil: 70,
+          valors: [
+            33.3, 36.4, 38.5, 40.0, 41.2, 42.9, 44.4, 45.0, 45.8, 46.2, 47.1, 47.6,
+            48.1, 48.6, 50.0, 50.0, 51.9, 52.0, 52.6, 53.8, 55.6, 57.7, 61.5,
+          ],
+        },
+      },
     );
     const camiPlena = join(dir, "sabadell-plena.html");
     writeFileSync(camiPlena, plena, "utf8");
     console.log(`fitxa de prova plena: ${camiPlena}`);
     expect(plena).toContain('class="ullada cinc"');
     expect(plena).toContain('class="ple-compacte"');
+    // El regle de dispersió de la participació hi és, amb el «tu ets aquí».
+    expect(plena).toContain('class="dispersio"');
+    expect(plena).toContain('class="marca aquest"');
   });
 
   it("cada enllaç de l'índex porta a una secció que existeix", () => {
@@ -1792,6 +1879,36 @@ describe("la mediana del grup", () => {
     const html = renderRadiografia(fitxa({ participation: participacio }));
     expect(html).toContain("60,0 %");
     expect(html).not.toContain("mediana dels");
+  });
+
+  it("amb els valors del grup dibuixa el regle de dispersió, amb el «tu ets aquí»", () => {
+    const html = renderRadiografia(fitxa({ participation: participacio }), [], new Map(), {
+      participacio: {
+        M20231: {
+          mediana: 51.5, quants: 10, etiqueta: "de més de 50.000 habitants", percentil: 88,
+          valors: [40, 45, 48, 50, 51.5, 53, 55, 58, 60, 62],
+        },
+      },
+      donesAlPle: null,
+    });
+    expect(html).toContain('class="dispersio"');
+    // El 60,0 % del municipi ja és dins dels valors del grup: es marca la seva
+    // marca, no se n'hi afegeix cap de nova que mouria la mediana.
+    expect(html).toContain('class="marca aquest"');
+    // I les tres xifres van escrites: una barra sola no és una dada llegible.
+    expect(html).toContain("El més baix");
+    expect(html).toContain("40,0 %");
+    expect(html).toContain("62,0 %");
+  });
+
+  it("sense els valors del grup no hi ha regle de dispersió, i res no peta", () => {
+    const html = renderRadiografia(fitxa({ participation: participacio }), [], new Map(), {
+      participacio: {
+        M20231: { mediana: 51.5, quants: 24, etiqueta: "de més de 50.000 habitants", percentil: 88, valors: [] },
+      },
+      donesAlPle: null,
+    });
+    expect(html).not.toContain('class="dispersio"');
   });
 });
 
@@ -2042,6 +2159,67 @@ describe("qui seu al ple: el recompte del govern", () => {
     expect(portada).toContain('href="regidor/marta-farres-falgueras/"');
     expect(html).toMatch(/<li class="persona alcaldia"><a href="regidor\/marta-farres-falgueras\//);
     expect(html).not.toMatch(/<li class="persona alcaldia"><a href="regidor\/pol-gibert-horcas\//);
+  });
+
+  it("«Vicealcalde» i «5aTta.Alcaldessa» no són l'alcaldia ni sense nom oficial", () => {
+    // Cardedeu, la Sénia, Viladecans: la regla local vella —«alcald» sense
+    // «tinent»— coronava el primer vicealcalde o la tinença escrita curta
+    // abans que la persona que de debò té l'alcaldia.
+    const councillors: RadiografiaData["councillors"] = [
+      { name: "NURIA VICE PRIMERA", role: "Vicealcalde", groupName: null, sigles: "ERC-AM", color: null, brandId: "erc", orderNum: 1 },
+      { name: "JOAN TINENCA CURTA", role: "5aTta.Alcaldessa", groupName: null, sigles: "ERC-AM", color: null, brandId: "erc", orderNum: 2 },
+      { name: "MARTA FARRES FALGUERAS", role: "Alcaldessa", groupName: null, sigles: "PSC-CP", color: null, brandId: "psc", orderNum: 3 },
+    ];
+    const html = renderRadiografia(fitxa({ councillors }));
+    expect(html).toMatch(/<li class="persona alcaldia"><a href="regidor\/marta-farres-falgueras\//);
+    expect(html).not.toMatch(/<li class="persona alcaldia"><a href="regidor\/nuria-vice-primera\//);
+    expect(html).not.toMatch(/<li class="persona alcaldia"><a href="regidor\/joan-tinenca-curta\//);
+  });
+
+  it("un nom oficial que no lliga amb cap fila no corona l'alcaldia vella del registre", () => {
+    // Tarrés: el relleu és a la font oficial però el registre encara marca
+    // l'anterior com a «Alcalde President», i el destacat queia sobre ell.
+    // Val més no destacar ningú que destacar qui ja no mana.
+    const councillors: RadiografiaData["councillors"] = [
+      { name: "POL GIBERT HORCAS", role: "Alcalde President", groupName: null, sigles: "PSC-CP", color: null, brandId: "psc", orderNum: 1 },
+      { name: "LLUIS MATAS FERRER", role: "Regidor", groupName: null, sigles: "ERC-AM", color: null, brandId: "erc", orderNum: 2 },
+    ];
+    const html = renderRadiografia(
+      fitxa({ councillors, government: { ...govern(14), mayorName: "Carla Nouvinguda Roca" } }),
+    );
+    const on = html.indexOf('id="regidors"');
+    const bloc = html.slice(on, html.indexOf("<section", on));
+    expect(bloc).not.toContain('class="persona alcaldia"');
+    // I el càrrec desfasat tampoc no s'escriu al costat de ningú.
+    expect(bloc).not.toContain("Alcalde President");
+  });
+
+  it("després d'un relleu, l'«Alcalde» vell del registre es calla al costat de l'alcaldia nova", () => {
+    const councillors: RadiografiaData["councillors"] = [
+      { name: "POL GIBERT HORCAS", role: "Alcalde", groupName: null, sigles: "PSC-CP", color: null, brandId: "psc", orderNum: 1 },
+      { name: "MARTA FARRES FALGUERAS", role: "Regidora", groupName: null, sigles: "PSC-CP", color: null, brandId: "psc", orderNum: 2 },
+    ];
+    const html = renderRadiografia(fitxa({ councillors, government: govern(14) }));
+    expect(html).toMatch(/<li class="persona alcaldia"><a href="regidor\/marta-farres-falgueras\//);
+    // La cara hi és, amb el nom; el títol vell, no: exculparia el relleu.
+    expect(html).toContain('title="Pol Gibert Horcas"');
+    expect(html).not.toContain('title="Pol Gibert Horcas · Alcalde"');
+  });
+
+  it("la seu no actualitzada que encara diu «Alcalde» de l'anterior: el títol vell es calla", () => {
+    // Castellgalí: el nom oficial mana —el relleu hi és— i el predecessor no
+    // pot continuar llegint-se «Alcalde» al costat de l'alcaldia nova.
+    const c = carrecs();
+    c.carrecs = [
+      carrec("Pol Gibert Horcas", "Alcalde", "Grup Municipal del PSC", true),
+      carrec("Marta Farrés Falgueras", "Regidora", "Grup Municipal del PSC", true),
+      carrec("Lluís Matas Ferrer", "Regidor", "Grup Municipal d'ERC", false),
+    ];
+    const html = renderRadiografia(fitxa({ carrecs: c, government: govern(2) }));
+    expect(html).toMatch(/<li class="persona alcaldia[^"]*"><a href="regidor\/marta-farres-falgueras\//);
+    expect(html).not.toMatch(/<li class="persona alcaldia[^"]*"><a href="regidor\/pol-gibert-horcas\//);
+    expect(html).not.toContain('title="Pol Gibert Horcas · Alcalde"');
+    expect(html).not.toContain('<span class="carrec">Alcalde</span>');
   });
 
   it("el ple compacte: una cara per regidoria, enllaçada a la seva fitxa, i el càrrec només a qui mana", () => {

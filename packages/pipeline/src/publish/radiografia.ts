@@ -9,7 +9,7 @@ import { sobreColor } from "./contrast";
 import { renderCriminalitat, type GrupCriminalitat } from "./criminalitat";
 import type { CriminalitatMetric } from "../jobs/j29-criminalitat";
 import type { MedianaGrup, MedianesMunicipi } from "./medianes";
-import { barresDivergents, distribucioGrup, escalaDivergent, serieTemporal, type FilaDivergent } from "./grafics";
+import { barresDivergents, distribucioGrup, escalaDivergent, regleDispersio, serieTemporal, type FilaDivergent } from "./grafics";
 import type { SeriesMunicipi } from "./series-grup";
 import type { Continuitat, PuntVolatilitat, VotPerdutElecció } from "../derive/trajectoria";
 import { hemicycle } from "./hemicycle";
@@ -17,7 +17,7 @@ import { icona } from "./icones";
 import { renderMapa, type PuntMapa } from "./mapa";
 import { assignaSlugs } from "./candidatura";
 import { adrecesRegidors } from "./regidor";
-import { resolAlcaldia } from "./alcaldia";
+import { esAlcaldia, resolAlcaldia } from "./alcaldia";
 import {
   dataCurta, delDia, elDia, nomLlegible, nomPreferit, nomsOficials, normalize, normalizePersonName, slugify,
 } from "../lib/text";
@@ -622,6 +622,41 @@ type SousDiputacionsMetric = {
 };
 
 /**
+ * El sou que publica el consell comarcal de cada conseller que també seu en
+ * aquest ple (J30). És el germà exacte de `SousDiputacionsMetric`: el mateix
+ * contracte —l'import el diu qui el paga, el màxim per assistències és un
+ * sostre i mai un sou— amb `consell` en comptes de `diputacio`.
+ */
+type SousConsellsMetric = {
+  persones: {
+    nom: string;
+    carrecMunicipal: string;
+    alcaldia: boolean;
+    /** El nom tal com l'escriu el consell, quan no és lletra per lletra el mateix. */
+    nomAlConsell: string | null;
+    consell: {
+      ens: string;
+      tipus: "consell comarcal";
+      carrec: string;
+      dedicacio: string | null;
+      retribucioAnualBruta: number | null;
+      maximPerAssistencies: number | null;
+      motiu: string | null;
+      font: { nom: string; url: string; format: string; llicencia: string; consultat: string };
+      metode: string;
+    };
+  }[];
+  alcaldia: SousConsellsMetric["persones"][number] | null;
+  catalunya: {
+    consellersQueTambeSonRegidors: number;
+    ambImportPublicat: number;
+    nomsAmbigusDescartats: number;
+    consultat: string;
+  };
+  advertiment: string;
+};
+
+/**
  * El que aquest ajuntament ha adjudicat, i amb quanta competència (J10).
  *
  * De tot el que hi ha aquí, la xifra que diu més no és el volum sinó **quantes
@@ -1089,7 +1124,42 @@ function renderTurnout(
    * `dades/`. Si algun dia torna, que sigui a un lloc on sigui l'única cosa
    * que hi ha, i no la tercera manera de dir el mateix.
    */
-  return `<ul class="participacio">${items.join("")}</ul>`;
+
+  /*
+   * El regle de dispersió del 23-M: una marca per municipi del grup, del que
+   * menys participació va tenir al que més, amb la mediana i «tu ets aquí».
+   * No repeteix cap dels regles de sobre: aquells diuen on és la mediana, i
+   * aquest ensenya el grup sencer —un percentil 70 d'un grup atapeït i un
+   * d'un grup partit en dos no volen dir el mateix. Només es pot dibuixar
+   * aquí perquè la participació és l'única mètrica de la fitxa que desa els
+   * valors del grup (`MedianaGrup.valors`); les marques van sense nom perquè
+   * la mediana no guarda de quin municipi és cada valor.
+   */
+  const darrera = ordered.find((r) => r.electionId === "M20231") ?? null;
+  const m2023 = medianes?.participacio["M20231"] ?? null;
+  const pct2023 =
+    darrera?.censusSize && darrera.voters ? (100 * darrera.voters) / darrera.censusSize : null;
+  let dispersio = "";
+  if (m2023 && pct2023 !== null && m2023.valors.length >= 4) {
+    // El municipi ja és dins de `valors`: no s'hi afegeix una segona vegada
+    // —mouria la mediana— sinó que es marca com a seva la marca més propera.
+    const marques: { valor: number; nom: string; aquest?: boolean }[] = m2023.valors.map((v) => ({
+      valor: v,
+      nom: "",
+    }));
+    let meva = 0;
+    for (let i = 1; i < marques.length; i++) {
+      if (Math.abs(marques[i]!.valor - pct2023) < Math.abs(marques[meva]!.valor - pct2023)) meva = i;
+    }
+    marques[meva] = { valor: marques[meva]!.valor, nom: "aquest municipi", aquest: true };
+    dispersio = regleDispersio("On cau entre els de la seva mida, el 2023", marques, {
+      format: (v) => percent(v),
+      quants: `els ${m2023.quants} municipis ${m2023.etiqueta}`,
+      etiquetaMediana: "La mediana del grup",
+      sotaMediana: "el municipi del mig",
+    });
+  }
+  return `<ul class="participacio">${items.join("")}</ul>${dispersio}`;
 }
 
 /** Una xifra amb la seva unitat. La fan servir l'indicador i la seva mediana. */
@@ -1708,9 +1778,6 @@ const inicialsDe = (nom: string): string =>
  * només serveix per escriure el càrrec de la portada i per al ple del registre
  * electoral, que no passa per `resolAlcaldia`; qui és l'alcaldia ho diu ell.
  */
-const esCarrecAlcaldia = (carrec: string | null | undefined): boolean =>
-  /alcald/i.test(carrec ?? "") && !/tinent|tinenta|d.alcald|adjunt/i.test(carrec ?? "");
-
 /**
  * El ple en una graella d'avatars, grup a grup.
  *
@@ -1825,7 +1892,9 @@ function renderPleCompacte(
       .sort((a, b) => (isMayor(b) ? 1 : 0) - (isMayor(a) ? 1 : 0))
       .map((c) => ({
         nom: c.nom,
-        carrec: c.carrec,
+        // Una seu no actualitzada encara diu «Alcalde» de qui ja no ho és:
+        // al costat de l'alcaldia que ha decidit `resolAlcaldia`, es calla.
+        carrec: esAlcaldia(c.carrec) && !isMayor(c) ? null : c.carrec,
         foto: c.fotoPetita,
         slug: adreces.get(c) ?? slugify(c.nom),
         alcaldia: isMayor(c),
@@ -1912,11 +1981,13 @@ function renderCouncillors(councillors: readonly Councillor[], government: Gover
   // L'alcaldia primer, i després per mida del grup: és l'ordre en què la gent
   // s'ho mira. Qui és l'alcaldia ho diu el nom de la font oficial, que està al
   // dia; el càrrec del registre és el del dia de la constitució del ple i,
-  // després d'un relleu, diria «Alcalde» de qui ja no ho és. Només quan el nom
-  // no lliga amb ningú es mira el càrrec, amb la mateixa regla que la seu.
+  // després d'un relleu, diria «Alcalde» de qui ja no ho és. El càrrec només
+  // decideix quan NO hi ha cap nom oficial: si n'hi ha un i no lliga amb cap
+  // fila, val més no destacar ningú que coronar l'alcaldia vella del registre,
+  // que és el que passava a Tarrés després del relleu.
   const nomOficial = government?.mayorName ? normalizePersonName(government.mayorName) : "";
   const pelNom = nomOficial === "" ? null : councillors.find((c) => normalizePersonName(c.name) === nomOficial) ?? null;
-  const isMayor = (c: Councillor): boolean => (pelNom ? c === pelNom : esCarrecAlcaldia(c.role));
+  const isMayor = (c: Councillor): boolean => (pelNom ? c === pelNom : nomOficial === "" && esAlcaldia(c.role));
   const ordered = [...groups.entries()].sort((a, b) => {
     const mayorA = a[1].some(isMayor) ? 1 : 0;
     const mayorB = b[1].some(isMayor) ? 1 : 0;
@@ -1933,7 +2004,9 @@ function renderCouncillors(councillors: readonly Councillor[], government: Gover
       .sort((a, b) => (isMayor(b) ? 1 : 0) - (isMayor(a) ? 1 : 0) || (a.orderNum ?? 99) - (b.orderNum ?? 99))
       .map((c) => ({
         nom: nomLlegible(c.name),
-        carrec: c.role,
+        // El càrrec «Alcalde» del dia de la constitució no es pot escriure al
+        // costat de l'alcaldia nova: davant d'un relleu es calla, i prou.
+        carrec: esAlcaldia(c.role) && !isMayor(c) ? null : c.role,
         foto: null,
         slug: adreces.get(c) ?? slugify(c.name),
         alcaldia: isMayor(c),
@@ -2156,6 +2229,7 @@ export type RadiografiaData = {
   retribucions: RetribucionsMetric | null;
   /** Qui del ple seu també a una diputació, i què en publica (J24). */
   sousDiputacions: SousDiputacionsMetric | null;
+  sousConsells: SousConsellsMetric | null;
   /** L'escut i la fotografia del poble, servits des de casa i amb crèdit (J26). */
   imatges: ImatgesMunicipi | null;
   /** El que s'ha adjudicat i amb quanta competència, de la PSCP (J10). */
@@ -3012,6 +3086,7 @@ export function renderSous(
   colorPer: (sigles: string | null) => string = () => "#8b8b8b",
   retribucions: RetribucionsMetric | null = null,
   diputacions: SousDiputacionsMetric | null = null,
+  consells: SousConsellsMetric | null = null,
 ): string {
   const parts: string[] = [];
 
@@ -3184,7 +3259,9 @@ export function renderSous(
    * mateixes persones i es fusionen aquí per nom normalitzat. Quan J24 porta
    * un import per a una fila que J14 tenia «sense import publicat», l'import
    * de J24 l'omple; quan porta un màxim per assistències, s'escriu com a
-   * sostre. Una persona que només és a J24 hi entra com una fila més.
+   * sostre. Una persona que només és a J24 hi entra com una fila més, i J30
+   * —els consells comarcals llegits directament de la seva seu— hi entra amb
+   * la mateixa fusió.
    */
   type Altre = CarrecsAcumulatsMetric["persones"][number]["altres"][number];
   type FilaAltre = Altre & { sostre?: { euros: number; font: { nom: string; url: string } } | null };
@@ -3229,6 +3306,41 @@ export function renderSous(
         retribucio,
         senseRetribucioPublicada:
           retribucio || sostre ? null : { motiu: d.motiu ?? "la diputació no en publica cap import", font },
+        sostre,
+      });
+    }
+    perClau.set(clau, fila);
+  }
+  for (const p of consells?.persones ?? []) {
+    const d = p.consell;
+    const clau = normalizePersonName(p.nom);
+    const fila = perClau.get(clau) ?? { nom: p.nom, carrecMunicipal: p.carrecMunicipal, alcaldia: p.alcaldia, altres: [] };
+    const font = { nom: d.font.nom, url: d.font.url, consultat: d.font.consultat };
+    const retribucio =
+      d.retribucioAnualBruta !== null
+        ? { anualBrut: d.retribucioAnualBruta, concepte: "retribució anual bruta", dedicacio: d.dedicacio, font }
+        : null;
+    const sostre = d.maximPerAssistencies !== null ? { euros: d.maximPerAssistencies, font } : null;
+    const mateix =
+      fila.altres.find((a) => normalize(a.ens) === normalize(d.ens)) ??
+      fila.altres.find((a) => /consell comarcal/i.test(a.tipus) || /consell comarcal/i.test(a.ens));
+    if (mateix) {
+      if (!mateix.retribucio && retribucio) {
+        mateix.retribucio = retribucio;
+        mateix.senseRetribucioPublicada = null;
+      }
+      if (sostre) {
+        mateix.sostre = sostre;
+        if (!mateix.retribucio) mateix.senseRetribucioPublicada = null;
+      }
+    } else {
+      fila.altres.push({
+        ens: d.ens,
+        tipus: d.tipus,
+        carrec: d.carrec,
+        retribucio,
+        senseRetribucioPublicada:
+          retribucio || sostre ? null : { motiu: d.motiu ?? "el consell comarcal no en publica cap import", font },
         sostre,
       });
     }
@@ -4007,6 +4119,15 @@ function renderMandat(data: RadiografiaData): string {
  *
  * La barra va sempre de pitjor a millor **dins del grup**, no de menys a més:
  * al deute, menys és millor, i pintar-ho al revés faria llegir el gràfic girat.
+ *
+ * Cada fila voldria portar, sota la barra, el regle de dispersió de
+ * `grafics.ts` amb una marca per municipi del grup. Avui no pot:
+ * `PeerComparison` només desa mediana, percentil, rang i quota, no els valors
+ * del grup. Perquè el regle hi càpiga caldria que J8 desés per indicador la
+ * llista ordenada de valors del grup —com fa `MedianaGrup.valors` amb la
+ * participació— i que arribés fins aquí dins de `finances.comparison`. Mentre
+ * no hi sigui, el regle només es dibuixa on els valors existeixen de debò: a
+ * la participació.
  */
 function renderComQueda(comparacio: readonly PeerComparison[], grup: { label: string; size: number } | null): string {
   const amb = comparacio.filter((c) => c.percentile !== null);
@@ -4722,6 +4843,7 @@ export function renderRadiografia(
     colorPerGrup,
     data.retribucions,
     data.sousDiputacions,
+    data.sousConsells,
   );
   const contractacio = renderContractacio(data.contractacio);
   const escombraries = renderEscombraries(data.despesaProgrames, data.residus);
@@ -5026,7 +5148,7 @@ ${cercador(BASE)}
           // Quan la persona s'ha trobat pel nom oficial i no pel càrrec, el
           // càrrec que en diu la seu electrònica és el d'abans del relleu —o
           // cap— i escriure'l seria dir que no ho és.
-          alcaldia.carrec && esCarrecAlcaldia(alcaldia.carrec.carrec) ? alcaldia.carrec.carrec : "Alcaldia",
+          alcaldia.carrec && esAlcaldia(alcaldia.carrec.carrec) ? alcaldia.carrec.carrec : "Alcaldia",
           government?.mayorSigles ?? null,
           mayorColor,
           alcaldia.foto,
@@ -5114,6 +5236,7 @@ export async function loadRadiografia(db: Db, slug: string, generatedAt: string)
     carrecsAcumulats: (byKind.get("carrecsAcumulats") ?? null) as CarrecsAcumulatsMetric | null,
     retribucions: (byKind.get("retribucions") ?? null) as RetribucionsMetric | null,
     sousDiputacions: (byKind.get("sousDiputacions") ?? null) as SousDiputacionsMetric | null,
+    sousConsells: (byKind.get("sousConsells") ?? null) as SousConsellsMetric | null,
     // Sense J26 executat no hi ha fila i l'escut no surt: la fitxa es construeix igual.
     imatges: (byKind.get("imatges") ?? null) as ImatgesMunicipi | null,
     contractacio: (byKind.get("contractacio") ?? null) as ContractacioMetric | null,
