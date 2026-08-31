@@ -66,6 +66,7 @@ La publicació completa (`publica tots`) regenera els 947 municipis, índexs, fi
 La base de dades municipal i el pipeline de fonts ja funcionen. Les prioritats següents són normalitzar el registre de fonts i evidències, mesurar cobertura camp a camp, ampliar actes/contractació/subvencions i convertir els conjunts de preguntes verificats en una brúixola municipal completa.
 
 Consulta el mètode a [`docs/METODOLOGIA.md`](docs/METODOLOGIA.md) i el pla de dades a [`docs/PLA-DADES-2027.md`](docs/PLA-DADES-2027.md).
+Les fonts candidates per ampliar les fitxes personals estan inventariades a [`docs/FONTS-PERSONES.md`](docs/FONTS-PERSONES.md).
 
 ## Llicència
 
