@@ -20,14 +20,20 @@ import {
 } from "./j29-criminalitat";
 
 /**
- * Les tres mostres de CSV són files copiades **literalment** dels fitxers del
- * Ministeri, baixades el 30 d'agost del 2026:
+ * Les cinc mostres de CSV són files copiades **literalment** dels fitxers del
+ * Ministeri, baixades el 30 i el 31 d'agost del 2026:
  *
  *   · 20254: balanç del 4t trimestre del 2025 (1509012.px), amb codi INE.
  *   · 20234: el del 2023 (1309012.px), sense codi («-Municipio de Badalona»)
  *     i amb el període «enero--diciembre 2023» de doble guionet, tal com surt.
  *   · 20204: el del 2020 (1009012.px), esquema vell de tipologies
  *     («1.-Homicidios…», «Resto de infracciones penales») i llindar de 30.000.
+ *   · 20174: el del 2017 (79012.px), el mateix esquema vell però sense el
+ *     «Resto de infracciones penales» i amb «Enero-diciembre» en majúscula.
+ *   · 20164: el del 2016 (69012.px), el primer que té taula de municipis:
+ *     vuit tipologies pròpies amb «(EU)» que es mapen per etiqueta i no pel
+ *     número, «Enero-Diciembre» amb dues majúscules, capitals de província i
+ *     majors de 50.000, i Madrid sense capçalera «Provincia de» al davant.
  *
  * L'índex és el retall de la pàgina real amb les tres taules del balanç.
  */
@@ -38,6 +44,8 @@ const INDEX_2025 = llegeix("criminalitat-index-20254.html");
 const BALANC_2025 = parseCsvBalanc(llegeix("criminalitat-balanc-20254.csv"));
 const BALANC_2023 = parseCsvBalanc(llegeix("criminalitat-balanc-20234.csv"));
 const BALANC_2020 = parseCsvBalanc(llegeix("criminalitat-balanc-20204.csv"));
+const BALANC_2017 = parseCsvBalanc(llegeix("criminalitat-balanc-20174.csv"));
+const BALANC_2016 = parseCsvBalanc(llegeix("criminalitat-balanc-20164.csv"));
 
 describe("taulaMunicipisDelIndex", () => {
   it("troba la taula de municipis i el llindar que declara el títol", () => {
@@ -110,6 +118,20 @@ describe("clauTipologia", () => {
   it("el «Resto de infracciones penales» vell no es mapa: barrejava convencional i ciber", () => {
     expect(clauTipologia("Resto de infracciones penales")).toBeNull();
   });
+
+  it("l'esquema del 2016 es resol per l'etiqueta sencera: pel número barrejaria sèries", () => {
+    expect(clauTipologia("1.-DELITOS Y FALTAS (EU)")).toBe("total");
+    expect(clauTipologia("2.-HOMICIDIOS DOLOSOS Y ASESINATOS CONSUMADOS (EU)")).toBe("homicidis");
+    // La prova que el número no hi mana: el mateix 5 davant, dues tipologies.
+    expect(clauTipologia("5.-SUSTRACCIÓN VEHÍCULOS A MOTOR (EU)")).toBe("vehicles");
+    expect(clauTipologia("5.-Delitos contra la libertad e indemnidad sexual")).toBe("sexuals");
+    // Només domicilis: la 7.1, no la 7 sencera, que hi afegeix establiments.
+    expect(clauTipologia("4.-ROBOS CON FUERZA EN DOMICILIOS (EU)")).toBe("robatoris-domicili");
+  });
+
+  it("els danys del 2016 no es mapen: pel número (7) anirien als robatoris amb força", () => {
+    expect(clauTipologia("7.-DAÑOS")).toBeNull();
+  });
 });
 
 describe("parseCsvBalanc", () => {
@@ -149,10 +171,26 @@ describe("parseCsvBalanc", () => {
     const resto = BALANC_2020.find((f) => f.etiqueta === "Resto de infracciones penales");
     expect(resto?.clau).toBeNull();
   });
+
+  it("l'esquema del 2016: dues majúscules al període, tipologies «(EU)» i Madrid sense província", () => {
+    const total2015 = BALANC_2016.find((f) => f.nom === "Badalona" && f.clau === "total" && f.any === 2015);
+    expect(total2015?.fets).toBe(10_974);
+    expect(total2015?.provincia).toBe("BARCELONA");
+    const vehicles = BALANC_2016.find((f) => f.nom === "Badalona" && f.clau === "vehicles" && f.any === 2015);
+    expect(vehicles?.fets).toBe(244);
+    // Madrid no té capçalera «Provincia de» i hereta l'última que hi ha hagut
+    // (aquí València; al fitxer real, Pontevedra): com que mai no és una
+    // província catalana, es descarta igualment sense fer soroll.
+    const madrid = BALANC_2016.find((f) => f.nom === "Madrid" && f.clau === "total" && f.any === 2015);
+    expect(madrid?.provincia).toBe("VALENCIA/VALÈNCIA");
+    expect(BALANC_2016.some((f) => f.nom.includes("Mallorca"))).toBe(false);
+  });
 });
 
 describe("ajuntaBalancos", () => {
   const ajuntat = ajuntaBalancos([
+    { any: 2016, files: BALANC_2016 },
+    { any: 2017, files: BALANC_2017 },
     { any: 2020, files: BALANC_2020 },
     { any: 2023, files: BALANC_2023 },
     { any: 2025, files: BALANC_2025 },
@@ -160,15 +198,35 @@ describe("ajuntaBalancos", () => {
 
   it("una sèrie per municipi i tipologia, creuada sempre pel codi INE", () => {
     const badalona = ajuntat.perIne5.get("08015")!.get("total")!;
-    expect([...badalona.keys()].sort()).toEqual([2019, 2020, 2022, 2023, 2024, 2025]);
+    expect([...badalona.keys()].sort()).toEqual([2015, 2016, 2017, 2019, 2020, 2022, 2023, 2024, 2025]);
+    expect(badalona.get(2015)).toBe(10_974);
     expect(badalona.get(2019)).toBe(12_341);
     expect(badalona.get(2025)).toBe(14_901);
   });
 
+  it("quan el mateix any surt a dos esquemes, guanya el balanç més nou: el 2016 el diu el del 2017", () => {
+    // El fitxer del 2016 dona 10.684 fets del 2016 a Badalona; el del 2017,
+    // revisat, 10.690. Del balanç del 2016 només en sobreviu l'any 2015.
+    expect(ajuntat.perIne5.get("08015")!.get("total")!.get(2016)).toBe(10_690);
+  });
+
+  it("una tipologia travessa el canvi d'esquema del 2016 al 2017 sense adonar-se'n", () => {
+    // La sostracció de vehicles és el 5 el 2016 i el 9 després; els robatoris
+    // en domicilis, el 4 el 2016 i el 7.1 després. La sèrie surt d'una peça.
+    const vehicles = ajuntat.perIne5.get("08015")!.get("vehicles")!;
+    expect(vehicles.get(2015)).toBe(244);
+    expect(vehicles.get(2016)).toBe(246);
+    const domicilis = ajuntat.perIne5.get("08015")!.get("robatoris-domicili")!;
+    expect(domicilis.get(2015)).toBe(518);
+    expect(domicilis.get(2016)).toBe(454);
+  });
+
   it("els noms dels balanços vells es resolen amb el diccionari de la mateixa font", () => {
-    // «- Municipio de Girona» (2020) i «-Municipio de Girona» (2023) → 17079,
+    // «- Municipio de Girona» (2016-2020) i «-Municipio de Girona» (2023) → 17079,
     // que és el codi que el balanç del 2025 posa al mateix nom sota la mateixa província.
     const girona = ajuntat.perIne5.get("17079")!.get("furts")!;
+    expect(girona.get(2015)).toBe(2_686);
+    expect(girona.get(2017)).toBe(1_954);
     expect(girona.get(2019)).toBe(2_043);
     expect(girona.get(2023)).toBe(2_346);
   });

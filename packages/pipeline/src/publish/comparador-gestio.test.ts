@@ -169,6 +169,7 @@ const ESPLUGUES = fila(
     deute: 237, deute_mandat: -47, estalvi: 11.7, saldo: 3.9, carrega: 6.1,
     execucio: 38.4, pmp: 21, ibi: 0.83, selectiva: null, dones: 47.6, transparencia: 92,
     cost_govern: 8.4, preu_aigua: 0.9124, rebut_ibi: 512, renda: 16_240, estrangera_pct: 11.8,
+    fets_penals_per_mil: 39.1, fets_canvi_mandat: 4.2,
   },
   {
     govern: { principal: "PSC-CP", secundari: "Pilar Díaz Romero", color: "#d00c3c" },
@@ -187,6 +188,7 @@ const SANT_JUST = fila(
     deute: 120, deute_mandat: 52, estalvi: -3.2, saldo: -1.4, carrega: 2.8,
     execucio: 79.1, pmp: 44, ibi: 0.61, selectiva: null, dones: 52.3, transparencia: 78,
     cost_govern: 12.7, preu_aigua: 0.6412, rebut_ibi: 780, renda: 22_910, estrangera_pct: 7.3,
+    fets_penals_per_mil: 51.8, fets_canvi_mandat: -1.4,
   },
   {
     govern: { principal: "ERC-AM", secundari: "Nom Cognom Cognom", color: "#ffb232" },
@@ -206,6 +208,8 @@ const ABELLA = fila(
     deute: 0, deute_mandat: null, estalvi: null, saldo: null, carrega: null,
     execucio: null, pmp: null, ibi: null, selectiva: null, dones: 20, transparencia: null,
     cost_govern: 31.2, preu_aigua: null, rebut_ibi: null, renda: 11_800, estrangera_pct: 3.1,
+    // El Ministeri no publica els municipis de menys de 20.000 habitants.
+    fets_penals_per_mil: null, fets_canvi_mandat: null,
   },
   {
     govern: { principal: "No consta", secundari: "" },
@@ -484,8 +488,9 @@ describe("els avisos", () => {
   it("compta els forats de la comparació que s'està mirant", () => {
     const nodes = obre(pagina([ESPLUGUES, ABELLA]), ["esplugues-de-llobregat", "abella-de-la-conca"]);
     expect(nodes.buits!.hidden).toBe(false);
-    // Abella no té deu xifres ni dues cel·les de text; Esplugues les té totes.
-    expect(nodes.buits!.innerHTML).toContain("<b>12 caselles de 44</b> d'aquesta taula no tenen dada");
+    // Abella no té deu xifres de comptes, dues de seguretat ni dues cel·les de
+    // text; Esplugues les té totes.
+    expect(nodes.buits!.innerHTML).toContain("<b>14 caselles de 48</b> d'aquesta taula no tenen dada");
     expect(nodes.buits!.innerHTML).toContain("No vol dir que la xifra sigui zero");
   });
 

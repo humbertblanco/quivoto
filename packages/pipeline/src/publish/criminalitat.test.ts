@@ -217,6 +217,58 @@ describe("renderCriminalitat", () => {
     }));
     expect(sense).toContain("10 menys que el 2024");
   });
+
+  it("un tipus que comença més tard que el total porta l'any d'inici al costat, al desplegable", () => {
+    const html = renderCriminalitat(metrica({
+      anys: [2021, 2022, 2023, 2024, 2025],
+      total: tipus({
+        clau: "total",
+        nom: "Total d'infraccions penals",
+        serie: [2021, 2022, 2023, 2024, 2025].map((any) => ({ any, fets: 100 + any - 2021 })),
+      }),
+      tipus: [
+        tipus({
+          clau: "ciber",
+          nom: "Cibercriminalitat",
+          serie: [{ any: 2023, fets: 900 }, { any: 2025, fets: 950 }],
+        }),
+      ],
+    }));
+    expect(html).toContain("Cibercriminalitat (des del 2023)");
+    expect(html).not.toContain("Total d'infraccions penals (des del");
+    // I el peu del desplegable diu per què una fila pot començar més tard.
+    expect(html).toContain("un desglòs que abans no existia");
+  });
+
+  it("amb vuit anys o més, la frase porta l'espurna de la sèrie; amb tres anys, no", () => {
+    const anys = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+    const llarga = renderCriminalitat(metrica({
+      anys,
+      total: tipus({
+        clau: "total",
+        nom: "Total d'infraccions penals",
+        serie: anys.map((any) => ({ any, fets: 10_000 + (any - 2018) * 100 })),
+        perMil: anys.map((any) => ({ any, valor: 50 })),
+      }),
+      tipus: [],
+    }));
+    expect(llarga).toContain("serie-espurna");
+    // L'espurna no substitueix la xifra: la frase continua sent el primer que es llegeix.
+    expect(llarga.trimStart().startsWith("<p class=\"entrada-bloc\">El 2025")).toBe(true);
+    expect(llarga).toContain("10.700 fets");
+    expect(renderCriminalitat(metrica())).not.toContain("serie-espurna");
+  });
+
+  it("un any que falta al mig de l'espurna és un forat dibuixat, no un pendent inventat", () => {
+    const serie = [2017, 2018, 2019, 2020, 2022, 2023, 2024, 2025].map((any) => ({ any, fets: 5_000 }));
+    const html = renderCriminalitat(metrica({
+      anys: serie.map((p) => p.any),
+      total: tipus({ clau: "total", nom: "Total d'infraccions penals", serie }),
+      tipus: [],
+    }));
+    expect(html).toContain("serie-espurna");
+    expect(html).toContain("2021 no en consta cap xifra");
+  });
 });
 
 describe("renderCriminalitat: el buit s'ha de dir", () => {

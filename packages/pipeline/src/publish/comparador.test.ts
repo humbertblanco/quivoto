@@ -132,6 +132,8 @@ describe("renderComparador", () => {
       // Les cinc files noves: el capítol de govern, l'aigua, l'IBI, la renda i el cens.
       "8squ-bk4r", "ACA, Observatori del preu de l&#039;aigua".replace("&#039;", "'"),
       "Idescat, IBI urbà (taula 173)", "INE, ADRH", "Idescat, cens de població",
+      // I la seguretat, del balanç de criminalitat del Ministeri.
+      "Ministeri de l'Interior, portal SEC",
     ]) {
       expect(html).toContain(font);
     }
@@ -619,5 +621,60 @@ describe("a 320, 480 i 768 píxels", () => {
     expect(css).toContain(".escala-graella{display:grid");
     expect(css).toContain("@media (min-width:900px){ .escala-graella{grid-template-columns:1fr 1fr} }");
     expect(css).toContain(".escala-svg{display:block;width:100%;height:auto");
+  });
+});
+
+// ---------------------------------------------------------------- la seguretat
+
+describe("la seguretat al comparador", () => {
+  // Dos municipis coberts pel balanç del Ministeri i un —Abella— que no hi és:
+  // el cas normal, perquè només els de més de 20.000 habitants hi surten.
+  const badalona: ComparadorRow = {
+    ...municipi("badalona", "Badalona", { fets_penals_per_mil: 64.4, fets_canvi_mandat: 5.3 }),
+    anys: { fets_penals_per_mil: 2025 },
+    peus: { fets_canvi_mandat: "de 14.156 fets el 2023 a 14.901 el 2025" },
+  };
+  const girona: ComparadorRow = {
+    ...municipi("girona", "Girona", { fets_penals_per_mil: 55.2, fets_canvi_mandat: -2.1 }),
+    anys: { fets_penals_per_mil: 2025 },
+  };
+  const files = [badalona, girona, ABELLA, ...FARCIMENT];
+  const html = renderComparador(files, "2026-08-31");
+
+  it("la secció tanca la taula i el glossari duu la citació que la font obliga", () => {
+    expect(html).toContain("La seguretat");
+    expect(html).toContain("Fets penals per 1.000 habitants");
+    expect(html).toContain("Fets penals: canvi des del 2023");
+    expect(html).toContain("Ministeri de l'Interior, portal SEC");
+    expect(html).toContain("Origen de los datos: Portal Estadístico de Criminalidad");
+    // La cobertura es diu amb el compte de debò del conjunt incrustat.
+    expect(html).toContain(`La tenen 2 dels ${files.length} municipis.`);
+    // I l'any de la dada va un cop a la capçalera de la fila.
+    expect(html).toContain("dada del 2025 · no es compara");
+  });
+
+  it("la taxa duu un decimal, el canvi duu signe i el peu duu les dues puntes", () => {
+    const cos = obre(html, ["badalona", "girona"])["cos-taula"]!.innerHTML;
+    expect(cos).toContain("64,4");
+    expect(cos).toContain("+5,3 %");
+    expect(cos).toContain("−2,1 %");
+    expect(cos).toContain("de 14.156 fets el 2023 a 14.901 el 2025");
+    // I cap marca: més fets coneguts pot ser més denúncies, i la policia no és
+    // del ple. La fila no reparteix res.
+    const seccio = cos.slice(cos.indexOf("Fets penals per 1.000 habitants"));
+    expect(seccio.slice(0, seccio.indexOf("</tr>"))).not.toContain('class="marca');
+  });
+
+  it("el municipi que el Ministeri no publica llegeix el perquè, no un guionet", () => {
+    const cos = obre(html, ["badalona", "abella-de-la-conca"])["cos-taula"]!.innerHTML;
+    expect(cos).toContain("El Ministeri només publica els fets penals dels municipis de més de 20.000 habitants");
+    expect(cos).toContain("no hi ha canvi a mesurar");
+  });
+
+  it("cap regle de seguretat: sense percentil no hi ha mediana honesta a dibuixar", () => {
+    // Amb mig grup de mida sense dada, la mediana del grup i el «pN entre els
+    // de la seva mida» duien el denominador mentider: la fila viu a la taula.
+    const nodes = obre(html, ["badalona", "girona"]);
+    expect(nodes["escales-cos"]!.innerHTML).not.toContain("Fets penals");
   });
 });

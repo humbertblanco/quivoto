@@ -83,7 +83,8 @@ type Indicador = {
   seccio: string;
   mena: "xifra" | "text";
   format:
-    | "nombre" | "euros" | "euros-decimal" | "euros-m3" | "percent" | "tipus" | "dies" | "variacio-euros" | "vegades";
+    | "nombre" | "euros" | "euros-decimal" | "euros-m3" | "percent" | "tipus" | "dies" | "variacio-euros"
+    | "variacio-percent" | "per-mil" | "vegades";
   /**
    * Com es llegeix la fila. A la taula només en surten dues coses: si es
    * marquen els extrems (`cap` no en marca) i, a la paritat, que el 50 % és
@@ -124,6 +125,11 @@ const SECCIONS = [
   "Què es paga",
   "Com ha anat el mandat",
   "Com es governa",
+  // Tanca la taula i no és dins de «Com es governa» a posta: la seguretat no
+  // la decideix (gairebé gens) l'ajuntament —la policia és dels Mossos— i
+  // barrejar-la amb la selectiva o la transparència la faria llegir com un
+  // resultat de gestió, que és exactament el que no és.
+  "La seguretat",
 ] as const;
 
 /**
@@ -308,6 +314,30 @@ const INDICADORS: readonly Indicador[] = [
     sentit: "amunt", percentil: true, font: "1a9c1ede",
     nota: "Apartats publicats dels que li tocarien, segons l'emplenament del portal de transparència que mesura el Consorci AOC.",
     absent: "No en tenim el mesurament de l'AOC.",
+  },
+  {
+    // La seguretat tanca la taula sense marques ni percentil, i és a posta.
+    // Sense marques perquè la policia aquí no és la municipal i més fets
+    // coneguts pot voler dir més denúncies: cap extrem no és un veredicte de
+    // cap ple. Sense percentil perquè només una setantena dels 947 municipis
+    // tenen la dada —el Ministeri no publica els de menys de 20.000 habitants—
+    // i un «pN entre els de la seva mida» amb mig grup absent duria el
+    // denominador mentider; el rànquing honest, amb el «de quants» de debò,
+    // és a la fitxa de cada municipi.
+    clau: "fets_penals_per_mil", etiqueta: "Fets penals per 1.000 habitants", seccio: "La seguretat",
+    mena: "xifra", format: "per-mil", sentit: "cap", percentil: false, font: "Ministeri de l'Interior, portal SEC",
+    nota: "Total d'infraccions penals conegudes per cada 1.000 habitants, de l'últim any sencer del Balanç de criminalitat del Ministeri de l'Interior. Són fets coneguts, no comesos: una xifra més alta pot ser més fets o més denúncies, i la seguretat la porten sobretot els Mossos, no l'ajuntament. Només es publica dels municipis de més de 20.000 habitants. La reutilització obliga a citar-ho així: «Origen de los datos: Portal Estadístico de Criminalidad».",
+    absent: "El Ministeri només publica els fets penals dels municipis de més de 20.000 habitants, i aquest no hi és.",
+  },
+  {
+    // El canvi del mandat, com el del deute: el tros de la sèrie que ha passat
+    // sota el govern d'ara, amb les dues puntes al peu. Encaixa al model de
+    // fila tal qual —una xifra amb signe i el seu peu— i tampoc no marca cap
+    // extrem, pel mateix motiu que la fila de sobre.
+    clau: "fets_canvi_mandat", etiqueta: "Fets penals: canvi des del 2023", seccio: "La seguretat",
+    mena: "xifra", format: "variacio-percent", sentit: "cap", percentil: false, font: "Ministeri de l'Interior, portal SEC",
+    nota: "Variació del total de fets penals coneguts entre el 2023 —el primer any del mandat— i el darrer any publicat, amb les dues xifres al peu. Mateixa font i mateixes cauteles que la fila de sobre, citació obligada inclosa: «Origen de los datos: Portal Estadístico de Criminalidad».",
+    absent: "Sense la sèrie del Ministeri —només publica els municipis de més de 20.000 habitants— no hi ha canvi a mesurar.",
   },
 ];
 
@@ -603,10 +633,11 @@ type RebutIbiMetric = {
  * per nom i no es carrega tot `municipality_metrics`: són milers de files de
  * JSON i la pàgina només en fa servir una dotzena.
  *
- * «poblacio» i «riquesa» no hi són a posta: porten la sèrie sencera de cada
- * indicador de l'Idescat i de l'INE, i d'aquí només en surt una xifra de
- * cadascuna. Es projecten amb una consulta a `carregaProjectades`, que demana
- * el camp i no el document, que és el que la memòria del motor aguanta.
+ * «poblacio», «riquesa» i «criminalitat» no hi són a posta: porten la sèrie
+ * sencera de cada indicador —o de cada tipologia penal— i d'aquí només en surt
+ * una xifra de cadascuna. Es projecten amb una consulta a `carregaProjectades`,
+ * que demana el camp i no el document, que és el que la memòria del motor
+ * aguanta.
  */
 const KINDS = [
   "government", "finances", "taxes", "parity", "transparency", "residus", "electoralHistory",
@@ -667,6 +698,16 @@ export function variacioDelMandat(
   };
 }
 
+/** El que la taula treu de la mètrica de J29: l'última foto del total i el canvi del mandat. */
+type ResumCriminalitat = {
+  perMil: number | null;
+  fets: number | null;
+  any: number | null;
+  canviPct: number | null;
+  canviAbs: number | null;
+  canviDesDe: number | null;
+};
+
 /**
  * Les mètriques grans, projectades: el camp i no el document.
  *
@@ -685,6 +726,7 @@ async function carregaProjectades(db: Db): Promise<{
   renda: Map<number, { valor: number; any: number | null }>;
   estrangera: Map<number, { valor: number; any: number | null }>;
   enllacIdescat: Map<number, string>;
+  criminalitat: Map<number, ResumCriminalitat>;
 }> {
   const data = municipalityMetrics.data;
   const nombre = (valor: string | null): number | null => {
@@ -731,11 +773,39 @@ async function carregaProjectades(db: Db): Promise<{
     const valor = nombre(row.value);
     if (valor !== null) estrangera.set(row.municipalityId, { valor, any: nombre(row.year) });
   }
+  // La mètrica de J29 porta la sèrie sencera de cada tipologia penal i d'aquí
+  // només en surt l'última foto del total: es projecta com la renda, el camp i
+  // no el document. La sèrie va ordenada per any, així que l'últim element és
+  // el del `darrerAny` —el mateix truc que fa servir `dades.ts`.
+  const criminalitatRows = await db
+    .select({
+      municipalityId: municipalityMetrics.municipalityId,
+      perMil: sql<string | null>`${data}->'total'->'perMil'->-1->>'valor'`,
+      fets: sql<string | null>`${data}->'total'->'serie'->-1->>'fets'`,
+      year: sql<string | null>`${data}->>'darrerAny'`,
+      canviPct: sql<string | null>`${data}->'total'->'canviMandat'->>'pct'`,
+      canviAbs: sql<string | null>`${data}->'total'->'canviMandat'->>'abs'`,
+      canviDesDe: sql<string | null>`${data}->'total'->'canviMandat'->>'desDe'`,
+    })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "criminalitat"));
+
   const enllacIdescat = new Map<number, string>();
   for (const row of enllacRows) {
     if (row.href && row.href.startsWith("https://www.idescat.cat/")) enllacIdescat.set(row.municipalityId, row.href);
   }
-  return { renda, estrangera, enllacIdescat };
+  const criminalitat = new Map<number, ResumCriminalitat>();
+  for (const row of criminalitatRows) {
+    criminalitat.set(row.municipalityId, {
+      perMil: nombre(row.perMil),
+      fets: nombre(row.fets),
+      any: nombre(row.year),
+      canviPct: nombre(row.canviPct),
+      canviAbs: nombre(row.canviAbs),
+      canviDesDe: nombre(row.canviDesDe),
+    });
+  }
+  return { renda, estrangera, enllacIdescat, criminalitat };
 }
 
 /**
@@ -797,9 +867,19 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
     const rebut = own?.get("rebutIbi") as RebutIbiMetric | undefined;
     const renda = projectades.renda.get(m.id);
     const estrangera = projectades.estrangera.get(m.id);
+    const crim = projectades.criminalitat.get(m.id);
     const indicator = (key: string): number | null =>
       finances?.indicators.find((i) => i.key === key)?.value ?? null;
     const mandat = variacioDelMandat(finances);
+    // Les dues puntes del canvi de fets penals: sense elles, un «+5,3 %» no
+    // diu ni de quants fets parla ni des de quan. L'inici es reconstrueix de
+    // la diferència, que és el que la mètrica desa.
+    const peuCrim =
+      crim && crim.canviPct !== null && crim.canviAbs !== null && crim.canviDesDe !== null &&
+      crim.fets !== null && crim.any !== null
+        ? `de ${(crim.fets - crim.canviAbs).toLocaleString("ca-ES")} fets el ${crim.canviDesDe} ` +
+          `a ${crim.fets.toLocaleString("ca-ES")} el ${crim.any}`
+        : "";
 
     // L'enllaç que la llicència de l'Idescat demana al costat de cada xifra
     // seva: el de la taula de població del municipi i, si no el tenim, el de la
@@ -865,11 +945,14 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
         preu_aigua: preuAigua,
         renda: renda?.valor ?? null,
         estrangera_pct: estrangeraPct,
+        fets_penals_per_mil: crim?.perMil ?? null,
+        fets_canvi_mandat: crim?.canviPct ?? null,
       },
       percentils: {},
       peus: {
         ...(mandat.peu ? { deute_mandat: mandat.peu } : {}),
         ...(cadastre ? { ibi: `última revisió cadastral: ${Math.round(cadastre)}` } : {}),
+        ...(peuCrim ? { fets_canvi_mandat: peuCrim } : {}),
       },
       anys: {
         ...(costGovern !== null && cost?.darrer?.any ? { cost_govern: cost.darrer.any } : {}),
@@ -877,6 +960,7 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
         ...(rebutIbi !== null && rebut?.darrerAny ? { rebut_ibi: rebut.darrerAny } : {}),
         ...(renda?.any ? { renda: renda.any } : {}),
         ...(estrangeraPct !== null && estrangera?.any ? { estrangera_pct: estrangera.any } : {}),
+        ...(crim && crim.perMil !== null && crim.any !== null ? { fets_penals_per_mil: crim.any } : {}),
       },
       ...(enllacIdescat ? { enllacIdescat } : {}),
       textos: {
@@ -1430,11 +1514,20 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
     .filter((s) => s.slugs.length >= 2)
     .map((s) => ({ ...s, noms: s.slugs.map((slug) => perSlug.get(slug)!.nom) }));
 
+  // La cobertura de la seguretat es diu amb el compte de debò, calculat del
+  // conjunt que s'incrusta: un «només els grans» sense la xifra no es pot
+  // comprovar, i una xifra escrita a mà es quedaria vella al primer balanç
+  // que canviés el llindar.
+  const ambSeguretat = rows.filter((r) => typeof r.valors.fets_penals_per_mil === "number").length;
+  const cobertura = (clau: string): string =>
+    clau.startsWith("fets_") && ambSeguretat > 0
+      ? ` La tenen ${ambSeguretat} dels ${rows.length} municipis.`
+      : "";
   const fonts = indicadors
     .map((i) => {
       const any = anyComu.get(i.clau);
       return `<tr><th scope="row">${escape(i.etiqueta)}</th>
-      <td>${escape(i.nota)}</td><td><code>${escape(i.font)}</code>${any ? ` · ${any}` : ""}</td></tr>`;
+      <td>${escape(i.nota)}${escape(cobertura(i.clau))}</td><td><code>${escape(i.font)}</code>${any ? ` · ${any}` : ""}</td></tr>`;
     })
     .join("");
 
@@ -1542,9 +1635,10 @@ ${cercador("../")}
       <tbody>${fonts}</tbody>
     </table>
     <p class="nota">Els conjunts amb identificador de vuit caràcters són del Consorci AOC; els que van
-    amb el nom de l'organisme són de l'INE, de l'Idescat o de l'ACA, i els altres, del portal de dades
-    obertes de la Generalitat. Les xifres de l'Idescat porten el seu enllaç al costat, com demana la
-    seva llicència. Els percentils i els grups de comparació són càlculs nostres i es poden repetir
+    amb el nom de l'organisme són de l'INE, de l'Idescat, de l'ACA o del Ministeri de l'Interior, i els
+    altres, del portal de dades obertes de la Generalitat. Les xifres de l'Idescat porten el seu enllaç
+    al costat, com demana la seva llicència, i les del Ministeri van amb la citació que la seva obliga.
+    Els percentils i els grups de comparació són càlculs nostres i es poden repetir
     amb el codi del projecte.</p>
   </details>
 </section>
@@ -1623,6 +1717,17 @@ function formata(def, valor){
   }
   if (def.format === "vegades") {
     return valor === 0 ? "cap" : milers(valor) + (valor === 1 ? " vegada" : " vegades");
+  }
+  // La taxa de fets penals va amb un decimal fix: entre 47,9 i 48,1
+  // l'arrodoniment a l'enter esborraria la diferència que es compara.
+  if (def.format === "per-mil") return valor.toLocaleString("ca-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  // Com la variació en euros: el signe hi va sempre i el menys és el de debò
+  // (−). Un canvi que arrodonit queda a zero és «igual», no un «0,0 %» que
+  // faria pensar que no s'ha mesurat res.
+  if (def.format === "variacio-percent") {
+    const decimes = Math.round(valor * 10) / 10;
+    if (decimes === 0) return "igual";
+    return (decimes > 0 ? "+" : "−") + Math.abs(decimes).toLocaleString("ca-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " %";
   }
   return milers(valor);
 }

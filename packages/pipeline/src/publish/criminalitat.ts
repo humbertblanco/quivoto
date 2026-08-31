@@ -6,6 +6,7 @@ import {
   type TipusCriminalitat,
 } from "../jobs/j29-criminalitat";
 import { medianOf, type PeerGroup } from "../derive/peers";
+import { serieTemporal } from "./grafics";
 
 /**
  * «Com ha anat la seguretat»: el bloc de la fitxa que respon si els fets
@@ -89,6 +90,35 @@ function fraseObertura(metric: CriminalitatMetric): string {
   return `<p class="entrada-bloc">${frase}.</p>`;
 }
 
+/** Amb menys de vuit anys, una espurna és soroll: la taula any a any ja ho diu tot. */
+const ANYS_PER_ESPURNA = 8;
+
+/**
+ * La forma de la sèrie del total, sota la frase i només quan la història és
+ * prou llarga: els municipis més grans arriben al 2015, i deu anys no es
+ * llegeixen d'un cop d'ull en una taula d'onze columnes. És l'espurna de
+ * `grafics.ts` —sense eixos, perquè la xifra ja és a la frase del costat— i
+ * pesa un parell de KB per municipi: el preu just d'ensenyar la dècada.
+ * Els forats de dins del seu propi tram es dibuixen com a forats; els anys
+ * d'abans que el municipi passés el llindar del Ministeri no són forats de la
+ * font sinó la vora de la sèrie, i per això no s'hi esperen.
+ */
+function espurnaTotal(metric: CriminalitatMetric): string {
+  const serie = metric.total.serie;
+  if (serie.length < ANYS_PER_ESPURNA) return "";
+  const esperats: number[] = [];
+  for (let any = serie[0]!.any; any <= metric.darrerAny; any += 1) esperats.push(any);
+  return serieTemporal(
+    serie.map((p) => ({ any: p.any, valor: p.fets })),
+    {
+      titol: "Fets penals coneguts, any a any",
+      format: (v) => `${enter(v)} fets`,
+      mida: "espurna",
+      anysEsperats: esperats,
+    },
+  );
+}
+
 /**
  * La posició, dita amb totes les paraules i sempre amb el denominador: una
  * posició sense saber entre quants és un titular, no una dada. I al costat,
@@ -151,7 +181,12 @@ function taulaSerie(metric: CriminalitatMetric): string {
         })
         .join("");
       const nom = tipus.nivell === 2 ? `— ${tipus.nom}` : tipus.nom;
-      return `<tr><th scope="row">${escape(nom)}</th>${cels}</tr>`;
+      // Quan un tipus comença més tard que el total no és cap forat: la font
+      // no el publicava —el desglòs ha crescut amb els anys— i l'any d'inici
+      // escrit al costat és el que evita llegir-ho com una fila incompleta.
+      const primerSeu = tipus.serie[0]?.any;
+      const desDe = primerSeu !== undefined && primerSeu > anys[0]! ? ` (des del ${primerSeu})` : "";
+      return `<tr><th scope="row">${escape(nom)}${desDe}</th>${cels}</tr>`;
     })
     .join("");
   return `<details class="nota"><summary>Any a any, per tipus de fet</summary>
@@ -160,7 +195,9 @@ function taulaSerie(metric: CriminalitatMetric): string {
   <tbody>${files}</tbody>
   </table></div>
   <span class="peu-nota">Fets coneguts de cada any sencer, del balanç més recent que el porta: el Ministeri
-  revisa xifres d'anys anteriors. Un guionet és un any que la font no publica per a aquest municipi.</span>
+  revisa xifres d'anys anteriors. Un guionet és un any que la font no publica per a aquest municipi, i un
+  tipus amb «des del» al costat és un desglòs que abans no existia: el balanç del 2016 tenia vuit
+  tipologies, i la cibercriminalitat no baixa a municipis fins a l'any 2021.</span>
   </details>`;
 }
 
@@ -193,6 +230,7 @@ export function renderCriminalitat(
   const grup = opcions.grup ?? null;
   const primerBalanc = metric.font.balancos[0]?.any;
   return `${fraseObertura(metric)}
+  ${espurnaTotal(metric)}
   ${frasePosicio(metric, grup)}
   ${taulaTipus(metric, grup)}
   ${taulaSerie(metric)}

@@ -14,8 +14,11 @@ import { withRun } from "../lib/run";
  * SEC, estadisticasdecriminalidad.ses.mir.es). Cada trimestre publica el
  * «Balance de criminalidad», i el del **quart trimestre porta l'any sencer**
  * (gener–desembre) amb l'any anterior al costat. La taula que ens interessa és
- * la tercera de cada balanç: «Municipios mayores de 20.000 habitantes e islas»
- * —fins al balanç del 2020, el llindar era 30.000—, amb **19 tipologies**:
+ * la tercera de cada balanç: «Municipios mayores de 20.000 habitantes e islas».
+ * El llindar ha anat baixant: el balanç del 2016 —el primer que té taula de
+ * municipis— duia les capitals de província i els de més de 50.000 habitants;
+ * del 2017 al 2020, els de més de 30.000; des del del 2021, els de més de
+ * 20.000. L'esquema d'ara té **19 tipologies**:
  * homicidis consumats i en temptativa, lesions, segrestos, delictes sexuals
  * (amb el desglòs d'agressions amb penetració), robatoris amb violència, amb
  * força (i el desglòs en domicilis), furts, sostraccions de vehicles, tràfic
@@ -27,7 +30,11 @@ import { withRun } from "../lib/run";
  * fitxer canvia cada trimestre (1509012.px el 4t del 2025, 1409012.px el del
  * 2024…), així que **es descobreix llegint l'índex** de cada balanç i no
  * s'endevina mai. Del 4t trimestre del 2025 en surten **71 municipis catalans**
- * (50 de Barcelona, 10 de Girona, 1 de Lleida i 10 de Tarragona).
+ * (50 de Barcelona, 10 de Girona, 1 de Lleida i 10 de Tarragona); del del 2017,
+ * 42, i del del 2016, 23. Comprovat el 31 d'agost del 2026 que **més enrere no
+ * hi ha res**: els índexs del 4t trimestre del 2013, 2014 i 2015 tornen sense
+ * cap taula —d'aquells anys només queden PDF a datos.gob.es—, així que la sèrie
+ * comença amb l'any 2015, que és el que el balanç del 2016 porta al costat.
  *
  * **El codi INE hi és des del balanç del 2024** («08015 Badalona»); als
  * anteriors la geografia només porta el nom («-Municipio de Badalona») sota la
@@ -95,8 +102,12 @@ import { withRun } from "../lib/run";
 export const KIND = "criminalitat";
 export const LLINDAR_HABITANTS = 20_000;
 export const MANDAT = 2023;
-/** Primer balanç que s'ingereix: el del 4t trimestre del 2019 (anys 2018 i 2019). */
-export const PRIMER_BALANC = 2019;
+/**
+ * Primer balanç que s'ingereix: el del 4t trimestre del 2016 (anys 2015 i 2016),
+ * el primer que té taula de municipis. Els índexs del 2013 al 2015 no en tenen
+ * cap (comprovat el 31 d'agost del 2026): més enrere no hi ha res a baixar.
+ */
+export const PRIMER_BALANC = 2016;
 export const PORTAL = "https://estadisticasdecriminalidad.ses.mir.es";
 
 export const PROVINCIES_CATALANES = new Set(["BARCELONA", "GIRONA", "LLEIDA", "TARRAGONA"]);
@@ -127,8 +138,10 @@ export const NOTA_FETS_CONEGUTS =
   "pot voler dir més fets o més denúncies, i les estafes per internet han inflat els totals de tot arreu.";
 
 export const NOTA_LLINDAR =
-  "El Ministeri només publica els municipis de més de 20.000 habitants (fins al balanç del 2020, 30.000): " +
-  "la resta de municipis no hi surt.";
+  "El Ministeri només publica els municipis grans, i el llindar ha anat baixant: al balanç del 2016 hi " +
+  "surten les capitals de província i els de més de 50.000 habitants; del 2017 al 2020, els de més de " +
+  "30.000; des del del 2021, els de més de 20.000. Un municipi que creua un llindar entra o surt de la " +
+  "sèrie: un any que hi falta és això, no un zero.";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // URLs del portal, comprovades una per una
@@ -203,12 +216,45 @@ export const TIPOLOGIES: readonly (DefinicioTipus & { numero: string })[] = [
 
 const PER_NUMERO = new Map(TIPOLOGIES.map((t) => [t.numero, t.clau]));
 
-/** Etiquetes de l'esquema vell que sabem que no es poden mapar, i per què no és un error. */
-export const ETIQUETES_DESCARTADES = new Set(["Resto de infracciones penales"]);
+/**
+ * L'esquema del balanç del 2016, que es resol per l'etiqueta sencera i mai pel
+ * número: aquell any la taula duia vuit tipologies pròpies amb el sufix «(EU)»
+ * i **els números no hi volen dir el mateix** —el 5 hi és la sostracció de
+ * vehicles i del 2017 ençà són els delictes sexuals—, així que pel número es
+ * barrejarien sèries. Dues equivalències no òbvies, comprovades amb els fitxers:
+ *
+ *   · «1.-DELITOS Y FALTAS (EU)» és el total d'infraccions penals amb el nom
+ *     d'abans de la reforma del Codi Penal: del 2016, el balanç del 2017 en diu
+ *     10.690 fets a Badalona i aquest 10.684 —la diferència és la revisió, i
+ *     com que el balanç més nou guanya, d'aquest fitxer només en surt el 2015.
+ *   · «4.-ROBOS CON FUERZA EN DOMICILIOS (EU)» són només domicilis: va a la
+ *     tipologia 7.1, no a la 7, que hi afegeix establiments i instal·lacions.
+ */
+export const ESQUEMA_2016: ReadonlyMap<string, string> = new Map([
+  ["1.-DELITOS Y FALTAS (EU)", "total"],
+  ["2.-HOMICIDIOS DOLOSOS Y ASESINATOS CONSUMADOS (EU)", "homicidis"],
+  ["3.-ROBO CON VIOLENCIA E INTIMIDACIÓN (EU)", "robatoris-violencia"],
+  ["4.-ROBOS CON FUERZA EN DOMICILIOS (EU)", "robatoris-domicili"],
+  ["5.-SUSTRACCIÓN VEHÍCULOS A MOTOR (EU)", "vehicles"],
+  ["6.-TRÁFICO DE DROGAS (EU)", "drogues"],
+  ["8.-HURTOS", "furts"],
+]);
+
+/**
+ * Etiquetes que sabem que no es poden mapar, i per què no són cap error: el
+ * «Resto» vell (2018-2021) barrejava convencional i ciber, i els danys del 2016
+ * no tenen tipologia pròpia a cap esquema posterior —i pel número (7) anirien a
+ * parar als robatoris amb força, que no ho són.
+ */
+export const ETIQUETES_DESCARTADES = new Set(["Resto de infracciones penales", "7.-DAÑOS"]);
 
 /** De l'etiqueta de la font a la nostra clau de tipologia, o `null` si no es mapa. */
 export function clauTipologia(etiqueta: string): string | null {
   const net = etiqueta.trim();
+  // El 2016 va primer i per etiqueta sencera: els seus números xoquen amb els nous.
+  const del2016 = ESQUEMA_2016.get(net);
+  if (del2016) return del2016;
+  if (ETIQUETES_DESCARTADES.has(net)) return null;
   if (/^(III\.|TOTAL INFRACCIONES)/i.test(net)) return "total";
   const roma = /^(II|I)\.\s/.exec(net);
   if (roma) return PER_NUMERO.get(roma[1]!) ?? null;
@@ -284,6 +330,12 @@ const GEO_SENSE_CODI = /^-\s*Municipio de\s+(.+)$/;
  * Una fila per municipi, tipologia i any. Les geografies que no són municipis
  * —comunitats, províncies, illes— no en treuen cap: la província només serveix
  * per recordar sota quina capçalera surt cada nom.
+ *
+ * Les comunitats d'una sola província (Madrid, Múrcia…) no porten capçalera
+ * «Provincia de» i els seus municipis hereten l'última que hi hagi hagut. És
+ * inofensiu a posta: mai no és una província catalana —les quatre nostres van
+ * sempre seguides dins del bloc de Catalunya, i just després ve la Comunitat
+ * Valenciana amb les seves capçaleres—, i el que no és català es descarta.
  */
 export function parseCsvBalanc(csv: string): FilaBalanc[] {
   const files: FilaBalanc[] = [];
@@ -568,14 +620,14 @@ function seriePadro(dades: unknown): PuntSerie[] | null {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Baixa l'índex i el CSV del balanç del 4t trimestre de cada any des del 2019,
+ * Baixa l'índex i el CSV del balanç del 4t trimestre de cada any des del 2016,
  * els ajunta i desa la mètrica `criminalitat` dels municipis coberts. És
  * idempotent, i **esborra** la mètrica dels municipis que ja no surten al
  * balanç: un municipi que en cau no s'ha de quedar amb la sèrie vella com si
  * res.
  *
- * Són ~8 índexs i ~8 CSV d'uns 2 MB: dura un parell de minuts, amb pausa
- * entre peticions per no castigar el portal.
+ * Són ~11 índexs i ~10 CSV d'entre 0,4 i 2 MB: dura uns tres minuts, amb
+ * pausa entre peticions per no castigar el portal.
  */
 export async function j29Criminalitat(db: Db): Promise<void> {
   const tots = await db
