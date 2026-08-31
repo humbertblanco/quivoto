@@ -724,6 +724,7 @@ const CSS = `
    La frase del bloc porta les xifres en negreta i amb números tabulars, com
    les caselles del pas pel ple: és la mateixa mena de dada, dita en una línia. */
 .etiquetes .cap-llista{background:var(--lavanda);color:#1E1B2E}
+.etiquetes .segon-carrec{background:var(--paper-2);border-color:var(--coral);color:var(--coral)}
 .encapcala{font-size:1.05rem;line-height:1.5}
 .encapcala b{font-variant-numeric:tabular-nums}
 /* La frase dels mandats, sota la del càrrec i abans de les pastilles: el gris
@@ -1764,6 +1765,7 @@ ${cercador("../../../../")}
             ctx.capDeLlista?.es ? '<span class="cap-llista">cap de llista el 2023</span>' : ""
           }
           ${r.entradaTardana ? `<span>va entrar a mig mandat</span>` : ""}
+          ${ctx.altresCarrecs.length > 0 ? `<span class="segon-carrec">${ctx.altresCarrecs.length === 1 ? "també té un càrrec supramunicipal" : `també té ${ctx.altresCarrecs.length} càrrecs supramunicipals`}</span>` : ""}
         </div>
       </div>
     </div>
