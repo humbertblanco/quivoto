@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import {
   candidacies, candidatures, councillorMandates, municipalities, municipalityMetrics, people, type Db,
 } from "@quivoto/db";
@@ -41,7 +41,12 @@ export async function deriveCouncilChanges(db: Db): Promise<void> {
       .from(candidacies)
       .innerJoin(candidatures, eq(candidatures.id, candidacies.candidatureId))
       .innerJoin(people, eq(people.id, candidacies.personId))
-      .where(eq(candidacies.elected, true));
+      .where(
+      // Sense el filtre d'elecció, amb el 2015 i el 2019 ingerits, el mapa
+      // «elegit per» es trepitja per persona amb sigles d'una elecció antiga i
+      // s'inventen canvis de grup. Avisat per l'agent que va estendre J4.
+      and(eq(candidacies.elected, true), eq(candidatures.electionId, "M20231")),
+    );
 
     const electedFor = new Map<string, { sigles: string; name: string }>();
     for (const row of elected) {

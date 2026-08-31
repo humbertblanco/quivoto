@@ -26,6 +26,7 @@ import { j24Diputacions } from "./jobs/j24-diputacions";
 import { j26ImatgesMunicipi } from "./jobs/j26-imatges-municipi";
 import { j27CapsDeLlista } from "./jobs/j27-caps-de-llista";
 import { j29Criminalitat } from "./jobs/j29-criminalitat";
+import { j30SousConsells } from "./jobs/j30-sous-consells";
 import { j28FotosExalcaldes } from "./jobs/j28-fotos-exalcaldes";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
@@ -64,6 +65,9 @@ const COMMANDS = {
   // J27 va a mà, com J21 però pel nom: `pnpm ingest j27`. No és a `ORDER`.
   j27: j27CapsDeLlista,
   j29: j29Criminalitat,
+  // J30 va a mà, com J24 però fitxa a fitxa: el que cada consell comarcal
+  // publica del que paga als seus consellers. No és a `ORDER`.
+  j30: j30SousConsells,
   // J28 també a mà i després de J21: baixa retrats de Commons d'exalcaldes.
   j28: (db: Parameters<typeof j28FotosExalcaldes>[0]) => j28FotosExalcaldes(db),
   derive: deriveMetrics,
