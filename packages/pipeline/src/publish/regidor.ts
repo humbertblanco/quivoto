@@ -643,6 +643,10 @@ const CSS = `
 .nav-fitxa{display:flex;gap:7px;flex-wrap:wrap;margin:var(--e2) 0 0;padding:0;list-style:none}
 .nav-fitxa a{display:block;border:1.5px solid var(--vora);border-radius:999px;padding:5px 10px;font-size:.76rem;font-weight:800;text-decoration:none}
 .nav-fitxa a:hover,.nav-fitxa a:focus-visible{border-color:var(--coral);color:var(--coral)}
+.cronologia{list-style:none;margin:var(--e3) 0 0;padding:0;border-left:3px solid var(--coral)}
+.cronologia li{display:grid;grid-template-columns:5rem 1fr;gap:var(--e2);padding:0 0 var(--e2) var(--e3);position:relative}
+.cronologia li::before{content:"";position:absolute;left:-7px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--coral);border:2px solid var(--paper)}
+.cronologia-any{font-family:var(--display);font-weight:900;font-variant-numeric:tabular-nums}
 
 /* --- què cobra ------------------------------------------------------------
    Una targeta per pagador i cap total: l'import gran, qui el paga al capdamunt
@@ -684,6 +688,10 @@ const CSS = `
 .pas .xifra{display:block;font-family:var(--display);font-weight:900;font-size:1.9rem;
   line-height:1.1;letter-spacing:-.03em;margin-top:4px}
 .pas .peu{display:block;font-size:.76rem;color:var(--ink-suau);line-height:1.35;margin-top:5px}
+.activitat-vot{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:var(--e2) 0 0}
+.activitat-vot span{border:1.5px solid var(--vora);padding:8px 10px;background:var(--paper-2);display:flex;flex-direction:column}
+.activitat-vot b{font-family:var(--display);font-size:1.25rem;line-height:1}
+.activitat-vot small{font-size:.7rem;font-weight:800;color:var(--ink-suau);margin-top:4px}
 
 /* --- què en sabem ---------------------------------------------------------
    El bloc únic de qui no tenim ni sou, ni vots, ni fitxa: l'única casella que
@@ -1128,10 +1136,15 @@ function pasPelPle(r: Regidor, ctx: ContextRegidor, generatedAt: string): string
   }
 
   const renyits = ctx.votsDelGrup.filter((v) => v.marge !== null && v.marge <= 2).length;
+  const votsDeterminats = ctx.votsDelGrup.filter((v) => v.tot);
+  const comptaSentit = (sentit: string): number => votsDeterminats.filter((v) => v.sentit === sentit).length;
+  const activitatVot = votsDeterminats.length > 0
+    ? `<div class="activitat-vot" aria-label="Resum de l'activitat de vot"><span><b>${comptaSentit("favor")}</b><small>a favor</small></span><span><b>${comptaSentit("contra")}</b><small>en contra</small></span><span><b>${comptaSentit("abstencio")}</b><small>abstencions</small></span><span><b>${Math.round((100 * votsDeterminats.length) / ctx.votsDelGrup.length)}%</b><small>vot atribuïble</small></span></div>`
+    : "";
   caselles.push(
     casella(
       "Punts votats",
-      ctx.votsDelGrup.length === 0 ? "cap" : String(ctx.votsDelGrup.length),
+      ctx.votsDelGrup.length === 0 ? "no disponible" : String(ctx.votsDelGrup.length),
       ctx.votsDelGrup.length === 0
         ? ctx.actesLlegides === 0
           ? "d'aquest ajuntament encara no n'hem pogut llegir cap acta"
@@ -1158,6 +1171,8 @@ function pasPelPle(r: Regidor, ctx: ContextRegidor, generatedAt: string): string
   return `<section class="bloc" id="pas-pel-ple">
     <h2>El seu pas pel ple</h2>
     <ul class="pas">${caselles.join("")}</ul>
+    ${activitatVot}
+    ${votsDeterminats.length > 0 && votsDeterminats.length < ctx.votsDelGrup.length ? `<p class="nota">En ${votsDeterminats.length} punts el grup va votar sencer i el sentit es pot atribuir a aquesta persona. En els altres ${ctx.votsDelGrup.length - votsDeterminats.length}, l'acta només permet atribuir el vot al grup.</p>` : ""}
     ${
       ctx.assistencia && ctx.assistencia.de >= 5
         ? `<p class="nota">L'assistència la diu l'acta de cada sessió al seu capçal, i és
@@ -1660,6 +1675,22 @@ function queEnPublica(ctx: ContextRegidor): string {
   </section>`;
 }
 
+/** Cronologia curta: només fets datats que provenen d'una font explícita. */
+function cronologia(r: Regidor, ctx: ContextRegidor): string {
+  const fets: { ordre: string; any: string; text: string }[] = [];
+  for (const l of ctx.llistes ?? []) {
+    fets.push({ ordre: String(l.any), any: String(l.any), text: `${l.capDeLlista ? "Va encapçalar" : `Va anar de número ${l.posicio ?? "?"}`} la llista ${escape(l.sigles)}${l.elegit ? " i en va sortir elegit" : " i no en va sortir elegit"}.` });
+  }
+  if (ctx.mandat?.constitucio) fets.push({ ordre: ctx.mandat.constitucio, any: ctx.mandat.constitucio.slice(0, 4), text: `Es va constituir el ple del mandat ${escape(ctx.mandat.nom)}.` });
+  if (r.desDe) fets.push({ ordre: r.desDe, any: r.desDe.slice(0, 4), text: `Va prendre possessió del càrrec el ${escape(delDia(r.desDe))}.` });
+  if (r.entradaTardana) fets.push({ ordre: "9999", any: "", text: "Va entrar a mig mandat; la font no en dona la data exacta." });
+  if (r.canviDeGrup) fets.push({ ordre: "9998", any: "", text: `Avui consta ${r.canviDeGrup.a ? `al grup ${escape(r.canviDeGrup.a)}` : "sense grup"}; va ser elegit per ${escape(r.canviDeGrup.de ?? "una altra llista")}.` });
+  for (const c of ctx.trajectoria?.carrecs ?? []) if (c.inici || c.fi) fets.push({ ordre: c.inici ?? c.fi ?? "", any: `${c.inici?.slice(0, 4) ?? ""}${c.fi ? `–${c.fi.slice(0, 4)}` : ""}`, text: `Va ocupar ${escape(c.nom)}.` });
+  if (fets.length < 2) return "";
+  fets.sort((a, b) => a.ordre.localeCompare(b.ordre));
+  return `<section class="bloc" id="cronologia"><h2>Cronologia política</h2><p class="entrada-bloc">Només hi entren fets amb <b>data o període publicat</b>; el que no consta no s'omple amb una suposició.</p><ol class="cronologia">${fets.map((f) => `<li><span class="cronologia-any">${escape(f.any)}</span><span>${f.text}</span></li>`).join("")}</ol><p class="nota">La cronologia combina el registre d'electes, les candidatures i, quan n'hi ha, fonts de trajectòria. Cada bloc de la fitxa conserva l'enllaç a la font corresponent.</p></section>`;
+}
+
 export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: string): string {
   const inicials = r.nom
     .split(/\s+/)
@@ -1751,6 +1782,7 @@ ${cercador("../../../../")}
     <ul class="nav-fitxa">
       ${senseRes ? '<li><a href="#que-en-sabem">Què en sabem</a></li>' : '<li><a href="#que-cobra">Què cobra</a></li><li><a href="#pas-pel-ple">Pas pel ple</a></li><li><a href="#que-ha-votat">Què ha votat</a></li><li><a href="#que-en-publica">Transparència</a></li>'}
       ${ctx.trajectoria ? '<li><a href="#mes-enlla">Trajectòria</a></li>' : ""}
+      ${(ctx.llistes?.length ?? 0) > 1 || (ctx.trajectoria?.carrecs.length ?? 0) > 0 ? '<li><a href="#cronologia">Cronologia</a></li>' : ""}
     </ul>
   </nav>
 
@@ -1765,6 +1797,8 @@ ${cercador("../../../../")}
   }
 
   ${mesEnllaDelPle(ctx)}
+
+  ${cronologia(r, ctx)}
 
   ${queEnPublica(ctx)}
 
