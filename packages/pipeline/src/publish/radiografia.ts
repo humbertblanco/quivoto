@@ -1677,7 +1677,8 @@ function renderRevenue(revenue: RevenueMetric): string {
   const grup = revenue.grup?.etiqueta ?? null;
   const scale = scaleFor(revenue.figures.map((f) => f.perHead), medianes);
   const propis = revenue.figures.reduce((a, f) => a + f.perHead, 0);
-  return `<ul class="diners">${revenue.figures
+  return `<p class="entrada-bloc">Aquests són els ingressos que l'ajuntament decideix directament: <b>impostos, taxes i preus públics</b>. Les transferències d'altres administracions no hi entren.</p>
+  <ul class="diners">${revenue.figures
     .map((figure) => moneyRow(figure.label, figure.perHead, medianes[figure.label], scale, grup))
     .join("")}</ul>
   <p class="entrada-bloc"><b>${number(revenue.propis?.perHabitant ?? Math.round(propis))} € per
