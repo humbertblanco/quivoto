@@ -1,7 +1,7 @@
 import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import {
-  candidacies, candidatures, councilTerms, councillorMandates, electionResults, municipalities,
+  candidacies, candidatures, electionResults, municipalities,
   municipalityMetrics, people, type Db,
 } from "@quivoto/db";
 import { loadRadiografia, renderRadiografia } from "./radiografia";
@@ -610,6 +610,85 @@ function grupsDelPle(dades: NonNullable<Awaited<ReturnType<typeof loadRadiografi
 }
 
 
+/** Un punt del ple tal com el desa J12, retallat al que llegeix `votsPerGrupDe`. */
+export type PuntDelPle = {
+  data: string;
+  titol: string;
+  url: string;
+  vots: { grup: string; sentit: string; vots: number | null }[];
+};
+
+/**
+ * Els vots de cada grup, una sola vegada per municipi i no un cop per persona.
+ *
+ * `tot` diu si el grup hi va votar sencer, que és el que permet atribuir el
+ * vot a cada persona: si un grup de divuit regidories hi posa divuit vots, no
+ * queda ningú a qui atribuir un vot diferent. Quan l'acta no dona la xifra,
+ * l'adaptador ja ho llegeix com «tot el grup»; quan en dona menys que
+ * regidories, algú no hi era o va votar a part i no es pot dir qui.
+ *
+ * El lligam del nom que escriu l'acta («PSC», «Esplugues en Comú Podem») amb
+ * el grup del ple («Partit dels Socialistes de Catalunya - Candidatura de
+ * Progrés (PSC-CP)») el fa `encaixa`, que davant del dubte no lliga res: a la
+ * pàgina d'una persona, atribuir-li el vot d'un altre grup és el pitjor error
+ * possible. I `puntsAmbDesglos` compta els punts on hem reconegut ALGUN grup
+ * del ple, que és el que permet a la pàgina distingir «no n'hem sabut llegir
+ * cap vot per grup» de «n'hem llegit però no hem sabut reconèixer el seu».
+ */
+export function votsPerGrupDe(
+  punts: readonly PuntDelPle[],
+  grups: readonly Grup[],
+): { votsPerGrup: Map<string, ContextRegidor["votsDelGrup"]>; puntsAmbDesglos: number } {
+  const escons = new Map(grups.map((g) => [g.nom, g.escons]));
+  const votsPerGrup = new Map<string, ContextRegidor["votsDelGrup"]>();
+  let puntsAmbDesglos = 0;
+  for (const punt of punts) {
+    if (punt.vots.length === 0) continue;
+    // Com de renyida va ser. Un punt aprovat per tothom no separa ningú i no
+    // diu res de qui hi seu; un decidit per un vot ho diu tot. El marge és la
+    // diferència entre els dos costats: com més petit, més val la pena
+    // ensenyar-lo, i és el criteri d'ordenació en comptes de la data.
+    let favor = 0;
+    let contra = 0;
+    for (const v of punt.vots) {
+      if (v.sentit === "favor") favor += v.vots ?? 0;
+      if (v.sentit === "contra") contra += v.vots ?? 0;
+    }
+    const marge = favor + contra === 0 ? null : Math.abs(favor - contra);
+    let lligat = false;
+    for (const vot of punt.vots) {
+      if (vot.sentit !== "favor" && vot.sentit !== "contra" && vot.sentit !== "abstencio") continue;
+      const grup = encaixa(vot.grup, grups);
+      if (grup === null) continue;
+      lligat = true;
+      const total = escons.get(grup.nom) ?? 0;
+      const llista = votsPerGrup.get(grup.nom) ?? [];
+      llista.push({
+        data: punt.data,
+        titol: punt.titol,
+        sentit: vot.sentit,
+        url: punt.url,
+        tot: vot.vots === null || (total > 0 && vot.vots === total),
+        marge,
+        favor,
+        contra,
+      });
+      votsPerGrup.set(grup.nom, llista);
+    }
+    if (lligat) puntsAmbDesglos += 1;
+  }
+  // Primer les renyides, i entre les igual de renyides, les més recents. Les
+  // que no porten recompte van al final: no sabem si van separar ningú.
+  for (const llista of votsPerGrup.values()) {
+    llista.sort((a, b) => {
+      const ma = a.marge ?? Number.MAX_SAFE_INTEGER;
+      const mb = b.marge ?? Number.MAX_SAFE_INTEGER;
+      return ma !== mb ? ma - mb : b.data.localeCompare(a.data);
+    });
+  }
+  return { votsPerGrup, puntsAmbDesglos };
+}
+
 /**
  * Les fitxes de les persones que seuen al ple d'un municipi.
  *
@@ -666,68 +745,7 @@ async function escriuRegidors(
     (dades.councilChanges?.changes ?? []).map((c) => [normalizePersonName(c.person), c]),
   );
 
-  // Els vots de cada grup, una sola vegada per municipi i no un cop per persona.
-  //
-  // `tot` diu si el grup hi va votar sencer, que és el que permet atribuir el
-  // vot a cada persona: si un grup de divuit regidories hi posa divuit vots, no
-  // queda ningú a qui atribuir un vot diferent. Quan l'acta no dona la xifra,
-  // l'adaptador ja ho llegeix com «tot el grup»; quan en dona menys que
-  // regidories, algú no hi era o va votar a part i no es pot dir qui.
-  const escons = new Map(grups.map((g) => [g.nom, g.escons]));
-  const votsPerGrup = new Map<
-    string,
-    {
-      data: string;
-      titol: string;
-      sentit: string;
-      url: string;
-      tot: boolean;
-      marge: number | null;
-      favor: number;
-      contra: number;
-    }[]
-  >();
-  for (const punt of dades.mocions?.llista ?? []) {
-    if (punt.vots.length === 0) continue;
-    // Com de renyida va ser. Un punt aprovat per tothom no separa ningú i no
-    // diu res de qui hi seu; un decidit per un vot ho diu tot. El marge és la
-    // diferència entre els dos costats: com més petit, més val la pena
-    // ensenyar-lo, i és el criteri d'ordenació en comptes de la data.
-    let favor = 0;
-    let contra = 0;
-    for (const v of punt.vots) {
-      if (v.sentit === "favor") favor += v.vots ?? 0;
-      if (v.sentit === "contra") contra += v.vots ?? 0;
-    }
-    const marge = favor + contra === 0 ? null : Math.abs(favor - contra);
-    for (const vot of punt.vots) {
-      if (vot.sentit !== "favor" && vot.sentit !== "contra" && vot.sentit !== "abstencio") continue;
-      const grup = encaixa(vot.grup, grups);
-      if (grup === null) continue;
-      const total = escons.get(grup.nom) ?? 0;
-      const llista = votsPerGrup.get(grup.nom) ?? [];
-      llista.push({
-        data: punt.data,
-        titol: punt.titol,
-        sentit: vot.sentit,
-        url: punt.url,
-        tot: vot.vots === null || (total > 0 && vot.vots === total),
-        marge,
-        favor,
-        contra,
-      });
-      votsPerGrup.set(grup.nom, llista);
-    }
-  }
-  // Primer les renyides, i entre les igual de renyides, les més recents. Les
-  // que no porten recompte van al final: no sabem si van separar ningú.
-  for (const llista of votsPerGrup.values()) {
-    llista.sort((a, b) => {
-      const ma = a.marge ?? Number.MAX_SAFE_INTEGER;
-      const mb = b.marge ?? Number.MAX_SAFE_INTEGER;
-      return ma !== mb ? ma - mb : b.data.localeCompare(a.data);
-    });
-  }
+  const { votsPerGrup, puntsAmbDesglos } = votsPerGrupDe(dades.mocions?.llista ?? [], grups);
 
   const totalSeats = carrecs.length;
   let escrites = 0;
@@ -773,6 +791,8 @@ async function escriuRegidors(
           majoria: Math.floor(totalSeats / 2) + 1,
           votsDelGrup: carrec.grup ? votsPerGrup.get(carrec.grup) ?? [] : [],
           actesLlegides: dades.mocions?.actes.llegides ?? 0,
+          actesIndexades: dades.mocions?.actes.indexades ?? null,
+          puntsAmbDesglos,
           assistencia: assistenciaDe(dades, carrec.nom, totalSeats),
           adreca: adreces.get(carrec)!,
           governConegut: carrecs.some((c) => c.equipGovern),
@@ -787,6 +807,7 @@ async function escriuRegidors(
             trajectoriaDePersona(fitxaTrajectoria, carrec.nom) ?? quiEsDeWikidata(fitxaCaps, carrec.nom),
           capDeLlista: candidatura,
           mandats: mandatsDe(historial, carrec.nom),
+          llistes: llistesDe(historial, carrec.nom),
           // El que cobra, de cada pagador que ho publica i sense sumar res:
           // l'ajuntament amb nom i cognoms (Barcelona), l'ajuntament via el
           // Ministeri (l'alcaldia), i els altres ens (diputacions, J14).
@@ -878,6 +899,22 @@ function retribucionsDe(
   }
 
   /*
+   * El mateix, del consell comarcal que paga (J30): la mateixa forma i les
+   * mateixes regles que J24. El cas que ho va demanar: una regidora de
+   * Vallirana, presidenta del Consell Comarcal del Baix Llobregat amb sou
+   * publicat a la seu del consell, que la seva pàgina no deia.
+   */
+  const delConsell = souDelConsellDe(dades.sousConsells ?? null, nom);
+  if (delConsell !== null && !ensVistos.has(normalize(delConsell.carrec.ens))) {
+    altres.push(delConsell.carrec);
+    ensVistos.add(normalize(delConsell.carrec.ens));
+    avis ??= delConsell.advertiment;
+    // El nom tal com l'escriu el consell, quan no és el nostre lletra per
+    // lletra: qui vagi a comprovar la font l'ha de poder reconèixer.
+    if (delConsell.nota !== null) avis = avis === null ? delConsell.nota : `${avis} ${delConsell.nota}`;
+  }
+
+  /*
    * Després, la resta de càrrecs acumulats (J14). Si la diputació ja ha dit el
    * seu, la fila de J14 del mateix ens no es repeteix: serien dues targetes del
    * mateix pagador, i la segona sense l'import que la primera sí que porta.
@@ -902,6 +939,83 @@ function retribucionsDe(
     }
   }
   return { altresCarrecs: altres, avisRetribucions: altres.length > 0 ? avis : null };
+}
+
+/** El que J30 desa per municipi, retallat al que en llegeix la fitxa de persona. */
+type SousConsellsDeJ30 = {
+  persones: {
+    nom: string;
+    /** El nom tal com l'escriu el consell, quan no és lletra per lletra el mateix. */
+    nomAlConsell?: string | null;
+    consell: {
+      ens: string;
+      carrec: string;
+      dedicacio: string | null;
+      retribucioAnualBruta: number | null;
+      maximPerAssistencies: number | null;
+      motiu: string | null;
+      font: { nom: string; url: string; llicencia?: string | null; consultat?: string | null };
+    };
+  }[];
+  advertiment?: string | null;
+};
+
+/** La forma que J30 desa a la mètrica `sousConsells`, llegida sense refiar-se'n. */
+function esSousConsells(x: unknown): x is SousConsellsDeJ30 {
+  if (typeof x !== "object" || x === null) return false;
+  return Array.isArray((x as Partial<SousConsellsDeJ30>).persones);
+}
+
+/**
+ * El càrrec al consell comarcal d'aquesta persona, amb el que en publica el
+ * consell que el paga (J30). Les regles són les de sempre i no es relaxen:
+ * l'aparellament és pel nom normalitzat i dos noms iguals no diuen res; només
+ * viatja l'import que publica qui paga; i el màxim per assistències va com a
+ * sostre, mai com a sou —no s'apunta a `anualBrut` ni se suma amb res.
+ *
+ * `nota` diu com escriu el nom el consell quan no és lletra per lletra el
+ * nostre («Eva M. Martínez Morales»): qui vagi a la font ha de poder
+ * reconèixer que parlem de la mateixa persona.
+ */
+export function souDelConsellDe(
+  sousConsells: unknown,
+  nom: string,
+): {
+  carrec: ContextRegidor["altresCarrecs"][number];
+  advertiment: string | null;
+  nota: string | null;
+} | null {
+  if (!esSousConsells(sousConsells)) return null;
+  const clau = normalizePersonName(nom);
+  const seves = sousConsells.persones.filter(
+    (p) => p?.consell && typeof p.nom === "string" && normalizePersonName(p.nom) === clau,
+  );
+  if (seves.length !== 1) return null;
+  const persona = seves[0]!;
+  const c = persona.consell;
+  const nomAlConsell = (persona.nomAlConsell ?? "").trim();
+  return {
+    carrec: {
+      ens: c.ens,
+      carrec: c.carrec,
+      anualBrut: c.retribucioAnualBruta,
+      concepte: c.retribucioAnualBruta === null ? null : "retribució anual bruta",
+      dedicacio: c.dedicacio,
+      motiuSenseImport: c.motiu,
+      sostreAssistencies: c.maximPerAssistencies,
+      font: {
+        nom: c.font.nom,
+        url: c.font.url,
+        llicencia: c.font.llicencia ?? null,
+        consultat: c.font.consultat ?? null,
+      },
+    },
+    advertiment: sousConsells.advertiment ?? null,
+    nota:
+      nomAlConsell !== "" && nomAlConsell !== nom.trim()
+        ? `A la seu del consell comarcal hi consta com a «${nomAlConsell}».`
+        : null,
+  };
 }
 
 /** El que el fitxer de Barcelona desa de cada persona (J22), retallat al que llegim. */
@@ -1160,30 +1274,46 @@ const anyDeLEleccio = (electionId: string): number | null => {
  * registre: sense això no es pot dir de ningú que sigui el seu primer mandat,
  * perquè el silenci d'un mandat no ingerit no és una absència.
  */
+export type LlistaAnada = {
+  any: number;
+  sigles: string;
+  posicio: number | null;
+  capDeLlista: boolean;
+  elegit: boolean;
+};
+
 export type HistorialMunicipi = {
   eleccions: number[];
-  /** Per nom normalitzat, els anys de les municipals després de les quals ha segut al ple. */
+  /** Per nom normalitzat, els anys de les municipals que l'han elegit. */
   mandats: Map<string, number[]>;
   /** Per nom normalitzat, els anys de les municipals en què ha anat en una llista com a titular. */
   llistes: Map<string, number[]>;
+  /** Per nom normalitzat, cada anada amb el detall: la llista, el número i si en va sortir. */
+  candidatures: Map<string, LlistaAnada[]>;
 };
 
 /**
- * Tot l'historial de plens i de llistes, un sol cop per a les 947 fitxes.
+ * Tot l'historial de llistes, un sol cop per a les 947 fitxes.
  *
- * Avui el registre d'electes i les candidatures només porten el mandat
- * 2023-2027 (comprovat el 30-08-2026: `councillor_mandates` i `candidacies`
- * tenen només files de M20231), de manera que d'aquí no en surt cap frase:
- * amb una sola elecció ingerida no es pot dir de ningú si és el primer mandat
- * o el tercer. El dia que J3 i J4 ingereixin el 2015 i el 2019, aquesta funció
- * no ha de canviar.
+ * La font són les **candidatures proclamades amb `electe`** (J4, que des de
+ * l'agost del 2026 ingereix el 2023, el 2019 i el 2015) i no el registre de
+ * plens: aquell només porta la composició d'avui, i un mandat antic no hi
+ * surt. El que aquesta font no veu —i per això la fitxa parla d'«elegit» i no
+ * d'«assegut»— són les substitucions de mandats passats: qui va entrar a mig
+ * mandat del 2019 no hi consta elegit el 2019. I per a qui seu avui per
+ * substitució, el garbell de `mandatsDe` calla sol: el seu últim any elegit
+ * no és el de l'última municipal.
+ *
+ * `eleccions` són les municipals de les quals el municipi té llistes al
+ * registre: sense això no es pot dir de ningú que sigui la primera vegada,
+ * perquè el silenci d'una municipal no ingerida no és una absència.
  */
 async function carregaHistorialMandats(db: Db): Promise<Map<number, HistorialMunicipi>> {
   const perMunicipi = new Map<number, HistorialMunicipi>();
   const de = (municipalityId: number): HistorialMunicipi => {
     let h = perMunicipi.get(municipalityId);
     if (h === undefined) {
-      h = { eleccions: [], mandats: new Map(), llistes: new Map() };
+      h = { eleccions: [], mandats: new Map(), llistes: new Map(), candidatures: new Map() };
       perMunicipi.set(municipalityId, h);
     }
     return h;
@@ -1194,45 +1324,62 @@ async function carregaHistorialMandats(db: Db): Promise<Map<number, HistorialMun
     map.set(clau, anys);
   };
 
-  const mandats = await db
-    .select({
-      municipalityId: councillorMandates.municipalityId,
-      electionId: councilTerms.electionId,
-      nom: people.fullName,
-    })
-    .from(councillorMandates)
-    .innerJoin(councilTerms, eq(councilTerms.id, councillorMandates.termId))
-    .innerJoin(people, eq(people.id, councillorMandates.personId));
-  for (const m of mandats) {
-    const any = anyDeLEleccio(m.electionId);
-    if (any === null) continue;
-    const h = de(m.municipalityId);
-    if (!h.eleccions.includes(any)) h.eleccions.push(any);
-    afegeix(h.mandats, normalizePersonName(m.nom), any);
-  }
-
-  const llistes = await db
+  const files = await db
     .select({
       municipalityId: candidatures.municipalityId,
       electionId: candidatures.electionId,
+      sigles: candidatures.sigles,
       nom: people.fullName,
+      posicio: candidacies.listPosition,
+      capDeLlista: candidacies.isHead,
+      elegit: candidacies.elected,
     })
     .from(candidacies)
     .innerJoin(candidatures, eq(candidatures.id, candidacies.candidatureId))
     .innerJoin(people, eq(people.id, candidacies.personId))
     .where(eq(candidacies.kind, "Titular"));
-  for (const l of llistes) {
-    const any = anyDeLEleccio(l.electionId);
+  for (const f of files) {
+    const any = anyDeLEleccio(f.electionId);
     if (any === null) continue;
-    afegeix(de(l.municipalityId).llistes, normalizePersonName(l.nom), any);
+    const h = de(f.municipalityId);
+    if (!h.eleccions.includes(any)) h.eleccions.push(any);
+    const clau = normalizePersonName(f.nom);
+    afegeix(h.llistes, clau, any);
+    if (f.elegit) afegeix(h.mandats, clau, any);
+    const anades = h.candidatures.get(clau) ?? [];
+    anades.push({ any, sigles: f.sigles, posicio: f.posicio, capDeLlista: f.capDeLlista, elegit: f.elegit });
+    h.candidatures.set(clau, anades);
   }
 
   for (const h of perMunicipi.values()) {
     h.eleccions.sort((a, b) => a - b);
     for (const anys of h.mandats.values()) anys.sort((a, b) => a - b);
     for (const anys of h.llistes.values()) anys.sort((a, b) => a - b);
+    for (const anades of h.candidatures.values()) anades.sort((a, b) => a.any - b.any);
   }
   return perMunicipi;
+}
+
+/**
+ * Les llistes on ha anat aquesta persona en aquest municipi, per a la línia
+ * «Les llistes on ha anat» de la seva fitxa.
+ *
+ * Les mateixes cauteles que `mandatsDe`: només quan el registre cobreix més
+ * d'una municipal —amb una de sola semblaria que abans no s'hi presentava,
+ * quan senzillament no ho tenim ingerit— i, si el mateix nom surt dues
+ * vegades el mateix any —dues persones que es diuen igual, o una fila
+ * duplicada—, no es diu res: penjar-li a algú l'anada a llistes d'un homònim
+ * és pitjor que callar.
+ */
+export function llistesDe(
+  historial: HistorialMunicipi | undefined,
+  nom: string,
+): ContextRegidor["llistes"] {
+  if (!historial || historial.eleccions.length < 2) return null;
+  const anades = historial.candidatures.get(normalizePersonName(nom)) ?? [];
+  if (anades.length === 0) return null;
+  if (new Set(anades.map((a) => a.any)).size !== anades.length) return null;
+  return [...anades].sort((a, b) => a.any - b.any);
 }
 
 /**

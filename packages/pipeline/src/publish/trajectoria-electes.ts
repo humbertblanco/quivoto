@@ -42,9 +42,16 @@ import { FOTOS_WIKIMEDIA_CSS, creditRetrat, retratWikimedia, type Retrat } from 
  * O sigui que la font no és un cens: és el que algú ha trobat prou notable per
  * escriure'n. Si aquesta pàgina digués «els alcaldes de ciutat gran fan més
  * carrera», estaria mesurant el biaix de la font i no la realitat. Per això
- * cada xifra hi va amb el seu denominador, el bloc de la cobertura és el segon
- * de la pàgina i no una nota al peu, i **no hi ha cap rànquing de municipis**:
- * l'ordre sortiria de qui té més article, no de qui fa més carrera.
+ * cada xifra hi va amb el seu denominador i **no hi ha cap rànquing de
+ * municipis**: l'ordre sortiria de qui té més article, no de qui fa més carrera.
+ *
+ * La primera versió obria la pàgina amb un bloc sencer de «què *no* diu» i
+ * era feixuc i estava escrit del revés: parlava del que no sabíem. El fons no
+ * ha canviat —el biaix de la font i la regla del rànquing es mantenen—, però
+ * ara es diu en positiu: aquí només hi ha el que Wikidata té escrit, i **es
+ * mostren dades quan n'hi ha**. L'entrada porta una línia honesta i el detall
+ * viu recollit en un desplegable al costat de la font, que és on el troba qui
+ * se'l vol llegir.
  *
  * La dècada és el mateix cas al revés. Els que van estrenar alcaldia als anys
  * 2010 en fan el salt un 6,8 %, contra el 17,5 % dels que la van estrenar als
@@ -347,8 +354,8 @@ export function ocupacions(
   <ul>${files2}</ul>
   <figcaption>Les dotze més freqüents de les ${nombre(ambOcupacio)} persones que en declaren
   alguna, de ${nombre(total)}. Una persona pot tenir-ne més d'una.
-  <b>De les altres ${nombre(total - ambOcupacio)} no en sabem res</b>: no vol dir que no
-  tinguessin ofici.</figcaption>
+  <b>De les altres ${nombre(total - ambOcupacio)}, Wikidata no en té cap d'escrita</b>: es mostren
+  oficis quan n'hi ha, i no tenir-ne d'escrit no vol dir no tenir-ne.</figcaption>
 </figure>`;
 }
 
@@ -627,40 +634,18 @@ ${cercador("../")}
   han ocupat després —o abans— un càrrec per sobre del seu ajuntament. Surten de
   ${nombre(data.municipis.filter((m) => m.ambSalt > 0).length)} municipis dels ${nombre(data.municipisTotal)}.</p>
   ${graellaDeCent(data.ambSalt, data.totalPersones, `De cada 100 alcaldes que Wikidata coneix, ${Math.max(1, Math.round((100 * data.ambSalt) / Math.max(1, data.totalPersones)))} han ocupat un càrrec per sobre del seu ajuntament.`)}
+  <p class="nota">Aquí només hi ha <b>el que Wikidata té escrit</b>: es mostren dades quan n'hi ha,
+  cada xifra va amb el seu denominador i no hi ha cap rànquing de municipis.
+  <a href="#cobertura">Com llegir aquestes xifres</a>.</p>
 </section>
 
 <nav class="index" aria-label="Seccions d'aquesta pàgina">
-  <a href="#cobertura">Què no diu aquesta pàgina</a>
   <a href="#on">On arriben</a>
   <a href="#mapa">De quins pobles surten</a>
   <a href="#quan">Per dècades</a>
   <a href="#abans">Què feien abans</a>
   <a href="#gent">Qui són</a>
 </nav>
-
-<section class="bloc" id="cobertura">
-  <h2>Què <em>no</em> diu aquesta pàgina</h2>
-  <p class="entrada-bloc">És el bloc més important i per això va primer, abans de cap xifra.</p>
-  <div class="destacat">
-    <p><b>${escape(cobertura)}</b> vol dir que de les altres ${nombre(data.totalPersones - data.ambSalt)}
-    <b>no ho sabem</b>, no que no hi hagin arribat mai.</p>
-    <p>La font d'aquesta pàgina és Wikidata, i Wikidata <b>cobreix molt millor la gent famosa</b>:
-    dels ${nombre(data.ambSalt)} que hi consta que han fet el salt, un
-    ${escape(percent(data.ambViquipediaSalt, data.ambSalt))} té article a la Viquipedia catalana;
-    dels ${nombre(data.totalPersones - data.ambSalt)} que no,
-    només un ${escape(percent(data.ambViquipediaSenseSalt, data.totalPersones - data.ambSalt))}.
-    No és un cens: és el que algú ha trobat prou notable per escriure'n.</p>
-    <p>Per això aquí <b>no hi ha cap rànquing de municipis</b> i els punts del mapa no creixen
-    amb la població. Una pàgina que digués «els alcaldes de ciutat gran fan més carrera»
-    estaria mesurant el biaix de la font i no la realitat.</p>
-  </div>
-  <p class="nota">El nostre historial oficial d'alcaldies en porta ${nombre(data.alcaldesHistorial)}
-  de diferents des del 1979; Wikidata en coneix ${nombre(data.totalPersones)}, i
-  ${nombre(data.aparellades)} d'aquests lliguen amb el nostre pel nom i per les dates alhora.
-  Els que no lliguen es publiquen igualment, dient que no lliguen: són dades de Wikidata i com a
-  tals es marquen, però no s'enganxen a la fitxa de cap persona nostra. Un càrrec atribuït a qui
-  no toca és pitjor que un buit.</p>
-</section>
 
 <section class="bloc" id="on">
   <h2>On arriben</h2>
@@ -722,6 +707,24 @@ ${cercador("../")}
   la seva etiqueta en català. Els ítems duplicats —la mateixa persona amb dues fitxes— es
   fusionen en comptes de descartar-se. El detall de cada decisió és al capçal de la feina
   d'ingesta.</p>
+  <details class="nota" id="cobertura">
+    <summary>Com llegir aquestes xifres</summary>
+    <p>Aquesta pàgina ensenya el que Wikidata té escrit: <b>${escape(cobertura)}</b> són les
+    persones que hi tenen un càrrec per sobre de l'ajuntament. De la resta no se n'afirma res,
+    ni en un sentit ni en l'altre: <b>es mostren dades quan n'hi ha</b>.</p>
+    <p>La font <b>cobreix molt millor la gent famosa</b>: dels ${nombre(data.ambSalt)} amb el salt
+    escrit, un ${escape(percent(data.ambViquipediaSalt, data.ambSalt))} té article a la Viquipedia
+    catalana; dels altres ${nombre(data.totalPersones - data.ambSalt)}, un
+    ${escape(percent(data.ambViquipediaSenseSalt, data.totalPersones - data.ambSalt))}. És el que
+    algú ha trobat prou notable per escriure'n, i per això aquí <b>no hi ha cap rànquing de
+    municipis</b> i els punts del mapa no creixen amb la població: ordenarien qui té més article,
+    no qui fa més carrera.</p>
+    <p>El nostre historial oficial d'alcaldies en porta ${nombre(data.alcaldesHistorial)}
+    de diferents des del 1979; Wikidata en coneix ${nombre(data.totalPersones)}, i
+    ${nombre(data.aparellades)} d'aquests lliguen amb el nostre pel nom i per les dates alhora.
+    Els que no lliguen es publiquen igualment, marcats com a dades de Wikidata, i no s'enganxen a
+    la fitxa de cap persona nostra: un càrrec atribuït a qui no toca és pitjor que un buit.</p>
+  </details>
 </section>
 
 </main>

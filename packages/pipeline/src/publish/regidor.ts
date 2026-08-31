@@ -163,6 +163,21 @@ export type ContextRegidor = {
   /** Quantes actes s'han pogut llegir, per dir per què la llista és curta. */
   actesLlegides: number;
   /**
+   * Quantes actes hi ha indexades a la seu, quan la mètrica ho diu. La fitxa
+   * del municipi escriu «Tenim indexades 40 actes» i aquesta pàgina deia «40
+   * actes llegides»: la mateixa xifra amb dues paraules, que llegides seguides
+   * semblaven dues coses. Amb totes dues es pot escriure «les 40 actes
+   * indexades, totes llegides», que és un sol vocabulari.
+   */
+  actesIndexades?: number | null;
+  /**
+   * En quants punts hem pogut llegir el vot d'ALGUN grup del ple. Separa dues
+   * situacions que no es poden confondre a la pàgina d'una persona: «no n'hem
+   * sabut llegir cap vot per grup» i «n'hem llegit d'altres grups però no hem
+   * sabut reconèixer el seu».
+   */
+  puntsAmbDesglos?: number;
+  /**
    * A quants plens ha anat, de quants en tenim la llista d'assistents.
    *
    * És l'única dada del projecte que és **de la persona i no del grup**:
@@ -322,7 +337,7 @@ export type ContextRegidor = {
     qid: string;
     /** L'ítem de Wikidata d'on surt tot això. */
     url: string;
-    /** L'article de la Viquipedia catalana, que en tenen 613 de les 2.917. */
+    /** L'article de la Viquipèdia catalana, que en tenen 613 de les 2.917. */
     viquipedia: string | null;
     /** L'ofici anterior a la política (P106), que en tenen 603. */
     ocupacions: string[];
@@ -414,7 +429,16 @@ export type ContextRegidor = {
     cobertesDesDe: number;
     llistesSenseEntrar: number[];
   } | null;
+  /**
+   * Les llistes municipals on ha anat de titular, any per any: la llista, el
+   * número i si en va sortir elegit. És la resposta directa a «quantes vegades
+   * s'ha presentat», i només arriba quan el registre cobreix més d'una
+   * municipal: amb una de sola, una llista d'una sola anada faria semblar que
+   * abans no s'hi presentava quan senzillament no ho tenim ingerit.
+   */
+  llistes?: { any: number; sigles: string; posicio: number | null; capDeLlista: boolean; elegit: boolean }[] | null;
   publicaDeLaPersona: {
+    /** `null` vol dir que la fitxa de la seu no s'ha pogut llegir: J14 ho desa així. */
     retribucio: "xifra" | "sense-xifra" | "cap" | null;
     declaracioBens: boolean;
     dietes: boolean;
@@ -951,6 +975,30 @@ function queCobra(r: Regidor, ctx: ContextRegidor): string {
 
   if (sous.length === 0) {
     const p = ctx.publicaDeLaPersona;
+    /*
+     * Quan la seu electrònica sí que publica una xifra, obrir el bloc amb «no
+     * en tenim cap import» xocava amb el ✓ del bloc del costat i es llegia com
+     * un error de la pàgina. La xifra existeix i es diu primer; el que no
+     * canvia és que no es reprodueix, perquè només recull la part que paga
+     * l'ajuntament i llegida com «el que cobra» exculparia.
+     */
+    if (p && p.retribucio === "xifra") {
+      return `<section class="bloc">
+    <h2>Què cobra</h2>
+    <p class="entrada-bloc">L'ajuntament <b>en publica una xifra</b> a la seu electrònica: la part
+    que paga ell mateix.</p>
+    <p>No la reproduïm aquí perquè <b>no és el que cobra</b>: deixa fora el que li pagui qualsevol
+    altra administració —una diputació, un consell comarcal, una àrea metropolitana— per càrrecs
+    que vénen d'aquesta regidoria, i una xifra curta llegida com el sou sencer exculpa.${
+      p.fitxa
+        ? ` <a href="${escape(p.fitxa)}" rel="noopener nofollow">La xifra, a la seva fitxa de la seu electrònica</a>.`
+        : ""
+    }</p>
+    <p class="nota">Quan qui paga en publiqui l'import sencer sortirà aquí, amb qui el paga al
+    costat i sense sumar-lo amb cap altre.</p>
+    ${avisos}
+  </section>`;
+    }
     return `<section class="bloc">
     <h2>Què cobra</h2>
     <p class="entrada-bloc">De ningú que li pagui aquest càrrec no en tenim cap import comprovat.</p>
@@ -958,19 +1006,9 @@ function queCobra(r: Regidor, ctx: ContextRegidor): string {
     xifra, o que la publica d'una manera que encara no hem pogut llegir i comprovar. Dir-ho és una
     dada del ple i no un buit d'aquesta pàgina: sense aquesta línia, la pàgina diria el mateix tant
     si en cobra cent mil euros com si no en cobra cap.</p>
-    ${
-      p && p.retribucio === "xifra"
-        ? `<p class="nota">El seu ajuntament sí que publica una xifra a la fitxa d'aquest càrrec, però
-           <b>només recull la part que paga ell mateix</b> i no el que la persona cobri d'una altra
-           administració: no és el que cobra, i per això no la copiem aquí com si ho fos.${
-             p.fitxa
-               ? ` <a href="${escape(p.fitxa)}" rel="noopener nofollow">La fitxa, a la seu electrònica</a>.`
-               : ""
-           }</p>`
-        : `<p class="nota">Qui n'hauria de publicar l'import és qui el paga: l'ajuntament del que li
-           paga l'ajuntament, i cada altre ens del que li paga ell. Quan en tinguem un de comprovat
-           sortirà aquí, amb qui el paga al costat i sense sumar-lo amb cap altre.</p>`
-    }
+    <p class="nota">Qui n'hauria de publicar l'import és qui el paga: l'ajuntament del que li
+    paga l'ajuntament, i cada altre ens del que li paga ell. Quan en tinguem un de comprovat
+    sortirà aquí, amb qui el paga al costat i sense sumar-lo amb cap altre.</p>
     ${avisos}
   </section>`;
   }
@@ -1041,6 +1079,22 @@ function casellaDesDe(r: Regidor, ctx: ContextRegidor, generatedAt: string): str
 }
 
 /**
+ * «les 40 actes indexades, totes llegides», «38 actes llegides de les 40
+ * indexades» o «12 actes llegides»: el mateix vocabulari que la fitxa del
+ * municipi, que diu «Tenim indexades 40 actes». Dues pàgines que s'enllacen
+ * entre elles no poden dir «indexades» i «llegides» com si fossin coses
+ * diferents; quan la mètrica no porta les indexades, es diu només el que sabem.
+ */
+function quantesActes(ctx: ContextRegidor): string {
+  const n = ctx.actesLlegides;
+  const llegides = `${n} ${n === 1 ? "acta llegida" : "actes llegides"}`;
+  const i = ctx.actesIndexades ?? null;
+  if (i === null || i <= 0) return llegides;
+  if (i === n) return `les ${n} actes indexades, totes llegides`;
+  return `${llegides} de les ${i} indexades`;
+}
+
+/**
  * El bloc «El seu pas pel ple»: quant fa que hi seu, quants plens ha fet i
  * quants punts en tenim del seu vot.
  *
@@ -1073,14 +1127,12 @@ function pasPelPle(r: Regidor, ctx: ContextRegidor, generatedAt: string): string
       ctx.votsDelGrup.length === 0
         ? ctx.actesLlegides === 0
           ? "d'aquest ajuntament encara no n'hem pogut llegir cap acta"
-          : `de ${ctx.actesLlegides} ${
-              ctx.actesLlegides === 1 ? "acta llegida" : "actes llegides"
-            }, cap no desglossa el vot per grup`
+          : (ctx.puntsAmbDesglos ?? 0) > 0
+            ? `de ${quantesActes(ctx)}, no hem sabut reconèixer el seu grup en cap votació`
+            : `de ${quantesActes(ctx)}, no n'hem sabut llegir cap vot per grup`
         : `${
             ctx.votsDelGrup.length === 1 ? "punt del ple" : "punts del ple"
-          } on l'acta desglossa el vot del seu grup, de ${ctx.actesLlegides} ${
-            ctx.actesLlegides === 1 ? "acta llegida" : "actes llegides"
-          }`,
+          } on l'acta desglossa el vot del seu grup, de ${quantesActes(ctx)}`,
     ),
   );
   if (ctx.votsDelGrup.length > 0) {
@@ -1188,11 +1240,12 @@ function queEnSabem(r: Regidor, ctx: ContextRegidor, generatedAt: string): strin
         actes === 0
           ? `D'aquest ajuntament <b>encara no n'hem pogut llegir cap acta</b>, i sense actes no podem
              dir què ha votat: preferim dir-ho a omplir-ho amb suposicions.`
-          : `${
-              actes === 1
-                ? "L'única acta que n'hem llegit <b>no desglossa el vot per grup</b>"
-                : `De les ${actes} actes que n'hem llegit, <b>cap no desglossa el vot per grup</b>`
-            }, i sense això no podem dir què ha votat: preferim dir-ho a omplir-ho amb suposicions.`,
+          : (ctx.puntsAmbDesglos ?? 0) > 0
+            ? `De ${quantesActes(ctx)} n'hem pogut llegir vots per grup, però <b>no hem sabut
+               reconèixer-hi el seu</b>: abans d'atribuir-li el vot d'un altre grup, no en diem cap.`
+            : `De ${quantesActes(ctx)}, <b>no n'hem sabut llegir cap vot desglossat per grup</b>:
+               n'hi pot haver escrit d'una manera que el nostre lector d'actes encara no entén, i
+               sense això no podem dir què ha votat. Preferim dir-ho a omplir-ho amb suposicions.`,
       )}
       ${fet(
         "Plens",
@@ -1267,7 +1320,7 @@ function mesEnllaDelPle(ctx: ContextRegidor): string {
     ${
       t.viquipedia === null
         ? ""
-        : `<p class="viqui"><a href="${escape(t.viquipedia)}" rel="noopener nofollow">La seva pàgina a la Viquipedia</a>.</p>`
+        : `<p class="viqui"><a href="${escape(t.viquipedia)}" rel="noopener nofollow">La seva pàgina a la Viquipèdia</a>.</p>`
     }
     <p class="nota">${escape(t.font)}, ítem
     <a href="${escape(t.url)}" rel="noopener nofollow">${escape(t.qid)}</a>${
@@ -1336,29 +1389,45 @@ function ordinalForca(n: number): string {
   return nomes[n - 1] ?? `${n}a`;
 }
 
+/** «del <b>2015</b>, del <b>2019</b> i del <b>2023</b>», per a les frases d'anys. */
+function delsAnys(anys: readonly number[]): string {
+  const parts = anys.map((a) => `del <b>${a}</b>`);
+  if (parts.length === 1) return parts[0]!;
+  return `${parts.slice(0, -1).join(", ")} i ${parts[parts.length - 1]}`;
+}
+
 /**
- * La frase dels mandats, sota la del càrrec: quants mandats porta en aquest
- * ple i des de quan, segons el registre d'electes.
+ * La frase dels mandats, sota la del càrrec: quantes municipals l'han elegit
+ * en aquest ple i des de quan.
  *
- * Només s'escriu quan el registre porta més d'una municipal del municipi
- * —avui només n'hi ha una i la frase no surt enlloc— i mai no diu «des del
- * 2015» com un inici si el registre no arriba més enrere: llavors ho diu amb
- * totes les lletres, perquè «hi és des que en tenim registre» i «hi va entrar
- * llavors» són dues frases diferents.
+ * Només s'escriu quan el registre porta més d'una municipal del municipi, i
+ * parla d'**eleccions, no de cadires**: la font són les candidatures amb
+ * `electe` (J4), i qui va entrar a mig mandat d'un ple antic per substitució
+ * no hi consta. Per això «elegida per primera vegada el 2023» és una frase
+ * que la font aguanta i «primer mandat» no ho seria —podria haver segut abans
+ * sense sortir-ne elegida—. L'únic ordinal que es conserva és el de la tanda
+ * seguida, on cada municipal l'ha elegida i la cadira es resegueix sencera.
+ * Pel mateix motiu, de les llistes on va anar sense sortir-ne se'n diu això
+ * mateix —«sense sortir-ne elegida»— i no «sense entrar al ple», que la font
+ * no pot saber.
  */
-function fraseMandats(ctx: ContextRegidor): string {
+function fraseMandats(r: Regidor, ctx: ContextRegidor): string {
   const m = ctx.mandats;
   if (!m) return "";
+  const fem = /a$/i.test(r.carrec.trim());
+  const elegit = fem ? "elegida" : "elegit";
   const ordinals = ["primer", "segon", "tercer", "quart", "cinquè", "sisè", "setè", "vuitè", "novè", "desè"];
   const ordinal = ordinals[m.quants - 1] ?? `${m.quants}è`;
+  const majuscula = `${elegit.charAt(0).toUpperCase()}${elegit.slice(1)}`;
   const principal =
     m.quants === 1
-      ? `El seu <b>primer mandat</b> en aquest ple des d'almenys el ${m.cobertesDesDe}`
+      ? `${majuscula} <b>per primera vegada</b> a les municipals del ${m.primer}, fins on arriba
+         el registre de llistes (cobreix des del ${m.cobertesDesDe})`
       : m.seguits
         ? `Al ple des del <b>${m.primer}</b>${
             m.iniciConegut ? "" : ", que és fins on arriba el registre"
           }: <b>${ordinal} mandat</b> seguit`
-        : `El seu <b>${ordinal} mandat</b> al ple; el primer, el del ${m.primer}`;
+        : `${majuscula} a les municipals ${delsAnys(m.anys)}`;
   const llistes =
     m.llistesSenseEntrar.length === 0
       ? ""
@@ -1366,8 +1435,34 @@ function fraseMandats(ctx: ContextRegidor): string {
           m.llistesSenseEntrar.length === 1
             ? `el ${m.llistesSenseEntrar[0]}`
             : `els anys ${m.llistesSenseEntrar.join(" i ")}`
-        } sense entrar al ple.`;
+        } sense sortir-ne ${elegit}.`;
   return `<p class="mandats">${principal}.${llistes}</p>`;
+}
+
+/**
+ * La línia de les llistes on ha anat: any per any, amb el número, la llista i
+ * si en va sortir. És la resposta directa a «quantes vegades s'ha presentat»,
+ * que la frase dels mandats només respon a mitges: aquella parla de les
+ * municipals que el van elegir, i aquesta també de les que no.
+ *
+ * Les sigles s'escriuen el primer any i quan canvien, no a cada any: «2015:
+ * núm. 8 amb ERC-AM · 2019: núm. 4» ja diu que el 2019 hi anava amb la
+ * mateixa llista, i repetir-les cada vegada faria la línia il·legible.
+ */
+function fraseLlistes(r: Regidor, ctx: ContextRegidor): string {
+  const anades = ctx.llistes;
+  if (!anades || anades.length === 0) return "";
+  const fem = /a$/i.test(r.carrec.trim());
+  const elegit = fem ? "elegida" : "elegit";
+  let anteriors: string | null = null;
+  const trossos = anades.map((a) => {
+    const numero = a.capDeLlista ? "cap de llista" : a.posicio === null ? null : `núm. ${a.posicio}`;
+    const sigles = a.sigles === anteriors ? null : `amb ${escape(a.sigles)}`;
+    anteriors = a.sigles;
+    const que = [numero, sigles].filter((t): t is string => t !== null).join(" ");
+    return `<b>${a.any}</b>: ${que === "" ? "" : `${que} `}(${a.elegit ? elegit : `no ${elegit}`})`;
+  });
+  return `<p class="mandats">Les llistes on ha anat — ${trossos.join(" · ")}.</p>`;
 }
 
 /**
@@ -1478,7 +1573,13 @@ function queHaVotat(ctx: ContextRegidor): string {
         ? `<p>${
             ctx.actesLlegides === 0
               ? `D'aquest ajuntament <b>encara no hem pogut llegir cap acta</b> amb el sentit del vot desglossat.`
-              : `Hem llegit ${ctx.actesLlegides} actes d'aquest ajuntament, però <b>cap no desglossa el vot per grup</b>.`
+              : (ctx.puntsAmbDesglos ?? 0) > 0
+                ? `De ${quantesActes(ctx)} n'hem pogut llegir el vot per grup en ${ctx.puntsAmbDesglos}
+                   ${ctx.puntsAmbDesglos === 1 ? "punt" : "punts"}, però <b>no hem sabut reconèixer-hi
+                   el seu grup</b>: abans d'atribuir-li el vot d'un altre, no en diem cap.`
+                : `De ${quantesActes(ctx)} d'aquest ajuntament,
+                   <b>no n'hem sabut llegir cap vot desglossat per grup</b>: n'hi pot haver escrit
+                   d'una manera que el nostre lector d'actes encara no entén.`
           }
            Sense això no podem dir què s'hi ha votat, i preferim dir-ho a omplir-ho amb suposicions.</p>`
         : `<p class="entrada-bloc">Els punts que el ple va votar de manera dividida i on consta el
@@ -1494,6 +1595,56 @@ function queHaVotat(ctx: ContextRegidor): string {
     allò</b>, perquè no queda ningú a qui atribuir un vot diferent. En aquests punts hi diu què va
     votar aquesta persona. Quan el grup hi va posar menys vots que regidories —algú no hi era, o
     algú hi va votar a part— no es pot saber qui, i llavors hi diu «el seu grup».</p>
+  </section>`;
+}
+
+/**
+ * El bloc «Què en publica el seu ajuntament», només quan la fitxa de la seu
+ * electrònica s'ha pogut llegir de debò: llavors cada ✓ i cada ✕ diuen què hi
+ * consta i què no. Quan no s'ha pogut obrir cap fitxa —o quan l'ajuntament no
+ * en publica— cinc creus es llegien com «no publica res», que és una afirmació
+ * que no podem fer, i la nota que ho matisava no desfeia la primera impressió:
+ * l'usuari va demanar treure-ho, i el bloc sencer no s'escriu. El senyal és
+ * `retribucio === null`, que és com J14 desa una fitxa no llegida.
+ */
+function queEnPublica(ctx: ContextRegidor): string {
+  const p = ctx.publicaDeLaPersona;
+  if (!p || p.retribucio === null) return "";
+  const fila = (hi: boolean, text: string): string =>
+    `<li class="${hi ? "hi-es" : "no-hi-es"}"><span class="senyal" aria-hidden="true">${
+      hi ? "✓" : "✕"
+    }</span><span class="nom">${escape(text)}</span></li>`;
+  return `<section class="bloc">
+    <h2>Què en publica el seu ajuntament</h2>
+    <p class="entrada-bloc">Del seu càrrec, què consta a la seu electrònica del mateix ajuntament.
+    <b>No és el que cobra</b>: és què se'n pot saber.</p>
+    <ul class="transparencia">
+      ${fila(p.retribucio === "xifra", "La retribució del càrrec, amb import")}
+      ${fila(p.declaracioBens, "La declaració de béns i activitats")}
+      ${fila(p.dietes, "Les dietes")}
+      ${fila(p.indemnitzacions, "Les indemnitzacions")}
+      ${
+        // Quan sí que en sabem un d'altre ens, la creu del costat diria el
+        // contrari del bloc de sobre si es llegís de pressa: aquí no vol dir
+        // que no en tingui, vol dir que el seu ajuntament no ho publica —i qui
+        // ho publica és qui el paga.
+        ctx.altresCarrecs.length > 0 && !p.altresRetribucions
+          ? `<li class="no-hi-es"><span class="senyal" aria-hidden="true">✕</span><span class="nom">Les
+             retribucions d'altres ens <b>—però en té ${
+               ctx.altresCarrecs.length === 1 ? "una" : ctx.altresCarrecs.length
+             }, i qui la paga sí que la publica: és al bloc de sobre</b></span></li>`
+          : fila(p.altresRetribucions, "Les retribucions d'altres ens")
+      }
+    </ul>
+    ${
+      p.fitxa
+        ? `<p class="nota oberta"><a href="${escape(p.fitxa)}" rel="noopener nofollow">La seva fitxa a la seu electrònica</a>.</p>`
+        : ""
+    }
+    <details class="nota"><summary>La lletra petita</summary>De l'import que hi publiquen els ajuntaments no se n'agafa cap euro:
+    només recull la part que paga l'ajuntament i deixa fora el que la persona cobri d'una altra
+    administració, de manera que una xifra baixa exculpa. El que sí que és comprovable és si hi
+    consta o no.${p.font ? ` ${escape(p.font.nom)}, consultat el ${escape(p.font.consultat)}.` : ""}</details>
   </section>`;
 }
 
@@ -1541,7 +1692,8 @@ ${cercador("../../../../")}
         <p class="entrada" style="margin:0">${escape(r.carrec)} ${escape(de(ctx.municipi))}${
           r.grup ? `, pel grup <b>${escape(r.grup)}</b>` : ""
         }.</p>
-        ${fraseMandats(ctx)}
+        ${fraseMandats(r, ctx)}
+        ${fraseLlistes(r, ctx)}
         <div class="etiquetes">
           ${
             // Les sigles porten a la pàgina del partit a tot Catalunya, com el
@@ -1595,56 +1747,7 @@ ${cercador("../../../../")}
 
   ${mesEnllaDelPle(ctx)}
 
-  ${
-    !ctx.publicaDeLaPersona
-      ? `<section class="bloc">
-    <h2>Què en publica el seu ajuntament</h2>
-    <p class="entrada-bloc">La seu electrònica d'aquest ajuntament no publica la fitxa de càrrecs
-    electes, i per això aquí no hi ha ni la llista de què consta i què no. No vol dir que no
-    publiqui res enlloc: vol dir que no ho podem llegir d'una font oberta.</p>
-  </section>`
-      : (() => {
-          const p = ctx.publicaDeLaPersona;
-          const fila = (hi: boolean, text: string): string =>
-            `<li class="${hi ? "hi-es" : "no-hi-es"}"><span class="senyal" aria-hidden="true">${
-              hi ? "✓" : "✕"
-            }</span><span class="nom">${escape(text)}</span></li>`;
-          return `<section class="bloc">
-    <h2>Què en publica el seu ajuntament</h2>
-    <p class="entrada-bloc">Del seu càrrec, què consta a la seu electrònica del mateix ajuntament.
-    <b>No és el que cobra</b>: és què se'n pot saber.</p>
-    <ul class="transparencia">
-      ${fila(p.retribucio === "xifra", "La retribució del càrrec, amb import")}
-      ${fila(p.declaracioBens, "La declaració de béns i activitats")}
-      ${fila(p.dietes, "Les dietes")}
-      ${fila(p.indemnitzacions, "Les indemnitzacions")}
-      ${
-        // Quan sí que en sabem un d'altre ens, la creu del costat diria el
-        // contrari del bloc de sobre si es llegís de pressa: aquí no vol dir
-        // que no en tingui, vol dir que el seu ajuntament no ho publica —i qui
-        // ho publica és qui el paga.
-        ctx.altresCarrecs.length > 0 && !p.altresRetribucions
-          ? `<li class="no-hi-es"><span class="senyal" aria-hidden="true">✕</span><span class="nom">Les
-             retribucions d'altres ens <b>—però en té ${
-               ctx.altresCarrecs.length === 1 ? "una" : ctx.altresCarrecs.length
-             }, i qui la paga sí que la publica: és al bloc de sobre</b></span></li>`
-          : fila(p.altresRetribucions, "Les retribucions d'altres ens")
-      }
-    </ul>
-    ${
-      p.fitxa
-        ? `<p class="nota oberta"><a href="${escape(p.fitxa)}" rel="noopener nofollow">La seva fitxa a la seu electrònica</a>.</p>`
-        : `<p class="nota oberta">D'aquest ajuntament no hem pogut obrir la fitxa de cap càrrec, i per
-           tant no en podem dir ni que publiqui ni que no publiqui res. Les creus de sobre volen dir
-           això i no una altra cosa.</p>`
-    }
-    <details class="nota"><summary>La lletra petita</summary>De l'import que hi publiquen els ajuntaments no se n'agafa cap euro:
-    només recull la part que paga l'ajuntament i deixa fora el que la persona cobri d'una altra
-    administració, de manera que una xifra baixa exculpa. El que sí que és comprovable és si hi
-    consta o no.${p.font ? ` ${escape(p.font.nom)}, consultat el ${escape(p.font.consultat)}.` : ""}</details>
-  </section>`;
-        })()
-  }
+  ${queEnPublica(ctx)}
 
   ${senseRes ? "" : queHaVotat(ctx)}
 

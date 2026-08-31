@@ -160,7 +160,7 @@ describe("renderRegidor", () => {
     expect(html).toContain("CC0 1.0");
     expect(html).toContain("Q11907");
     expect(html).toContain("advocada");
-    expect(html).toContain("La seva pàgina a la Viquipedia");
+    expect(html).toContain("La seva pàgina a la Viquipèdia");
   });
 
   it("quan no en sabem res, el bloc no s'escriu: cap «no consta»", () => {
@@ -195,9 +195,35 @@ describe("renderRegidor", () => {
     expect(html).toContain("encara no hem pogut llegir cap acta");
   });
 
-  it("distingeix no haver llegit actes de que les actes no desglossin el vot", () => {
+  /**
+   * «cap acta no desglossa el vot per grup» afirmava una cosa de les actes que
+   * no sabem: a Esplugues les actes sí que desglossen —les preguntes de prova
+   * les citen— i era el nostre lector que no les sabia llegir. La frase parla
+   * de la nostra lectura, no de les actes.
+   */
+  it("quan no sabem llegir cap vot, ho diu de la nostra lectura i no de les actes", () => {
     const html = renderRegidor(REGIDORA, { ...CONTEXT, votsDelGrup: [] }, "2026-08-29");
-    expect(html).toContain("cap no desglossa el vot per grup");
+    expect(html).toContain("no n'hem sabut llegir cap vot desglossat per grup");
+    expect(html).not.toContain("cap no desglossa el vot per grup");
+  });
+
+  it("i quan llegim vots d'altres grups, diu que no hem sabut reconèixer el seu", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, votsDelGrup: [], puntsAmbDesglos: 7 },
+      "2026-08-29",
+    );
+    expect(html).toContain("no hem sabut reconèixer-hi");
+    expect(html).not.toContain("no n'hem sabut llegir cap vot desglossat");
+  });
+
+  it("amb les actes indexades a la mà, parla com la fitxa del municipi", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, votsDelGrup: [], actesIndexades: 12 },
+      "2026-08-29",
+    );
+    expect(html).toContain("les 12 actes indexades, totes llegides");
   });
 
   it("diu què va votar la persona quan tot el seu grup hi va votar igual", () => {
@@ -649,10 +675,10 @@ describe("una persona de qui no sabem res", () => {
     expect(html).not.toContain("de 0 actes");
   });
 
-  it("distingeix no haver llegit actes de que cap no desglossi el vot", () => {
+  it("distingeix no haver llegit actes de no haver-ne sabut llegir el vot", () => {
     const html = renderRegidor(REGIDORA, { ...BUIT, actesLlegides: 12 }, "2026-08-30");
-    expect(html).toContain("De les 12 actes");
-    expect(html).toContain("cap no desglossa el vot per grup");
+    expect(html).toContain("De 12 actes llegides");
+    expect(html).toContain("no n'hem sabut llegir cap vot desglossat per grup");
     expect(html).toContain("Cap de les actes que hem llegit no porta la llista");
   });
 
@@ -723,6 +749,103 @@ describe("una persona de qui no sabem res", () => {
     );
     expect(html).toContain("<h2>Què cobra</h2>");
     expect(html).toContain("la font no en dona cap import");
+  });
+});
+
+describe("quan la seu electrònica publica una xifra i cap pagador res", () => {
+  const PUBLICA_XIFRA = {
+    retribucio: "xifra" as const, declaracioBens: true, dietes: false, indemnitzacions: false,
+    altresRetribucions: false, fitxa: "https://seu-e.cat/fitxa",
+    font: { nom: "seu-e.cat", url: "https://seu-e.cat/", consultat: "2026-08-30" },
+  };
+
+  /**
+   * Obrir amb «no en tenim cap import» mentre el bloc del costat marcava
+   * «✓ La retribució del càrrec, amb import» es llegia com un error de la
+   * pàgina. La xifra existeix i es diu primer; reproduir-la, no.
+   */
+  it("el bloc anomena la xifra primer i diu per què no la reproduïm", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, publicaDeLaPersona: PUBLICA_XIFRA },
+      "2026-08-30",
+    );
+    expect(html).toContain("en publica una xifra</b> a la seu electrònica");
+    expect(html).toContain("no és el que cobra");
+    expect(html).toContain("La xifra, a la seva fitxa de la seu electrònica");
+    expect(html).not.toContain("no en tenim cap import comprovat");
+  });
+});
+
+describe("«Què en publica el seu ajuntament» només quan la fitxa s'ha llegit", () => {
+  const PUBLICA = {
+    retribucio: "cap" as const, declaracioBens: true, dietes: false, indemnitzacions: false,
+    altresRetribucions: false, fitxa: "https://seu-e.cat/fitxa",
+    font: { nom: "seu-e.cat", url: "https://seu-e.cat/", consultat: "2026-08-30" },
+  };
+
+  it("amb la fitxa llegida, el bloc hi és i enllaça la fitxa oficial", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, publicaDeLaPersona: PUBLICA }, "2026-08-30");
+    expect(html).toContain("<h2>Què en publica el seu ajuntament</h2>");
+    expect(html).toContain("La seva fitxa a la seu electrònica");
+  });
+
+  /**
+   * Cinc creus sota una fitxa que no s'ha pogut llegir es llegien com «no
+   * publica res», que és una afirmació que no podem fer, i la nota que ho
+   * matisava no desfeia la primera impressió: l'usuari va demanar treure-ho.
+   * Quan no hem llegit res, no es diu res.
+   */
+  it("sense mètrica de la seu no hi ha bloc: ni creus ni disculpes", () => {
+    const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
+    expect(html).not.toContain("Què en publica el seu ajuntament");
+  });
+
+  it("amb la fitxa no llegida (retribució nul·la), tampoc", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, publicaDeLaPersona: { ...PUBLICA, retribucio: null, fitxa: null } },
+      "2026-08-30",
+    );
+    expect(html).not.toContain("Què en publica el seu ajuntament");
+    expect(html).not.toContain("no en podem dir ni que publiqui");
+  });
+});
+
+describe("les llistes on ha anat", () => {
+  const LLISTES: NonNullable<ContextRegidor["llistes"]> = [
+    { any: 2015, sigles: "ERC-AM", posicio: 8, capDeLlista: false, elegit: false },
+    { any: 2019, sigles: "ERC-AM", posicio: 4, capDeLlista: false, elegit: true },
+    { any: 2023, sigles: "ERC-AM", posicio: 2, capDeLlista: false, elegit: true },
+  ];
+
+  it("una línia amb cada anada: any, número, llista i si en va sortir", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, llistes: LLISTES }, "2026-08-30");
+    expect(html).toContain("Les llistes on ha anat");
+    expect(html).toContain("<b>2015</b>: núm. 8 amb ERC-AM (no elegida)");
+    // Les sigles no es repeteixen quan no canvien: ja se sap amb qui anava.
+    expect(html).toContain("<b>2019</b>: núm. 4 (elegida)");
+    expect(html).toContain("<b>2023</b>: núm. 2 (elegida)");
+  });
+
+  it("les sigles tornen a dir-se quan canvien, i el cap de llista es diu pel nom", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        llistes: [
+          { any: 2019, sigles: "CUP", posicio: 3, capDeLlista: false, elegit: false },
+          { any: 2023, sigles: "ERC-AM", posicio: 1, capDeLlista: true, elegit: true },
+        ],
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("<b>2019</b>: núm. 3 amb CUP (no elegida)");
+    expect(html).toContain("<b>2023</b>: cap de llista amb ERC-AM (elegida)");
+  });
+
+  it("sense historial no hi ha línia", () => {
+    expect(renderRegidor(REGIDORA, CONTEXT, "2026-08-30")).not.toContain("Les llistes on ha anat");
   });
 });
 
@@ -1024,7 +1147,13 @@ describe("la frase dels mandats", () => {
     expect(html).toContain("fins on arriba el registre");
   });
 
-  it("el primer mandat només s'afirma dins del que el registre cobreix", () => {
+  /**
+   * La font dels mandats són les candidatures amb «electe», que no veuen les
+   * substitucions de mandats passats: per això la frase diu «elegida per
+   * primera vegada» —que la font aguanta— i no «primer mandat», que podria
+   * ser fals si havia segut abans per substitució.
+   */
+  it("la primera elecció s'afirma com a elecció, dins del que el registre cobreix", () => {
     const html = renderRegidor(
       REGIDORA,
       {
@@ -1036,20 +1165,23 @@ describe("la frase dels mandats", () => {
       },
       "2026-08-30",
     );
-    expect(html).toContain("primer mandat");
-    expect(html).toContain("des d'almenys el 2015");
-    expect(html).toContain("els anys 2015 i 2019 sense entrar al ple");
+    expect(html).toContain("per primera vegada");
+    expect(html).toContain("cobreix des del 2015");
+    // De les llistes on no va sortir només es diu això: «sense entrar al ple»
+    // seria afirmar que no hi va entrar mai, i una substitució ho desmentiria.
+    expect(html).toContain("els anys 2015 i 2019 sense sortir-ne elegida");
+    expect(html).not.toContain("primer mandat");
   });
 
-  it("amb un forat no es diu «seguit»: es diu quin és i quan va ser el primer", () => {
+  it("amb un forat no es diu cap ordinal: es diuen les municipals que l'han elegida", () => {
     const html = renderRegidor(
       REGIDORA,
       { ...CONTEXT, mandats: { ...TRES, anys: [2015, 2023], quants: 2, seguits: false, iniciConegut: false } },
       "2026-08-30",
     );
-    expect(html).toContain("segon mandat");
-    expect(html).toContain("el primer, el del 2015");
+    expect(html).toContain("Elegida a les municipals del <b>2015</b> i del <b>2023</b>");
     expect(html).not.toContain("seguit");
+    expect(html).not.toContain("segon mandat");
   });
 
   it("sense historial no s'escriu res, i la frase també surt a la pàgina de qui no en sabem res", () => {

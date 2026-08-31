@@ -220,7 +220,7 @@ describe("decades i ocupacions", () => {
   it("les ocupacions diuen de quants se'n sap i de quants no", () => {
     const html = ocupacions(DADES.ocupacions, DADES.ambOcupacio, DADES.totalPersones);
     expect(html).toContain("de les 603 persones que en declaren");
-    expect(html).toContain("<b>De les altres 2.314 no en sabem res</b>");
+    expect(html).toContain("<b>De les altres 2.314, Wikidata no en té cap d'escrita</b>");
   });
 });
 
@@ -328,22 +328,27 @@ describe("renderTrajectoriaElectes", () => {
     expect(html).not.toMatch(/<b>284<\/b>\s*alcaldes/);
   });
 
-  it("el bloc de la cobertura va abans que cap altra xifra", () => {
-    const cobertura = html.indexOf('id="cobertura"');
-    expect(cobertura).toBeGreaterThan(0);
-    expect(cobertura).toBeLessThan(html.indexOf('id="on"'));
-    expect(cobertura).toBeLessThan(html.indexOf('id="mapa"'));
+  /**
+   * El bloc «què *no* diu» obria la pàgina i era feixuc i escrit del revés:
+   * l'usuari va demanar amagar-lo més i dir-ho en positiu. El fons no marxa
+   * —el biaix i la regla del rànquing continuen escrits— però ara viu en un
+   * desplegable al costat de la font, i l'entrada n'avisa amb una línia.
+   */
+  it("la lletra del biaix viu recollida al costat de la font, no com a primer bloc", () => {
+    expect(html).toContain('<details class="nota" id="cobertura">');
+    expect(html.indexOf('id="cobertura"')).toBeGreaterThan(html.indexOf('id="gent"'));
+    // I l'entrada hi porta amb una línia honesta, abans de cap secció.
+    expect(html.indexOf('href="#cobertura"')).toBeLessThan(html.indexOf('id="on"'));
   });
 
-  it("diu amb aquestes paraules què no es pot concloure", () => {
-    expect(html).toContain("<b>no ho sabem</b>, no que no hi hagin arribat mai");
+  it("ho diu en positiu: es mostren dades quan n'hi ha, i el biaix queda escrit", () => {
+    expect(html).toContain("es mostren dades quan n'hi ha");
+    expect(html).not.toContain("no ho sabem");
     expect(html).toContain("cobreix molt millor la gent famosa");
-    expect(html).toContain(
-      "estaria mesurant el biaix de la font i no la realitat",
-    );
+    expect(html).toContain("no hi ha cap rànquing de municipis");
     // I la prova numèrica del biaix, no només l'afirmació.
-    expect(html).toContain("96 % té article a la Viquipedia catalana");
-    expect(html).toContain("només un 13 %");
+    expect(html).toContain("96 % té article a la Viquipedia");
+    expect(html).toMatch(/un\s+13 %/);
   });
 
   it("avisa que la baixada de les últimes dècades no és cap troballa", () => {
