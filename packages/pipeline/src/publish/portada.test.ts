@@ -44,14 +44,14 @@ const MARQUES = [
 ] as const;
 
 const CIUTATS = [
-  ["barcelona", "Barcelona", 1_702_000, "Jaume Collboni Cuadrado", "PSC-CP", "psc", "/observatori/fotos/160/08019-1.webp", "regidor/jaume-collboni-cuadrado/"],
-  ["l-hospitalet-de-llobregat", "L'Hospitalet de Llobregat", 283_000, "David Quirós", "PSC-CP", "psc", null, null],
-  ["terrassa", "Terrassa", 226_000, "Jordi Ballart", "TxT", null, null, "regidor/jordi-ballart/"],
-  ["badalona", "Badalona", 226_000, "Xavier García Albiol", "PP", "pp", "/observatori/fotos/160/08015-1.webp", "regidor/xavier-garcia-albiol/"],
-  ["sabadell", "Sabadell", 219_000, "Marta Farrés", "PSC-CP", "psc", null, "regidor/marta-farres/"],
-  ["lleida", "Lleida", 143_000, "Fèlix Larrosa", "PSC-CP", "psc", "/observatori/fotos/160/25120-1.webp", "regidor/felix-larrosa/"],
-  ["tarragona", "Tarragona", 141_000, "Rubén Viñuales", "PSC-CP", "psc", null, "regidor/ruben-vinuales/"],
-  ["mataro", "Mataró", 131_000, "David Bote", "PSC-CP", "psc", null, "regidor/david-bote/"],
+  ["barcelona", "Barcelona", 1_702_000, "Jaume Collboni Cuadrado", "PSC-CP", "psc", "regidor/jaume-collboni-cuadrado/"],
+  ["l-hospitalet-de-llobregat", "L'Hospitalet de Llobregat", 283_000, "David Quirós", "PSC-CP", "psc", null],
+  ["terrassa", "Terrassa", 226_000, "Jordi Ballart", "TxT", null, "regidor/jordi-ballart/"],
+  ["badalona", "Badalona", 226_000, "Xavier García Albiol", "PP", "pp", "regidor/xavier-garcia-albiol/"],
+  ["sabadell", "Sabadell", 219_000, "Marta Farrés", "PSC-CP", "psc", "regidor/marta-farres/"],
+  ["lleida", "Lleida", 143_000, "Fèlix Larrosa", "PSC-CP", "psc", "regidor/felix-larrosa/"],
+  ["tarragona", "Tarragona", 141_000, "Rubén Viñuales", "PSC-CP", "psc", "regidor/ruben-vinuales/"],
+  ["mataro", "Mataró", 131_000, "David Bote", "PSC-CP", "psc", "regidor/david-bote/"],
 ] as const;
 
 const COMARQUES = [
@@ -66,11 +66,11 @@ const COMARQUES = [
 function mostra(canvis: Partial<PortadaMostra> = {}): PortadaMostra {
   return {
     partits: MARQUES.map(([id, sigles, color, alcaldies, regidories]) => ({ id, sigles, nom: `Nom ${sigles}`, color, alcaldies, regidories })),
-    municipis: CIUTATS.map(([slug, nom, habitants, alcalde, sigles, brandId, foto, adreca]) => ({
+    municipis: CIUTATS.map(([slug, nom, habitants, alcalde, sigles, brandId, adreca]) => ({
       slug,
       nom,
       habitants,
-      alcaldia: { nom: alcalde, sigles, brandId, foto, adreca },
+      alcaldia: { nom: alcalde, sigles, brandId, adreca },
     })),
     quiMana: [
       ...CIUTATS.map(([slug, , , , , brandId]) => ({ slug, brandId: brandId ?? "local" })),
@@ -150,21 +150,20 @@ describe("renderPortada amb la mostra", () => {
     expect(html).toContain('querySelectorAll("[data-obre-cerca]")');
   });
 
-  it("ensenya les vuit ciutats amb la cara o les inicials, i enllaça el poble i la persona", () => {
+  it("ensenya les vuit ciutats sense cap cara: el poble, la persona i les sigles, enllaçats", () => {
     const llista = main.slice(main.indexOf('<ol class="grans">'), main.indexOf("</ol>"));
     expect(llista.match(/<li>/g)).toHaveLength(8);
-    // Barcelona: retrat, nom del poble a la fitxa, alcalde a la seva pàgina, sigles amb color.
-    expect(llista).toContain('<img class="retrat" src="/observatori/fotos/160/08019-1.webp" alt="" loading="lazy" width="44" height="44">');
+    // Cap retrat ni inicials: les cares no són del poble, són de persones.
+    expect(llista).not.toContain("<img");
+    expect(llista).not.toContain('class="retrat');
+    // Barcelona: el poble a la seva fitxa, l'alcalde a la seva pàgina, les sigles a la del partit.
     expect(llista).toContain('<a class="poble" href="m/barcelona/">Barcelona</a>');
     expect(llista).toContain('<a href="m/barcelona/regidor/jaume-collboni-cuadrado/">Jaume Collboni Cuadrado</a>');
     expect(llista).toContain('href="./partit/psc/"');
     expect(llista).toContain("1.702.000 habitants");
-    // L'Hospitalet: sense retrat van les inicials amb el color del PSC, i sense fitxa el nom porta a les alcaldies.
-    expect(llista).toContain('class="retrat inicials sense-foto" style="--c:#d00c3c;--t:');
-    expect(llista).toContain(">DQ</span>");
+    // L'Hospitalet: sense fitxa el nom porta a l'apartat d'alcaldies del municipi.
     expect(llista).toContain('<a href="m/l-hospitalet-de-llobregat/#alcaldies">David Quirós</a>');
-    // Terrassa: llista local, inicials grises i la pastilla no enllaça enlloc.
-    expect(llista).toContain('style="--c:#8b8b8b;--t:');
+    // Terrassa: llista local, la pastilla grisa i sense enllaç enlloc.
     expect(llista).toContain('<b class="sigla" style="--c:#8b8b8b;--t:');
     expect(main).toContain('<a href="els947.html">i 939 més →</a>');
   });
@@ -264,7 +263,7 @@ describe("renderPortada amb la mostra", () => {
       comptes(),
       "avui",
       mostra({
-        municipis: [{ slug: "x", nom: 'Un <b>poble</b> "rar"', habitants: 1, alcaldia: { nom: "A <i>B</i>", sigles: "<X>", brandId: null, foto: null, adreca: null } }],
+        municipis: [{ slug: "x", nom: 'Un <b>poble</b> "rar"', habitants: 1, alcaldia: { nom: "A <i>B</i>", sigles: "<X>", brandId: null, adreca: null } }],
       }),
     );
     expect(dolent).toContain("Un &lt;b&gt;poble&lt;/b&gt; &quot;rar&quot;");

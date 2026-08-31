@@ -72,16 +72,12 @@ function entrada(canvis: Partial<EntradaMostra> = {}): EntradaMostra {
       // Una llista sense cap regidoria ni alcaldia no dona pàgina a la marca.
       llista(13, 1, "VOX", "vox", 0, 900),
     ],
-    carrecs: new Map([
-      [
-        1,
-        [
-          { nom: "Jaume Collboni Cuadrado", carrec: "Alcalde", fotoPetita: "/observatori/fotos/160/08019-1.webp" },
-          { nom: "Laia Bonet Rull", carrec: "Primera tinenta d'alcaldia", fotoPetita: null },
-        ],
-      ],
+    // El ple del registre electoral dels dos primers; Girona no en té, i la
+    // seva alcaldia queda sense fitxa on enviar.
+    registre: new Map([
+      [1, [{ nom: "Jaume Collboni Cuadrado" }, { nom: "Laia Bonet Rull" }]],
+      [2, [{ nom: "David Quirós" }, { nom: "Una Altra Persona" }]],
     ]),
-    registre: new Map([[2, [{ nom: "David Quirós" }, { nom: "Una Altra Persona" }]]]),
     metropolitans: new Set([1, 2]),
     preguntes: [
       { slug: "girona", municipi: "Girona", jugable: false },
@@ -127,31 +123,28 @@ describe("composaMostra", () => {
     expect(slugs).toEqual([...slugs].sort((a, b) => a.localeCompare(b)));
   });
 
-  it("treu els més poblats amb la cara, la fitxa i les sigles de qui hi mana", () => {
+  it("treu els més poblats amb el nom, la fitxa i les sigles de qui hi mana", () => {
     expect(mostra.municipis).toHaveLength(QUANTS_MUNICIPIS);
     expect(mostra.municipis.map((m) => m.slug).slice(0, 3)).toEqual(["barcelona", "l-hospitalet-de-llobregat", "girona"]);
     // Poble Buit és el desè per població: no hi surt.
     expect(mostra.municipis.some((m) => m.slug === "poble-buit")).toBe(false);
 
     const bcn = mostra.municipis[0]!;
-    // La seu electrònica marca l'alcalde: el seu nom, el seu retrat i la seva fitxa.
+    // El nom és el de la font oficial i la fitxa es troba al ple del registre.
     expect(bcn.alcaldia).toEqual({
       nom: "Jaume Collboni Cuadrado",
       sigles: "PSC-CP",
       brandId: "psc",
-      foto: "/observatori/fotos/160/08019-1.webp",
       adreca: "regidor/jaume-collboni-cuadrado/",
     });
-    // Sense seu, la fitxa surt del registre: nom de la font oficial, sense retrat.
     const lh = mostra.municipis[1]!;
-    expect(lh.alcaldia).toMatchObject({ nom: "David Quirós", brandId: "psc", foto: null });
+    expect(lh.alcaldia).toMatchObject({ nom: "David Quirós", brandId: "psc" });
     expect(lh.alcaldia?.adreca).toMatch(/^regidor\/david-quiros/);
-    // Girona: la llista no és de cap marca, i no hi ha fitxa on enviar.
+    // Girona: la llista no és de cap marca i, sense registre, no hi ha fitxa on enviar.
     expect(mostra.municipis[2]!.alcaldia).toEqual({
       nom: "Lluc Salellas i Vilar",
       sigles: "GUANYEM",
       brandId: null,
-      foto: null,
       adreca: null,
     });
   });
@@ -194,7 +187,7 @@ describe("composaMostra", () => {
   });
 
   it("no peta amb una base buida", () => {
-    const buida = composaMostra(entrada({ municipis: [], govern: new Map(), llistes: [], carrecs: new Map(), registre: new Map(), metropolitans: new Set(), preguntes: [] }));
+    const buida = composaMostra(entrada({ municipis: [], govern: new Map(), llistes: [], registre: new Map(), metropolitans: new Set(), preguntes: [] }));
     expect(buida.partits).toEqual([]);
     expect(buida.municipis).toEqual([]);
     expect(buida.comarques).toEqual([]);

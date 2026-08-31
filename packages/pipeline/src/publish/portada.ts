@@ -1,6 +1,5 @@
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { sobreColor } from "./contrast";
 import { MASCOTA_CSS, catalunya } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
@@ -19,10 +18,17 @@ import type { MostraMunicipi, PortadaMostra } from "./portada-mostra";
  * arribava a la portada llegia deu vegades «aquí hi ha coses» i no en veia cap.
  *
  * Ara la portada **ensenya** en comptes d'explicar: les vuit ciutats més grans
- * amb la cara de qui hi mana, el mapa dels 947 pintat per força, les quinze
+ * amb el nom de qui hi mana, el mapa dels 947 pintat per força, les quinze
  * marques amb les seves alcaldies, les sis comarques més poblades, els pobles
  * que ja tenen preguntes i tres comparacions per començar. Cada bloc és un
  * tros de la pàgina a què porta, i el títol del bloc és l'enllaç.
+ *
+ * ## Les ciutats grans, sense cares
+ *
+ * Cada capsa havia portat el retrat de l'alcaldia. Les cares són de persones,
+ * no dels pobles, i a la pàgina que és de tot el país feien semblar la ciutat
+ * seva; a més, qui té foto i qui no en té feien vuit capses de vuit mides.
+ * Fora: el nom enllaçat hi porta igual, i les capses fan totes la mateixa.
  *
  * ## Les dues versions
  *
@@ -229,19 +235,23 @@ const CSS = `
 .bloc h2 a:hover{text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:6px}
 .mes{margin:var(--e2) 0 0;font-weight:800;font-size:.92rem}
 
-/* --- les ciutats amb cara: quatre per fila, dues en un telèfon --- */
-.grans{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;gap:var(--e3) var(--e2);
-  grid-template-columns:repeat(4,minmax(0,1fr))}
+/* --- les ciutats més grans: quatre capses iguals per fila, dues en un telèfon ---
+   Sense retrats, cada capsa són tres línies. Les files es reparteixen iguals
+   (grid-auto-rows:1fr), un nom llarg es talla a dues línies perquè cap capsa
+   no creixi pel seu compte, i els habitants s'enganxen a baix de tot: la
+   línia de sota queda alineada d'una capsa a l'altra. */
+.grans{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;gap:var(--e2);
+  grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr}
 @media (max-width:760px){.grans{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media (max-width:600px){.grans{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--e2)}}
-.grans li{display:flex;gap:10px;align-items:flex-start;min-width:0}
-.grans .qui{display:flex;flex-direction:column;gap:3px;min-width:0}
+@media (max-width:600px){.grans{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.grans li{display:flex;flex-direction:column;gap:4px;min-width:0;min-height:84px}
 .grans .poble{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em;
-  line-height:1.1;text-decoration:none;overflow-wrap:anywhere}
+  line-height:1.1;text-decoration:none;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .grans .poble:hover{text-decoration:underline;text-decoration-thickness:2.5px;text-underline-offset:4px}
 .grans .alcaldia{font-size:.84rem;line-height:1.3;display:flex;flex-wrap:wrap;gap:3px 6px;align-items:center}
 .grans .alcaldia a{font-weight:700}
-.grans .hab{font-size:.76rem;color:var(--ink-suau);font-weight:700;font-variant-numeric:tabular-nums}
+.grans .hab{font-size:.76rem;color:var(--ink-suau);font-weight:700;font-variant-numeric:tabular-nums;margin-top:auto}
 
 /* --- qui mana: el mapa i la clau, l'un al costat de l'altra --- */
 .mana-reixa{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:var(--e3);align-items:center}
@@ -283,6 +293,10 @@ const CSS = `
 .comarques-taula th[scope="row"],.comarques-taula .mana-cela{text-align:left}
 .comarques-taula thead th{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
   color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
+/* La capçalera s'alinea com la seva columna: noms i sigles a l'esquerra,
+   xifres a la dreta; si no, «Comarca» i «Qui hi mana més» suraven a la dreta
+   de columnes escrites a l'esquerra. */
+.comarques-taula thead th:first-child,.comarques-taula thead th:last-child{text-align:left}
 .comarques-taula th[scope="row"] a{font-family:var(--display);font-weight:900;font-size:1.05rem;
   letter-spacing:-.01em;text-decoration:none}
 .comarques-taula th[scope="row"] a:hover{text-decoration:underline;text-decoration-thickness:2.5px;text-underline-offset:4px}
@@ -298,10 +312,13 @@ const CSS = `
 .xip.jugable:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 #1E1B2E}
 .xip small{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;opacity:.75}
 
-/* --- tres comparacions per començar --- */
+/* --- tres comparacions per començar ---
+   Les targetes fan la mateixa alçada encara que un títol ocupi dues línies i
+   els altres una: la fila és compartida i l'enllaç omple la seva capsa. */
 .comparacions{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;gap:var(--e2);
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.comparacions a{display:flex;flex-direction:column;gap:3px;text-decoration:none;color:inherit;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));grid-auto-rows:1fr}
+.comparacions li{display:flex;min-width:0}
+.comparacions a{flex:1;display:flex;flex-direction:column;gap:3px;text-decoration:none;color:inherit;
   border:2.5px solid var(--ink);border-radius:var(--r-m);padding:var(--e2);background:var(--paper-2);
   box-shadow:var(--ombra);transition:transform .12s ease,box-shadow .12s ease}
 .comparacions a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
@@ -315,6 +332,12 @@ const CSS = `
 .linia span{color:var(--ink-suau);font-weight:700;font-size:.9rem}
 .baixa{font-size:.86rem;color:var(--ink-suau);margin:var(--e2) 0 0}
 
+/* --- el mateix aire entre blocs a totes les mides ---
+   Els 40px de --e4 entre bloc i bloc són aire en un portàtil i un desert en
+   un telèfon de 390px: allà l'espai entre blocs baixa un graó, com el de
+   dins de cada bloc. */
+@media (max-width:600px){.portada{padding:var(--e2) 0 var(--e3)}.bloc{padding:var(--e3) 0}}
+
 /* --- sense la base de dades: els enllaços i prou --- */
 .seccions{list-style:none;margin:var(--e3) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
 .seccions a{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border:2px solid var(--ink);
@@ -326,24 +349,10 @@ const LUPA = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke
 
 // ------------------------------------------------------------------ els blocs
 
-/** Les dues inicials d'un nom, per a qui no té retrat. */
-const inicialsDe = (nom: string): string =>
-  nom
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join("");
-
-function municipiAmbCara(m: MostraMunicipi, colors: ReadonlyMap<string, string>): string {
+/* Una ciutat de la portada: el poble, qui hi mana i quants hi viuen. Sense
+   retrat ni inicials: la capsa és del municipi i la cara era d'una persona. */
+function municipiGran(m: MostraMunicipi): string {
   const a = m.alcaldia;
-  const color = (a?.brandId ? colors.get(a.brandId) : null) ?? GRIS_LOCAL;
-  const { fons, tinta } = sobreColor(color);
-  const cara = a?.foto
-    ? `<img class="retrat" src="${escape(a.foto)}" alt="" loading="lazy" width="44" height="44">`
-    : `<span class="retrat inicials${a ? " sense-foto" : ""}" style="--c:${fons};--t:${tinta}" aria-hidden="true">${
-        a ? escape(inicialsDe(a.nom)) : "?"
-      }</span>`;
   // El nom de l'alcaldia porta a la fitxa de la persona i, quan no en té, a
   // l'apartat d'alcaldies del municipi: on va ho decideix `resolAlcaldia()`.
   const alcaldia = a
@@ -351,20 +360,19 @@ function municipiAmbCara(m: MostraMunicipi, colors: ReadonlyMap<string, string>)
         a.sigles ? ` ${sigla(a.sigles, { base: "./", brandId: a.brandId })}` : ""
       }</span>`
     : `<span class="alcaldia">sense alcaldia identificada</span>`;
-  return `<li>${cara}<div class="qui">
+  return `<li>
       <a class="poble" href="m/${escape(m.slug)}/">${escape(m.nom)}</a>
       ${alcaldia}
       <span class="hab">${xifra(m.habitants)} habitants</span>
-    </div></li>`;
+    </li>`;
 }
 
 function blocMunicipis(mostra: PortadaMostra): string {
   if (mostra.municipis.length === 0) return "";
-  const colors = new Map(mostra.partits.map((p) => [p.id, p.color]));
   const resta = mostra.comptes.municipis - mostra.municipis.length;
   return `<section class="bloc" id="grans">
     <h2><a href="els947.html">Els municipis més grans</a></h2>
-    <ol class="grans">${mostra.municipis.map((m) => municipiAmbCara(m, colors)).join("")}</ol>
+    <ol class="grans">${mostra.municipis.map(municipiGran).join("")}</ol>
     ${resta > 0 ? `<p class="mes"><a href="els947.html">i ${xifra(resta)} més →</a></p>` : ""}
   </section>`;
 }
