@@ -635,6 +635,14 @@ const CSS = `
 .vots li.renyida{background:var(--paper-2);border-left:6px solid var(--coral);padding-left:var(--e2)}
 .vots .recompte{display:block;font-size:.76rem;color:var(--ink-suau);font-weight:700;
   font-variant-numeric:tabular-nums;margin-top:3px}
+.resum-vot{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:var(--e2) 0 0}
+.resum-vot span{display:flex;flex-direction:column;border:2px solid var(--ink);padding:8px 10px;background:var(--paper-2)}
+.resum-vot b{font-family:var(--display);font-size:1.35rem;line-height:1}
+.resum-vot small{font-size:.72rem;font-weight:800;color:var(--ink-suau);margin-top:4px}
+.resum-vot .favor b{color:#2f8f68}.resum-vot .contra b{color:var(--coral)}.resum-vot .abstencio b{color:#9a7b18}
+.nav-fitxa{display:flex;gap:7px;flex-wrap:wrap;margin:var(--e2) 0 0;padding:0;list-style:none}
+.nav-fitxa a{display:block;border:1.5px solid var(--vora);border-radius:999px;padding:5px 10px;font-size:.76rem;font-weight:800;text-decoration:none}
+.nav-fitxa a:hover,.nav-fitxa a:focus-visible{border-color:var(--coral);color:var(--coral)}
 
 /* --- què cobra ------------------------------------------------------------
    Una targeta per pagador i cap total: l'import gran, qui el paga al capdamunt
@@ -983,7 +991,7 @@ function queCobra(r: Regidor, ctx: ContextRegidor): string {
      * l'ajuntament i llegida com «el que cobra» exculparia.
      */
     if (p && p.retribucio === "xifra") {
-      return `<section class="bloc">
+      return `<section class="bloc" id="que-cobra">
     <h2>Què cobra</h2>
     <p class="entrada-bloc">L'ajuntament <b>en publica una xifra</b> a la seu electrònica: la part
     que paga ell mateix.</p>
@@ -999,7 +1007,7 @@ function queCobra(r: Regidor, ctx: ContextRegidor): string {
     ${avisos}
   </section>`;
     }
-    return `<section class="bloc">
+    return `<section class="bloc" id="que-cobra">
     <h2>Què cobra</h2>
     <p class="entrada-bloc">De ningú que li pagui aquest càrrec no en tenim cap import comprovat.</p>
     <p>Que no en tinguem <b>no vol dir que no en cobri</b>: vol dir que qui el paga no en publica la
@@ -1018,7 +1026,7 @@ function queCobra(r: Regidor, ctx: ContextRegidor): string {
   // com a imports: dir «dos imports» amb una targeta que diu que no en cobra
   // cap seria comptar el buit com si fos una xifra.
   const ambImport = sous.filter((s) => s.anualBrut !== null).length;
-  return `<section class="bloc">
+  return `<section class="bloc" id="que-cobra">
     <h2>Què cobra</h2>
     <p class="entrada-bloc">${
       ambImport === 0
@@ -1147,7 +1155,7 @@ function pasPelPle(r: Regidor, ctx: ContextRegidor, generatedAt: string): string
     );
   }
 
-  return `<section class="bloc">
+  return `<section class="bloc" id="pas-pel-ple">
     <h2>El seu pas pel ple</h2>
     <ul class="pas">${caselles.join("")}</ul>
     ${
@@ -1212,7 +1220,7 @@ function queEnSabem(r: Regidor, ctx: ContextRegidor, generatedAt: string): strin
   const actes = ctx.actesLlegides;
   const fet = (etq: string, text: string): string =>
     `<li><span class="etq">${etq}</span><span class="fet">${text}</span></li>`;
-  return `<section class="bloc">
+  return `<section class="bloc" id="que-en-sabem">
     <h2>Què en sabem</h2>
     <p class="entrada-bloc">${
       desDe ? "Quant fa que hi seu, i tres coses" : "Tres coses"
@@ -1553,6 +1561,9 @@ function queHaVotat(ctx: ContextRegidor): string {
   const propis = ctx.votsDelGrup.filter((v) => v.tot);
   const compte = (sentit: string): number => propis.filter((v) => v.sentit === sentit).length;
   const abstencions = compte("abstencio");
+  const resumComptes = propis.length > 0
+    ? `<div class="resum-vot" aria-label="Resum dels vots atribuïbles a la persona"><span class="favor"><b>${compte("favor")}</b><small>a favor</small></span><span class="contra"><b>${compte("contra")}</b><small>en contra</small></span><span class="abstencio"><b>${abstencions}</b><small>abstencions</small></span><span><b>${ctx.votsDelGrup.length - propis.length}</b><small>només del grup</small></span></div>`
+    : "";
   const resumDelVot =
     propis.length === 0
       ? ""
@@ -1566,7 +1577,7 @@ function queHaVotat(ctx: ContextRegidor): string {
         <b>${compte("favor")}</b> a favor, <b>${compte("contra")}</b> en contra i
         <b>${abstencions}</b> ${abstencions === 1 ? "abstenció" : "abstencions"}.</p>`;
 
-  return `<section class="bloc">
+  return `<section class="bloc" id="que-ha-votat">
     <h2>Què ha votat</h2>
     ${
       ctx.votsDelGrup.length === 0
@@ -1586,6 +1597,7 @@ function queHaVotat(ctx: ContextRegidor): string {
            sentit del vot del seu grup, <b>començant pels més renyits</b>. Un punt aprovat per
            tothom no separa ningú; un decidit per un vot o dos és on es veu qui és qui.</p>
            ${resumDelVot}
+           ${resumComptes}
            <ul class="vots">${vots}</ul>
            ${ctx.votsDelGrup.length > 40 ? `<p class="nota">Se n'ensenyen 40 dels ${ctx.votsDelGrup.length}.</p>` : ""}
            ${fontDelsVots(ctx)}`
@@ -1614,7 +1626,7 @@ function queEnPublica(ctx: ContextRegidor): string {
     `<li class="${hi ? "hi-es" : "no-hi-es"}"><span class="senyal" aria-hidden="true">${
       hi ? "✓" : "✕"
     }</span><span class="nom">${escape(text)}</span></li>`;
-  return `<section class="bloc">
+  return `<section class="bloc" id="que-en-publica">
     <h2>Què en publica el seu ajuntament</h2>
     <p class="entrada-bloc">Del seu càrrec, què consta a la seu electrònica del mateix ajuntament.
     <b>No és el que cobra</b>: és què se'n pot saber.</p>
@@ -1734,6 +1746,13 @@ ${cercador("../../../../")}
         : ""
     }
   </section>
+
+  <nav aria-label="Apartats d'aquesta fitxa">
+    <ul class="nav-fitxa">
+      ${senseRes ? '<li><a href="#que-en-sabem">Què en sabem</a></li>' : '<li><a href="#que-cobra">Què cobra</a></li><li><a href="#pas-pel-ple">Pas pel ple</a></li><li><a href="#que-ha-votat">Què ha votat</a></li><li><a href="#que-en-publica">Transparència</a></li>'}
+      ${ctx.trajectoria ? '<li><a href="#mes-enlla">Trajectòria</a></li>' : ""}
+    </ul>
+  </nav>
 
   ${comACapDeLlista(r, ctx)}
 
