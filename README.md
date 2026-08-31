@@ -15,7 +15,7 @@
 
 ## Què hi ha avui
 
-El repositori ja publica un observatori estàtic amb 947 municipis, resultats electorals des de 1979, alcaldies, composició dels plens, candidatures, trajectòries, finances, despesa per serveis, criminalitat, fonts i fitxes descarregables. Les afirmacions de la brúixola són conjunts de prova editorial amb evidència; la resposta del votant encara viu només al navegador.
+El repositori ja publica un observatori estàtic amb 947 municipis, resultats electorals des de 1979, alcaldies, composició dels plens, candidatures, trajectòries, finances, despesa per serveis, criminalitat, fonts i fitxes descarregables. També creua els regidors que són diputats provincials: quan la diputació publica una retribució anual, es mostra a la fitxa de la persona amb la font i sense sumar-la artificialment al sou municipal. Les afirmacions de la brúixola són conjunts de prova editorial amb evidència; la resposta del votant encara viu només al navegador.
 
 ![Gràfic de despesa municipal en mòbil](docs/screenshots/grafic-mobil.png)
 
