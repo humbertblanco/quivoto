@@ -361,6 +361,38 @@ def passos(items):
       f'      <li><b>{i+1}</b><div><h3>{h}</h3><p>{p}</p></div></li>'
       for i, (h, p) in enumerate(items))
 
+def cerca_home(lang):
+    ca = lang == 'ca'
+    return f'''<section class="cerca-home" aria-labelledby="cerca-home-titol">
+  <div class="cerca-home-cos">
+    <p class="micro">{'Entra directament' if ca else 'Entra directamente'}</p>
+    <h2 id="cerca-home-titol">{'Busca el teu municipi o electe' if ca else 'Busca tu municipio o electo'}</h2>
+    <p>{'Escriu un nom i ves directament a la fitxa, sense haver de navegar pels menús.' if ca else 'Escribe un nombre y ve directamente a la ficha, sin tener que navegar por los menús.'}</p>
+    <label class="nomes-lectors" for="cerca-home-camp">{'Cerca' if ca else 'Buscar'}</label>
+    <input id="cerca-home-camp" class="cerca-home-camp" type="search" autocomplete="off" spellcheck="false" placeholder="{'Sabadell, alcaldessa o regidor' if ca else 'Sabadell, alcaldesa o concejal'}" aria-controls="cerca-home-resultats">
+    <div id="cerca-home-resultats" class="cerca-home-resultats" role="listbox" aria-live="polite"></div>
+  </div>
+</section>
+<script>
+(function(){{
+  var input=document.getElementById('cerca-home-camp'), out=document.getElementById('cerca-home-resultats');
+  if(!input||!out) return;
+  var data=null, electes=null;
+  function norm(s){{return String(s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();}}
+  function esc(s){{return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}}
+  function render(){{
+    var q=norm(input.value).trim(); if(q.length<2){{out.innerHTML='';return;}}
+    var rows=[];
+    if(data&&data.mun) data.mun.forEach(function(m){{if(norm(m.n).includes(q)||(m.a&&norm(m.a).includes(q))) rows.push({{t:m.n,s:m.c||'',u:'/observatori/m/'+m.s+'/',k:'Municipi'}});}});
+    if(electes&&electes.reg) electes.reg.forEach(function(r){{if(norm(r[0]).includes(q)){{var m=data.mun[r[1]];if(m) rows.push({{t:r[0],s:m.n+(r[2]<0?'':' · '+electes.sig[r[2]]),u:'/observatori/m/'+m.s+'/#regidors',k:'Regidor'}});}}}});
+    rows=rows.slice(0,8);
+    out.innerHTML=rows.length?rows.map(function(r){{return '<a class="cerca-home-fila" role="option" href="'+r.u+'"><b>'+esc(r.t)+'</b><span>'+esc(r.k+' · '+r.s)+'</span></a>';}}).join(''):'<p class="cerca-home-buit">{'No hi ha cap coincidència.' if ca else 'No hay coincidencias.'}</p>';
+  }}
+  fetch('/observatori/cerca.json').then(function(r){{return r.json();}}).then(function(d){{data=d;render();fetch('/observatori/cerca-electes.json').then(function(r){{return r.json();}}).then(function(d){{electes=d;render();}});}});
+  input.addEventListener('input',render);
+}})();
+</script>'''
+
 def cards(items, cls):
     return '\n'.join(
       f'    <article class="{cls}"><h3>{h}</h3><p>{p}</p></article>' for h, p in items)
@@ -482,6 +514,19 @@ CSS_EXTRA = '''<style>
 @media(min-width:820px){.obs-reixa{grid-template-columns:repeat(3,1fr)}}
 .obs-accions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin:var(--e3) 0 0}
 .obs-nota{margin:var(--e2) 0 0;font-size:.9rem;color:var(--ink-suau);max-width:52ch}
+
+/* ---------- cercador a la portada --------------------------------------- */
+.cerca-home{background:var(--paper-2);border-bottom:2.5px solid var(--ink);padding:var(--e4) var(--e3)}
+.cerca-home-cos{max-width:var(--ample);margin:0 auto}
+.cerca-home h2{margin:0 0 6px;max-width:24ch}
+.cerca-home p:not(.micro){max-width:55ch}
+.cerca-home-camp{display:block;width:min(100%,620px);margin-top:var(--e2);padding:14px 16px;border:2.5px solid var(--ink);border-radius:var(--r-m);font:inherit;font-size:1.05rem;background:var(--paper);color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.cerca-home-camp:focus{outline:3px solid var(--coral);outline-offset:3px}
+.cerca-home-resultats{display:grid;gap:6px;width:min(100%,620px);margin-top:var(--e2)}
+.cerca-home-fila{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:10px 12px;border:1.5px solid var(--vora);background:var(--paper);text-decoration:none}
+.cerca-home-fila:hover,.cerca-home-fila:focus-visible{border-color:var(--coral);transform:translateX(2px)}
+.cerca-home-fila span{font-size:.78rem;color:var(--ink-suau);text-align:right}
+.cerca-home-buit{font-size:.88rem;color:var(--ink-suau)}
 
 /* ---------- la demostració jugable ----------------------------------------
    Les afirmacions són reals i encara no estan validades. L'avís va a dalt de
@@ -711,6 +756,8 @@ PAGE = '''<!doctype html>
     </div>
   </div>
 </section>
+
+{cerca_home}
 
 <section class="xifres-banda">
   <div class="cinta">
@@ -1062,6 +1109,7 @@ def build(lang):
     ctx['obs_xifres_items'] = obs_xifres(t)
     ctx['obs_reixa_items'] = obs_reixa(t)
     ctx['prova'] = prova_html(t)
+    ctx['cerca_home'] = cerca_home(lang)
     ctx['estil_extra'] = CSS_EXTRA
     ctx['mascota_petita'] = L.papereta(150)
     page = PAGE.format(**ctx)
