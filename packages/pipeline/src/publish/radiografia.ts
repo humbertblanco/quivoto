@@ -4831,7 +4831,6 @@ export function renderRadiografia(
   ]
     .filter((t) => t !== "")
     .join("\n  ");
-  const votsPle = renderVotsPle(data.mocions);
 
   // Què ha fet aquest govern amb els comptes: el balanç del mandat, com queda
   // respecte dels seus i el deute any a any. Eren tres blocs —«Balanç»,
@@ -5024,7 +5023,6 @@ export function renderRadiografia(
   const seccions: Seccio[] = (
     [
       { id: "ple", titol: "Qui mana, i com hi va arribar", curt: "Qui mana", icona: "el ple", html: quiMana },
-      { id: "vots-ple", titol: "Què es vota al ple", curt: "Vots al ple", icona: "el ple", html: votsPle },
       { id: "comptes", titol: "Què ha fet aquest govern amb els comptes", curt: "Els comptes", html: comptes },
       {
         id: "mandat",
