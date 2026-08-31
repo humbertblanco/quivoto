@@ -1807,7 +1807,7 @@ function graellaDelPle(grups: readonly GrupPle[]): string {
         const classes = ["persona", p.alcaldia ? "alcaldia" : "", p.govern ? "govern" : ""].filter(Boolean).join(" ");
         // El nom va dins de l'enllaç, amagat als ulls: un enllaç que només és
         // una cara no té nom per a qui llegeix amb veu.
-        return `<li class="${classes}"><a href="regidor/${escape(p.slug)}/" title="${escape(titol)}">${retrat}<span class="nomes-lectors">${escape(titol)}</span></a>${
+        return `<li class="${classes}"><a href="regidor/${escape(p.slug)}/" title="${escape(titol)}" aria-label="${escape(titol)}" data-tip="${escape(titol)}">${retrat}<span class="nomes-lectors">${escape(titol)}</span></a>${
           p.ambCarrec && p.carrec ? `<span class="carrec">${escape(p.carrec)}</span>` : ""
         }</li>`;
       })

@@ -568,6 +568,24 @@ details.nota > .serie{font-size:1rem}
 /* Al govern: fons lleugerament tenyit i marca a cada regidoria. El govern pot
    ser de més d'un partit, i per això la marca va per persona i no per grup. */
 .grup.al-govern{box-shadow:var(--ombra),inset 0 0 0 999px rgba(191,232,210,.16)}
+/* El nom complet no ocupa una línia sota cada cara, però no queda amagat:
+   surt en passar-hi el ratolí i també en posar-hi el focus de teclat. */
+.retrats a[data-tip]{position:relative}
+.retrats a[data-tip]::after{content:attr(data-tip);position:absolute;z-index:20;left:50%;bottom:calc(100% + 7px);
+  transform:translateX(-50%);width:max-content;max-width:240px;padding:6px 9px;border:1.5px solid var(--ink);
+  border-radius:7px;background:var(--ink);color:var(--paper);font:700 .74rem/1.2 var(--text);
+  pointer-events:none;opacity:0;visibility:hidden;transition:opacity .12s ease;box-shadow:var(--ombra)}
+.retrats a[data-tip]:hover::after,.retrats a[data-tip]:focus-visible::after{opacity:1;visibility:visible}
+/* Els títols natius de les minigràfiques són útils però massa discrets i no es
+   poden llegir bé en pantalles tàctils. Repetim el context en una etiqueta
+   visual quan l'element rep focus o hover; la taula accessible continua sent
+   la font completa per a lectors de pantalla. */
+.grafic [title]{position:relative}
+.grafic [title]:hover::after,.grafic [title]:focus-visible::after{content:attr(title);position:absolute;z-index:25;
+  left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);width:max-content;max-width:220px;padding:5px 8px;
+  border:1.5px solid var(--ink);border-radius:6px;background:var(--ink);color:var(--paper);
+  font:700 .72rem/1.2 var(--text);white-space:normal;pointer-events:none;box-shadow:var(--ombra)}
+@media (prefers-reduced-motion:reduce){.retrats a[data-tip]::after{transition:none}}
 .grup li.govern .marca-govern{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
   background:var(--menta);color:#1E1B2E;border:1.5px solid var(--ink);border-radius:var(--r-max);
   padding:2px 7px;white-space:nowrap;margin-left:auto;flex:none}
