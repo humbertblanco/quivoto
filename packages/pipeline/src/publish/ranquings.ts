@@ -29,6 +29,7 @@
  */
 
 import { buildPeerGroups, type PeerGroup } from "../derive/peers";
+import { slugify } from "../lib/text";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { INDEXABLE, SITE } from "./config";
@@ -214,6 +215,8 @@ export function extrems(r: RanquingPreparat): { alt: Extrem; baix: Extrem } | nu
 const format = (m: Metrica) => (v: number): string => `${n(v, m.decimals)}${m.sufix}`;
 
 const fitxa = (r: RankingRow): string => `<a href="../m/${escape(r.s)}/">${escape(r.n)}</a>`;
+/** La comarca, en petit i enllaçada a la seva pàgina: és l'altra manera d'agrupar els 947. */
+const comarca = (r: RankingRow): string => `<a class="comarca" href="../c/${escape(slugify(r.c))}/">${escape(r.c)}</a>`;
 
 /**
  * Els empatats, escrits com una frase: «Fulleda, Esterri de Cardós i Granyena
@@ -282,7 +285,7 @@ function regle(r: RanquingPreparat): string {
 export const PAS = 40;
 
 function filaHtml(f: FilaRanquing, pos: number, fmt: (v: number) => string): string {
-  return `<li><span class="pos">${pos}</span><span class="municipi">${fitxa(f.fila)}<small>${escape(f.fila.c)}</small></span><b class="dada">${escape(fmt(f.valor))}</b></li>`;
+  return `<li><span class="pos">${pos}</span><span class="municipi">${fitxa(f.fila)}<small>${comarca(f.fila)}</small></span><b class="dada">${escape(fmt(f.valor))}</b></li>`;
 }
 
 function seccio(r: RanquingPreparat, grups: readonly PeerGroup[]): string {
@@ -318,7 +321,7 @@ function seccio(r: RanquingPreparat, grups: readonly PeerGroup[]): string {
 function dadesJson(rows: readonly RankingRow[], preparats: readonly RanquingPreparat[], grups: readonly PeerGroup[]): string {
   const perFila = buildPeerGroups(rows.map((r, id) => ({ id, population: r.p })));
   const index = new Map(rows.map((r, i) => [r, i]));
-  const municipis = rows.map((r, id) => [r.s, r.n, r.c, perFila.get(id)?.key ?? ""]);
+  const municipis = rows.map((r, id) => [r.s, r.n, r.c, perFila.get(id)?.key ?? "", slugify(r.c)]);
   const metriques = Object.fromEntries(
     preparats.map((r) => [
       r.metrica.id,
@@ -363,6 +366,8 @@ const CSS = `${GRAFICS_CSS}
 .llista-ranquing .pos{font-family:var(--display);font-weight:900;font-size:1.15rem;color:var(--coral-text);font-variant-numeric:tabular-nums}
 .llista-ranquing .municipi a{font-weight:800;color:var(--ink)}
 .llista-ranquing .municipi small{display:block;color:var(--ink-suau);font-size:.76rem;margin-top:1px}
+.llista-ranquing .municipi small a{color:inherit;font-weight:600;text-decoration-color:var(--vora)}
+.llista-ranquing .municipi small a:hover{color:var(--coral-text)}
 .llista-ranquing .dada{font-family:var(--display);font-weight:900;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .mes-fila{margin:var(--e2) 0 0;display:flex;gap:var(--e2);align-items:center;flex-wrap:wrap;color:var(--ink-suau);font-size:.9rem}
 .mes{font:inherit;font-weight:800;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:var(--r-max);
@@ -421,8 +426,8 @@ const JS = `<script>
     const m = dades.metriques[seccio.dataset.metrica];
     if (!m) return;
     const files = m.files.map(([i, valor]) => {
-      const [s, n, c, grup] = dades.municipis[i];
-      return { s, n, c, grup, valor, text: (n + " " + c).toLocaleLowerCase("ca") };
+      const [s, n, c, grup, cs] = dades.municipis[i];
+      return { s, n, c, cs, grup, valor, text: (n + " " + c).toLocaleLowerCase("ca") };
     });
     const ambit = seccio.querySelector("[data-ambit]");
     const cerca = seccio.querySelector("[data-cerca]");
@@ -441,7 +446,7 @@ const JS = `<script>
       // es diuen Vallès.
       const trobats = delAmbit.map((f, i) => ({ ...f, pos: i + 1 })).filter((f) => !terme || f.text.includes(terme));
       llista.innerHTML = trobats.slice(0, visibles).map((f) =>
-        '<li><span class="pos">' + f.pos + '</span><span class="municipi">' + enllac(f) + "<small>" + esc(f.c) + "</small></span>" +
+        '<li><span class="pos">' + f.pos + '</span><span class="municipi">' + enllac(f) + '<small><a class="comarca" href="../c/' + esc(f.cs) + '/">' + esc(f.c) + "</a></small></span>" +
         '<b class="dada">' + esc(fmt(f.valor, m.d, m.s)) + "</b></li>").join("");
       const resten = trobats.length - Math.min(visibles, trobats.length);
       mes.hidden = resten <= 0;

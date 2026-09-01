@@ -27,6 +27,7 @@ import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
 import { credit, escutMunicipi, type ImatgesMunicipi } from "./escut";
 import { sigla } from "./sigla";
+import { cara } from "./cara";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 
@@ -2333,8 +2334,16 @@ function summarySentence(
  * Va just sota del resum perquè «qui mana» és una persona abans que unes sigles,
  * i perquè un nom amb cara es recorda i unes sigles no. Sense fotografia no
  * queda un buit: hi van les inicials amb el color del partit.
- */
-/**
+ *
+ * La cara la dibuixa `cara()` de `cara.ts`, que va néixer aquí i ara la
+ * comparteixen la portada, les comarques i els partits: la mateixa persona ha
+ * de tenir la mateixa cara a totes les pàgines. I el retrat és **el mateix que
+ * ensenya la fitxa de la persona**: `resolAlcaldia()` el treu de la mateixa
+ * entrada de la seu electrònica —el gran, i si no hi és, el petit— amb què
+ * `publish.ts` escriu la pàgina de «regidor/<persona>/». Si la fitxa de la
+ * persona té cara, la portada del municipi la té; si aquí surten inicials és
+ * que l'ajuntament no en publica cap, i llavors tampoc no en té la persona.
+ *
  * @param adreca On porta el nom: la fitxa de la persona («regidor/<slug>/»)
  *   quan en té, i si no, la taula d'alcaldies d'aquesta mateixa pàgina. El nom
  *   de qui mana no és mai text mort.
@@ -2347,18 +2356,8 @@ function renderAlcaldia(
   foto: string | null,
   adreca: string | null,
 ): string {
-  const inicials = nom
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join("");
-  const { fons, tinta } = sobreColor(color);
-  const cara = foto
-    ? `<img class="cara-alcaldia" src="${escape(foto)}" alt="" width="52" height="52" loading="lazy">`
-    : `<span class="cara-alcaldia inicials" style="--c:${fons};--t:${tinta}" aria-hidden="true">${escape(inicials)}</span>`;
   const etiqueta = `${escape(carrec)}${sigles ? ` · ${sigla(sigles, { base: BASE, color })}` : ""}`;
-  return `<p class="alcaldia">${cara}<span class="qui-mana">
+  return `<p class="alcaldia">${cara(nom, foto, { color })}<span class="qui-mana">
     <span class="nom-alcaldia"><a href="${escape(adreca ?? "#alcaldies")}">${escape(nom)}</a></span>
     <span class="carrec-alcaldia">${etiqueta}</span></span></p>`;
 }
@@ -2379,6 +2378,24 @@ function elOrdinal(n: number): string {
 
 /** El signe d'una variació, amb el menys tipogràfic. */
 const signeDe = (n: number): string => (n > 0 ? "+" : n < 0 ? "−" : "");
+
+/**
+ * Els rànquings dels 947 que existeixen, tal com els anomena `ranquings.ts`
+ * (`METRIQUES[].id`): són les àncores de `../../ranquings/#<id>`. Es declaren
+ * aquí com a tipus perquè el compilador no deixi enllaçar un rànquing que no
+ * hi és —la despesa o el deute per habitant no en tenen— i un canvi de nom
+ * allà peti aquí i no a la pàgina publicada.
+ */
+type RanquingId = "poblacio" | "participacio" | "dones" | "renda" | "selectiva" | "aigua" | "ibi" | "alternances";
+
+/**
+ * «entre els 947 →»: l'enllaç petit d'una xifra cap al rànquing on surt la
+ * mateixa xifra de tots els municipis. Va al costat de la comparació amb els
+ * de la seva mida, no en lloc seu: la comparació de grup diu si és normal, i
+ * el rànquing diu on cau entre tots.
+ */
+const entreEls947 = (id: RanquingId): string =>
+  `<a class="entre-947" href="${BASE}ranquings/#${id}">entre els 947 →</a>`;
 
 /**
  * L'enllaç de l'Idescat d'una xifra, tal com el dona l'API.
@@ -2660,11 +2677,13 @@ export function renderQuiHiViu(poblacio: PoblacioMetric, riquesa: RiquesaMetric 
           etq: "Renda neta per persona",
           xifra: `${number(Math.round(renda.valor))} €`,
           espurna: sparkline(renda.serie, (v) => `${number(Math.round(v))} €`),
+          // El lloc que ocupa ja es diu en paraules; l'enllaç porta a la
+          // llista sencera on es pot veure qui hi ha davant i darrere.
           peu: `${
             renda.catalunya
               ? `${elOrdinal(renda.catalunya.rang)} de ${number(renda.catalunya.de)} municipis amb dada · `
               : ""
-          }INE, ${renda.any}`,
+          }INE, ${renda.any} · ${entreEls947("renda")}`,
           font: `<span class="compta">${escape(riquesa!.context.nota)}</span>`,
         })
       : "";
@@ -3599,9 +3618,17 @@ export function renderContractacio(c: ContractacioMetric | null): string {
  * els noms i no els vots. I el vot perdut només es diu sencer quan els vots per
  * candidatura de la font quadren amb els que ella mateixa declara.
  */
+/**
+ * @param alcaldia Qui té l'alcaldia avui i on és la seva fitxa, per enllaçar-hi
+ *   el nom de «La mateixa persona» quan és ella. La ratxa és de qui mana ara
+ *   —la calcula `derive/trajectoria` cap enrere des de l'últim mandat—, però
+ *   es comprova pel nom igualment: si un dia la ratxa parlés d'algú altre, el
+ *   nom no portaria a una fitxa que no és la seva.
+ */
 export function renderTrajectoria(
   continuitat: ContinuitatMetric | null,
   votPerdut: VotPerdutMetric | null,
+  alcaldia: { nom: string | null; adreca: string | null } | null = null,
 ): string {
   const tires: string[] = [];
   const notes: string[] = [];
@@ -3623,11 +3650,16 @@ export function renderTrajectoria(
       }),
     );
     if (continuitat.persona) {
+      const nom = nomLlegible(continuitat.persona.nom);
+      const esLAlcaldia =
+        alcaldia?.adreca &&
+        alcaldia.nom &&
+        normalizePersonName(alcaldia.nom) === normalizePersonName(continuitat.persona.nom);
       tires.push(
         tira({
           etq: "La mateixa persona",
           xifra: `${number(continuitat.persona.anys)} ${continuitat.persona.anys === 1 ? "any" : "anys"}`,
-          peu: escape(nomLlegible(continuitat.persona.nom)),
+          peu: esLAlcaldia ? `<a href="${escape(alcaldia!.adreca!)}">${escape(nom)}</a>` : escape(nom),
         }),
       );
     }
@@ -4245,7 +4277,17 @@ function renderUllada(
   medianes?: MedianesMunicipi,
   colorPer: (sigles: string | null) => string = () => "#8b8b8b",
 ): string {
-  type Pastilla = { etq: string; xifra: string; peu: string; part: number | null; on: string; tema: string };
+  /**
+   * `ranquing` és l'id del rànquing dels 947 on surt aquesta mateixa xifra,
+   * quan n'hi ha un. Només el tenen les que la pàgina de rànquings calcula
+   * amb la mateixa definició: el rebut d'IBI, el preu de l'aigua i la
+   * participació. La despesa i el deute per habitant no en tenen —cap
+   * rànquing els ordena— i no se'ls inventa cap enllaç.
+   */
+  type Pastilla = {
+    etq: string; xifra: string; peu: string; part: number | null; on: string; tema: string;
+    ranquing?: RanquingId;
+  };
   const pastilles: Pastilla[] = [];
   const delMig = "el poble del mig de la seva mida";
 
@@ -4308,6 +4350,7 @@ function renderUllada(
         : `l'any, el ${ibi.darrerAny}`,
       on: "#que-paga",
       tema: "fiscalitat",
+      ranquing: "ibi",
     });
   } else if (aigua && aigua.preu.subministrament !== null) {
     pastilles.push({
@@ -4319,6 +4362,7 @@ function renderUllada(
         : `per metre cúbic, el ${aigua.darrerAny}`,
       on: "#que-paga",
       tema: "medi ambient",
+      ranquing: "aigua",
     });
   }
 
@@ -4340,6 +4384,7 @@ function renderUllada(
             : `${decimal(Math.abs(dif), 1)} punts ${dif > 0 ? "més" : "menys"} que ${delMig}`,
       on: "#participacio",
       tema: "participació",
+      ranquing: "participacio",
     });
   }
 
@@ -4391,7 +4436,12 @@ function renderUllada(
           : `<span class="on"><i style="--w:${Math.max(0, Math.min(100, p.part)).toFixed(0)}%"></i></span>`
       }
       <span class="peu">${escape(p.peu)}</span>
-    </a></li>`,
+    </a>${
+      // Fora de la tessel·la, que ja és un enllaç sencer: un <a> dins d'un <a>
+      // no és HTML vàlid. Va sota, a la dreta, i el CSS («.entre-947») el
+      // pinta com un peu més i no com una segona targeta.
+      p.ranquing ? entreEls947(p.ranquing) : ""
+    }</li>`,
     )
     .join("")}</ul>
 </section>`;
@@ -4618,10 +4668,14 @@ export function renderJoc(
       tira({
         etq: `Canvis de mans des del ${h.firstYear ?? 1979}`,
         xifra: h.alternances === 0 ? "Cap" : number(h.alternances),
-        peu:
+        // El rànquing dels canvis de força només hi compta els municipis amb
+        // dada a les dotze eleccions; els altres hi surten com a «sense dada»,
+        // i l'enllaç val igual: allà s'explica per què.
+        peu: `${
           h.alternances === 0
             ? `la mateixa força ha guanyat les ${number(h.elections)} eleccions`
-            : `en ${number(h.elections)} eleccions`,
+            : `en ${number(h.elections)} eleccions`
+        } · ${entreEls947("alternances")}`,
       }),
     );
   }
@@ -4804,7 +4858,7 @@ export function renderRadiografia(
   ${renderMayors(data.mayors)}`
       : "";
 
-  const trajectoria = renderTrajectoria(data.continuitat, data.votPerdut);
+  const trajectoria = renderTrajectoria(data.continuitat, data.votPerdut, { nom: alcaldia.nom, adreca: alcaldia.adreca });
 
   // Els moviments al ple eren una secció sencera per a una frase: ara és una
   // línia al final de «Qui mana». El que no es diu —el motiu de plegar, els
@@ -5157,7 +5211,15 @@ ${cercador(BASE)}
 <main id="contingut">
 
 <section class="portada">
-  <p class="micro">${escape(m.comarca ?? "")}${m.provincia ? ` · ${escape(m.provincia)}` : ""}</p>
+  ${
+    // La comarca porta a la seva pàgina, amb el mateix camí que fa servir
+    // «On continua» al final de la fitxa (`pastillesContext`): era l'única
+    // menció de la comarca a tota la portada i no era cap enllaç. La
+    // província es queda com a text: no té pàgina.
+    `<p class="micro">${
+      m.comarca ? `<a href="${BASE}c/${escape(slugify(m.comarca))}/">${escape(m.comarca)}</a>` : ""
+    }${m.provincia ? ` · ${escape(m.provincia)}` : ""}</p>`
+  }
   ${
     // L'escut al costat del nom, quan Commons en té: 877 dels 947. Sense
     // escut no hi va cap silueta, i el crèdit —que la llicència obliga— és a

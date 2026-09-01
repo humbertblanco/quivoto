@@ -718,6 +718,8 @@ describe("la renda: on cau el poble, dit en paraules", () => {
     expect(html).toContain("14.500 €");
     expect(html).toContain("el 214è de 927 municipis amb dada");
     expect(html).toContain("INE, 2023");
+    // I el lloc porta a la llista sencera: el rànquing de la renda dels 947.
+    expect(html).toContain('<a class="entre-947" href="../../ranquings/#renda">entre els 947 →</a>');
     expect(html).toContain("Un ajuntament no decideix quant guanya la gent que hi viu");
     // L'espurna dibuixa la sèrie, i la lletra petita diu el que no es veu a la
     // xifra: que la sèrie s'atura l'any de les eleccions, i qui tapa els buits.
@@ -1493,6 +1495,22 @@ describe("quant fa que mana el mateix, i quants vots no hi van arribar", () => {
 
   it("sense cap de les dues mètriques no hi ha bloc", () => {
     expect(renderTrajectoria(null, null)).toBe("");
+  });
+
+  it("«La mateixa persona» enllaça a la fitxa de l'alcaldia quan és ella, i només llavors", () => {
+    const c = continuitat({ persona: { ...ratxa({ anys: 7, legislatures: 2 }), nom: "MARTA FARRÉS FALGUERAS" } });
+    // Sense saber qui mana ni on és la seva fitxa, el nom és text.
+    expect(renderTrajectoria(c, null)).toContain("<span class=\"peu\">Marta Farrés Falgueras</span>");
+    // Amb l'alcaldia resolta, el nom porta a la seva pàgina.
+    const amb = renderTrajectoria(c, null, { nom: "Marta Farrés Falgueras", adreca: "regidor/marta-farres-falgueras/" });
+    expect(amb).toContain('<a href="regidor/marta-farres-falgueras/">Marta Farrés Falgueras</a>');
+    // Si la ratxa és d'una altra persona que qui mana avui, no s'hi enllaça:
+    // el nom no ha de portar mai a una fitxa que no és la seva.
+    const altra = renderTrajectoria(c, null, { nom: "Pol Gibert Horcas", adreca: "regidor/pol-gibert-horcas/" });
+    expect(altra).not.toContain("regidor/pol-gibert-horcas/");
+    expect(altra).toContain("Marta Farrés Falgueras");
+    // I sense fitxa no hi ha enllaç encara que sigui ella.
+    expect(renderTrajectoria(c, null, { nom: "Marta Farrés Falgueras", adreca: null })).not.toContain("<a href=\"regidor/");
   });
 
   it("diu els anys de la ratxa, les legislatures i les alternances", () => {
@@ -2586,5 +2604,113 @@ describe("com ha anat la seguretat", () => {
     // Sabadell passa del llindar: la fitxa diu que el forat és de la font.
     expect(html).toContain("hauria de formar part");
     expect(html).toContain("Mossos");
+  });
+});
+
+/**
+ * La portada de la fitxa i els enllaços que en surten: la cara de l'alcaldia
+ * és la mateixa que a la seva fitxa de persona, la comarca porta a la seva
+ * pàgina, i les xifres que tenen rànquing hi porten. I el balanç del mandat
+ * no pinta cap veredicte.
+ */
+describe("la portada: la cara de l'alcaldia, la comarca i «entre els 947»", () => {
+  const carrec = (nom: string, carrec: string, foto: string | null, fotoPetita: string | null) => ({
+    nom, carrec, grup: "Grup Municipal del PSC", equipGovern: true, foto, fotoPetita, fitxa: null,
+  });
+  const seu = (alcaldessa: ReturnType<typeof carrec>): NonNullable<RadiografiaData["carrecs"]> => ({
+    font: "seu-e", url: "https://seu-e.cat/ca/web/sabadell/govern", slug: "sabadell",
+    descarregat: "29 d'agost del 2026", totalCarrecs: 2, ambFoto: 1, cobertura: "completa",
+    carrecs: [alcaldessa, carrec("Pol Gibert Horcas", "Regidor", null, null)],
+  });
+  const portada = (html: string): string =>
+    html.slice(html.indexOf('<p class="alcaldia">'), html.indexOf("</p>", html.indexOf('<p class="alcaldia">')));
+  const ullada = (html: string): string => {
+    const on = html.indexOf('<section class="ullada');
+    return on < 0 ? "" : html.slice(on, html.indexOf("</section>", on));
+  };
+
+  it("la cara de la capçalera és el retrat gran de la seu, el mateix que la fitxa de la persona", () => {
+    // `publish.ts` escriu la pàgina de la persona amb `carrec.foto ?? carrec.fotoPetita`;
+    // la capçalera ha d'ensenyar exactament aquest.
+    const html = renderRadiografia(
+      fitxa({ carrecs: seu(carrec("Marta Farrés Falgueras", "Alcaldessa", "/observatori/fotos/320/20338.webp", "/observatori/fotos/160/20338.webp")), government: govern() }),
+    );
+    const p = portada(html);
+    expect(p).toContain('<img class="cara-alcaldia" style="" src="/observatori/fotos/320/20338.webp" alt="" width="52" height="52" loading="lazy">');
+    expect(p).not.toContain("inicials");
+    expect(p).toContain('href="regidor/marta-farres-falgueras/"');
+  });
+
+  it("amb només el retrat petit, va el petit; sense cap, les inicials amb el color de la força", () => {
+    const petit = portada(
+      renderRadiografia(fitxa({ carrecs: seu(carrec("Marta Farrés Falgueras", "Alcaldessa", null, "/observatori/fotos/160/20338.webp")), government: govern() })),
+    );
+    expect(petit).toContain('src="/observatori/fotos/160/20338.webp"');
+    const sense = portada(
+      renderRadiografia(fitxa({ carrecs: seu(carrec("Marta Farrés Falgueras", "Alcaldessa", null, null)), government: govern() })),
+    );
+    // La mateixa peça que fa servir tot el web (cara.ts): mateixa classe,
+    // mateixes inicials, i sempre de la mateixa mida.
+    expect(sense).toMatch(/<span class="cara-alcaldia inicials" style="--c:#[0-9a-fA-F]{6};--t:#[0-9a-fA-F]{6}" aria-hidden="true">MF<\/span>/);
+    expect(sense).not.toContain("<img");
+  });
+
+  it("la comarca de la capçalera enllaça a la seva pàgina; la província es queda com a text", () => {
+    const html = renderRadiografia(fitxa());
+    expect(html).toContain('<p class="micro"><a href="../../c/valles-occidental/">Vallès Occidental</a> · Barcelona</p>');
+    // I és el mateix camí que «On continua» al final de la fitxa.
+    expect(html).toContain('<a href="../../c/valles-occidental/"><b>Vallès Occidental</b>');
+  });
+
+  it("l'ullada porta «entre els 947 →» al rànquing només on n'hi ha: IBI i participació, i mai despesa ni deute", () => {
+    const participacio = [{ electionId: "M20231", censusSize: 1000, voters: 600, blankVotes: 5 }] as unknown as RadiografiaData["participation"];
+    const u = ullada(renderRadiografia(fitxa({ finances: finances(), government: govern(), spending: gasta(), participation: participacio })));
+    const enllacos = [...u.matchAll(/<a class="entre-947" href="([^"]+)">entre els 947 →<\/a>/g)].map((m) => m[1]);
+    expect(enllacos).toEqual(["../../ranquings/#ibi", "../../ranquings/#participacio"]);
+    // Fora de la tessel·la, que ja és un enllaç: mai un <a> dins d'un <a>.
+    expect(u).toMatch(/<\/a><a class="entre-947" href="\.\.\/\.\.\/ranquings\/#ibi">/);
+    const tesselaIbi = u.slice(u.indexOf('<a href="#que-paga">'), u.indexOf("</a>", u.indexOf('<a href="#que-paga">')));
+    expect(tesselaIbi).not.toContain("entre-947");
+    // Ni a la despesa ni al deute: no hi ha cap rànquing que els ordeni.
+    for (const on of ["#diners", "#comptes"]) {
+      const tessel·la = u.slice(u.indexOf(`<a href="${on}">`), u.indexOf("</li>", u.indexOf(`<a href="${on}">`)));
+      expect(tessel·la).not.toContain("entre els 947");
+    }
+  });
+
+  it("quan l'aigua substitueix l'IBI, l'enllaç va al rànquing de l'aigua", () => {
+    const u = ullada(renderRadiografia(fitxa({ finances: finances(), government: govern(), rebutIbi: ibi({ publicable: false }) })));
+    expect(u).toContain('href="../../ranquings/#aigua"');
+    expect(u).not.toContain('href="../../ranquings/#ibi"');
+  });
+
+  it("i el CSS que treu l'enllaç de la graella hi és", () => {
+    const html = renderRadiografia(fitxa());
+    expect(html).toContain(".ullada li:has(> .entre-947){display:flex;flex-direction:column}");
+    expect(html).toContain(".ullada a.entre-947{display:block;flex:0 0 auto;min-height:0");
+  });
+
+  it("«Canvis de mans» a la banda del 23-M enllaça al rànquing d'alternances", () => {
+    const history = { series: [], elections: 12, firstYear: 1979, alternances: 2 } as unknown as RadiografiaData["history"];
+    const html = renderRadiografia(fitxa({ history }));
+    expect(html).toContain('Canvis de mans des del 1979');
+    expect(html).toContain('en 12 eleccions · <a class="entre-947" href="../../ranquings/#alternances">entre els 947 →</a>');
+  });
+});
+
+describe("el balanç del mandat no pinta cap veredicte", () => {
+  it("la diferència va en tinta normal: cap verd ni cap coral per fila", () => {
+    const html = renderRadiografia(fitxa({ finances: finances() }));
+    // Les classes de direcció es queden a l'HTML —hi són per a qui les vulgui
+    // llegir— però cap regla les pinta.
+    expect(html).toMatch(/<tr class="(millor|pitjor|igual)">/);
+    expect(html).not.toMatch(/\.balanc tr\.millor \.canvi\{color/);
+    expect(html).not.toMatch(/\.balanc tr\.pitjor \.canvi\{color/);
+    expect(html).not.toContain("#1d7a4f");
+    expect(html).not.toContain("#7fd6a8");
+    // «Sense canvi» s'atenua, que no és cap judici.
+    expect(html).toContain(".balanc tr.igual .canvi{color:var(--ink-suau)");
+    // La direcció es llegeix per la fletxa, que porta el seu text.
+    expect(html).toMatch(/<td class="fletxa" aria-label="(puja|baixa|sense canvi)">/);
   });
 });

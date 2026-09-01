@@ -1,9 +1,11 @@
 import { tintaSobre } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { de, delDia, elDia, nomLlegible, normalizePersonName, slugify } from "../lib/text";
+import { de, delDia, elDia, nomLlegible, normalize, normalizePersonName, slugify } from "../lib/text";
 import { capcalera, tipografia } from "./capcalera";
-import { sigla } from "./sigla";
+import { partitDe, sigla } from "./sigla";
+import { cara } from "./cara";
+import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import type { FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
@@ -196,6 +198,27 @@ export type ContextRegidor = {
    * passar, no recalcular.
    */
   adreca: string;
+  /**
+   * La comarca del municipi, per enllaçar-hi des del peu de la pàgina.
+   *
+   * La fitxa municipal ja porta la pastilla «qui mana a la comarca» i la
+   * pàgina de la persona no hi arribava: qui hi entra pel cercador es quedava
+   * a dos clics de la comarca. Sense comarca (Barcelona ciutat en té, però
+   * hi ha fonts que no la donen) no s'hi escriu res.
+   */
+  comarca?: string | null;
+  /**
+   * Les altres persones del seu grup municipal, per posar-los cara i enllaç.
+   *
+   * La fitxa del municipi ensenya el ple sencer, i la pàgina d'una persona
+   * només deia el nom del grup: qui volia saber amb qui seu havia de tornar
+   * enrere i buscar-los entre vint-i-set noms. Aquí arriba el grup tal com el
+   * llegeix la seu electrònica, la mateixa llista i en el mateix ordre que fa
+   * servir `adrecesRegidors()`, i per això l'adreça de cadascú ve donada i
+   * no es recalcula. La persona mateixa pot venir-hi inclosa: el bloc la
+   * treu per l'adreça, que és l'única clau que no confon dos noms iguals.
+   */
+  companys?: { nom: string; foto: string | null; adreca: string; carrec: string }[] | null;
   /**
    * Si la fitxa d'aquest ajuntament marca qui és a l'equip de govern.
    *
@@ -606,8 +629,8 @@ const CSS = `
    regidor, i no era cap problema de responsive sinó una col·lisió de noms.
    Ara fa servir «sigla», que és la mateixa pastilla que la fitxa del municipi i
    la de la candidatura: el mateix component i no una còpia. */
-.etiquetes span:not(.sigla){border:2px solid var(--ink);border-radius:var(--r-max);padding:4px 14px;
-  font-size:.8rem;font-weight:800;flex:none;white-space:nowrap;max-width:100%}
+.etiquetes span:not(.sigla),.etiquetes a:not(.sigla){border:2px solid var(--ink);border-radius:var(--r-max);padding:4px 14px;
+  font-size:.8rem;font-weight:800;flex:none;white-space:nowrap;max-width:100%;text-decoration:none}
 .etiquetes .sigla{flex:none;font-size:.86rem;padding:3px 12px}
 /* L'alcaldia és el càrrec que fa mirar la pàgina: va en coral, que és l'accent
    de la casa, i és l'única pastilla plena de la fila que no depèn del partit. */
@@ -725,6 +748,24 @@ const CSS = `
    les caselles del pas pel ple: és la mateixa mena de dada, dita en una línia. */
 .etiquetes .cap-llista{background:var(--lavanda);color:#1E1B2E}
 .etiquetes .segon-carrec{background:var(--paper-2);border-color:var(--coral);color:var(--coral)}
+.etiquetes a.segon-carrec:hover,.etiquetes a.segon-carrec:focus-visible{background:var(--coral);color:#FBF7EE}
+/* El nom del grup és un enllaç a la fitxa municipal, però va dins d'una frase
+   i no ha de semblar una pastilla: subratllat fi i la tinta de sempre. */
+.entrada .grup-enllac{color:inherit;text-decoration-color:var(--vora);text-underline-offset:3px}
+.entrada .grup-enllac:hover,.entrada .grup-enllac:focus-visible{text-decoration-color:var(--coral)}
+
+/* --- al mateix grup ------------------------------------------------------
+   Una cara i un nom per persona, en fila i sense cap altra dada: el bloc
+   respon «amb qui seu», i la resta ja és a la fitxa de cadascú. La cara és la
+   compartida («cara.ts», 40 px), amb el color del grup a les inicials. */
+.cares-grup{list-style:none;margin:var(--e2) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
+.cares-grup a{display:inline-flex;align-items:center;gap:10px;border:2px solid var(--ink);
+  border-radius:var(--r-max);padding:5px 16px 5px 6px;background:var(--paper-2);text-decoration:none;
+  color:inherit;max-width:100%}
+.cares-grup a:hover,.cares-grup a:focus-visible{border-color:var(--coral);box-shadow:2px 2px 0 var(--coral)}
+.cares-grup .qui{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.cares-grup .qui b{font-size:.92rem;overflow-wrap:anywhere}
+.cares-grup .qui small{font-size:.72rem;font-weight:700;color:var(--ink-suau)}
 .encapcala{font-size:1.05rem;line-height:1.5}
 .encapcala b{font-variant-numeric:tabular-nums}
 /* La frase dels mandats, sota la del càrrec i abans de les pastilles: el gris
@@ -1692,6 +1733,60 @@ function cronologia(r: Regidor, ctx: ContextRegidor): string {
   return `<section class="bloc" id="cronologia"><h2>Cronologia política</h2><p class="entrada-bloc">Només hi entren fets amb <b>data o període publicat</b>; el que no consta no s'omple amb una suposició.</p><ol class="cronologia">${fets.map((f) => `<li><span class="cronologia-any">${escape(f.any)}</span><span>${f.text}</span></li>`).join("")}</ol><p class="nota">La cronologia combina el registre d'electes, les candidatures i, quan n'hi ha, fonts de trajectòria. Cada bloc de la fitxa conserva l'enllaç a la font corresponent.</p></section>`;
 }
 
+/**
+ * El càrrec amb el municipi al darrere, sense dir-lo dues vegades.
+ *
+ * Les seus electròniques escriuen el càrrec de maneres diferents: a Esplugues
+ * diuen «Alcalde» i a Sabadell «Alcaldessa de Sabadell», i la pàgina hi
+ * afegia el municipi a totes dues: **«Alcaldessa de Sabadell de Sabadell»** a
+ * la primera frase de la fitxa de l'alcaldessa. No és un cas de les alcaldies:
+ * «Regidora de l'Ajuntament de Terrassa» faria el mateix. Quan el nom del
+ * municipi ja és dins del càrrec, el càrrec es deixa tal com ve; si no, s'hi
+ * afegeix amb la preposició ben contreta (`de()`).
+ *
+ * Es compara sense accents ni majúscules perquè les fonts no en posen igual,
+ * i pel nom sencer del municipi: «Sant Cugat» dins de «Regidor de Sant Cugat
+ * Sesgarrigues» no és el mateix municipi que «Sant Cugat del Vallès».
+ */
+export function carrecAmbMunicipi(carrec: string, municipi: string): string {
+  const net = carrec.trim();
+  const municipiNormal = normalize(municipi);
+  // «el Prat de Llobregat» pot venir escrit «Prat de Llobregat» al càrrec;
+  // l'article inicial no és el que decideix si el municipi hi és.
+  const senseArticle = municipiNormal.replace(/^(l|el|els|la|les|sa|ses|s) /, "");
+  const dins = normalize(net);
+  if (municipiNormal !== "" && (dins.includes(municipiNormal) || dins.includes(senseArticle))) return net;
+  return `${net} ${de(municipi)}`;
+}
+
+/**
+ * Les cares de qui seu al mateix grup municipal.
+ *
+ * Va després de la capçalera i abans de les xifres perquè respon la pregunta
+ * que ve just després de «qui és»: amb qui hi seu. Cada persona és un enllaç
+ * a la seva fitxa, amb la cara compartida de `cara.ts` a 40 px i el color del
+ * grup a les inicials de qui no té foto. Si el grup és d'una sola persona no
+ * hi ha ningú a ensenyar i el bloc no s'escriu; el que no es fa és escriure
+ * «no té companys de grup», que no és cap dada.
+ */
+function mateixGrup(r: Regidor, ctx: ContextRegidor): string {
+  const altres = (ctx.companys ?? []).filter((c) => c.adreca !== ctx.adreca);
+  if (altres.length === 0 || !r.grup) return "";
+  const color = r.color ?? null;
+  const files = altres
+    .map(
+      (c) => `<li><a href="../${escape(c.adreca)}/">${cara(c.nom, c.foto, { mida: 40, color })}<span class="qui"><b>${escape(nomLlegible(c.nom))}</b><small>${escape(c.carrec)}</small></span></a></li>`,
+    )
+    .join("");
+  return `<section class="bloc mateix-grup" id="mateix-grup">
+    <h2>Al mateix grup</h2>
+    <p class="entrada-bloc">${
+      altres.length === 1 ? "L'altra persona" : `Les altres <b>${altres.length}</b> persones`
+    } del grup <a href="../../#regidors">${escape(r.grup)}</a> al ple ${escape(de(ctx.municipi))}.</p>
+    <ul class="cares-grup">${files}</ul>
+  </section>`;
+}
+
 export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: string): string {
   const inicials = r.nom
     .split(/\s+/)
@@ -1706,6 +1801,11 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
 
   // Quan no en sabem res, els tres blocs que ho dirien es fonen en un de sol.
   const senseRes = noEnSabemRes(ctx);
+  // El partit de les sigles, si en té pàgina; `null` per a les llistes locals.
+  const partitId = r.sigles ? partitDe(r.sigles) : null;
+  const partit = partitId ? { id: partitId, name: BRANDS_BY_ID.get(partitId)?.name ?? r.sigles! } : null;
+  // Les cares del seu grup, escrites una vegada: la navegació només mira si hi són.
+  const alMateixGrup = mateixGrup(r, ctx);
 
   return `<!doctype html>
 <html lang="ca">
@@ -1714,7 +1814,7 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>${escape(nomLlegible(r.nom))} · ${escape(ctx.municipi)} — Observatori municipal de quivoto</title>
-<meta name="description" content="${escape(r.carrec)} ${escape(de(ctx.municipi))}${
+<meta name="description" content="${escape(carrecAmbMunicipi(r.carrec, ctx.municipi))}${
     r.grup ? ` pel grup ${escape(r.grup)}` : ""
   }: de quina llista va sortir, si és a l'equip de govern i què ha votat el seu grup al ple.">
 <link rel="canonical" href="${SITE}/observatori/m/${escape(ctx.slug)}/regidor/${escape(ctx.adreca)}/">
@@ -1733,8 +1833,11 @@ ${cercador("../../../../")}
     <div class="persona">
       ${retrat}
       <div>
-        <p class="entrada" style="margin:0">${escape(r.carrec)} ${escape(de(ctx.municipi))}${
-          r.grup ? `, pel grup <b>${escape(r.grup)}</b>` : ""
+        <p class="entrada" style="margin:0">${escape(carrecAmbMunicipi(r.carrec, ctx.municipi))}${
+          // El nom del grup porta al bloc «Qui seu al ple» de la fitxa
+          // municipal (`id="regidors"` a radiografia.ts): és on hi ha el grup
+          // sencer, amb els escons i qui hi seu.
+          r.grup ? `, pel grup <a class="grup-enllac" href="../../#regidors"><b>${escape(r.grup)}</b></a>` : ""
         }.</p>
         ${fraseMandats(r, ctx)}
         ${fraseLlistes(r, ctx)}
@@ -1765,7 +1868,11 @@ ${cercador("../../../../")}
             ctx.capDeLlista?.es ? '<span class="cap-llista">cap de llista el 2023</span>' : ""
           }
           ${r.entradaTardana ? `<span>va entrar a mig mandat</span>` : ""}
-          ${ctx.altresCarrecs.length > 0 ? `<span class="segon-carrec">${ctx.altresCarrecs.length === 1 ? "també té un càrrec supramunicipal" : `també té ${ctx.altresCarrecs.length} càrrecs supramunicipals`}</span>` : ""}
+          ${
+            // Els càrrecs supramunicipals es detallen al bloc «Què cobra», amb
+            // qui els paga: la pastilla hi porta en comptes de només anunciar-los.
+            ctx.altresCarrecs.length > 0 ? `<a class="segon-carrec" href="#que-cobra">${ctx.altresCarrecs.length === 1 ? "també té un càrrec supramunicipal" : `també té ${ctx.altresCarrecs.length} càrrecs supramunicipals`}</a>` : ""
+          }
         </div>
       </div>
     </div>
@@ -1782,11 +1889,14 @@ ${cercador("../../../../")}
 
   <nav aria-label="Apartats d'aquesta fitxa">
     <ul class="nav-fitxa">
+      ${alMateixGrup ? '<li><a href="#mateix-grup">Al mateix grup</a></li>' : ""}
       ${senseRes ? '<li><a href="#que-en-sabem">Què en sabem</a></li>' : '<li><a href="#que-cobra">Què cobra</a></li><li><a href="#pas-pel-ple">Pas pel ple</a></li><li><a href="#que-ha-votat">Què ha votat</a></li><li><a href="#que-en-publica">Transparència</a></li>'}
       ${ctx.trajectoria ? '<li><a href="#mes-enlla">Trajectòria</a></li>' : ""}
       ${(ctx.llistes?.length ?? 0) > 1 || (ctx.trajectoria?.carrecs.length ?? 0) > 0 ? '<li><a href="#cronologia">Cronologia</a></li>' : ""}
     </ul>
   </nav>
+
+  ${alMateixGrup}
 
   ${comACapDeLlista(r, ctx)}
 
@@ -1815,6 +1925,21 @@ ${cercador("../../../../")}
         r.sigles
           ? `<li><a href="../../${escape(slugify(r.sigles))}/"><b>${escape(r.sigles)} a ${escape(ctx.municipi)}</b>
         <span>Els resultats de la candidatura i qui hi va anar a la llista</span></a></li>`
+          : ""
+      }
+      ${
+        // La pàgina del partit a tot Catalunya, quan les sigles són d'un
+        // partit que en té: la mateixa regla que la pastilla de les sigles
+        // (`partitDe()`), i per tant una llista local no hi porta.
+        partit
+          ? `<li><a href="../../../../partit/${escape(partit.id)}/"><b>${escape(partit.name)} a tot Catalunya</b>
+        <span>On governa, quants regidors té i com li ha anat a cada municipi</span></a></li>`
+          : ""
+      }
+      ${
+        ctx.comarca
+          ? `<li><a href="../../../../c/${escape(slugify(ctx.comarca))}/"><b>${escape(ctx.comarca)}</b>
+        <span>Qui mana a la comarca, municipi per municipi</span></a></li>`
           : ""
       }
     </ul>

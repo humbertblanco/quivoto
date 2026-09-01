@@ -43,15 +43,16 @@ const MARQUES = [
   ["podem", "Podem", "#6b2b73", 0, 2],
 ] as const;
 
+/** Slug, nom, habitants, alcaldia, sigles, marca, fitxa i retrat: Barcelona en té, la resta no. */
 const CIUTATS = [
-  ["barcelona", "Barcelona", 1_702_000, "Jaume Collboni Cuadrado", "PSC-CP", "psc", "regidor/jaume-collboni-cuadrado/"],
-  ["l-hospitalet-de-llobregat", "L'Hospitalet de Llobregat", 283_000, "David Quirós", "PSC-CP", "psc", null],
-  ["terrassa", "Terrassa", 226_000, "Jordi Ballart", "TxT", null, "regidor/jordi-ballart/"],
-  ["badalona", "Badalona", 226_000, "Xavier García Albiol", "PP", "pp", "regidor/xavier-garcia-albiol/"],
-  ["sabadell", "Sabadell", 219_000, "Marta Farrés", "PSC-CP", "psc", "regidor/marta-farres/"],
-  ["lleida", "Lleida", 143_000, "Fèlix Larrosa", "PSC-CP", "psc", "regidor/felix-larrosa/"],
-  ["tarragona", "Tarragona", 141_000, "Rubén Viñuales", "PSC-CP", "psc", "regidor/ruben-vinuales/"],
-  ["mataro", "Mataró", 131_000, "David Bote", "PSC-CP", "psc", "regidor/david-bote/"],
+  ["barcelona", "Barcelona", 1_702_000, "Jaume Collboni Cuadrado", "PSC-CP", "psc", "regidor/jaume-collboni-cuadrado/", "/observatori/fotos/160/1.webp"],
+  ["l-hospitalet-de-llobregat", "L'Hospitalet de Llobregat", 283_000, "David Quirós", "PSC-CP", "psc", null, null],
+  ["terrassa", "Terrassa", 226_000, "Jordi Ballart", "TxT", null, "regidor/jordi-ballart/", null],
+  ["badalona", "Badalona", 226_000, "Xavier García Albiol", "PP", "pp", "regidor/xavier-garcia-albiol/", null],
+  ["sabadell", "Sabadell", 219_000, "Marta Farrés", "PSC-CP", "psc", "regidor/marta-farres/", null],
+  ["lleida", "Lleida", 143_000, "Fèlix Larrosa", "PSC-CP", "psc", "regidor/felix-larrosa/", null],
+  ["tarragona", "Tarragona", 141_000, "Rubén Viñuales", "PSC-CP", "psc", "regidor/ruben-vinuales/", null],
+  ["mataro", "Mataró", 131_000, "David Bote", "PSC-CP", "psc", "regidor/david-bote/", null],
 ] as const;
 
 const COMARQUES = [
@@ -66,11 +67,11 @@ const COMARQUES = [
 function mostra(canvis: Partial<PortadaMostra> = {}): PortadaMostra {
   return {
     partits: MARQUES.map(([id, sigles, color, alcaldies, regidories]) => ({ id, sigles, nom: `Nom ${sigles}`, color, alcaldies, regidories })),
-    municipis: CIUTATS.map(([slug, nom, habitants, alcalde, sigles, brandId, adreca]) => ({
+    municipis: CIUTATS.map(([slug, nom, habitants, alcalde, sigles, brandId, adreca, foto]) => ({
       slug,
       nom,
       habitants,
-      alcaldia: { nom: alcalde, sigles, brandId, adreca },
+      alcaldia: { nom: alcalde, sigles, brandId, adreca, foto },
     })),
     quiMana: [
       ...CIUTATS.map(([slug, , , , , brandId]) => ({ slug, brandId: brandId ?? "local" })),
@@ -150,12 +151,9 @@ describe("renderPortada amb la mostra", () => {
     expect(html).toContain('querySelectorAll("[data-obre-cerca]")');
   });
 
-  it("ensenya les vuit ciutats sense cap cara: el poble, la persona i les sigles, enllaçats", () => {
+  it("ensenya les vuit ciutats amb la cara de qui hi mana: el poble, la persona i les sigles, enllaçats", () => {
     const llista = main.slice(main.indexOf('<ol class="grans">'), main.indexOf("</ol>"));
     expect(llista.match(/<li>/g)).toHaveLength(8);
-    // Cap retrat ni inicials: les cares no són del poble, són de persones.
-    expect(llista).not.toContain("<img");
-    expect(llista).not.toContain('class="retrat');
     // Barcelona: el poble a la seva fitxa, l'alcalde a la seva pàgina, les sigles a la del partit.
     expect(llista).toContain('<a class="poble" href="m/barcelona/">Barcelona</a>');
     expect(llista).toContain('<a href="m/barcelona/regidor/jaume-collboni-cuadrado/">Jaume Collboni Cuadrado</a>');
@@ -166,6 +164,58 @@ describe("renderPortada amb la mostra", () => {
     // Terrassa: llista local, la pastilla grisa i sense enllaç enlloc.
     expect(llista).toContain('<b class="sigla" style="--c:#8b8b8b;--t:');
     expect(main).toContain('<a href="els947.html">i 939 més →</a>');
+  });
+
+  /**
+   * La cara és la de `cara.ts`, la mateixa de la fitxa: retrat quan n'hi ha i
+   * inicials sobre el color de la força quan no, i **sempre de la mateixa
+   * mida**, que és el que fa que les vuit capses tornin a ser iguals. És
+   * decorativa: `alt=""`, fora de l'enllaç, i el nom és el que hi porta.
+   */
+  it("posa una cara a cada capsa, de la mateixa mida tingui retrat o no", () => {
+    const llista = main.slice(main.indexOf('<ol class="grans">'), main.indexOf("</ol>"));
+    // Una cara per capsa: el retrat de Barcelona i set cercles d'inicials.
+    expect(llista.match(/class="cara-alcaldia/g)).toHaveLength(8);
+    expect(llista.match(/--mida:40px/g)).toHaveLength(8);
+    expect(llista).toContain(
+      '<img class="cara-alcaldia petita" style="--mida:40px;" src="/observatori/fotos/160/1.webp" alt="" width="40" height="40" loading="lazy">',
+    );
+    expect(llista.match(/<img /g)).toHaveLength(1);
+    // Les inicials del PSC del color del PSC, les del PP del color del PP.
+    expect(llista).toMatch(/class="cara-alcaldia inicials petita" style="--mida:40px;--c:#d00c3c;--t:[^"]+" aria-hidden="true">DQ</);
+    expect(llista).toMatch(/style="--mida:40px;--c:#234b90;--t:[^"]+" aria-hidden="true">XG</);
+    // Terrassa és local: les inicials sobre el mateix gris que la pastilla.
+    expect(llista).toMatch(/style="--mida:40px;--c:#8b8b8b;--t:[^"]+" aria-hidden="true">JB</);
+    // La cara no enllaça: va abans del nom, fora de l'<a>.
+    expect(llista).toMatch(/aria-hidden="true">DQ<\/span><span class="qui"><a href="m\/l-hospitalet-de-llobregat\/#alcaldies">/);
+    expect(llista).not.toContain('<a href="m/barcelona/regidor/jaume-collboni-cuadrado/"><img');
+  });
+
+  it("una ciutat sense alcaldia identificada té la capsa igual: un interrogant al cercle gris", () => {
+    const sense = cos(
+      renderPortada(comptes(), "avui", mostra({ municipis: [{ slug: "x", nom: "Poble X", habitants: 10, alcaldia: null }] })),
+    );
+    const llista = sense.slice(sense.indexOf('<ol class="grans">'), sense.indexOf("</ol>"));
+    expect(llista).toMatch(/class="cara-alcaldia inicials petita" style="--mida:40px;--c:#8b8b8b;--t:[^"]+" aria-hidden="true">\?</);
+    expect(llista).toContain('<span class="qui">sense alcaldia identificada</span>');
+  });
+
+  /**
+   * La columna dreta de la capçalera quedava buida a partir de 820px. Ara hi
+   * ha l'Observatori en xifres, i és l'única porta dels rànquings des de la
+   * portada amb dades: no tenen bloc propi.
+   */
+  it("posa l'Observatori en xifres al costat del títol, cada xifra enllaçada a la seva pàgina", () => {
+    const nav = main.slice(main.indexOf('<nav class="xifres"'), main.indexOf("</nav>", main.indexOf('<nav class="xifres"')));
+    expect(main.indexOf('<nav class="xifres"')).toBeLessThan(main.indexOf('<section class="bloc" id="grans">'));
+    expect([...nav.matchAll(/<li><a href="([^"]+)"><b>([^<]+)<\/b> ([^<]+)<\/a>/g)].map((m) => [m[1], m[2], m[3]])).toEqual([
+      ["els947.html", "947", "municipis"],
+      ["c/", "43", "comarques"],
+      ["partit/", "15", "partits"],
+      ["ranquings/", expect.stringMatching(/^\d+$/), "rànquings"],
+      ["preguntes/", "23", "pobles amb preguntes"],
+    ]);
+    expect(main).toContain('href="ranquings/"');
   });
 
   it("dibuixa el mapa dels 947 pintat per força, enllaçat al mapa gran i amb la clau al costat", () => {
@@ -243,7 +293,8 @@ describe("renderPortada amb la mostra", () => {
   });
 
   it("no enllaça el que no s'ha publicat", () => {
-    const sense = cos(renderPortada(comptes({ trajectoria: null }), "avui", mostra({ amb: null, preguntes: [] })));
+    // Els comptes i la mostra surten de la mateixa lectura: sense preguntes, cap dels dos no en té.
+    const sense = cos(renderPortada(comptes({ trajectoria: null, conjuntsPreguntes: 0 }), "avui", mostra({ amb: null, preguntes: [] })));
     expect(sense).not.toContain('href="amb/"');
     expect(sense).not.toContain('href="trajectoria/"');
     expect(sense).not.toContain('href="preguntes/"');
@@ -263,13 +314,21 @@ describe("renderPortada amb la mostra", () => {
       comptes(),
       "avui",
       mostra({
-        municipis: [{ slug: "x", nom: 'Un <b>poble</b> "rar"', habitants: 1, alcaldia: { nom: "A <i>B</i>", sigles: "<X>", brandId: null, adreca: null } }],
+        municipis: [
+          {
+            slug: "x",
+            nom: 'Un <b>poble</b> "rar"',
+            habitants: 1,
+            alcaldia: { nom: "A <i>B</i>", sigles: "<X>", brandId: null, adreca: null, foto: '/fotos/"rara".webp' },
+          },
+        ],
       }),
     );
     expect(dolent).toContain("Un &lt;b&gt;poble&lt;/b&gt; &quot;rar&quot;");
     expect(dolent).toContain("A &lt;i&gt;B&lt;/i&gt;");
     expect(dolent).toContain("&lt;X&gt;");
     expect(dolent).not.toContain("<i>B</i>");
+    expect(dolent).toContain('src="/fotos/&quot;rara&quot;.webp"');
   });
 });
 
@@ -277,13 +336,16 @@ describe("renderPortada sense la mostra", () => {
   const html = renderPortada(comptes(), "avui");
   const main = cos(html);
 
+  /** La llista d'enllaços a les seccions, sense les xifres de la capçalera. */
+  const seccions = (html: string): string => html.slice(html.indexOf('<ul class="seccions">'), html.indexOf("</ul>", html.indexOf('<ul class="seccions">')));
+
   it("queda una portada d'enllaços: cap targeta, cap bloc de dades", () => {
     expect(main).toContain('<ul class="seccions">');
     expect(main).not.toContain('class="reixa"');
     expect(main).not.toContain('<ol class="grans">');
     expect(main).not.toContain('<svg class="minimapa"');
     expect(main).not.toContain('<ul class="marques">');
-    expect([...main.matchAll(/<li><a href="([^"]+)">/g)].map((m) => m[1])).toEqual([
+    expect([...seccions(main).matchAll(/<li><a href="([^"]+)">/g)].map((m) => m[1])).toEqual([
       "els947.html",
       "mapa/",
       "ranquings/",
@@ -296,14 +358,17 @@ describe("renderPortada sense la mostra", () => {
     ]);
   });
 
-  it("continua portant el botó del cercador i la línia de la descàrrega", () => {
+  it("continua portant el botó del cercador, les xifres de la capçalera i la línia de la descàrrega", () => {
     expect(main).toContain("data-obre-cerca hidden");
+    // Les xifres només necessiten els recomptes, i `portada-ara.ts` els té.
+    expect(main).toContain('<nav class="xifres"');
+    expect(main).toContain('<li><a href="partit/"><b>15</b> partits</a></li>');
     expect(main.match(/href="dades\/"/g)).toHaveLength(1);
   });
 
   it("no enllaça el que no s'ha publicat", () => {
     const sense = cos(renderPortada(comptes({ trajectoria: null, amb: null, conjuntsPreguntes: 0 }), "avui"));
-    expect([...sense.matchAll(/<li><a href="([^"]+)">/g)].map((m) => m[1])).toEqual([
+    expect([...seccions(sense).matchAll(/<li><a href="([^"]+)">/g)].map((m) => m[1])).toEqual([
       "els947.html",
       "mapa/",
       "ranquings/",
@@ -311,6 +376,8 @@ describe("renderPortada sense la mostra", () => {
       "c/",
       "comparador/",
     ]);
+    // Sense preguntes, la xifra de preguntes tampoc no surt a la capçalera.
+    expect(sense).not.toContain("pobles amb preguntes");
   });
 });
 

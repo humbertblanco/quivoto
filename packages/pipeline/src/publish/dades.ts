@@ -1451,10 +1451,12 @@ const DADES_CSS = `${RADIOGRAFIA_CSS}
 .baixades span{color:var(--ink-suau);font-size:.95rem}
 .parell{display:flex;flex-wrap:wrap;gap:var(--e1);margin-top:var(--e2)}
 .parell a{border:2px solid var(--ink);border-radius:var(--r-max);padding:4px 13px;font-size:.8rem;font-weight:800;text-decoration:none;background:var(--paper)}
-.xifres{list-style:none;padding:0;margin:var(--e3) 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--e2)}
-.xifres li{background:var(--menta);color:#1E1B2E;border:2.5px solid #1E1B2E;border-radius:var(--r-m);padding:var(--e2);box-shadow:3px 3px 0 #1E1B2E}
-.xifres b{display:block;font-family:var(--display);font-weight:900;font-size:2.2rem;letter-spacing:-.03em;line-height:1}
-.xifres span{font-size:.86rem}
+/* «.xifres-dades» i no «.xifres»: el nom curt és el de les tres xifres del peu
+   compartit, i la regla de les pastilles de menta («li») hi arribava. */
+.xifres-dades{list-style:none;padding:0;margin:var(--e3) 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--e2)}
+.xifres-dades li{background:var(--menta);color:#1E1B2E;border:2.5px solid #1E1B2E;border-radius:var(--r-m);padding:var(--e2);box-shadow:3px 3px 0 #1E1B2E}
+.xifres-dades b{display:block;font-family:var(--display);font-weight:900;font-size:2.2rem;letter-spacing:-.03em;line-height:1}
+.xifres-dades span{font-size:.86rem}
 pre{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);padding:var(--e2);overflow-x:auto;font-size:.85rem}
 pre code{background:none;border:0;padding:0}
 .llicencies{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--e2)}.llicencies li{border:2px solid var(--vora);border-radius:var(--r-m);padding:var(--e2);background:var(--paper-2)}.llicencies b{display:block;font-family:var(--display);font-size:1.05rem;margin-bottom:7px}
@@ -1489,7 +1491,7 @@ ${cercador("../")}
 tornar a publicar. Ho posem aquí perquè un periodista local ens pugui contrastar sense
 demanar-nos permís ni esperar cap resposta.</p>
 
-<ul class="xifres">
+<ul class="xifres-dades">
   <li><b>${municipis}</b><span>municipis</span></li>
   <li><b>${stats.camps}</b><span>camps al fitxer de Catalunya</span></li>
   <li><b>CC BY</b><span>i cada camp amb la seva font</span></li>

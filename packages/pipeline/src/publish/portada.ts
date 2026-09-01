@@ -2,9 +2,11 @@ import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import { MASCOTA_CSS, catalunya } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
+import { cara } from "./cara";
 import { cercador } from "./cercador";
 import { geometria } from "./mapa";
 import { peu } from "./peu";
+import { METRIQUES } from "./ranquings";
 import { sigla } from "./sigla";
 import type { MostraMunicipi, PortadaMostra } from "./portada-mostra";
 
@@ -18,17 +20,33 @@ import type { MostraMunicipi, PortadaMostra } from "./portada-mostra";
  * arribava a la portada llegia deu vegades «aquí hi ha coses» i no en veia cap.
  *
  * Ara la portada **ensenya** en comptes d'explicar: les vuit ciutats més grans
- * amb el nom de qui hi mana, el mapa dels 947 pintat per força, les quinze
- * marques amb les seves alcaldies, les sis comarques més poblades, els pobles
- * que ja tenen preguntes i tres comparacions per començar. Cada bloc és un
- * tros de la pàgina a què porta, i el títol del bloc és l'enllaç.
+ * amb la cara i el nom de qui hi mana, el mapa dels 947 pintat per força, les
+ * quinze marques amb les seves alcaldies, les sis comarques més poblades, els
+ * pobles que ja tenen preguntes i tres comparacions per començar. Cada bloc és
+ * un tros de la pàgina a què porta, i el títol del bloc és l'enllaç.
  *
- * ## Les ciutats grans, sense cares
+ * ## Les ciutats grans, amb cara
  *
- * Cada capsa havia portat el retrat de l'alcaldia. Les cares són de persones,
- * no dels pobles, i a la pàgina que és de tot el país feien semblar la ciutat
- * seva; a més, qui té foto i qui no en té feien vuit capses de vuit mides.
- * Fora: el nom enllaçat hi porta igual, i les capses fan totes la mateixa.
+ * Cada capsa porta el retrat de l'alcaldia, o les seves inicials sobre el
+ * color de la força quan la seu no en publica cap. Durant un temps no en va
+ * portar: qui tenia foto i qui no en tenia feien vuit capses de vuit mides, i
+ * es van treure totes. El que ho arregla és `cara()` de `cara.ts`, la mateixa
+ * cara que ensenyen la fitxa, la comarca i el partit: **sempre fa la mateixa
+ * mida**, tingui retrat o no, i les vuit capses tornen a ser iguals amb la
+ * cara posada. La cara és decorativa —`alt=""`, sense enllaç—: el nom és el
+ * text i és el text el que porta a la fitxa de la persona. I si l'alcaldia no
+ * s'ha identificat, hi va un interrogant al mateix cercle, gris, perquè la
+ * capsa no s'encongeixi.
+ *
+ * ## Les xifres al costat del títol
+ *
+ * A partir de 820 px la capçalera és una reixa de dues columnes —la mateixa
+ * que a la fitxa posa la silueta del municipi a la dreta— i aquí la dreta
+ * quedava buida: mig full en blanc al costat del títol. Ara hi va una targeta
+ * amb l'Observatori en xifres, cada xifra enllaçada a la seva pàgina. És la
+ * porta dels rànquings, que no tenen bloc propi i fins ara només s'hi arribava
+ * pel menú, i en un telèfon es queda sota la crida del cercador com una fila
+ * de pastilles.
  *
  * ## Les dues versions
  *
@@ -229,6 +247,28 @@ const CSS = `
 .portada .obre-cerca span{position:static;width:auto;height:auto;overflow:visible;clip:auto}
 .portada .cerca-poble a{font-weight:700;font-size:.92rem}
 
+/* --- l'Observatori en xifres: pastilles en un telèfon, targeta a la dreta ---
+   Sota els 820px és una fila de pastilles que segueix la crida del cercador.
+   A partir d'allà la capçalera és la reixa de dues columnes d'estil.ts i la
+   targeta se'n va a la dreta, a la columna que quedava buida: una xifra per
+   línia, la xifra gran i el nom al costat, i tota la línia és l'enllaç. */
+.xifres{margin:var(--e3) 0 0}
+.xifres ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.xifres a{display:inline-flex;align-items:baseline;gap:6px;min-height:40px;padding:0 14px;border:2px solid var(--ink);
+  border-radius:var(--r-max);font-weight:800;font-size:.86rem;text-decoration:none;color:inherit;background:var(--paper-2)}
+.xifres a:hover{box-shadow:var(--ombra)}
+.xifres b{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+@media (min-width:820px){
+  .portada .xifres{grid-column:2;grid-row:1 / span 99;margin:6px 0 0}
+  .xifres ul{flex-direction:column;gap:0;border:2.5px solid var(--ink);border-radius:var(--r-m);
+    background:var(--paper-2);box-shadow:var(--ombra);overflow:hidden}
+  .xifres li+li{border-top:2px solid var(--vora)}
+  .xifres a{display:flex;align-items:baseline;justify-content:flex-start;min-height:0;padding:11px 16px;
+    border:0;border-radius:0;background:none;font-size:.9rem}
+  .xifres a:hover{box-shadow:none;background:var(--presec);color:#1E1B2E}
+  .xifres b{font-size:1.5rem;min-width:3.2ch}
+}
+
 /* --- els blocs: el títol és l'enllaç a la pàgina sencera --- */
 .bloc h2 a{color:inherit;text-decoration:none}
 .bloc h2 a::after{content:" →";color:var(--coral-text);font-weight:900}
@@ -236,21 +276,28 @@ const CSS = `
 .mes{margin:var(--e2) 0 0;font-weight:800;font-size:.92rem}
 
 /* --- les ciutats més grans: quatre capses iguals per fila, dues en un telèfon ---
-   Sense retrats, cada capsa són tres línies. Les files es reparteixen iguals
-   (grid-auto-rows:1fr), un nom llarg es talla a dues línies perquè cap capsa
-   no creixi pel seu compte, i els habitants s'enganxen a baix de tot: la
-   línia de sota queda alineada d'una capsa a l'altra. */
+   Cada capsa són el nom del poble, la cara de qui hi mana amb el nom i les
+   sigles al costat, i els habitants. La cara fa sempre 40px —retrat o
+   inicials, vegeu cara.ts—, i per això les capses no depenen de qui té foto.
+   Les files es reparteixen iguals (grid-auto-rows:1fr), un nom llarg es talla
+   a dues línies perquè cap capsa no creixi pel seu compte, i els habitants
+   s'enganxen a baix de tot: la línia de sota queda alineada d'una capsa a
+   l'altra. */
 .grans{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;gap:var(--e2);
   grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr}
 @media (max-width:760px){.grans{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:600px){.grans{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.grans li{display:flex;flex-direction:column;gap:4px;min-width:0;min-height:84px}
+.grans li{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:110px}
 .grans .poble{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em;
   line-height:1.1;text-decoration:none;overflow-wrap:anywhere;
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .grans .poble:hover{text-decoration:underline;text-decoration-thickness:2.5px;text-underline-offset:4px}
-.grans .alcaldia{font-size:.84rem;line-height:1.3;display:flex;flex-wrap:wrap;gap:3px 6px;align-items:center}
-.grans .alcaldia a{font-weight:700}
+/* La cara i el text, l'una al costat de l'altre. La classe .alcaldia
+   d'estil.ts és la targeta de la fitxa i porta un marge de dalt que aquí
+   no toca. */
+.grans .alcaldia{display:flex;align-items:center;gap:8px;min-width:0;margin:0}
+.grans .qui{font-size:.84rem;line-height:1.3;display:flex;flex-wrap:wrap;gap:3px 6px;align-items:center;min-width:0}
+.grans .qui a{font-weight:700}
 .grans .hab{font-size:.76rem;color:var(--ink-suau);font-weight:700;font-variant-numeric:tabular-nums;margin-top:auto}
 
 /* --- qui mana: el mapa i la clau, l'un al costat de l'altra --- */
@@ -349,17 +396,27 @@ const LUPA = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke
 
 // ------------------------------------------------------------------ els blocs
 
-/* Una ciutat de la portada: el poble, qui hi mana i quants hi viuen. Sense
-   retrat ni inicials: la capsa és del municipi i la cara era d'una persona. */
-function municipiGran(m: MostraMunicipi): string {
+/** La mida de la cara a les capses de les ciutats: més petita que a la fitxa (52), més gran que a la llista dels 947 (30). */
+const MIDA_CARA_GRANS = 40;
+
+/* Una ciutat de la portada: el poble, la cara i el nom de qui hi mana, i
+   quants hi viuen. La cara és `cara()`, la mateixa de la fitxa: retrat si la
+   seu en publica, inicials sobre el color de la força si no, i sempre de la
+   mateixa mida. */
+function municipiGran(m: MostraMunicipi, colors: ReadonlyMap<string, string>): string {
   const a = m.alcaldia;
+  // El color de les inicials és el de la marca i, per a una llista local o
+  // una alcaldia que no s'ha identificat, el gris de la pastilla i del mapa.
+  const color = (a?.brandId ? colors.get(a.brandId) : null) ?? GRIS_LOCAL;
   // El nom de l'alcaldia porta a la fitxa de la persona i, quan no en té, a
   // l'apartat d'alcaldies del municipi: on va ho decideix `resolAlcaldia()`.
   const alcaldia = a
-    ? `<span class="alcaldia"><a href="m/${escape(m.slug)}/${a.adreca ? escape(a.adreca) : "#alcaldies"}">${escape(a.nom)}</a>${
+    ? `<span class="alcaldia">${cara(a.nom, a.foto, { mida: MIDA_CARA_GRANS, color })}<span class="qui"><a href="m/${escape(
+        m.slug,
+      )}/${a.adreca ? escape(a.adreca) : "#alcaldies"}">${escape(a.nom)}</a>${
         a.sigles ? ` ${sigla(a.sigles, { base: "./", brandId: a.brandId })}` : ""
-      }</span>`
-    : `<span class="alcaldia">sense alcaldia identificada</span>`;
+      }</span></span>`
+    : `<span class="alcaldia">${cara("?", null, { mida: MIDA_CARA_GRANS, color })}<span class="qui">sense alcaldia identificada</span></span>`;
   return `<li>
       <a class="poble" href="m/${escape(m.slug)}/">${escape(m.nom)}</a>
       ${alcaldia}
@@ -370,9 +427,10 @@ function municipiGran(m: MostraMunicipi): string {
 function blocMunicipis(mostra: PortadaMostra): string {
   if (mostra.municipis.length === 0) return "";
   const resta = mostra.comptes.municipis - mostra.municipis.length;
+  const colors = new Map(mostra.partits.map((p) => [p.id, p.color]));
   return `<section class="bloc" id="grans">
     <h2><a href="els947.html">Els municipis més grans</a></h2>
-    <ol class="grans">${mostra.municipis.map(municipiGran).join("")}</ol>
+    <ol class="grans">${mostra.municipis.map((m) => municipiGran(m, colors)).join("")}</ol>
     ${resta > 0 ? `<p class="mes"><a href="els947.html">i ${xifra(resta)} més →</a></p>` : ""}
   </section>`;
 }
@@ -493,6 +551,27 @@ function blocLinies(comptes: ComptesPortada, mostra: PortadaMostra): string {
   return linies ? `<section class="bloc linies">${linies}</section>` : "";
 }
 
+/**
+ * L'Observatori en xifres, al costat del títol: cada xifra és la porta de la
+ * pàgina que la desplega. Surt a les dues versions de la portada perquè només
+ * necessita els recomptes, que `portada-ara.ts` també té; les de zero no
+ * surten, com els blocs que no tenen res a ensenyar.
+ */
+function xifres(comptes: ComptesPortada): string {
+  const linies: [string, number, string][] = [
+    ["els947.html", comptes.municipis, "municipis"],
+    ["c/", comptes.comarques, "comarques"],
+    ["partit/", comptes.partits, "partits"],
+    ["ranquings/", METRIQUES.length, "rànquings"],
+    ["preguntes/", comptes.conjuntsPreguntes, "pobles amb preguntes"],
+  ];
+  const items = linies
+    .filter(([, n]) => n > 0)
+    .map(([on, n, text]) => `<li><a href="${on}"><b>${xifra(n)}</b> ${escape(text)}</a></li>`)
+    .join("");
+  return items ? `<nav class="xifres" aria-label="L'Observatori en xifres"><ul>${items}</ul></nav>` : "";
+}
+
 /** Sense la base de dades: els enllaços a les seccions i prou. */
 function seccions(comptes: ComptesPortada): string {
   const enllacos: [string, string][] = [
@@ -551,6 +630,7 @@ ${cercador("./")}
     ha votat des del 1979 i què en diuen els comptes, amb la font de cada xifra al costat.</p>
     <p class="cerca-poble"><button type="button" class="obre-cerca" data-obre-cerca hidden>${LUPA}<span>Escriu el nom del teu poble</span></button>
       <a href="els947.html">o busca'l a la llista dels ${xifra(comptes.municipis)}</a></p>
+    ${xifres(comptes)}
   </section>
 
   ${cos}

@@ -130,8 +130,12 @@ const EXTRA_CSS = `
   letter-spacing:-.02em;line-height:1.28;margin:6px 0 var(--e2);max-width:34ch}
 .pregunta .tema{display:inline-block;background:var(--menta);color:#1E1B2E;border:1.5px solid var(--ink);
   border-radius:var(--r-max);padding:2px 10px;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
+/* La pastilla del govern és un enllaç a l'evidència de la mateixa targeta, que
+   és d'on surt la posició: sense subratllat, que la vora discontínua ja diu
+   que és una cosa deduïda i no una dada. */
 .pregunta .govern{display:inline-block;border:1.5px dashed var(--ink);border-radius:var(--r-max);
-  padding:2px 10px;font-size:.7rem;font-weight:800;margin-left:6px}
+  padding:2px 10px;font-size:.7rem;font-weight:800;margin-left:6px;color:inherit;text-decoration:none}
+.pregunta .govern:hover{background:var(--presec);color:#1E1B2E}
 .pregunta dl{margin:var(--e2) 0 0;display:grid;gap:8px}
 .pregunta dt{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-suau)}
 .pregunta dd{margin:0;font-size:.92rem;line-height:1.5}
@@ -141,10 +145,14 @@ const EXTRA_CSS = `
 .veredicte-llindar ul{margin:var(--e1) 0 0;padding-left:1.1em;font-size:.9rem}
 .veredicte-llindar .bloqueja{color:var(--coral);font-weight:700}
 .llista-municipis{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e2)}
-.llista-municipis a{display:flex;justify-content:space-between;align-items:baseline;gap:var(--e2);
+/* La targeta és només l'enllaç al conjunt («a.conjunt»): sota hi van, en
+   fila, les pastilles d'anar a respondre i d'anar a la fitxa, que abans
+   heretaven la targeta sencera perquè la regla era «.llista-municipis a». */
+.llista-municipis a.conjunt{display:flex;justify-content:space-between;align-items:baseline;gap:var(--e2);
   flex-wrap:wrap;background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2);text-decoration:none;color:inherit}
 .llista-municipis b{font-family:var(--display);font-weight:900;font-size:1.2rem;letter-spacing:-.02em}
+.llista-municipis .accions{display:flex;flex-wrap:wrap;gap:8px;margin:0}
 .llista-municipis .bloquejada{display:inline-block;margin-top:6px;padding:4px 10px;border-radius:var(--r-max);
   background:var(--vora);color:var(--ink-suau);font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
 `;
@@ -167,11 +175,11 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
     <h3>${escape(a.text)}</h3>
     <span class="tema">${icona(a.tema)}<span>${escape(a.tema)}</span></span>
     ${a.districte ? `<span class="districte">${escape(a.districte)}</span>` : ""}
-    <span class="govern">el govern hi és ${escape(a.posicio_govern)}</span>
+    <a class="govern" href="#evidencia-${i + 1}" title="Segons l'evidència d'aquesta mateixa targeta">el govern hi és ${escape(a.posicio_govern)}</a>
     <dl>
       ${a.context ? `<dt>Per què es pregunta això aquí</dt><dd>${escape(a.context)}</dd>` : ""}
       <dt>Evidència</dt>
-      <dd>${escape(a.evidencia)}${
+      <dd id="evidencia-${i + 1}">${escape(a.evidencia)}${
         a.url_evidencia
           ? ` <a href="${escape(a.url_evidencia)}" target="_blank" rel="noopener">obre el document</a>`
           : ""
@@ -282,12 +290,18 @@ ${peu("../../", generatedAt, extres)}
 export function renderIndexPreguntes(conjunts: readonly ConjuntAmbSlug[], generatedAt: string): string {
   const files = conjunts
     .map(
-      (c) => `<li><a href="${escape(c.slug)}/">
+      // Cada municipi porta dos camins a més del conjunt: respondre'l, si es
+      // pot, i la seva fitxa municipal, que és on es veu qui mana i què ha
+      // votat de debò el ple del qual surten les preguntes.
+      (c) => `<li><a class="conjunt" href="${escape(c.slug)}/">
       <b>${escape(c.municipi)}</b>
       <span class="secundari">${c.veredicte.resum.ambVotCitable} de ${c.veredicte.total} preguntes
       lligades a una votació del ple</span>
     </a>
-    ${c.veredicte.avaluable && verifica(c).jugable ? `<a class="prova-enllac" href="${escape(c.slug)}/prova/">Respon-les →</a>` : '<span class="prova-enllac bloquejada">En revisió</span>'}</li>`,
+    <p class="accions">
+      ${c.veredicte.avaluable && verifica(c).jugable ? `<a class="prova-enllac" href="${escape(c.slug)}/prova/">Respon-les →</a>` : '<span class="prova-enllac bloquejada">En revisió</span>'}
+      <a class="prova-enllac" href="../m/${escape(c.slug)}/">La fitxa de ${escape(c.municipi)} →</a>
+    </p></li>`,
     )
     .join("");
 

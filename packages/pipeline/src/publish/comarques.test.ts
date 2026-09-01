@@ -35,6 +35,7 @@ function comarca(over: Partial<ComarcaData> = {}): ComarcaData {
       pacte: 214, majoriaAbsoluta: 520, canvisAlcaldia: 61,
     },
     altres: [{ slug: "priorat", name: "Priorat", municipis: 23 }],
+    metropolitans: 0,
     ...over,
     municipis,
   };
@@ -378,13 +379,50 @@ describe("la cara i el partit de cada alcaldia", () => {
       comarca({ municipis: [municipi({ mayorFoto: "/observatori/fotos/160/25009.webp" })] }),
       "2026-08-29",
     );
-    expect(html).toContain('<img class="retrat" src="/observatori/fotos/160/25009.webp"');
+    // És la cara compartida de cara.ts, a 36 px: la mateixa que la portada i la
+    // fitxa, i no una de pròpia que un dia deixaria d'assemblar-s'hi.
+    expect(html).toContain('<img class="cara-alcaldia petita" style="--mida:36px;" src="/observatori/fotos/160/25009.webp"');
+    expect(html).not.toContain('class="retrat');
   });
 
   it("posa la inicial amb el color del partit quan no en publica, mai un buit", () => {
     const html = renderComarca(comarca({ municipis: [municipi({ mayorFoto: null })] }), "2026-08-29");
-    expect(html).toContain('class="retrat inicials"');
+    expect(html).toContain('class="cara-alcaldia inicials petita"');
+    expect(html).toContain("--mida:36px;");
+    // El color d'ERC, no el gris de «no ho sabem».
+    expect(html).toContain("--c:#ffb232");
     expect(html).toContain(">MP<");
+  });
+
+  it("totes les cares fan la mateixa mida, tinguin foto o no", () => {
+    const html = renderComarca(
+      comarca({
+        municipis: [
+          municipi({ slug: "a", mayorFoto: "/observatori/fotos/160/1.webp" }),
+          municipi({ slug: "b", mayorFoto: null }),
+        ],
+      }),
+      "2026-08-29",
+    );
+    expect(html.match(/--mida:36px;/g)).toHaveLength(2);
+  });
+
+  it("separa l'alcaldia de la llista en dues columnes, perquè les files facin la mateixa alçada", () => {
+    // Amb les etiquetes sota el nom, la fila d'un pacte amb canvi d'alcaldia
+    // doblava la del costat. Ara cada cosa té la seva columna i la fila
+    // sencera fa l'alçada de la cara.
+    const html = renderComarca(
+      comarca({ municipis: [municipi({ winnerGoverns: false, mayorChanged: true })] }),
+      "2026-08-29",
+    );
+    expect(html).toContain("<th>Alcaldia</th><th>Amb quina llista</th>");
+    const persona = html.slice(html.indexOf('<td class="mana">'), html.indexOf("</td>", html.indexOf('<td class="mana">')));
+    expect(persona).not.toContain('class="sigla"');
+    expect(persona).not.toContain("marca-pacte");
+    const llista = html.slice(html.indexOf('<td class="llista">'), html.indexOf("</td>", html.indexOf('<td class="llista">')));
+    expect(llista).toContain('href="../../partit/erc/"');
+    expect(llista).toContain('<span class="marca-pacte">pacte</span>');
+    expect(llista).toContain("canvi a mig mandat");
   });
 
   it("la cara i el nom porten a la fitxa de la persona, dos nivells amunt", () => {
@@ -409,6 +447,8 @@ describe("la cara i el partit de cada alcaldia", () => {
     const html = renderComarca(comarca({ municipis: [municipi({ mayorName: null, mayorAdreca: null })] }), "2026-08-29");
     expect(html).not.toContain('<a class="persona"');
     expect(html).toContain("Sense dada");
+    // I el cercle porta un interrogant, no un forat ni unes inicials de ningú.
+    expect(html).toContain(">?<");
   });
 
   it("fa clicable la pastilla del partit, que abans no portava enlloc", () => {
@@ -470,5 +510,44 @@ describe("la dispersió entre municipis", () => {
     const html = renderComarca(ambRenda([11_000, 14_000, 16_000, 24_000]), "2026-08-29");
     expect(html).toContain('id="indicadors"');
     expect(html).toContain('<a href="#indicadors">');
+  });
+});
+
+/**
+ * Els salts de la portada: el mapa, els rànquings i, només on toca, l'AMB.
+ *
+ * El que s'hi prova és que no hi hagi cap enllaç decoratiu: l'Àrea
+ * Metropolitana només surt a les comarques que hi tenen municipis, i a les
+ * altres 38 no se n'ha de parlar.
+ */
+describe("els salts de la portada", () => {
+  it("porta al mapa de Catalunya i als rànquings dels 947", () => {
+    const html = renderComarca(comarca(), "2026-08-29");
+    const salts = html.slice(html.indexOf('<p class="salts">'), html.indexOf("</p>", html.indexOf('<p class="salts">')));
+    expect(salts).toContain('href="../../mapa/"');
+    expect(salts).toContain('href="../../ranquings/"');
+    expect(salts).toContain("rànquings dels 947");
+  });
+
+  it("enllaça l'Àrea Metropolitana només a les comarques que hi tenen municipis", () => {
+    // El peu compartit enllaça l'AMB a totes les pàgines: el que no hi ha de
+    // ser és a la portada ni al cos, on diria que la comarca hi té a veure.
+    const fora = renderComarca(comarca({ metropolitans: 0 }), "2026-08-29");
+    const cos = fora.slice(fora.indexOf('<main id="contingut">'), fora.indexOf("</main>"));
+    expect(cos).not.toContain('href="../../amb/"');
+    expect(cos).not.toContain("Àrea Metropolitana");
+
+    const dins = renderComarca(
+      comarca({ municipis: [municipi({ slug: "a" }), municipi({ slug: "b" }), municipi({ slug: "c" })], metropolitans: 2 }),
+      "2026-08-29",
+    );
+    expect(dins).toContain("2 dels seus 3 municipis són de l'<a href=\"../../amb/\">Àrea Metropolitana de Barcelona</a>");
+    // I ho torna a dir al bloc que explica què és una comarca, que és on cal.
+    expect(dins).toContain("2 d'aquests municipis són\n  també de l'<a href=\"../../amb/\">");
+  });
+
+  it("diu «tots» quan tots hi són, com al Barcelonès", () => {
+    const html = renderComarca(comarca({ municipis: [municipi({ slug: "a" }), municipi({ slug: "b" })], metropolitans: 2 }), "2026-08-29");
+    expect(html).toContain("Tots els seus municipis són de l'<a href=\"../../amb/\">");
   });
 });

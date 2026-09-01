@@ -106,8 +106,14 @@ const CSS = `
   box-shadow:var(--ombra);padding:var(--e3);margin:var(--e3) 0;font-size:.94rem}
 .avis-demo p{margin:0 0 var(--e2)}
 .avis-demo p:last-child{margin-bottom:0}
-.gros{font:inherit;font-weight:800;font-size:1rem;cursor:pointer;background:var(--ink);color:var(--paper);
-  border:2.5px solid var(--ink);border-radius:var(--r-max);padding:12px 26px}
+/* «Comença» i «Afina-ho amb N preguntes més» són les crides a l'acció
+   d'aquesta pàgina i van amb la mateixa pastilla coral que la resta de
+   l'Observatori («.boto-prova», a estil.ts): abans duien un estil propi de
+   tinta que, al costat del «Respon-les i mira amb qui coincideixes →» de la
+   pàgina de preguntes, semblava d'un altre web. La pastilla està escrita per a
+   un enllaç: el botó només ha de recuperar la lletra de la pàgina —els
+   navegadors li posen la del sistema— i el cursor de mà. */
+button.boto-prova{font-family:inherit;line-height:inherit;cursor:pointer}
 @media (prefers-reduced-motion:reduce){.escala button,.progres .barra i,.classificacio .via i{transition:none}}
 @media (max-width:560px){.escala{gap:5px}.escala button{padding:10px 2px;min-height:76px;font-size:.6rem}}
 `;
@@ -294,7 +300,7 @@ ${cercador(BASE)}
           : ""
       }
     </div>
-    <p><button class="gros" id="comenca">Comença</button></p>
+    <p><button class="boto-prova" id="comenca">Comença</button></p>
     <p class="nota">Les teves respostes es queden al navegador. No se n'envia cap enlloc.</p>
   </section>
 
@@ -327,7 +333,7 @@ ${cercador(BASE)}
     <h2 style="margin-top:var(--e5)">Pregunta per pregunta</h2>
     <ul class="repas" id="repas"></ul>
     <p class="nota" style="margin-top:var(--e4)">
-      <button type="button" class="gros" id="mes" hidden></button>
+      <button type="button" class="boto-prova" id="mes" hidden></button>
       <button type="button" id="altre" style="font:inherit;font-weight:800;cursor:pointer;background:transparent;border:2px solid var(--ink);border-radius:var(--r-max);padding:10px 20px;margin-left:var(--e2)">Torna-hi</button>
       <a href="../../../m/${escape(conjunt.slug)}/" style="margin-left:var(--e2)">Mira la fitxa de ${escape(conjunt.municipi)}</a>
     </p>

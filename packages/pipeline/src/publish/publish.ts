@@ -382,6 +382,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         forces: comarca.forces,
         pacte: comarca.pacte,
         canvisAlcaldia: comarca.canvisAlcaldia,
+        poblacioMediana: comarca.poblacioMediana,
       });
     }
     run.say(`${comarques.length} pàgines de comarca`);
@@ -820,6 +821,19 @@ async function escriuRegidors(
   const totalSeats = carrecs.length;
   let escrites = 0;
   const adreces = adrecesRegidors(carrecs);
+  /*
+   * Les persones de cada grup, per al bloc «Al mateix grup» de la fitxa de
+   * cadascuna: la mateixa llista i el mateix ordre que la fitxa municipal, i
+   * l'adreça és la que ja s'ha decidit aquí i no es recalcula a la pàgina.
+   * La foto petita (160 px) és la que toca per a una cara de 40 px.
+   */
+  const perGrup = new Map<string, NonNullable<ContextRegidor["companys"]>>();
+  for (const c of carrecs) {
+    if (!c.grup) continue;
+    const llista = perGrup.get(c.grup) ?? [];
+    llista.push({ nom: c.nom, foto: c.fotoPetita ?? c.foto, adreca: adreces.get(c)!, carrec: c.carrec });
+    perGrup.set(c.grup, llista);
+  }
   for (const carrec of carrecs) {
     const clau = normalizePersonName(carrec.nom);
     const delRegistre = perNom.get(clau) ?? null;
@@ -865,6 +879,8 @@ async function escriuRegidors(
           puntsAmbDesglos,
           assistencia: assistenciaDe(dades, carrec.nom, totalSeats),
           adreca: adreces.get(carrec)!,
+          comarca: dades.municipality.comarca ?? null,
+          companys: carrec.grup ? perGrup.get(carrec.grup) ?? null : null,
           governConegut: carrecs.some((c) => c.equipGovern),
           publicaDeLaPersona: publicaDe(dades, carrec.nom),
           // El que Wikidata sap d'aquesta persona i que el nostre registre no sap

@@ -96,6 +96,7 @@ describe("renderRanquings", () => {
     expect(participacio.match(/<li><span class="pos">/g)).toHaveLength(PAS);
     expect(participacio).toContain('<span class="pos">1</span>');
     expect(participacio).toContain("../m/poble-99/");
+    expect(participacio).toContain('<a class="comarca" href="../c/comarca/">Comarca</a>');
     // Poble 000 és el darrer de participació: surt al regle com «el més baix»,
     // però no a les primeres files; el JSON amb què el navegador completa la
     // llista sí que el porta.

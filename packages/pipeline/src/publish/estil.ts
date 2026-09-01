@@ -195,6 +195,8 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
   box-shadow:var(--ombra);object-fit:cover;flex:0 0 auto;background:var(--paper-2)}
 .cara-alcaldia.inicials{display:flex;align-items:center;justify-content:center;
   font-family:var(--display);font-weight:900;font-size:1.05rem;background:var(--c);color:var(--t)}
+/* La mateixa cara més petita (vegeu cara.ts): la mida va a --mida. */
+.cara-alcaldia.petita{width:var(--mida);height:var(--mida);border-width:2px;box-shadow:2px 2px 0 var(--ink);font-size:calc(var(--mida) * .36)}
 .qui-mana{display:flex;flex-direction:column;gap:3px;min-width:0}
 .nom-alcaldia{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.01em}
 .nom-alcaldia a{color:inherit;text-decoration:none;border-bottom:2.5px solid var(--coral)}
@@ -332,6 +334,23 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
 /* Dues línies i para: un peu de tres estirava tota la fila de la graella. */
 .ullada .peu{font-size:.74rem;color:var(--ink-suau);line-height:1.3;margin-top:7px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* «entre els 947 →»: l'enllaç al rànquing d'aquella xifra, a les pastilles que
+   en tenen. Va FORA de la tessel·la —que ja és un enllaç sencer— com a segon
+   fill del <li>, i per això «.ullada a» l'agafava i en feia una segona graella
+   de 124 px: aquí es desfà tot això. La pastilla es fa columna flexible i la
+   tessel·la s'estira, perquè l'enllaç quedi enganxat a baix a la dreta a totes
+   les pastilles de la fila, tinguin el peu d'una línia o de dues; a la dreta,
+   i no sota la xifra, perquè el marge esquerre de la tessel·la canvia amb la
+   columna i alinear-s'hi demanaria repetir totes les regles de nth-child. */
+.ullada li:has(> .entre-947){display:flex;flex-direction:column}
+.ullada li:has(> .entre-947) > a:first-child{flex:1 0 auto}
+.ullada a.entre-947{display:block;flex:0 0 auto;min-height:0;margin-top:-10px;padding:0 var(--e2) var(--e2) 0;
+  text-align:right;font-size:.72rem;font-weight:800;letter-spacing:.02em;color:var(--coral-text);
+  text-decoration:none}
+.ullada a.entre-947:hover,.ullada a.entre-947:focus-visible{text-decoration:underline;text-decoration-thickness:2px}
+/* A les tires («.tires .peu») l'enllaç va dins del peu, en línia, i només
+   canvia de color: allà el peu no és cap enllaç i no cal treure'l de res. */
+.tires .peu .entre-947{color:var(--coral-text);font-weight:800;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.ullada .xifra{transition:none}}
 
 /* --- una persona amb cara i partit --------------------------------------
@@ -778,9 +797,15 @@ details.nota > .serie{font-size:1rem}
 .comparativa.menys{font-weight:700}
 
 /* --- el balanç del mandat -------------------------------------------
-   Tres columnes de xifra i una fletxa al mig. El color diu si la xifra ha anat
-   cap on convenia, però mai sol: al costat sempre hi ha la paraula, perquè qui
-   no distingeixi colors ho llegeixi igual. */
+   Tres columnes de xifra i una fletxa al mig. La diferència va en tinta
+   normal, A POSTA: abans anava en verd quan la xifra «millorava» i en coral
+   quan «empitjorava», i això és un veredicte pintat sobre una dada, que és el
+   que la metodologia (docs/METODOLOGIA.md) no permet. Un deute que baixa no
+   és «bo» sense saber què s'ha deixat de fer, i el color ho deia igualment.
+   La direcció es llegeix per la fletxa, pel signe i per la lletra petita; les
+   classes «millor», «pitjor» i «igual» de la fila es queden a l'HTML per a
+   qui les vulgui llegir, però no pinten cap color. «igual» només s'atenua:
+   «sense canvi» no és cap judici. */
 .balanc{width:100%;border-collapse:collapse;font-size:.95rem}
 .balanc thead th{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-suau);
   text-align:right;padding:0 0 8px;border-bottom:2.5px solid var(--ink);font-weight:800}
@@ -793,10 +818,7 @@ details.nota > .serie{font-size:1rem}
 .balanc .ara{font-family:var(--display);font-weight:900;font-size:1.2rem;letter-spacing:-.02em}
 .balanc .fletxa{width:2.2em;font-size:1.1rem;color:var(--ink-suau)}
 .balanc .canvi{font-weight:800;padding-left:12px;white-space:nowrap}
-.balanc tr.millor .canvi{color:#1d7a4f}
-.balanc tr.pitjor .canvi{color:var(--coral-text)}
 .balanc tr.igual .canvi{color:var(--ink-suau);font-weight:600}
-@media (prefers-color-scheme:dark){.balanc tr.millor .canvi{color:#7fd6a8}}
 .peu-nota{display:block;font-size:.76rem;font-weight:500;color:var(--ink-suau);margin-top:3px;line-height:1.35;max-width:34ch}
 .balanc .canvi .peu-nota{text-align:right;max-width:none}
 .destacat{background:var(--presec);color:#1E1B2E;border:2.5px solid var(--ink);border-radius:var(--r-m);
@@ -1080,8 +1102,11 @@ details.nota > .serie{font-size:1rem}
   border:1.5px solid var(--ink);border-radius:var(--r-max);padding:3px 12px;font-size:.7rem;
   font-weight:800;text-transform:uppercase;letter-spacing:.06em}
 /* Com ha anat el mandat: el canvi del poble i el dels seus, un al costat de
-   l'altre. El color marca millora o empitjorament, però la frase de sota deixa
-   clar que qui jutja és qui llegeix. */
+   l'altre. El salt va en color de tinta, A POSTA, com a la taula del balanç:
+   abans anava en verd quan «millorava» i en coral quan «empitjorava», i això
+   és un veredicte pintat sobre una dada. El signe i la frase de sota diuen cap
+   on va; qui jutja és qui llegeix. Les classes millora/empitjora es queden per
+   a qui vulgui llegir-les al codi, sense color. */
 /* Sis targetes amb contorn de 2,5px i ombra dura per a una etiqueta i un salt:
    el marc pesava més que la dada i les sis juntes feien 2.751px. És una taula
    de comparació, no sis fets independents, i com a llista amb un filet i la
@@ -1095,12 +1120,6 @@ details.nota > .serie{font-size:1rem}
 .mandat .etq{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.01em}
 .mandat .salt{font-family:var(--display);font-weight:900;font-size:1.35rem;text-align:right;
   font-variant-numeric:tabular-nums}
-.mandat li.millora .salt{color:#1E6B4A}
-.mandat li.empitjora .salt{color:var(--coral-text,#C24429)}
-/* En fosc, el verd de la millora es queda a 2,55:1 damunt de la targeta: és el
-   mateix cas que ja estava resolt a la taula del balanç i aquí s'havia quedat
-   sense resoldre. */
-@media (prefers-color-scheme:dark){ .mandat li.millora .salt{color:#7FD6A8} }
 .mandat .dedes{grid-column:2;font-size:.84rem;color:var(--ink-suau);font-weight:700}
 .mandat .del-grup{grid-column:3;text-align:right;font-size:.8rem;color:var(--ink-suau);font-weight:700}
 @media (max-width:520px){

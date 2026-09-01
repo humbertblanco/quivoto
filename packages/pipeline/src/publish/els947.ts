@@ -835,13 +835,17 @@ export function clausOrdre(fila: Fila): string {
  * quedar-se amb una còpia vella dels mateixos estils.
  */
 const CSS = `
-.xifres{list-style:none;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+/* Va amb sufix i no «.xifres» a seques perquè aquest nom és el de les tres
+   xifres del peu compartit («footer.peu .xifres»): sense el sufix, la regla
+   de les pastilles («.xifres li») arribava al peu i hi posava fons, vora i
+   ombra a cada compte. */
+.xifres-947{list-style:none;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
   margin:var(--e4) 0 0;padding:0}
-.xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
+.xifres-947 li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2)}
-.xifres b{display:block;font-family:var(--display);font-weight:900;font-size:2.1rem;line-height:1;
+.xifres-947 b{display:block;font-family:var(--display);font-weight:900;font-size:2.1rem;line-height:1;
   letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.xifres span{font-size:.82rem;color:var(--ink-suau)}
+.xifres-947 span{font-size:.82rem;color:var(--ink-suau)}
 .pistes{display:flex;flex-wrap:wrap;gap:8px;margin:var(--e3) 0 0}
 
 /* --- qui mana a cada poble, a la llista dels 947 -------------------------
@@ -1197,7 +1201,7 @@ ${cercador("./")}
   </p>
 </section>
 
-<ul class="xifres">
+<ul class="xifres-947">
   <li><b>${totals.municipis}</b><span>municipis, de ${totals.comarques} comarques</span></li>
   <li><b>${xifra(totals.regidories)}</b><span>regidories el 2023</span></li>
   <li><b>${totals.pacte}</b><span>on governa una llista que no va guanyar</span></li>

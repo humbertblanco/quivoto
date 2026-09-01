@@ -174,8 +174,9 @@ describe("renderComparador", () => {
 
   it("cap color de veredicte a la taula: ni verd ni coral sota .comparativa ni a les marques", () => {
     const html = renderComparador(rows, "2026-08-29");
-    // Només el full d'aquesta pàgina: el de la casa té una pastilla «.marca»
-    // de marca de partit que no és la marca d'extrem d'aquí.
+    // Només el full d'aquesta pàgina: el de la casa té el logotip del peu
+    // («footer.peu .marca») i la marca de partit, que no són la marca d'extrem
+    // d'aquí (que per això es diu «.marca-extrem»).
     const inici = html.indexOf("/* --- el cercador i els municipis triats --- */");
     expect(inici).toBeGreaterThan(0);
     const css = html.slice(inici, html.indexOf("</style>")).replace(/@media[^{]*\{/g, "{");
@@ -662,7 +663,7 @@ describe("la seguretat al comparador", () => {
     // I cap marca: més fets coneguts pot ser més denúncies, i la policia no és
     // del ple. La fila no reparteix res.
     const seccio = cos.slice(cos.indexOf("Fets penals per 1.000 habitants"));
-    expect(seccio.slice(0, seccio.indexOf("</tr>"))).not.toContain('class="marca');
+    expect(seccio.slice(0, seccio.indexOf("</tr>"))).not.toContain('class="marca-extrem');
   });
 
   it("el municipi que el Ministeri no publica llegeix el perquè, no un guionet", () => {

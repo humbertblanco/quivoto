@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  adrecesRegidors, quiEsDeWikidata, renderRegidor, slugRegidor, trajectoriaDePersona,
+  adrecesRegidors, carrecAmbMunicipi, quiEsDeWikidata, renderRegidor, slugRegidor, trajectoriaDePersona,
   type ContextRegidor,
 } from "./regidor";
 
@@ -1193,5 +1193,145 @@ describe("la frase dels mandats", () => {
     );
     expect(html).toContain("<h2>Què en sabem</h2>");
     expect(html).toContain("tercer mandat");
+  });
+});
+
+/**
+ * La primera frase de la fitxa de l'alcaldessa de Sabadell deia «Alcaldessa de
+ * Sabadell de Sabadell»: la seu electrònica ja escriu el municipi dins del
+ * càrrec i la pàgina l'hi tornava a afegir. No és cosa de les alcaldies —qualsevol
+ * càrrec escrit amb el municipi hi cau— i l'arranjament tampoc no ho és.
+ */
+describe("el càrrec no diu el municipi dues vegades", () => {
+  it("quan el càrrec ja porta el municipi, es deixa tal com ve", () => {
+    expect(carrecAmbMunicipi("Alcaldessa de Sabadell", "Sabadell")).toBe("Alcaldessa de Sabadell");
+    expect(carrecAmbMunicipi("Regidora de l'Ajuntament de Terrassa", "Terrassa")).toBe(
+      "Regidora de l'Ajuntament de Terrassa",
+    );
+    // Sense accents ni majúscules: les fonts no els posen igual.
+    expect(carrecAmbMunicipi("ALCALDE DE SANT CUGAT DEL VALLES", "Sant Cugat del Vallès")).toBe(
+      "ALCALDE DE SANT CUGAT DEL VALLES",
+    );
+    // L'article del municipi no és el que decideix si hi és.
+    expect(carrecAmbMunicipi("Alcalde del Prat de Llobregat", "el Prat de Llobregat")).toBe(
+      "Alcalde del Prat de Llobregat",
+    );
+  });
+
+  it("i quan no el porta, s'hi afegeix amb la preposició ben contreta", () => {
+    expect(carrecAmbMunicipi("Alcalde", "Esplugues de Llobregat")).toBe("Alcalde d'Esplugues de Llobregat");
+    expect(carrecAmbMunicipi("Regidora", "el Prat de Llobregat")).toBe("Regidora del Prat de Llobregat");
+    // Un municipi que només coincideix a mitges no compta com a dit.
+    expect(carrecAmbMunicipi("Regidor de Sant Cugat Sesgarrigues", "Sant Cugat del Vallès")).toBe(
+      "Regidor de Sant Cugat Sesgarrigues de Sant Cugat del Vallès",
+    );
+  });
+
+  it("a la pàgina sencera: ni a la frase d'entrada ni a la descripció", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, nom: "Marta Farrés Falgueras", carrec: "Alcaldessa de Sabadell", sigles: "PSC-CP" },
+      { ...CONTEXT, municipi: "Sabadell", slug: "sabadell" },
+      "2026-08-30",
+    );
+    expect(html).not.toContain("de Sabadell de Sabadell");
+    expect(html).toContain("Alcaldessa de Sabadell, pel grup");
+  });
+});
+
+describe("els enllaços entre pàgines", () => {
+  it("el nom del grup porta al bloc «Qui seu al ple» de la fitxa municipal", () => {
+    const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
+    expect(html).toContain(
+      'pel grup <a class="grup-enllac" href="../../#regidors"><b>Grup Municipal Republicà (GMR)</b></a>',
+    );
+  });
+
+  it("i sense grup no hi ha cap enllaç buit", () => {
+    const html = renderRegidor({ ...REGIDORA, grup: null }, CONTEXT, "2026-08-30");
+    expect(html).not.toContain("pel grup");
+    expect(html).not.toContain("#regidors");
+  });
+
+  it("les sigles porten a la pàgina del partit, quatre nivells amunt", () => {
+    const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
+    expect(html).toContain('href="../../../../partit/erc/"');
+  });
+
+  it("el peu enllaça el partit a tot Catalunya i la comarca, quan els sabem", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, comarca: "Baix Llobregat" }, "2026-08-30");
+    expect(html).toContain('<a href="../../../../partit/erc/"><b>Esquerra Republicana de Catalunya a tot Catalunya</b>');
+    expect(html).toContain('<a href="../../../../c/baix-llobregat/"><b>Baix Llobregat</b>');
+  });
+
+  it("una llista local no té pàgina de partit i no s'hi enllaça; sense comarca, tampoc", () => {
+    // «-AM» al final ja resoldria a ERC (és la regla de `siglesFamily`): la
+    // llista local de debò és la que no porta cap sufix de partit.
+    const html = renderRegidor({ ...REGIDORA, sigles: "IxE" }, CONTEXT, "2026-08-30");
+    // Es mira la llista de destins i no la pàgina sencera: el peu comú ja
+    // enllaça les comarques, i això no és el que es comprova aquí.
+    const destins = html.slice(html.indexOf('<ul class="destins">'), html.indexOf("</ul>", html.indexOf('<ul class="destins">')));
+    expect(destins).not.toContain("a tot Catalunya</b>");
+    expect(destins).not.toContain('href="../../../../c/');
+  });
+
+  it("la pastilla del càrrec supramunicipal porta al bloc on es detalla", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        altresCarrecs: [
+          { ens: "Diputació de Barcelona", carrec: "Diputada", anualBrut: null, concepte: null, dedicacio: null, motiuSenseImport: "no ho publica", font: null },
+        ],
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain('<a class="segon-carrec" href="#que-cobra">també té un càrrec supramunicipal</a>');
+    expect(html).toContain('id="que-cobra"');
+  });
+});
+
+describe("al mateix grup", () => {
+  const companys = [
+    { nom: "Marta Alarcón i Puerto", foto: null, adreca: "marta-alarcon-pujol", carrec: "Regidora" },
+    { nom: "Pere Coll Vidal", foto: "/observatori/fotos/160/1.webp", adreca: "pere-coll-vidal", carrec: "Regidor" },
+    { nom: "ANNA RIBAS SOLÀ", foto: null, adreca: "anna-ribas-sola", carrec: "Regidora" },
+  ];
+
+  it("ensenya les altres persones del grup, amb cara i enllaç a la seva fitxa", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, companys }, "2026-08-30");
+    expect(html).toContain('id="mateix-grup"');
+    expect(html).toContain("Les altres <b>2</b> persones del grup");
+    expect(html).toContain('<a href="../pere-coll-vidal/">');
+    expect(html).toContain('<a href="../anna-ribas-sola/">');
+    // La cara compartida, a 40 px: foto per a qui en té, inicials per a qui no.
+    expect(html).toContain('src="/observatori/fotos/160/1.webp" alt="" width="40" height="40"');
+    expect(html).toMatch(/cara-alcaldia inicials petita" style="--mida:40px;[^"]*" aria-hidden="true">AR</);
+    // El nom es publica com s'escriu un nom, també aquí.
+    expect(html).toContain("<b>Anna Ribas Solà</b>");
+    // I el bloc entra a la navegació de la fitxa.
+    expect(html).toContain('<a href="#mateix-grup">Al mateix grup</a>');
+  });
+
+  it("no s'hi inclou la persona mateixa", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, companys }, "2026-08-30");
+    const bloc = html.slice(html.indexOf('id="mateix-grup"'), html.indexOf("</section>", html.indexOf('id="mateix-grup"')));
+    expect(bloc).not.toContain('href="../marta-alarcon-pujol/"');
+  });
+
+  it("les inicials van amb el color del grup", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, companys }, "2026-08-30");
+    const bloc = html.slice(html.indexOf('id="mateix-grup"'));
+    // #ffb232 és el color d'ERC del fixture; `sobreColor()` el pot ajustar,
+    // però la variable hi ha de ser i no el gris de «no sabem de qui és».
+    expect(bloc).toMatch(/--mida:40px;--c:#[0-9a-f]{6};--t:#[0-9a-f]{6}/i);
+    expect(bloc).not.toContain("--c:#9a9a9a");
+  });
+
+  it("si al grup només hi seu ella, el bloc no s'escriu", () => {
+    const sola = renderRegidor(REGIDORA, { ...CONTEXT, companys: [companys[0]!] }, "2026-08-30");
+    expect(sola).not.toContain('id="mateix-grup"');
+    expect(sola).not.toContain("Al mateix grup");
+    // I quan no arriba la llista, tampoc: cap «no té companys».
+    expect(renderRegidor(REGIDORA, CONTEXT, "2026-08-30")).not.toContain("mateix-grup");
   });
 });

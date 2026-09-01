@@ -146,6 +146,29 @@ describe("renderComarquesIndex", () => {
     expect(sense).not.toContain("Àrea Metropolitana, ");
   });
 
+  it("no dibuixa la columna del municipi del mig si cap fila no la porta", () => {
+    // Una columna de guions no compararia res, i un zero semblaria una dada.
+    expect(html).not.toContain("El municipi del mig");
+    expect(html).not.toContain('class="cx-mig"');
+  });
+
+  it("posa el municipi del mig quan les files el porten, i deixa buida la de Catalunya", () => {
+    const ambMediana = renderComarquesIndex(
+      [comarca({ poblacioMediana: 3_315.4 }), comarca({ slug: "priorat", name: "Priorat", habitants: 9_000, poblacioMediana: null })],
+      "avui",
+    );
+    expect(ambMediana).toContain('<th scope="col">El municipi del mig</th>');
+    const bages = ambMediana.slice(ambMediana.indexOf(">Bages<"), ambMediana.indexOf("</tr>", ambMediana.indexOf(">Bages<")));
+    expect(bages).toContain('<td class="cx-mig">3.315</td>');
+    // La comarca sense la dada diu que no la té, no un zero.
+    const priorat = ambMediana.slice(ambMediana.indexOf(">Priorat<"), ambMediana.indexOf("</tr>", ambMediana.indexOf(">Priorat<")));
+    expect(priorat).toContain('<td class="cx-mig">—</td>');
+    // La mediana dels 947 no surt de 43 medianes: la cel·la del peu queda buida.
+    const peu = ambMediana.slice(ambMediana.indexOf("<tfoot>"), ambMediana.indexOf("</tfoot>"));
+    expect(peu).toContain('<td class="cx-mig"></td>');
+    expect(ambMediana).toContain("<b>El municipi del mig</b>");
+  });
+
   it("diu que no hi ha res quan no hi ha res, en comptes d'una taula buida", () => {
     const buit = renderComarquesIndex([], "avui");
     expect(buit).toContain("Encara no hi ha cap comarca publicada");

@@ -63,6 +63,15 @@ describe("renderPreguntes", () => {
     }
   });
 
+  it("la pastilla del govern porta a l'evidència de la mateixa targeta", () => {
+    // La posició del govern no és una dada: es dedueix de l'evidència que hi
+    // ha més avall a la mateixa targeta, i la pastilla ho ha de dir.
+    expect(jugable).toContain('<a class="govern" href="#evidencia-1" title="Segons l\'evidència d\'aquesta mateixa targeta">el govern hi és acord</a>');
+    expect(jugable).toContain('<dd id="evidencia-1">');
+    expect(jugable).toContain('<a class="govern" href="#evidencia-2"');
+    expect(jugable).toContain('<dd id="evidencia-2">');
+  });
+
   it("el bloc «Segueix estirant» es queda només amb el que és d'aquesta pàgina", () => {
     expect(jugable).not.toContain("Les altres proves");
     expect(jugable).toContain("<b>La fitxa de Poble de Prova</b>");
@@ -86,5 +95,14 @@ describe("renderIndexPreguntes", () => {
     expect(html).toContain('href="poble-de-prova/"');
     expect(html).toContain('href="poble-de-prova/prova/"');
     expect(html).toContain("En revisió");
+  });
+
+  it("enllaça la fitxa municipal de cada municipi, no només les seves preguntes", () => {
+    expect(html).toContain('<a class="prova-enllac" href="../m/poble-de-prova/">La fitxa de Poble de Prova →</a>');
+    // La targeta és només l'enllaç al conjunt; les pastilles de sota no la
+    // poden heretar, que és el que passava amb «.llista-municipis a».
+    expect(html).toContain('<a class="conjunt" href="poble-de-prova/">');
+    expect(html).toContain(".llista-municipis a.conjunt{");
+    expect(html).not.toContain(".llista-municipis a{");
   });
 });

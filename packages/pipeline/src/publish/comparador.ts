@@ -1229,8 +1229,12 @@ const CSS = `
 /* La marca d'extrem és una pastilla de tinta discontínua, sense fons: «el més
    alt» i «el més baix» són fets, no veredictes, i cap casella no s'acoloreix
    perquè un fons verd o coral es llegiria com un «bé» o un «malament» que la
-   taula no diu. */
-.marca{display:inline-block;margin-top:6px;border:2px dashed var(--ink-suau);border-radius:var(--r-max);
+   taula no diu.
+   Es diu «.marca-extrem» i no «.marca» perquè aquest segon nom és el del
+   logotip «quivoto» del peu compartit («footer.peu .marca»): amb el nom curt,
+   la vora discontínua i les majúscules grises d'aquí es menjaven el logotip
+   del peu d'aquesta pàgina, que sortia com una pastilla d'extrem més. */
+.marca-extrem{display:inline-block;margin-top:6px;border:2px dashed var(--ink-suau);border-radius:var(--r-max);
   padding:2px 10px;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
   color:var(--ink-suau);background:transparent}
 /* L'enllaç que la llicència de l'Idescat demana al costat de la xifra. */
@@ -1912,7 +1916,7 @@ function celaXifra(def, row, marca, posicio){
       ? ""
       : '<span class="percentil"><i class="quintil q' + quintilDe(percentil) + '" aria-hidden="true"></i>' +
         esc(textDelPercentil(row, percentil)) + "</span>") +
-    (marca ? '<span class="marca ' + marca + '">' + esc(nomDeLaMarca(def, marca)) + "</span>" : "") +
+    (marca ? '<span class="marca-extrem ' + marca + '">' + esc(nomDeLaMarca(def, marca)) + "</span>" : "") +
     "</td>";
 }
 

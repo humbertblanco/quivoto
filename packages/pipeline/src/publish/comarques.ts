@@ -6,7 +6,7 @@ import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
 import { slugify } from "../lib/text";
 import { carregaCarrecsAlcaldia, carregaPleDelRegistre, resolAlcaldia } from "./alcaldia";
-import { sobreColor } from "./contrast";
+import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { regleDispersio } from "./grafics";
 import { icona } from "./icones";
@@ -159,6 +159,15 @@ export type ComarcaData = {
   };
   /** Les altres 42, per poder-hi saltar sense passar per l'índex. */
   altres: { slug: string; name: string; municipis: number }[];
+  /**
+   * Quants dels seus municipis són de l'Àrea Metropolitana de Barcelona.
+   *
+   * Zero a 38 comarques i el que sigui a les cinc que hi toquen; és el que
+   * decideix si la portada enllaça la pàgina de l'AMB. Per al Baix Llobregat
+   * no és cap detall: 25 dels seus 30 municipis hi són, i el transport,
+   * l'aigua i els residus els hi decideixen a l'AMB i no a la comarca.
+   */
+  metropolitans: number;
 };
 
 // -------------------------------------------------------------- presentació
@@ -212,35 +221,6 @@ const colorSegur = (color: string): string => (/^#[0-9a-f]{6}$/i.test(color) ? c
 /** El color de la força que té l'alcaldia d'un municipi, sempre pintable. */
 const colorAlcaldia = (brandId: string | null | undefined): string =>
   colorSegur(colorOf(brandId ?? SENSE_MARCA));
-
-/**
- * La cara de qui mana, i mai un forat.
- *
- * Quan l'ajuntament publica el retrat, el retrat; quan no, la inicial amb el
- * color del seu grup i la mateixa mida i la mateixa vora. És la regla que ja
- * fa el ple de la fitxa municipal: qui no té fotografia no és un regidor de
- * segona, és que el seu ajuntament no l'ha publicada.
- */
-function caraAlcaldia(
-  foto: string | null | undefined,
-  nom: string | null,
-  brandId: string | null | undefined,
-): string {
-  if (foto) {
-    return `<img class="retrat" src="${escape(foto)}" alt="" loading="lazy" width="34" height="34">`;
-  }
-  // Sense nom d'alcaldia la inicial és la del municipi: val més una lletra que
-  // un rodó buit, i el nom que hi ha sota la cara ja diu que no en sabem el nom.
-  const lletres = (nom ?? "?")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join("");
-  const tint = sobreColor(colorAlcaldia(brandId));
-  return `<span class="retrat inicials" style="--c:${tint.fons};--t:${tint.tinta}"
-    aria-hidden="true">${escape(lletres || "?")}</span>`;
-}
 
 function formatValue(value: number, unit: ComarcaIndicador["unit"]): string {
   return unit === "euros" ? `${number(Math.round(value))} €` : `${decimal(value)} %`;
@@ -412,6 +392,15 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
   const carrecsSeu = await carregaCarrecsAlcaldia(db);
   const pleRegistre = await carregaPleDelRegistre(db);
 
+  // Els municipis de l'AMB (J17), la mateixa lectura que fa `loadAmb()`. Aquí
+  // només serveix per comptar-los per comarca: la pàgina de l'AMB es publica
+  // després de les de comarca, i sense això cap comarca no sabria que hi toca.
+  const membresAmb = await db
+    .select({ municipalityId: municipalityMetrics.municipalityId })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "amb"));
+  const esMetropolita = new Set(membresAmb.map((m) => m.municipalityId));
+
   // La renda neta per persona, de l'Atles de distribució de renda de les llars
   // de l'INE (J23). El document en porta sis, d'indicadors, i d'aquí només en
   // surt el que la gent entén: quants diners nets entren a cada casa per cap.
@@ -525,6 +514,7 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
   const perComarca = new Map<string, ComarcaMunicipi[]>();
   const habitants = new Map<string, number>();
   const regidories = new Map<string, number>();
+  const metropolitans = new Map<string, number>();
   const forces = new Map<string, Map<string, ComarcaForca>>();
 
   for (const m of all) {
@@ -572,6 +562,7 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
     else perComarca.set(comarca, [municipi]);
     habitants.set(comarca, (habitants.get(comarca) ?? 0) + (m.population ?? 0));
     regidories.set(comarca, (regidories.get(comarca) ?? 0) + seats);
+    if (esMetropolita.has(m.id)) metropolitans.set(comarca, (metropolitans.get(comarca) ?? 0) + 1);
 
     let forcesComarca = forces.get(comarca);
     if (!forcesComarca) forces.set(comarca, (forcesComarca = new Map()));
@@ -674,6 +665,7 @@ export async function loadComarques(db: Db): Promise<ComarcaData[]> {
       indicadors: indicadors.map((byComarca) => byComarca.get(name)).filter(Boolean) as ComarcaIndicador[],
       catalunya,
       altres,
+      metropolitans: metropolitans.get(name) ?? 0,
     };
   });
 }
@@ -1181,9 +1173,16 @@ function renderComparacions(data: ComarcaData): string {
  * La llista de municipis: el motiu pel qual algú arriba a aquesta pàgina.
  *
  * Eren cinc columnes de text pla i la darrera —les sigles— no portava enlloc.
- * Ara qui mana hi surt amb la cara i amb la pastilla del seu partit, que és
- * un enllaç a la seva pàgina catalana; les dues columnes de la dreta es
- * fonen en una perquè són la mateixa cosa, qui hi mana.
+ * Ara qui mana hi surt amb la cara i el nom, que porten a la seva fitxa, i la
+ * llista amb què governa va en una columna a part, amb la pastilla del partit
+ * que enllaça la seva pàgina catalana i les marques d'excepció (pacte, ple
+ * sense majoria, canvi a mig mandat).
+ *
+ * Per què dues columnes i no una: amb les etiquetes sota el nom, les files
+ * feien alçades diferents —la d'un pacte amb canvi d'alcaldia doblava la del
+ * costat— i en una taula de 68 files l'ull no sap on és. Amb la cara a 36 px
+ * i cada cosa a la seva columna, totes les files fan la mateixa alçada, que és
+ * la de la cara.
  */
 function renderMunicipis(data: ComarcaData): string {
   const rows = data.municipis
@@ -1199,27 +1198,32 @@ function renderMunicipis(data: ComarcaData): string {
         ? sigla(m.mayorSigles, { base: "../../", brandId: m.mayorBrandId })
         : "";
       /*
+       * La cara és la mateixa peça que la portada i la fitxa (`cara.ts`): el
+       * retrat que publica l'ajuntament o les inicials sobre el color de la
+       * força, sempre al mateix cercle. Sense nom d'alcaldia el cercle porta
+       * un interrogant: val més dir que no ho sabem que deixar-hi un forat.
+       *
        * La cara i el nom porten a la pàgina de la persona —la que ha decidit
        * `resolAlcaldia()` amb el retrat— o a l'apartat d'alcaldies del
-       * municipi quan no en té. Les etiquetes van fora de l'enllaç perquè la
-       * pastilla de sigles ja n'és un altre, i sense nom no hi ha enllaç: no
-       * hi ha ningú a qui anar a veure.
+       * municipi quan no en té. Sense nom no hi ha enllaç: no hi ha ningú a
+       * qui anar a veure.
        */
-      const persona = `${caraAlcaldia(m.mayorFoto, m.mayorName, m.mayorBrandId)}<span class="nom">${escape(m.mayorName ?? "Sense dada")}</span>`;
+      const persona = `${cara(m.mayorName ?? "?", m.mayorFoto, { mida: 36, color: colorAlcaldia(m.mayorBrandId) })}<span class="nom">${escape(m.mayorName ?? "Sense dada")}</span>`;
       const onVa = m.mayorName ? `../../m/${escape(m.slug)}/${m.mayorAdreca ? escape(m.mayorAdreca) : "#alcaldies"}` : null;
+      const etiquetes = [pastilla, marca, canvi].filter(Boolean).join(" ");
       return `<tr>
       <th scope="row"><a href="../../m/${escape(m.slug)}/">${escape(m.name)}</a></th>
       <td class="xifra pob">${number(m.population ?? 0)}</td>
       <td class="xifra reg">${m.seats}</td>
       <td class="mana">
         ${onVa ? `<a class="persona" href="${onVa}">${persona}</a>` : `<span class="persona">${persona}</span>`}
-        <span class="etiquetes">${pastilla} ${marca} ${canvi}</span>
       </td>
+      <td class="llista">${etiquetes ? `<span class="etiquetes">${etiquetes}</span>` : ""}</td>
     </tr>`;
     })
     .join("");
   return `<table class="municipis">
-  <thead><tr><th>Municipi</th><th>Habitants</th><th>Regidories</th><th>Qui hi mana</th></tr></thead>
+  <thead><tr><th>Municipi</th><th class="xifra">Habitants</th><th class="xifra">Regidories</th><th>Alcaldia</th><th>Amb quina llista</th></tr></thead>
   <tbody>${rows}</tbody>
 </table>`;
 }
@@ -1264,21 +1268,35 @@ const COMARCA_CSS = TERRITORI_CSS + GLOSSARI_CSS + `
    regle es dibuixa també a la fitxa municipal, i el seu CSS viatja amb ell
    dins de GRAFICS_CSS, que aquest full ja porta via RADIOGRAFIA_CSS. */
 
-/* Qui hi mana, a la llista de municipis: la cara i la pastilla del partit. El
-   retrat hi va a 34 px i no a 44 perquè són fins a 68 files seguides. */
-/* Qui hi mana: la cara i el nom en una línia, que és l'enllaç a la persona, i
-   les etiquetes a sota alineades amb el nom. Abans era una fila amb la cara i
-   una columna al costat; ara la persona és un enllaç i la pastilla de sigles
-   n'és un altre, i no poden anar l'un dins de l'altre. */
-.municipis .mana{display:flex;flex-direction:column;gap:3px;min-width:0}
+/* Qui hi mana, a la llista de municipis. La cara és la de cara.ts a 36 px
+   —són fins a 68 files seguides i a 52 la taula faria dues pantalles més— i
+   la fila sencera s'alinea al mig, perquè totes facin la mateixa alçada: la
+   d'aquella cara. Els números van a la dreta, que és com es comparen. */
+.municipis td,.municipis th{vertical-align:middle}
+.municipis .xifra{text-align:right}
 .municipis .mana .persona{display:flex;align-items:center;gap:9px;min-width:0;color:inherit;
   text-decoration:none;min-height:44px}
-.municipis .mana .retrat{width:34px;height:34px;flex:none}
+.municipis .mana .cara-alcaldia{flex:none}
 .municipis .mana .nom{font-weight:700;line-height:1.25;overflow-wrap:anywhere}
 .municipis .mana a.persona:hover .nom,.municipis .mana a.persona:focus-visible .nom{text-decoration:underline;
   text-decoration-thickness:2.5px;text-underline-offset:3px;text-decoration-color:var(--coral)}
 .municipis .mana a.persona:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
-.municipis .mana .etiquetes{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding-left:43px}
+/* La pastilla i les marques d'excepció, a la seva columna. Es poden partir en
+   dues línies (pacte i canvi alhora) i encara caben dins dels 44 px de la
+   cara: la fila no creix. */
+.municipis .llista .etiquetes{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+@media (max-width:640px){
+  /* Sense columnes, la llista va sota el nom de l'alcaldia i alineada amb ell,
+     que és on l'ull la busca després de la cara. */
+  .municipis .xifra{text-align:left}
+  .municipis .mana .persona{min-height:0;padding-top:4px}
+  .municipis .llista .etiquetes{padding-left:45px;padding-top:2px}
+}
+
+/* Els salts de la portada: on més s'explica aquesta comarca fora d'aquí. */
+.salts{margin:var(--e2) 0 0;font-size:.9rem;color:var(--ink-suau);display:flex;flex-wrap:wrap;gap:4px 14px}
+.salts a{font-weight:800}
+.salts .amb-dins{color:var(--ink);font-weight:700}
 
 /* Les altres 42: sense això, cada pàgina de comarca és un carreró sense sortida. */
 .veines{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
@@ -1308,6 +1326,34 @@ function summarySentence(data: ComarcaData): string {
       ? ", més de la meitat de la comarca"
       : "";
   return `${head}${tail}.`;
+}
+
+/**
+ * On més s'explica aquesta comarca, dit a la portada.
+ *
+ * Tres destins i cap de decoratiu: el mapa de Catalunya, on la comarca es
+ * veu entre les altres 42; els rànquings, on cada un dels seus municipis
+ * queda situat entre els 947 amb un cercador que admet el nom de la comarca; i
+ * l'Àrea Metropolitana, només a les cinc comarques que hi tenen municipis,
+ * perquè allà hi ha un govern que decideix coses que els seus ajuntaments no
+ * decideixen. Les altres 38 no en parlen: no hi tenen res a veure.
+ */
+function saltsComarca(data: ComarcaData): string {
+  const salts: string[] = [
+    `<a href="../../mapa/">Al mapa de Catalunya</a>`,
+    `<a href="../../ranquings/">Els seus municipis, als rànquings dels ${number(data.catalunya.municipis)}</a>`,
+  ];
+  if (data.metropolitans > 0) {
+    const tots = data.metropolitans === data.municipis.length;
+    salts.unshift(
+      `<span class="amb-dins">${
+        tots
+          ? "Tots els seus municipis són"
+          : `${number(data.metropolitans)} dels seus ${number(data.municipis.length)} municipis són`
+      } de l'<a href="../../amb/">Àrea Metropolitana de Barcelona</a></span>`,
+    );
+  }
+  return `<p class="salts">${salts.join("")}</p>`;
 }
 
 export function renderComarca(data: ComarcaData, generatedAt: string): string {
@@ -1352,6 +1398,7 @@ ${cercador("../../")}
       : `<p class="entrada">De l'alcaldia més repetida d'aquesta comarca no n'hem pogut lligar
          la candidatura amb cap força coneguda.</p>`
   }
+  ${saltsComarca(data)}
   ${ulladaComarca(data)}
 </section>
 
@@ -1391,7 +1438,8 @@ ${teIndicadors ? `<section class="bloc" id="indicadors">
 
 <section class="bloc" id="municipis">
   <h2>Els ${data.municipis.length} municipis</h2>
-  <p class="entrada-bloc">Ordenats per població; cada nom porta a la seva fitxa.</p>
+  <p class="entrada-bloc">Ordenats per població. Cada municipi porta a la seva fitxa; cada alcaldia,
+  a la pàgina de la persona, i cada partit, a la seva.</p>
   ${renderMunicipis(data)}
 </section>
 
@@ -1399,6 +1447,13 @@ ${teIndicadors ? `<section class="bloc" id="indicadors">
   <h2>Què és i què no és una comarca</h2>
   <p>Els consells comarcals no es voten: els trien els regidors. Això no és la fitxa d'un govern
   comarcal, sinó la <b>suma dels ${data.municipis.length} ajuntaments</b> de ${escape(data.name)}.</p>
+  ${
+    data.metropolitans > 0
+      ? `<p>${number(data.metropolitans)} ${plural(data.metropolitans, "d'aquests municipis és", "d'aquests municipis són")}
+  també de l'<a href="../../amb/">Àrea Metropolitana de Barcelona</a>, que sí que és un govern:
+  hi decideix el transport, l'aigua i els residus de tots ells.</p>`
+      : ""
+  }
   <p class="nota">Els límits són els del padró de la Generalitat, amb el Lluçanès i el Moianès
   com a comarques pròpies.</p>
 </section>

@@ -46,7 +46,7 @@ describe("renderProva", () => {
   });
 
   it("continua sent la demostració sencera, amb el guió i les afirmacions", () => {
-    expect(html).toContain('<button class="gros" id="comenca">Comença</button>');
+    expect(html).toContain('<button class="boto-prova" id="comenca">Comença</button>');
     expect(html).toContain("const D = [");
     expect(html).toContain("cosa número 0");
     expect(html.trimEnd().endsWith("</html>")).toBe(true);

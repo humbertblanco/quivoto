@@ -347,8 +347,8 @@ describe("la taula pintada al navegador", () => {
     const mandat = seccio.slice(0, seccio.indexOf("</tr>"));
     expect(mandat).toContain("la variació més baixa");
     expect(mandat).toContain("la variació més alta");
-    expect(mandat).not.toContain('class="marca millor"');
-    expect(mandat).not.toContain('class="marca pitjor"');
+    expect(mandat).not.toContain('class="marca-extrem millor"');
+    expect(mandat).not.toContain('class="marca-extrem pitjor"');
   });
 
   it("cap fila no reparteix bons i dolents: ni marques ni fons de color", () => {
@@ -362,11 +362,11 @@ describe("la taula pintada al navegador", () => {
     expect(html).not.toContain('<td class="pitjor"');
     const deute = html.slice(html.indexOf("Deute per habitant"));
     const filaDeute = deute.slice(0, deute.indexOf("</tr>"));
-    expect(filaDeute).toContain('<span class="marca alt">el més alt</span>');
-    expect(filaDeute).toContain('<span class="marca baix">el més baix</span>');
+    expect(filaDeute).toContain('<span class="marca-extrem alt">el més alt</span>');
+    expect(filaDeute).toContain('<span class="marca-extrem baix">el més baix</span>');
     // I on no té sentit comparar —el cost del govern, la renda— no es marca res.
     const renda = html.slice(html.indexOf("Renda neta per persona"));
-    expect(renda.slice(0, renda.indexOf("</tr>"))).not.toContain('class="marca');
+    expect(renda.slice(0, renda.indexOf("</tr>"))).not.toContain('class="marca-extrem');
   });
 
   it("el percentil porta el seu quint en tinta, de més clar a més fosc", () => {

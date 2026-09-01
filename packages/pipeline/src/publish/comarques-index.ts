@@ -53,6 +53,17 @@ export type ComarcaFila = {
   pacte: number;
   /** Municipis on l'alcaldia ha canviat a mig mandat. */
   canvisAlcaldia: number;
+  /**
+   * Habitants del municipi del mig de la comarca: la mediana que `comarques.ts`
+   * ja calcula per a la seva portada («el del mig té 3.315 habitants»).
+   *
+   * És la xifra que fa comparables dues files: el Barcelonès i el Bages tenen
+   * 30 i 5 municipis i no s'assemblen en res, i la mitjana no ho diria
+   * —Barcelona sola la dispara. Opcional perquè qui fa les files (`publish.ts`)
+   * la pot no passar; llavors la columna no es dibuixa, i no s'omple amb un
+   * zero que semblaria una dada.
+   */
+  poblacioMediana?: number | null;
 };
 
 /** L'Àrea Metropolitana, quan s'ha pogut publicar: quants municipis i de quantes comarques. */
@@ -118,6 +129,7 @@ export const COMARQUES_INDEX_CSS = `
    això va sota la taula i no en un paràgraf a part. */
 .cx-taula tfoot th,.cx-taula tfoot td{border-top:2.5px solid var(--ink);border-bottom:0;font-weight:800}
 .cx-taula tfoot th[scope="row"]{font-family:var(--display);font-weight:900;font-size:1.05rem}
+.cx-mig{color:var(--ink-suau)}
 .cx-mana{display:flex;align-items:center;gap:8px}
 .cx-mana .sec{font-size:.78rem;color:var(--ink-suau);font-weight:700;white-space:nowrap}
 .cx-nota{font-size:.86rem;color:var(--ink-suau);max-width:44em}
@@ -175,12 +187,21 @@ export function renderComarquesIndex(
       ? `${number(ordenades.length)} comarques, ${number(total.municipis)} municipis i ${number(total.habitants)} habitants. A cada una, qui té més alcaldies, on governa qui no va guanyar i on ha canviat l'alcaldia des del 2023.`
       : "Encara no hi ha cap comarca publicada.";
 
+  // La columna del municipi del mig només hi és si alguna fila la porta: una
+  // columna de guions no compararia res.
+  const ambMediana = ordenades.some((c) => typeof c.poblacioMediana === "number");
+  const celaMediana = (c: ComarcaFila): string =>
+    ambMediana
+      ? `<td class="cx-mig">${typeof c.poblacioMediana === "number" ? number(Math.round(c.poblacioMediana)) : "—"}</td>`
+      : "";
+
   const files = ordenades
     .map(
       (c) => `<tr>
       <th scope="row"><a href="${escape(c.slug)}/">${escape(c.name)}</a></th>
       <td>${number(c.municipis)}</td>
       <td>${number(c.habitants)}</td>
+      ${celaMediana(c)}
       <td class="cx-mana-cela">${celaMana(c, base)}</td>
       <td>${number(c.pacte)}</td>
       <td>${number(c.canvisAlcaldia)}</td>
@@ -198,6 +219,7 @@ export function renderComarquesIndex(
       <th scope="col">Comarca</th>
       <th scope="col">Municipis</th>
       <th scope="col">Habitants</th>
+      ${ambMediana ? '<th scope="col">El municipi del mig</th>' : ""}
       <th scope="col">Qui hi mana més</th>
       <th scope="col">Pactes</th>
       <th scope="col">Canvis d'alcaldia</th>
@@ -207,6 +229,11 @@ export function renderComarquesIndex(
       <th scope="row">Catalunya</th>
       <td>${number(total.municipis)}</td>
       <td>${number(total.habitants)}</td>
+      ${
+        // La mediana dels 947 no es pot treure de 43 medianes: la cel·la queda
+        // buida i no s'hi posa cap xifra que no s'hagi calculat.
+        ambMediana ? '<td class="cx-mig"></td>' : ""
+      }
       <td class="cx-mana-cela">${celaMana({ forces: forcesCatalunya, municipis: total.municipis }, base)}</td>
       <td>${number(total.pacte)}</td>
       <td>${number(total.canvisAlcaldia)}</td>
@@ -255,7 +282,12 @@ ${cercador(base)}
 <section>
   <h2>De més a menys habitants</h2>
   ${taula}
-  <p class="cx-nota"><b>Pactes</b> són els municipis on governa una llista que no va ser la més
+  <p class="cx-nota">${
+    ambMediana
+      ? "<b>El municipi del mig</b> són els habitants del municipi que queda al mig de la comarca " +
+        "ordenada per població: diu si és una comarca de pobles o de ciutats. "
+      : ""
+  }<b>Pactes</b> són els municipis on governa una llista que no va ser la més
   votada. <b>Canvis d'alcaldia</b>, els que n'han canviat des de les eleccions del 2023. La força
   de cada fila és la que hi té més alcaldies, comptant les llistes locals com una de sola; on
   n'hi ha dues d'empatades es diuen totes dues. Cada nom porta a la pàgina de la comarca, amb
