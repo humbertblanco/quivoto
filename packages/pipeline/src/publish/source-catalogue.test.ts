@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { renderSourcesIndex, writeSourceCatalogue } from "./source-catalogue";
+import { renderSourcesList, writeSourceCatalogue } from "./source-catalogue";
 import { SOURCES } from "./source-registry";
 
 describe("registre de fonts", () => {
@@ -28,13 +28,15 @@ describe("registre de fonts", () => {
     for (let n = 1; n <= 30; n++) expect(jobs.has(`J${n}`), `falta J${n}`).toBe(true);
   });
 
-  it("renderitza amb els components i enllaços compartits", () => {
-    const html = renderSourcesIndex("2026-09-01");
-    expect(html).toContain("D'on surt cada dada");
-    expect(html).toContain("fonts.json");
-    expect(html).toContain("manifest.json");
-    expect(html).toContain("<footer class=\"peu\"");
+  it("llista cada font agrupada pel seu estat, amb la fitxa plegada", () => {
+    const html = renderSourcesList();
+    expect(html).toContain("Als fitxers descarregables");
+    expect(html).toContain('<details class="font" id="ensLocals">');
     expect(html).toContain("Cost efectiu dels serveis");
+    expect(html).toContain('<span class="publicat">Publicada</span>');
+    expect(html.match(/<details class="font"/g)).toHaveLength(Object.keys(SOURCES).length);
+    // Cada font és un h4 sota l'h3 del seu estat: l'ordre és publicades primer.
+    expect(html.indexOf("Als fitxers descarregables")).toBeLessThan(html.indexOf("En preparació"));
   });
 });
 

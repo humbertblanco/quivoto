@@ -75,7 +75,8 @@ T = {
   'qui':'Un projecte independent fet a Catalunya. Encara som pocs: si ets periodista local, treballes amb dades obertes o vols ajudar amb el teu municipi, escriu-nos.',
   'contacte':'hola@quivoto.cat',
   'peu_legal':'Avís legal','peu_priv':'Privadesa','peu_metod':'Metodologia (aviat)','peu_obs':'Observatori',
-  'peu':'quivoto — brúixola electoral de les municipals 2027. Un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
+  'peu':'quivoto — brúixola electoral de les municipals 2027.',
+  'credit':'Un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
   'gracies_h':'Fet!','gracies_p':'T’avisarem quan obrim el teu municipi. Mentrestant, ja pots tancar aquesta pestanya.','gracies_torna':'Tornar a l’inici',
  },
  'es': {
@@ -140,7 +141,8 @@ T = {
   'qui':'Un proyecto independiente hecho en Cataluña. Todavía somos pocos: si eres periodista local, trabajas con datos abiertos o quieres ayudar con tu municipio, escríbenos.',
   'contacte':'hola@quivoto.cat',
   'peu_legal':'Aviso legal','peu_priv':'Privacidad','peu_metod':'Metodología (pronto)','peu_obs':'Observatorio',
-  'peu':'quienvoto — brújula electoral de las municipales 2027. Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
+  'peu':'quienvoto — brújula electoral de las municipales 2027.',
+  'credit':'Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
   'gracies_h':'¡Hecho!','gracies_p':'Te avisaremos cuando abramos tu municipio. Mientras, ya puedes cerrar esta pestaña.','gracies_torna':'Volver al inicio',
  },
 }
@@ -300,7 +302,6 @@ MENU = [
   ('portada',     'Observatori',  ''),
   ('947',         'Els 947',      'els947.html'),
   ('mapa',        'Mapa',         'mapa/'),
-  ('destaquen',   'Destaquen',    'destaquen/'),
   ('ranquings',   'Rànquings',    'ranquings/'),
   ('comarques',   'Comarques',    'c/'),
   ('partits',     'Partits',      'partit/'),
@@ -440,35 +441,62 @@ def obs_reixa(t):
       for u, et, tit, txt in t['obs_reixa'])
 
 
+def xifres_observatori():
+    """Els recomptes del peu, escrits pel generador de l'Observatori a
+    web/public/observatori/xifres.json en cada publicació. Si no hi és (un
+    clon net, sense cap publicació feta), el peu va sense xifres i sense data:
+    val més no dir res que dir un número copiat a mà que envelleix sol."""
+    import json
+    cami = os.path.join(OUT, 'observatori', 'xifres.json')
+    try:
+        with open(cami, encoding='utf-8') as f:
+            x = json.load(f)
+        return {k: x[k] for k in ('municipis', 'electes', 'candidatures', 'generatedAt')}
+    except (OSError, ValueError, KeyError):
+        return None
+
+
 def footer_complet(t):
-    """El mateix peu editorial a la landing, els documents i l'Observatori."""
+    """El mateix peu editorial a la landing, els documents i l'Observatori:
+    la targeta de qui som, les pastilles per anar a mirar coses i la lletra
+    petita de les fonts. És la còpia en Python de peu.ts; si allà canvia una
+    pastilla, aquí també."""
     es = t['lang'] == 'es'
     noms = (
-      ('Los 947', 'El mapa', 'Destacados', 'Rankings', 'El comparador', 'Las comarcas', 'El Área Metropolitana',
+      ('Los 947', 'El mapa', 'Rankings', 'El comparador', 'Las comarcas', 'El Área Metropolitana',
        'Las preguntas', 'Los datos', 'Todas las fuentes', 'Aviso legal', 'Privacidad') if es else
-      ('Els 947', 'El mapa', 'Destaquen', 'Rànquings', 'El comparador', 'Les comarques', "L’Àrea Metropolitana",
+      ('Els 947', 'El mapa', 'Rànquings', 'El comparador', 'Les comarques', "L’Àrea Metropolitana",
        'Les preguntes', 'Les dades', 'Totes les fonts', 'Avís legal', 'Privadesa')
     )
     base = t['obs_url']
-    urls = ('els947.html', 'mapa/', 'destaquen/', 'ranquings/', 'comparador/', 'c/', 'amb/', 'preguntes/', 'dades/', 'dades/#fonts')
-    nav = ''.join(f'<a href="{base}{u}">{n}</a>' for n, u in zip(noms[:10], urls))
+    urls = ('els947.html', 'mapa/', 'ranquings/', 'comparador/', 'c/', 'amb/', 'preguntes/', 'dades/', 'dades/#fonts')
+    nav = ''.join(f'<a href="{base}{u}">{n}</a>' for n, u in zip(noms[:9], urls))
+    x = xifres_observatori()
+    municipis = f"{x['municipis']:,}".replace(',', '.') if x else '947'
     lema = (
-      'Quién gobierna cada uno de los 947 municipios de Cataluña, qué paga la gente y qué se '
+      f'Quién gobierna cada uno de los {municipis} municipios de Cataluña, qué paga la gente y qué se '
       'prometió. <b>Sin ningún modelo de lenguaje por medio</b>: fuentes oficiales, cada cifra '
       'con la suya al lado y cálculos que cualquiera puede repetir.' if es else
-      'Qui mana a cada un dels 947 municipis de Catalunya, què hi paga la gent i què s’hi va '
+      f'Qui mana a cada un dels {municipis} municipis de Catalunya, què hi paga la gent i què s’hi va '
       'prometre. <b>Sense cap model de llenguatge pel mig</b>: fonts oficials, cada xifra amb la '
       'seva al costat i càlculs que qualsevol pot repetir.'
     )
-    credit = t['peu'].split(' — ', 1)[-1].split('. ', 1)[-1]
-    import datetime
-    data = datetime.date.today().isoformat()
+    if x:
+        compte = lambda n, de: f'<li><b>{n:,}</b><span>{de}</span></li>'.replace(',', '.')
+        xifres = ('<ul class="xifres">' + compte(x['municipis'], 'municipios' if es else 'municipis')
+                  + compte(x['electes'], 'electos' if es else 'electes')
+                  + compte(x['candidatures'], 'candidaturas' if es else 'candidatures') + '</ul>')
+        quan = (f'<b>Observatorio actualizado el {x["generatedAt"]}</b> con' if es else
+                f'<b>Observatori actualitzat el {x["generatedAt"]}</b> amb')
+    else:
+        xifres = ''
+        quan = '<b>Hecho</b> con' if es else '<b>Fet</b> amb'
     fonts = (
-      f'<b>Generado el {data}</b> con datos abiertos de la Generalitat de Cataluña, el Consorcio '
-      f'AOC, Idescat, el Ministerio de Hacienda y el Síndic de Greuges. Consulta '
+      f'{quan} datos abiertos de la Generalitat de Cataluña, el Consorcio AOC, Idescat, el '
+      f'Ministerio de Hacienda y el Síndic de Greuges. Consulta '
       f'<a href="{base}dades/#fonts">el catálogo completo de fuentes, métodos y licencias</a>.' if es else
-      f'<b>Generat el {data}</b> amb dades obertes de la Generalitat de Catalunya, el Consorci '
-      f'AOC, l’Idescat, el Ministeri d’Hisenda i el Síndic de Greuges. Consulta '
+      f'{quan} dades obertes de la Generalitat de Catalunya, el Consorci AOC, l’Idescat, el '
+      f'Ministeri d’Hisenda i el Síndic de Greuges. Consulta '
       f'<a href="{base}dades/#fonts">el catàleg complet de fonts, mètodes i llicències</a>.'
     )
     catalunya = '''<svg class="catalunya" width="88" height="88" viewBox="0 0 120 120" aria-hidden="true">
@@ -479,13 +507,11 @@ def footer_complet(t):
     return f'''<footer class="peu peu-complet"><div>
       <div class="crida"><div class="cara">{catalunya}</div>
         <div class="diu"><a class="marca-peu" href="/">{t['marca']}</a><p class="lema">{lema}</p></div>
-        <ul class="xifres"><li><b>947</b><span>{'municipios' if es else 'municipis'}</span></li>
-          <li><b>4.807</b><span>{'electos' if es else 'electes'}</span></li>
-          <li><b>2.626</b><span>{'candidaturas' if es else 'candidatures'}</span></li></ul></div>
+        {xifres}</div>
       <nav class="anar" aria-label="{'Más del Observatorio' if es else 'Més de l’Observatori'}">{nav}</nav>
       <p class="lletra">{fonts}</p>
-      <p class="legal"><a href="/avis-legal.html">{noms[10]}</a> · <a href="/privadesa.html">{noms[11]}</a></p>
-      <p class="credit">{credit}</p>
+      <p class="legal"><a href="/avis-legal.html">{noms[9]}</a> · <a href="/privadesa.html">{noms[10]}</a></p>
+      <p class="credit">{t['credit']}</p>
     </div></footer>'''
 
 

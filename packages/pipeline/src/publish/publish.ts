@@ -33,7 +33,6 @@ import { renderProva } from "./prova";
 import { verifica } from "./verificacio";
 import { renderPortada } from "./portada";
 import { renderMapaCatalunya } from "./mapa-catalunya";
-import { renderDestaquen } from "./destaquen";
 import { renderRanquings } from "./ranquings";
 import { loadVotsPartit } from "./vots-partit";
 import { loadPortadaMostra } from "./portada-mostra";
@@ -207,13 +206,19 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       candidatures: electes.candidatures,
       fitxersDades: XIFRES_PEU.fitxersDades,
     });
-    // Aquestes pàgines també porten el peu global: s'escriuen només després
-    // de fixar-ne els recomptes definitius, com la resta de la publicació.
-    await mkdir(`${OUT_DIR}../destaquen`, { recursive: true });
-    await writeFile(`${OUT_DIR}../destaquen/index.html`, renderDestaquen(carregats, generatedAt), "utf8");
+    // Les mateixes xifres, en un fitxer, perquè la landing (que es genera a
+    // part, amb `tools/build_landing.py`) escrigui el mateix peu sense copiar
+    // cap número a mà.
+    await writeFile(
+      `${OUT_DIR}../xifres.json`,
+      `${JSON.stringify({ municipis: carregats.length, electes: electes.regidors, candidatures: electes.candidatures, generatedAt })}\n`,
+      "utf8",
+    );
+    // Els rànquings porten el peu global: s'escriuen després de fixar-ne els
+    // recomptes, com la resta de la publicació.
     await mkdir(`${OUT_DIR}../ranquings`, { recursive: true });
     await writeFile(`${OUT_DIR}../ranquings/index.html`, renderRanquings(carregats, generatedAt), "utf8");
-    run.say("pàgines Destaquen i Rànquings");
+    run.say("pàgina de rànquings");
 
     /*
      * Les fitxes de trajectòria, totes de cop i abans del bucle: són 947 files
@@ -505,7 +510,6 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       `${SITE}/observatori/`,
       `${SITE}/observatori/els947.html`,
       `${SITE}/observatori/mapa/`,
-      `${SITE}/observatori/destaquen/`,
       `${SITE}/observatori/ranquings/`,
       `${SITE}/observatori/dades/`,
       `${SITE}/observatori/preguntes/`,

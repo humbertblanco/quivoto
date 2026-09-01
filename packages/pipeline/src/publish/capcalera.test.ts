@@ -25,12 +25,12 @@ describe("capcalera", () => {
    * Sis destins, en aquest ordre, i cap més: el menú és curt a propòsit i el
    * que s'hi afegeix s'hi afegeix aquí, amb el seu perquè al capçal.
    */
-  it("té nou destins, amb les novetats abans de les comarques i les trajectòries abans del comparador", () => {
+  it("té vuit destins, amb els rànquings entre el mapa i les comarques i les trajectòries abans del comparador", () => {
     const html = capcalera("./", "cap");
     const textos = [...html.matchAll(/<a href="[^"]*">([^<]+)<\/a>/g)]
       .map((m) => m[1])
       .filter((t) => t !== "quivoto");
-    expect(textos).toEqual(["Observatori", "Els 947", "Mapa", "Destaquen", "Rànquings", "Comarques", "Partits", "Trajectòries", "Comparador"]);
+    expect(textos).toEqual(["Observatori", "Els 947", "Mapa", "Rànquings", "Comarques", "Partits", "Trajectòries", "Comparador"]);
   });
 
   it("marca Rànquings com a pàgina actual", () => {

@@ -13,7 +13,6 @@
 
   # L'únic slug antic publicat per error: una adreça, una pàgina canònica.
   RewriteRule ^observatori/preguntes/el-prat-de-llobregat/?$ /observatori/preguntes/prat-de-llobregat/ [L,R=301]
-  RewriteRule ^observatori/fonts/?$ /observatori/dades/#fonts [L,R=301,NE]
 </IfModule>
 
 # ---- Capçaleres de seguretat ----

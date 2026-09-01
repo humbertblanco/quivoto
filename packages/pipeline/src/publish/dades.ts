@@ -8,7 +8,7 @@ import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SOURCES, type SourceKey } from "./source-registry";
-import { renderSourcesList, writeSourceCatalogue, type PublishedField } from "./source-catalogue";
+import { FONTS_CSS, renderSourcesList, writeSourceCatalogue, type PublishedField } from "./source-catalogue";
 
 /**
  * La descàrrega de dades.
@@ -1459,8 +1459,8 @@ pre{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--
 pre code{background:none;border:0;padding:0}
 .llicencies{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--e2)}.llicencies li{border:2px solid var(--vora);border-radius:var(--r-m);padding:var(--e2);background:var(--paper-2)}.llicencies b{display:block;font-family:var(--display);font-size:1.05rem;margin-bottom:7px}
 .cita{background:var(--lavanda);color:#1E1B2E;border:2.5px solid #1E1B2E;border-radius:var(--r-m);padding:var(--e3);box-shadow:3px 3px 0 #1E1B2E;margin-top:var(--e2)}
-.font{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:3px 3px 0 var(--ink);margin:var(--e2) 0;overflow:hidden}.font summary{list-style:none;cursor:pointer;padding:var(--e2) var(--e3);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 20px;align-items:center}.font summary::-webkit-details-marker{display:none}.font summary::after{content:"+";font-family:var(--display);font-size:1.8rem;font-weight:900}.font[open] summary::after{content:"−"}.font[open] summary{border-bottom:2px solid var(--vora);background:var(--menta);color:#1e1b2e}.font h3{margin:0}.font-cos{padding:var(--e2) var(--e3) var(--e3)}.font .meta{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}.font .meta span{border:1.5px solid currentColor;border-radius:var(--r-max);padding:3px 10px;font-size:.72rem;font-weight:800}.font dl{display:grid;grid-template-columns:minmax(110px,170px) 1fr;gap:8px 14px}.font dt{font-weight:900}.font dd{margin:0;color:var(--ink-suau)}
-@media(max-width:720px){.llicencies{grid-template-columns:1fr}}@media(max-width:560px){.font dl{grid-template-columns:1fr}.font dd{margin-bottom:7px}}
+${FONTS_CSS}
+@media(max-width:720px){.llicencies{grid-template-columns:1fr}}
 `;
 
 export function renderDadesIndex(generatedAt: string, stats: { municipis: number; camps: number }): string {

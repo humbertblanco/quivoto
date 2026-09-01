@@ -210,7 +210,6 @@ export function peu(
       ${extres.map((e) => pastilla(e.text, e.on, true)).join("\n      ")}
       ${pastilla("Els 947", `${base}els947.html`)}
       ${pastilla("El mapa", `${base}mapa/`)}
-      ${pastilla("Destaquen", `${base}destaquen/`)}
       ${pastilla("Rànquings", `${base}ranquings/`)}
       ${pastilla("El comparador", `${base}comparador/`)}
       ${pastilla("Les comarques", `${base}c/`)}

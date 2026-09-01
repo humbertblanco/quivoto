@@ -1,10 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { capcalera, tipografia } from "./capcalera";
-import { cercador } from "./cercador";
-import { peu } from "./peu";
-import { RADIOGRAFIA_CSS } from "./estil";
 import { SOURCES, SOURCE_REGISTRY_VERSION, type Source, type SourceKey } from "./source-registry";
 
 export type PublishedField = {
@@ -62,40 +58,59 @@ export async function writeSourceCatalogue(
   await writeFile(join(normalizedDataDir, "manifest.json"), stableJson(manifest), "utf8");
 }
 
-const CSS = `${RADIOGRAFIA_CSS}
-.resum-fonts{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:var(--e2);list-style:none;padding:0;margin:var(--e3) 0}
-.resum-fonts li{background:var(--menta);color:#1e1b2e;border:2.5px solid #1e1b2e;border-radius:var(--r-m);box-shadow:3px 3px 0 #1e1b2e;padding:var(--e2)}
-.resum-fonts b{display:block;font-family:var(--display);font-size:1.8rem}.font{border-top:2px solid var(--vora);padding:var(--e3) 0}
-.font{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:3px 3px 0 var(--ink);margin:var(--e2) 0;padding:0;overflow:hidden}.font summary{list-style:none;cursor:pointer;padding:var(--e2) var(--e3);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 20px;align-items:center}.font summary::-webkit-details-marker{display:none}.font summary::after{content:"+";font-family:var(--display);font-size:1.8rem;font-weight:900}.font[open] summary::after{content:"−"}.font[open] summary{border-bottom:2px solid var(--vora);background:var(--menta);color:#1e1b2e}.font h3{margin:0}.font-cos{padding:var(--e2) var(--e3) var(--e3)}.meta{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}.meta span{border:1.5px solid currentColor;border-radius:var(--r-max);padding:3px 10px;font-size:.72rem;font-weight:800}
-.font dl{display:grid;grid-template-columns:minmax(110px,170px) 1fr;gap:8px 14px;margin:var(--e2) 0}.font dt{font-weight:900}.font dd{margin:0;color:var(--ink-suau)}
-.font ul{margin:6px 0}.fitxers{display:flex;flex-wrap:wrap;gap:8px}.fitxers a{font-weight:800}
-@media(max-width:560px){.font dl{grid-template-columns:1fr}.font dd{margin-bottom:7px}}
+/**
+ * L'estil de la llista de fonts, que viu a `/dades/#fonts`. Files d'una llista
+ * i no targetes: són més de trenta i cada una amb vora, ombra i coixí feia una
+ * columna de caixes que no es podia escombrar amb la vista. Oberta, cada font
+ * ensenya la seva fitxa; tancada, el títol i dues etiquetes.
+ */
+export const FONTS_CSS = `
+.fonts-llista{margin:var(--e2) 0 0}
+.fonts-llista h3{font-size:.8rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-suau);
+  margin:var(--e3) 0 0;padding-bottom:6px;border-bottom:2.5px solid var(--ink)}
+.font{border-bottom:2px solid var(--vora)}
+.font summary{list-style:none;cursor:pointer;padding:13px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;align-items:center}
+.font summary::-webkit-details-marker{display:none}
+.font summary::after{content:"+";font-family:var(--display);font-size:1.5rem;font-weight:900;line-height:1;color:var(--ink-suau)}
+.font[open] summary::after{content:"−"}
+.font summary:hover h4,.font summary:focus-visible h4{color:var(--coral-text)}
+.font summary:focus-visible{outline:3px solid var(--coral-text);outline-offset:2px;border-radius:6px}
+.font h4{margin:0;font-family:var(--display);font-weight:900;font-size:1.02rem;letter-spacing:-.01em}
+.font .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.font .meta span{border:1.5px solid var(--vora);border-radius:var(--r-max);padding:2px 9px;font-size:.7rem;font-weight:800;color:var(--ink-suau)}
+.font .meta .publicat{background:var(--menta);border-color:#1E1B2E;color:#1E1B2E}
+.font-cos{padding:2px 0 var(--e3);color:var(--ink-suau);font-size:.92rem;max-width:78ch}
+.font-cos p{margin:6px 0 0}
+.font dl{display:grid;grid-template-columns:minmax(100px,140px) 1fr;gap:5px 14px;margin:0 0 var(--e2)}
+.font dt{font-weight:800;color:var(--ink)}
+.font dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:560px){.font dl{grid-template-columns:1fr}.font dd{margin-bottom:6px}}
 `;
-
-export function renderSourcesIndex(generatedAt: string): string {
-  const list = renderSourcesList();
-  const published = Object.values(SOURCES).filter(s => s.estat === "publicat").length;
-  return `<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fonts · Observatori de quivoto</title><meta name="description" content="Registre complet de les fonts, transformacions, cobertura i límits de l'Observatori municipal.">${tipografia("../")}<style>${CSS}</style></head><body><a class="salta" href="#contingut">Ves al contingut</a>${capcalera("../", "cap", "fonts")}${cercador("../")}<main id="contingut"><p class="micro">Metodologia</p><h1>D'on surt cada dada</h1><p class="entrada">Una font no és només un enllaç: és qui publica, quin període cobreix, què hi transformem i què no permet afirmar. Aquest registre inclou també les fonts que només alimenten una fitxa o serveixen per contrastar.</p><ul class="resum-fonts"><li><b>${Object.keys(SOURCES).length}</b><span>fonts i famílies</span></li><li><b>${published}</b><span>als descarregables</span></li><li><b>J1–J30</b><span>feina traçable</span></li></ul><section class="bloc"><h2>Registre reutilitzable</h2><p>La pàgina i els fitxers es generen del mateix registre. El manifest dona la mida i el SHA-256 dels exports principals.</p><p class="fitxers"><a href="../dades/fonts.json">fonts.json</a><a href="../dades/camps.json">camps.json</a><a href="../dades/manifest.json">manifest.json</a><a href="../dades/ESQUEMA.md">ESQUEMA.md</a></p></section><section class="bloc"><h2>Totes les fonts</h2>${list}</section></main>${peu("../", generatedAt)}</body></html>`;
-}
 
 /** El mateix registre complet, reutilitzat també dins de /dades/. */
 export function renderSourcesList(): string {
-  const estatPublic = (estat: Source["estat"]): string => ({
-    publicat: "Publicada",
-    nomes_fitxa: "Només a les fitxes municipals",
-    suport: "Font de context",
-    experimental: "En preparació",
-    retirat: "Ja no s'actualitza",
-  })[estat];
+  const estats: ReadonlyArray<{ estat: Source["estat"]; titol: string; etiqueta: string }> = [
+    { estat: "publicat", titol: "Als fitxers descarregables", etiqueta: "Publicada" },
+    { estat: "nomes_fitxa", titol: "Només a les fitxes municipals", etiqueta: "A les fitxes" },
+    { estat: "suport", titol: "De context i comprovació", etiqueta: "Context" },
+    { estat: "experimental", titol: "En preparació", etiqueta: "En preparació" },
+    { estat: "retirat", titol: "Ja no s'actualitzen", etiqueta: "Retirada" },
+  ];
   const periodePublic = (periode: string): string => periode
     .replace(/foto vigent sense exercici explícit/gi, "situació actual, sense any de referència publicat")
     .replace(/foto consultada en cada ingesta/gi, "consultat en cada actualització")
     .replace(/foto vigent/gi, "situació actual");
-  return Object.entries(SOURCES).map(([key, raw]) => {
-    const s: Source = raw;
-    return `<details class="font" id="${esc(key)}"><summary><div><h3>${esc(s.titol)}</h3><div class="meta"><span>${esc(estatPublic(s.estat))}</span><span>${esc(periodePublic(s.periode))}</span></div></div></summary><div class="font-cos">
+  const fitxa = (key: string, s: Source, etiqueta: string): string =>
+    `<details class="font" id="${esc(key)}"><summary><div><h4>${esc(s.titol)}</h4><div class="meta"><span class="${esc(s.estat)}">${esc(etiqueta)}</span><span>${esc(periodePublic(s.periode))}</span></div></div></summary><div class="font-cos">
     <dl><dt>Productor</dt><dd>${esc(s.productor)}</dd><dt>Conjunt</dt><dd><a href="${esc(s.url)}">${esc(s.id)}</a> · ${esc(s.portal)}</dd><dt>Granularitat</dt><dd>${esc(s.granularitat)}</dd><dt>Univers</dt><dd>${esc(s.univers)}</dd><dt>Llicència</dt><dd>${esc(s.llicencia)}${s.atribucio ? ` · ${esc(s.atribucio)}` : ""}</dd></dl>
     <p><b>Què en fem:</b> ${s.transformacions.map(esc).join("; ")}.</p>${s.limitacions.length ? `<p><b>Límits:</b> ${s.limitacions.map(esc).join("; ")}.</p>` : ""}
   </div></details>`;
-  }).join("\n");
+  const entrades = Object.entries(SOURCES) as [string, Source][];
+  return `<div class="fonts-llista">${estats
+    .map(({ estat, titol, etiqueta }) => {
+      const del = entrades.filter(([, s]) => s.estat === estat);
+      return del.length ? `<h3>${esc(titol)} · ${del.length}</h3>\n${del.map(([key, s]) => fitxa(key, s, etiqueta)).join("\n")}` : "";
+    })
+    .filter(Boolean)
+    .join("\n")}</div>`;
 }
