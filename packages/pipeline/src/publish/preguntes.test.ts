@@ -13,8 +13,9 @@ import { renderIndexPreguntes, renderPreguntes, type ConjuntAmbSlug } from "./pr
 const ACTA = "https://media.seu-e.cat/acteca/810210001/2025/acta-ple-12-03-2025.pdf";
 
 function afirmacio(i: number, url: string | undefined): Afirmacio {
+  const temes = ["fiscalitat", "fiscalitat", "fiscalitat", "habitatge", "habitatge", "habitatge", "mobilitat", "mobilitat", "mobilitat", "seguretat", "seguretat", "seguretat", "urbanisme", "urbanisme", "urbanisme", "cultura", "cultura", "educació", "educació", "participació"];
   return {
-    tema: "habitatge",
+    tema: temes[i] ?? "participació",
     text: `L'Ajuntament ha de fer la cosa número ${i}.`,
     evidencia: "Ple de 12 de març de 2025, acord núm. 4: aprovat amb 13 vots a favor i 8 en contra.",
     posicio_govern: i % 2 === 0 ? "acord" : "desacord",
@@ -24,7 +25,7 @@ function afirmacio(i: number, url: string | undefined): Afirmacio {
 
 /** Un conjunt que s'aguanta en actes (jugable) o en premsa (no jugable). */
 function conjunt(ambActes: boolean): ConjuntAmbSlug {
-  const afirmacions = Array.from({ length: 4 }, (_, i) =>
+  const afirmacions = Array.from({ length: 20 }, (_, i) =>
     afirmacio(i, ambActes ? ACTA : "https://www.diari.cat/noticia"),
   );
   const base = { municipi: "Poble de Prova", afirmacions };
@@ -81,8 +82,9 @@ describe("renderIndexPreguntes", () => {
     expect(html).toContain('href="../mapa/"');
   });
 
-  it("enllaça cada conjunt i la seva demostració", () => {
+  it("enllaça la demostració només dels conjunts que superen tots dos llindars", () => {
     expect(html).toContain('href="poble-de-prova/"');
     expect(html).toContain('href="poble-de-prova/prova/"');
+    expect(html).toContain("En revisió");
   });
 });

@@ -10,6 +10,10 @@
 
   RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
   RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+
+  # L'únic slug antic publicat per error: una adreça, una pàgina canònica.
+  RewriteRule ^observatori/preguntes/el-prat-de-llobregat/?$ /observatori/preguntes/prat-de-llobregat/ [L,R=301]
+  RewriteRule ^observatori/fonts/?$ /observatori/dades/#fonts [L,R=301,NE]
 </IfModule>
 
 # ---- Capçaleres de seguretat ----
@@ -44,4 +48,4 @@ Options -Indexes
   Require all denied
 </FilesMatch>
 
-ErrorDocument 404 /index.html
+ErrorDocument 404 /404.html

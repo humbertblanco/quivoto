@@ -1,0 +1,230 @@
+{
+  "municipi": "Viladecans",
+  "afirmacions": [
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha d'aprovar el pressupost municipal del 2026 presentat pel govern.",
+      "context": "El pressupost fixa els ingressos, la despesa i la plantilla municipal de l'exercici.",
+      "evidencia": "Ple del 13/11/2025, acord núm. 1, «APROVAR INICIALMENT EL PRESSUPOST GENERAL [...] PER A L’EXERCICI 2026». L'acta diu literalment: «Resultat de la votació: Aprovat per majoria absoluta - 13 vots a favor (PSC-CP i VECP-C); 11 vots en contra (ERC-AM, PP i VOX); i cap abstenció.»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2025/a33a4196-e39d-4105-8fb1-e4d5a4eb6912/PL%20131125.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Aprovar-lo permet executar els comptes nous; rebutjar-lo força una pròrroga o una nova negociació."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de suspendre el cobrament de la taxa municipal de residus.",
+      "context": "La moció proposava aturar cautelarment el cobrament de la taxa domèstica i comercial.",
+      "evidencia": "Ple del 18/12/2025, acord núm. 18, moció del PP «PER A LA SUSPENSIÓ CAUTELAR DEL COBRAMENT DE LA TAXA DE RESIDUS DOMÈSTICS I COMERCIALS». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 11 vots a favor (ERC-AM, PP i VOX); 14 vots en contra (PSC-CP i VECP-C); i cap abstenció.»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2025/8c7cb760-0251-47a8-be5e-68d7156b702d/PL%20181225%20(amb%20Annex).pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Suspendre-la alleuja el rebut immediat; també deixa sense finançament específic un servei obligatori."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de modificar la taxa de residus amb bonificacions segons la separació de cada llar.",
+      "context": "La proposta vinculava justícia fiscal, transparència i incentius ambientals en el rebut.",
+      "evidencia": "Ple del 29/01/2026, acord núm. 15, moció d'ERC-AM «PER A LA REVISIÓ I MODIFICACIÓ DE LA TAXA DE RESIDUS [...]». L'acta diu: «Resultat de la votació: Rebutjada per majoria absoluta - 11 vots a favor (ERC-AM, PP i VOX); 14 vots en contra (PSC-CP i VECP-C); i cap abstenció.»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/e6094d27-4626-4118-a50e-2cb46d8293f1/PL%20290126.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Bonificar la separació premia conductes; també exigeix mesurar-les i complica la gestió del rebut."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de subvencionar els comerços que redueixin i separin millor els residus.",
+      "context": "Les bases creen ajuts de concurrència per al sector comercial.",
+      "evidencia": "Ple del 29/01/2026, acord núm. 11, «BASES [...] D’AJUTS DESTINATS A LA REDUCCIÓ, RECICLATGE I MILLORA DE LA SEPARACIÓ DE RESIDUS DEL SECTOR COMERCIAL». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 14 vots a favor (PSC-CP i VECP-C); 11 abstencions (ERC-AM, PP i VOX).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/e6094d27-4626-4118-a50e-2cb46d8293f1/PL%20290126.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "L'ajut facilita canvis als negocis; també trasllada al pressupost una inversió empresarial."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de prohibir els habitatges d'ús turístic a Viladecans.",
+      "context": "La moció plantejava que no s'atorguessin habitatges d'ús turístic al municipi.",
+      "evidencia": "Ple del 26/03/2026, acord núm. 18, moció conjunta «PER LA PROHIBICIÓ DELS HABITATGES D'ÚS TURÍSTIC (HUT's) AL MUNICIPI DE VILADECANS». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 19 vots a favor (PSC-CP, VECP-C i ERC-AM); 6 vots en contra (PP i VOX); i cap abstenció.»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/a67902be-c19f-4fc0-ba52-6e2921b5fc95/PL%20260326.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "La prohibició reserva pisos a residència; també elimina una activitat turística legal."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha d'aplicar el límit de preus del lloguer a Viladecans.",
+      "context": "Viladecans és municipi declarat zona de mercat residencial tensionat.",
+      "evidencia": "Ple del 27/11/2025, acord núm. 12, moció conjunta «PER A L'APLICACIÓ EFECTIVA DEL LÍMIT DE PREUS DEL LLOGUER A VILADECANS». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 19 vots a favor (PSC-CP, VECP-C i ERC-AM); 6 vots en contra (PP i VOX); i cap abstenció.»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2025/fec7d39d-75ef-4d74-853b-84cf2ca96ed4/PL%20271125%20(amb%20Annex).pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El límit protegeix llogaters; també restringeix el preu que pot fixar la propietat."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha d'acordar amb grans tenidors que cedeixin pisos al lloguer assequible.",
+      "context": "La moció incloïa SAREB/Casa47, entitats financeres i grans tenidors.",
+      "evidencia": "Ple del 30/04/2026, acord núm. 21, moció del PP «PER IMPULSAR ACORDS AMB SAREB/CASA47, ENTITATS FINANCERES I GRANS TENEDORS PER MOBILITZAR HABITATGE CAP AL LLOGUER ASSEQUIBLE I SOCIAL». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 8 vots a favor (ERC-AM i PP); 13 vots en contra (PSC-CP); i 4 abstencions (VECP-C i VOX).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/d6e8a732-db51-4da2-a0fb-c8633abfac40/PL%20300426.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Els acords poden posar pisos buits al mercat; també depenen de propietaris externs."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha d'aprovar el Pla local d'habitatge 2025-2030 proposat pel govern.",
+      "context": "El pla ordena les actuacions municipals d'habitatge durant sis anys.",
+      "evidencia": "Ple del 18/12/2025, acord núm. 16, «APROVAR INICIALMENT EL PLA LOCAL D’HABITATGE 2025-2030». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 14 vots a favor (PSC-CP i VECP-C); 11 vots en contra (ERC-AM, PP i VOX); i cap abstenció.»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2025/8c7cb760-0251-47a8-be5e-68d7156b702d/PL%20181225%20(amb%20Annex).pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Aprovar-lo activa el full de ruta del govern; rebutjar-lo obliga a refer les prioritats."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha d'estudiar un carril bus a la C-32 entre Viladecans i Barcelona.",
+      "context": "La moció buscava una alternativa col·lectiva als desplaçaments per autopista.",
+      "evidencia": "Ple del 25/09/2025, acord núm. 13, moció conjunta «PER ESTUDIAR LA IMPLANTACIÓ D’UN CARRIL BUS A LA C-32». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 22 vots a favor (PSC-CP, VECP-C, ERC-AM i PP); 3 abstencions (VOX).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2025/3a7282a8-9491-464a-8b95-4413d4cc6c35/PL%20250925%20(amb%20Annex).pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El carril pot fer competitiu l'autobús; també resta capacitat al trànsit general."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de permetre als professionals un permís únic per entrar a les zones amb videovigilància.",
+      "context": "La proposta afectava industrials, reparadors i altres professionals que accedeixen a zones restringides.",
+      "evidencia": "Ple del 25/09/2025, acord núm. 17, moció de VOX «PER FACILITAR L'ACCÉS D'INDUSTRIALS, REPARADORS I PROFESSIONALS A LES ZONES D'ACCÉS RESTRINGIT PER VIDEOVIGILÀNCIA, MITJANÇANT UN PERMÍS ÚNIC». L'acta diu: «Resultat de la votació: Rebutjada per majoria absoluta - 6 vots a favor (PP i VOX); 19 vots en contra (PSC-CP, VECP-C i ERC-AM).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2025/3a7282a8-9491-464a-8b95-4413d4cc6c35/PL%20250925%20(amb%20Annex).pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El permís simplifica serveis a domicili; també redueix el control individual dels accessos."
+    },
+    {
+      "tema": "educacio",
+      "text": "L'Ajuntament ha d'estudiar la gestió directa de les quatre escoles bressol municipals.",
+      "context": "La votació demanava estudiar la internalització d'un servei avui prestat indirectament.",
+      "evidencia": "Ple del 30/04/2026, acord núm. 20, moció conjunta «PER ESTUDIAR LA INTERNALITZACIÓ DE LES 4 ESCOLES BRESSOL MUNICIPALS DE VILADECANS». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 13 vots a favor (ERC-AM, PP, VOX i VECP-C); 12 vots en contra (PSC-CP); i cap abstenció.»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/d6e8a732-db51-4da2-a0fb-c8633abfac40/PL%20300426.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "La gestió directa dona control municipal; també trasllada plantilla i risc operatiu a l'ajuntament."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de reclamar més freqüències i capacitat del servei de Rodalies a Viladecans.",
+      "context": "L'estació és una connexió principal de la ciutat amb Barcelona i el Baix Llobregat.",
+      "evidencia": "Ple del 26/02/2026, acord núm. 10, moció conjunta «PER A LA MILLORA DEL SERVEI DE RODALIES A VILADECANS». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 21 vots a favor (PSC-CP, VECP-C, ERC-AM i PP); 3 abstencions (VOX).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/78c075bd-444f-4117-b55c-369f8f2f22c3/PL%20260226%20(amb%20Annex).pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Reclamar millores pressiona l'operador; també prioritza el tren davant altres inversions locals."
+    },
+    {
+      "tema": "seguretat",
+      "text": "L'Ajuntament ha d'instal·lar videovigilància als accessos del Parc Agrari des de Viladecans.",
+      "context": "La moció proposava control d'accés per càmera als camins del Parc Agrari.",
+      "evidencia": "Ple del 26/02/2026, acord núm. 13, moció del PP «PER A LA INSTAL·LACIÓ D'UN SISTEMA DE CONTROL D'ACCÉS, MITJANÇANT VIDEOVIGILÀNCIA, ALS ACCESSOS AL PARC AGRARI». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 6 vots a favor (PP i VOX); 13 vots en contra (PSC-CP); i 5 abstencions (VECP-C i ERC-AM).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/78c075bd-444f-4117-b55c-369f8f2f22c3/PL%20260226%20(amb%20Annex).pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Les càmeres poden dissuadir robatoris; també enregistren l'accés a un espai natural i agrícola."
+    },
+    {
+      "tema": "seguretat",
+      "text": "L'Ajuntament ha de crear un pla integral de seguretat i recuperació de l'espai públic.",
+      "context": "La proposta agrupava seguretat, convivència i ús de l'espai públic.",
+      "evidencia": "Ple del 25/06/2026, acord núm. 19, moció del PP «PER L'APROVACIÓ D'UN PLA INTEGRAL DE SEGURETAT, CONVIVÈNCIA I RECUPERACIÓ DE L'ESPAI PÚBLIC». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 6 vots a favor (PP i VOX); 19 vots en contra (PSC-CP, VECP-C i ERC-AM).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/d59eb1d1-400d-406c-bfd1-c0b5ee02461f/PL%20250626%20(amb%20Annex).pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Un pla concentra actuacions i indicadors; també pot duplicar instruments municipals ja vigents."
+    },
+    {
+      "tema": "seguretat",
+      "text": "L'Ajuntament ha de regularitzar una unitat canina permanent dins la Policia Local.",
+      "context": "La moció proposava donar continuïtat formal a la unitat canina policial.",
+      "evidencia": "Ple del 18/12/2025, acord núm. 19, moció de VOX «PER A LA CONTINUÏTAT I REGULARITZACIÓ DE LA UNITAT CANINA DE LA POLICIA LOCAL». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 11 vots a favor (ERC-AM, PP i VOX); 14 vots en contra (PSC-CP i VECP-C).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2025/8c7cb760-0251-47a8-be5e-68d7156b702d/PL%20181225%20(amb%20Annex).pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Una unitat estable aporta una eina policial especialitzada; també té cost de formació i manteniment."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de denegar el pla especial de l'equipament metropolità de la carretera de Sant Climent.",
+      "context": "La moció demanava revocar l'aprovació inicial del planejament de l'equipament.",
+      "evidencia": "Ple del 25/06/2026, acord núm. 18, moció d'ERC-AM «PER LA REVOCACIÓ DE L'APROVACIÓ INICIAL I LA DENEGACIÓ DEL PLA ESPECIAL URBANÍSTIC DE L'EQUIPAMENT METROPOLITÀ DE LA CARRETERA DE SANT CLIMENT». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 8 vots a favor (ERC-AM i PP); 13 vots en contra (PSC-CP); i 4 abstencions (VECP-C i VOX).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/d59eb1d1-400d-406c-bfd1-c0b5ee02461f/PL%20250626%20(amb%20Annex).pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Denegar-lo atura el projecte actual; també renuncia a l'equipament en els termes aprovats."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha d'investigar el desenvolupament urbanístic del sector Llevant mitjançant una comissió municipal.",
+      "context": "La moció proposava un expedient tecnicojurídic i una comissió sobre el sector Llevant.",
+      "evidencia": "Ple del 26/03/2026, acord núm. 19, moció del PP «PER INSTAR LA INCOACIÓ D'UN EXPEDIENT D'INVESTIGACIÓ TECNICOJURÍDICA SOBRE EL DESENVOLUPAMENT DEL SECTOR LLEVANT I LA CREACIÓ D'UNA COMISSIÓ». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 6 vots a favor (PP i VOX); 14 vots en contra (PSC-CP i VECP-C); i 5 abstencions (ERC-AM).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/a67902be-c19f-4fc0-ba52-6e2921b5fc95/PL%20260326.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "La comissió pot aclarir decisions urbanístiques; també consumeix recursos revisant expedients ja tramitats."
+    },
+    {
+      "tema": "serveis socials",
+      "text": "L'Ajuntament ha d'ampliar els serveis socials municipals amb més recursos i personal.",
+      "context": "La moció tractava l'ampliació de la capacitat local d'atenció social.",
+      "evidencia": "Ple del 26/02/2026, acord núm. 12, moció conjunta «PER A L'AMPLIACIÓ I MILLORA DELS SERVEIS SOCIALS A VILADECANS». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 21 vots a favor (PSC-CP, VECP-C, ERC-AM i PP); 3 abstencions (VOX).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/78c075bd-444f-4117-b55c-369f8f2f22c3/PL%20260226%20(amb%20Annex).pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Més capacitat redueix esperes; també obliga a dedicar-hi més pressupost estructural."
+    },
+    {
+      "tema": "serveis socials",
+      "text": "L'Ajuntament ha d'incorporar-se a la Taula de Sensellarisme del Baix Llobregat.",
+      "context": "La taula coordina ajuntaments, administracions i entitats davant el sensellarisme.",
+      "evidencia": "Ple del 26/03/2026, acord núm. 15, «ADHESIÓ DE L’AJUNTAMENT DE VILADECANS A LA TAULA DE SENSELLARISME DEL BAIX LLOBREGAT». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 22 vots a favor (PSC-CP, VECP-C, ERC-AM i PP); 3 abstencions (VOX).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/a67902be-c19f-4fc0-ba52-6e2921b5fc95/PL%20260326.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Coordinar-se permet compartir recursos; també condiciona prioritats locals a un òrgan comarcal."
+    },
+    {
+      "tema": "medi ambient",
+      "text": "L'Ajuntament ha d'aturar temporalment el nou sistema de recollida de residus.",
+      "context": "La moció demanava suspendre o modificar parcialment la implantació i obrir una revisió.",
+      "evidencia": "Ple del 30/10/2025, acord núm. 14, moció del PP «PER SOL·LICITAR LA SUSPENSIÓ TEMPORAL O MODIFICACIÓ PARCIAL DE LA IMPLANTACIÓ DEL NOU SISTEMA DE RECOLLIDA DE RESIDUS». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 6 vots a favor (PP i VOX); 14 vots en contra (PSC-CP i VECP-C); i 5 abstencions (ERC-AM).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2025/6d3f58a9-37ae-49e0-a012-32557086a1fd/PL%20301025%20(amb%20Annex).pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Aturar-lo permet corregir incidències; també endarrereix els objectius de separació."
+    },
+    {
+      "tema": "medi ambient",
+      "text": "L'Ajuntament ha d'afegir equipaments municipals a la xarxa metropolitana de refugis climàtics.",
+      "context": "La xarxa identifica espais accessibles durant episodis de calor.",
+      "evidencia": "Ple del 30/04/2026, acord núm. 14, «INCLUSIÓ DE NOUS ESPAIS-REFUGI A LA XARXA METROPOLITANA DE REFUGIS CLIMÀTICS». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 21 vots a favor (PSC-CP, VECP-C, ERC-AM i PP); 3 abstencions (VOX).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/d6e8a732-db51-4da2-a0fb-c8633abfac40/PL%20300426.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Més refugis protegeixen durant la calor; també exigeixen obrir i climatitzar equipaments."
+    },
+    {
+      "tema": "neteja",
+      "text": "L'Ajuntament ha d'aplicar un pla de xoc de neteja i manteniment als barris.",
+      "context": "La moció incloïa contenidors, manteniment urbà i incivisme.",
+      "evidencia": "Ple del 25/06/2026, acord núm. 20, moció de VOX «PER L'ELABORACIÓ D'UN PLA DE XOC DE NETEJA, REVISIÓ DE CONTENIDORS, MANTENIMENT URBÀ I INCIVISME ALS BARRIS». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 6 vots a favor (PP i VOX); 19 vots en contra (PSC-CP, VECP-C i ERC-AM).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/d59eb1d1-400d-406c-bfd1-c0b5ee02461f/PL%20250626%20(amb%20Annex).pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El xoc concentra recursos visibles; també pot desplaçar el manteniment ordinari."
+    },
+    {
+      "tema": "comerç",
+      "text": "L'Ajuntament ha d'aplicar una campanya extraordinària de suport al comerç local per Nadal.",
+      "context": "La proposta buscava concentrar promoció municipal durant la campanya nadalenca.",
+      "evidencia": "Ple del 27/11/2025, acord núm. 15, moció de VOX «PER A L'IMPULS DEL COMERÇ LOCAL DURANT LA CAMPANYA DE NADAL 2025». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 6 vots a favor (PP i VOX); 19 vots en contra (PSC-CP, VECP-C i ERC-AM).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2025/fec7d39d-75ef-4d74-853b-84cf2ca96ed4/PL%20271125%20(amb%20Annex).pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "La campanya concentra afluència als negocis locals; també afavoreix una temporada concreta."
+    },
+    {
+      "tema": "participacio",
+      "text": "L'Ajuntament ha de crear una comissió del ple per revisar l'organització i la gestió municipal.",
+      "context": "La moció vinculava recursos humans, organització interna i control de gestió.",
+      "evidencia": "Ple del 28/05/2026, acord núm. 17, moció del PP «PER A LA MILLORA URGENT DE LA POLÍTICA DE RECURSOS HUMANS, L'ORGANITZACIÓ INTERNA I EL CONTROL DE GESTIÓ [...] AMB CREACIÓ D'UNA COMISSIÓ». L'acta diu: «Resultat de la votació: Rebutjat per majoria absoluta - 6 vots a favor (PP i VOX); 13 vots en contra (PSC-CP); i 5 abstencions (VECP-C i ERC-AM).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2026/5b883211-c4cf-414c-9e41-d2567fef8916/PL%20280526.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "La comissió reforça el control polític; també pot duplicar la fiscalització ordinària."
+    },
+    {
+      "tema": "participacio",
+      "text": "L'Ajuntament ha de prorrogar el Pla local de convivència fins a l'octubre del 2029.",
+      "context": "La pròrroga allarga quatre anys la vigència de l'instrument municipal de convivència.",
+      "evidencia": "Ple del 25/09/2025, acord núm. 11, «APROVAR LA PRÒRROGA DEL PLA LOCAL DE CONVIVÈNCIA [...] FINS EL 30 D’OCTUBRE DE 2029». L'acta diu: «Resultat de la votació: Aprovat per majoria absoluta - 14 vots a favor (PSC-CP i VECP-C); 11 abstencions (ERC-AM, PP i VOX).»",
+      "url_evidencia": "https://media.seu-e.cat/acteca/830150006/2025/3a7282a8-9491-464a-8b95-4413d4cc6c35/PL%20250925%20(amb%20Annex).pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Prorrogar-lo evita un buit de planificació; també ajorna redactar-ne un de nou."
+    }
+  ]
+}

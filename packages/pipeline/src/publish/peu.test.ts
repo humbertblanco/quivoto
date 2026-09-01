@@ -28,6 +28,13 @@ describe("peu", () => {
     expect(peu("./", "30 d'agost del 2026")).toContain("Generat el 30 d'agost del 2026");
   });
 
+  it("acredita l'autor i Damos en el Blanco amb els seus enllaços", () => {
+    const html = peu("./", "avui");
+    expect(html).toContain('<a href="https://x.com/humbertblanco">Humbert Blanco</a>');
+    expect(html).toContain('<a href="https://damosenelblanco.com">Damos en el Blanco</a>');
+    expect(html).toContain('<a href="https://github.com/humbertblanco/quivoto">GitHub</a>');
+  });
+
   /**
    * L'obligació legal i alhora l'argument del projecte: qui publica les dades,
    * amb quina llicència, i que no hi ha cap model de llenguatge pel mig.

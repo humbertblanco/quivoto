@@ -106,6 +106,12 @@ export type Els947Row = {
   pe?: number | null;
   /** preu de l'aigua: el tram de subministrament, en euros per metre cúbic */
   pa?: number | null;
+  /** any del preu de l'aigua; recollida selectiva i any; rebut mitjà d'IBI i any */
+  paa?: number | null;
+  rs?: number | null;
+  rsa?: number | null;
+  ibi?: number | null;
+  ibia?: number | null;
   /**
    * Renda neta mitjana per persona, en euros l'any, i de quin any és.
    *
@@ -127,6 +133,9 @@ export type Els947Row = {
    */
   rn?: number | null;
   ra?: number | null;
+  /** mediana de renda equivalent, la mesura preferida per ordenar municipis */
+  rm?: number | null;
+  rma?: number | null;
   /**
    * El que cobra l'alcaldia en un any, en euros, **només quan és un sou**.
    *
@@ -178,6 +187,8 @@ const KINDS_ELS947: string[] = [
   // consulta que demanés només el camp, no la mètrica sencera.
   "poblacio",
   "preuAigua",
+  "residus",
+  "rebutIbi",
   // La renda. Aquesta mètrica porta els sis indicadors de l'ADRH amb la sèrie
   // sencera del 2015 al 2023 i la comparació amb Catalunya: d'aquí només en
   // surten dues xifres —el valor de la renda neta per persona i el seu any— i
@@ -387,7 +398,13 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         | { indicadors: { clau: string; valor: number | null }[] }
         | undefined;
       const aigua = llegeix("preuAigua") as
-        | { preu: { subministrament: number | null } }
+        | { darrerAny?: number; preu: { subministrament: number | null } }
+        | undefined;
+      const residus = llegeix("residus") as
+        | { darrerAny?: number; taxaSelectiva?: number | null }
+        | undefined;
+      const rebutIbi = llegeix("rebutIbi") as
+        | { darrerAny?: number; rebutMitja?: number | null; publicable?: boolean }
         | undefined;
 
       /*
@@ -404,6 +421,8 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         | undefined;
       const renda =
         riquesa?.indicadors?.find((i) => i.clau === "rendaNetaPersona")?.valor ?? null;
+      const rendaMediana =
+        riquesa?.indicadors?.find((i) => i.clau === "medianaUnitatConsum")?.valor ?? null;
 
       return {
         s: m.slug,
@@ -435,8 +454,15 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         pt: participacio.get(m.id) ?? null,
         pe: poblacio?.indicadors?.find((i) => i.clau === "pctNacionalitatEstrangera")?.valor ?? null,
         pa: aigua?.preu?.subministrament ?? null,
+        paa: aigua?.preu?.subministrament == null ? null : aigua.darrerAny ?? null,
+        rs: residus?.taxaSelectiva ?? null,
+        rsa: residus?.taxaSelectiva == null ? null : residus.darrerAny ?? null,
+        ibi: rebutIbi?.publicable === false ? null : rebutIbi?.rebutMitja ?? null,
+        ibia: rebutIbi?.publicable === false || rebutIbi?.rebutMitja == null ? null : rebutIbi.darrerAny ?? null,
         rn: renda,
         ra: renda === null ? null : riquesa?.any ?? null,
+        rm: rendaMediana,
+        rma: rendaMediana === null ? null : riquesa?.any ?? null,
         sa: souAlcaldia(llegeix("retribucions")),
       };
     })

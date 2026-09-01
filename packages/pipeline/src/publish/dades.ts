@@ -7,6 +7,8 @@ import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { SOURCES, type SourceKey } from "./source-registry";
+import { renderSourcesList, writeSourceCatalogue, type PublishedField } from "./source-catalogue";
 
 /**
  * La descàrrega de dades.
@@ -22,169 +24,10 @@ import { RADIOGRAFIA_CSS } from "./estil";
  * fitxa canvia, aquest fitxer deixa de compilar i algú se n'ha d'adonar.
  */
 
-// ------------------------------------------------------------------- fonts
-
-type Font = {
-  /** Identificador del conjunt al portal d'origen. És el que fa comprovable la xifra. */
-  id: string;
-  titol: string;
-  portal: string;
-  llicencia: string;
-  url: string;
-};
-
-const SOCRATA = "Generalitat de Catalunya · Dades Obertes";
-const AOC = "Consorci AOC · dadesobertes.seu-e.cat";
-
-/**
- * Llicències comprovades amb crides reals al portal el 29-08-2026. Al catàleg
- * de l'AOC hi ha conjunts duplicats amb el mateix títol i llicències diferents
- * (`cc-nc`, `cc-by`, «no especificada»); els identificadors que fem servir són
- * tots CC0, i per això aquí hi va l'identificador i no el nom del conjunt.
- */
-const FONTS = {
-  ensLocals: {
-    id: "6nei-4b44", titol: "Dades generals dels ens locals de Catalunya", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/6nei-4b44",
-  },
-  resultats: {
-    id: "ntc4-rnwr", titol: "Processos electorals · Vots", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/ntc4-rnwr",
-  },
-  participacio: {
-    id: "irrv-2mfc", titol: "Processos electorals · Participació", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/irrv-2mfc",
-  },
-  candidats: {
-    id: "xnfg-weec", titol: "Processos electorals · Persones candidates", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/xnfg-weec",
-  },
-  alcaldies: {
-    id: "2v2p-vu4h", titol: "Historial d'alcaldes/esses 1979-2027", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/2v2p-vu4h",
-  },
-  plens: {
-    id: "nm3n-3vbj", titol: "Composició dels plens municipals", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/nm3n-3vbj",
-  },
-  liquidacionsGencat: {
-    id: "ytva-5kp3", titol: "Liquidació dels pressupostos dels ens locals", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/ytva-5kp3",
-  },
-  historic: {
-    id: "3539f7e6", titol: "Eleccions municipals: resultats històrics en vots 1979-2023", portal: AOC,
-    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/eleccions-municipals-resultats-historics-en-vots",
-  },
-  liquidacio: {
-    id: "81f18313", titol: "Liquidació del pressupost (execució per capítols)", portal: AOC,
-    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/liquidacio-del-pressupost-execucio-per-capitols",
-  },
-  deute: {
-    id: "34db8dc5", titol: "Endeutament (deute viu a 31/12)", portal: AOC,
-    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/ge-ge-endeutament",
-  },
-  pmp: {
-    id: "eecca986", titol: "Període mitjà de pagament a proveïdors", portal: AOC,
-    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/ge-ge-termini-pagament-proveidors",
-  },
-  impostos: {
-    id: "82ae0ea2", titol: "Tipus impositius municipals", portal: AOC,
-    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/agn-npp-tipus-impositius",
-  },
-  costEfectiu: {
-    id: "12c13cdd", titol: "Cost efectiu dels serveis (Ministeri d'Hisenda)", portal: AOC,
-    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/ge-ge-cost-efectiu-serveis-minhap",
-  },
-  transparencia: {
-    id: "1a9c1ede", titol: "Emplenament dels portals de transparència", portal: AOC,
-    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/emplenament-dels-portals-de-transparencia",
-  },
-  actes: {
-    id: "b5d370d0", titol: "Actes del Ple", portal: AOC,
-    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/agn-ag-actes-de-ple",
-  },
-  sindic: {
-    id: "943d6174", titol: "Ajuntaments sense regidors de l'oposició (Síndic de Greuges)", portal: AOC,
-    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/sindic-de-greuges-ajuntaments-sense-regidors-de-l-oposicio",
-  },
-  liquidacioEconomica: {
-    id: "8squ-bk4r", titol: "Liquidació del pressupost, econòmic i per programes", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/8squ-bk4r",
-  },
-  liquidacioProgrames: {
-    // Comprovat al CKAN de l'AOC el 30-08-2026: el paquet `f65ae930` és `cc-zero`.
-    id: "5b96829f", titol: "Liquidació del pressupost per programes (grups de programa)", portal: AOC,
-    llicencia: "CC0", url: "https://dadesobertes.seu-e.cat/dataset/ge-p-liquidacions-per-programes-detallat",
-  },
-  ambEns: {
-    id: "2r5q-tsxs", titol: "Ens on participa cada ens local", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/2r5q-tsxs",
-  },
-  arc: {
-    id: "69zu-w48s", titol: "Estadística de residus municipals (Agència de Residus de Catalunya)", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/69zu-w48s",
-  },
-  fiances: {
-    id: "qww9-bvhh", titol: "Preu mitjà del lloguer, per les fiances dipositades (Agència de l'Habitatge)", portal: SOCRATA,
-    llicencia: "Condicions d'ús del portal (reutilització lliure amb atribució)",
-    url: "https://analisi.transparenciacatalunya.cat/d/qww9-bvhh",
-  },
-  aca: {
-    id: "aca-preus", titol: "Observatori del preu de l'aigua", portal: "Agència Catalana de l'Aigua · aca.gencat.cat",
-    llicencia: "Llicència oberta d'ús d'informació – Catalunya (avís legal de gencat.cat): citar la font i no alterar-ne el sentit",
-    url: "https://aca.gencat.cat/ca/laigua/consulta-de-dades/observatori-del-preu-de-laigua/",
-  },
-  /*
-   * L'Idescat no és CC: les condicions de les seves API obliguen a presentar
-   * cada xifra amb l'enllaç que l'API ha donat, tal com l'ha donat. Aquí hi va
-   * la pàgina general; l'enllaç de cada municipi va al JSON del municipi.
-   */
-  idescatPoblacio: {
-    id: "censph/5992/5987", titol: "Cens de població: nacionalitat espanyola i estrangera", portal: "Idescat · idescat.cat",
-    llicencia: "Condicions d'ús de l'Idescat: cal enllaçar la pàgina de l'Idescat al costat de la xifra",
-    // La mateixa pàgina que l'API dona per municipi (`&geo=mun:…`), sense el municipi.
-    url: "https://www.idescat.cat/pub/?id=censph&n=479",
-  },
-  idescatIbi: {
-    id: "ibi/173", titol: "Impost de béns immobles de naturalesa urbana (IBI), taula 173", portal: "Idescat · idescat.cat",
-    llicencia: "Condicions d'ús de l'Idescat: cal enllaçar la pàgina de l'Idescat al costat de la xifra",
-    url: "https://www.idescat.cat/pub/?id=ibi&n=173",
-  },
-  /*
-   * L'INE permet reutilitzar citant la font i la data de l'última actualització,
-   * i imposa la forma de la citació quan les dades s'elaboren, que és el cas:
-   * la fórmula literal va a la llicència i la data de la taula, al JSON del
-   * municipi.
-   */
-  ineAdrh: {
-    id: "ADRH", titol: "Atlas de distribución de renta de los hogares (ADRH)", portal: "INE · ine.es",
-    llicencia: "Reutilització lliure citant la font i la data d'actualització: «Elaboración propia con datos extraídos del sitio web del INE: www.ine.es»",
-    // El catàleg de l'operació, que és d'on J23 treu les quatre taules provincials.
-    url: "https://servicios.ine.es/wstempus/js/ES/TABLAS_OPERACION/ADRH",
-  },
-  /*
-   * L'avís legal del portal del Ministeri permet reutilitzar amb fins
-   * comercials i no comercials, amb la citació feta i literal. No és cap CC.
-   */
-  interiorBalanc: {
-    id: "DatosBalanceAnt", titol: "Balanç de criminalitat (4t trimestre: any sencer)",
-    portal: "Ministeri de l'Interior · estadisticasdecriminalidad.ses.mir.es",
-    llicencia: "Reutilització lliure amb citació obligada i literal: «Origen de los datos: Portal Estadístico de Criminalidad»",
-    url: "https://estadisticasdecriminalidad.ses.mir.es/publico/portalestadistico/balances",
-  },
-} as const satisfies Record<string, Font>;
-
-type ClauFont = keyof typeof FONTS;
+// El catàleg complet viu en un sol mòdul; aquí només en conservem els noms
+// curts perquè formen part del CSV públic des de la primera versió.
+const FONTS = SOURCES;
+type ClauFont = SourceKey;
 
 // ------------------------------------------------------------------- camps
 
@@ -1561,6 +1404,21 @@ export async function writeDownloads(
   // ell inclòs.
   await desa(`${arrel}ESQUEMA.md`, esquema(generatedAt, globals.length, files + 1, coberturaBloc));
 
+  const dependencies: Partial<Record<string, readonly SourceKey[]>> = {
+    deute_habitant: ["deute", "padroAoc"],
+    deute_habitant_serie: ["deute", "padroAoc"],
+    fets_penals_per_mil: ["interiorBalanc", "padroAoc"],
+    cost_govern_habitant: ["liquidacioEconomica", "padroAoc"],
+    despesa_programa: ["liquidacioProgrames", "padroAoc"],
+  };
+  const campsPublics: PublishedField[] = CAMPS.map((camp) => ({
+    clau: camp.clau, etiqueta: camp.etiqueta, unitat: camp.unitat,
+    sourceIds: dependencies[camp.clau] ?? [camp.font],
+    derivat: camp.propi === true, descripcio: camp.descripcio,
+    abast: camp.global ? "municipi_i_catalunya" : "municipi",
+  }));
+  await writeSourceCatalogue(arrel, generatedAt, campsPublics);
+
   return { files, bytes, municipis: globals.length, camps: columnes.length };
 }
 
@@ -1599,10 +1457,10 @@ const DADES_CSS = `${RADIOGRAFIA_CSS}
 .xifres span{font-size:.86rem}
 pre{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);padding:var(--e2);overflow-x:auto;font-size:.85rem}
 pre code{background:none;border:0;padding:0}
-table{border-collapse:collapse;width:100%;font-size:.92rem;margin-top:var(--e2)}
-th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--vora);vertical-align:top}
-th{font-family:var(--display);font-weight:900}
+.llicencies{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--e2)}.llicencies li{border:2px solid var(--vora);border-radius:var(--r-m);padding:var(--e2);background:var(--paper-2)}.llicencies b{display:block;font-family:var(--display);font-size:1.05rem;margin-bottom:7px}
 .cita{background:var(--lavanda);color:#1E1B2E;border:2.5px solid #1E1B2E;border-radius:var(--r-m);padding:var(--e3);box-shadow:3px 3px 0 #1E1B2E;margin-top:var(--e2)}
+.font{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:3px 3px 0 var(--ink);margin:var(--e2) 0;overflow:hidden}.font summary{list-style:none;cursor:pointer;padding:var(--e2) var(--e3);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 20px;align-items:center}.font summary::-webkit-details-marker{display:none}.font summary::after{content:"+";font-family:var(--display);font-size:1.8rem;font-weight:900}.font[open] summary::after{content:"−"}.font[open] summary{border-bottom:2px solid var(--vora);background:var(--menta);color:#1e1b2e}.font h3{margin:0}.font-cos{padding:var(--e2) var(--e3) var(--e3)}.font .meta{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}.font .meta span{border:1.5px solid currentColor;border-radius:var(--r-max);padding:3px 10px;font-size:.72rem;font-weight:800}.font dl{display:grid;grid-template-columns:minmax(110px,170px) 1fr;gap:8px 14px}.font dt{font-weight:900}.font dd{margin:0;color:var(--ink-suau)}
+@media(max-width:720px){.llicencies{grid-template-columns:1fr}}@media(max-width:560px){.font dl{grid-template-columns:1fr}.font dd{margin-bottom:7px}}
 `;
 
 export function renderDadesIndex(generatedAt: string, stats: { municipis: number; camps: number }): string {
@@ -1625,8 +1483,8 @@ ${cercador("../")}
 
 <main id="contingut">
 
-<p class="micro">Descàrrega</p>
-<h1>Les dades, en cru</h1>
+<p class="micro">Descarrega, comprova i reutilitza</p>
+<h1>Les dades de l'Observatori</h1>
 <p class="entrada">Tot el que mostra l'Observatori, en fitxers que podeu obrir, comprovar i
 tornar a publicar. Ho posem aquí perquè un periodista local ens pugui contrastar sense
 demanar-nos permís ni esperar cap resposta.</p>
@@ -1647,6 +1505,9 @@ demanar-nos permís ni esperar cap resposta.</p>
     <li><a href="ESQUEMA.md"><b>L'esquema</b>
       <span>Cada camp: què vol dir, en quines unitats va, de quin any és i de quin conjunt
       obert surt, amb l'identificador per anar-lo a comprovar.</span></a></li>
+    <li><a href="#fonts"><b>El registre de fonts</b>
+      <span>Qui publica cada dada, de quin període és, com la tractem i quins límits té.</span></a>
+      <div class="parell"><a href="fonts.json">fonts.json</a><a href="camps.json">camps.json</a><a href="manifest.json">manifest.json</a></div></li>
   </ul>
   <h2 style="margin-top:var(--e4)">Un municipi sol</h2>
   <p>Cada fitxa té el seu parell de fitxers amb tot el que ensenya. El nom és el mateix de
@@ -1657,6 +1518,14 @@ quivoto.cat/observatori/dades/m/<b>barcelona</b>.json</code></pre>
   <p class="nota">El fitxer del municipi va en format llarg —una fila per indicador— perquè
   cada municipi té dades diferents. Així l'indicador que no tenim no hi és, i això és una
   informació i no un forat en una graella.</p>
+</section>
+
+<section class="bloc" id="fonts">
+  <p class="micro">Procedència</p>
+  <h2>Totes les fonts de l'Observatori</h2>
+  <p>Aquesta és la llista completa del registre canònic: fonts publicades, de suport, només de fitxa
+  i experimentals. També es pot reutilitzar com a <a href="fonts.json">fonts.json</a>.</p>
+  ${renderSourcesList()}
 </section>
 
 <section class="bloc">
@@ -1682,13 +1551,11 @@ quivoto.cat/observatori/dades/m/<b>barcelona</b>.json</code></pre>
 
 <section class="bloc">
   <h2>Llicència i com citar-nos</h2>
-  <table>
-    <tbody>
-      <tr><th>Les nostres dades derivades</th><td>Creative Commons BY 4.0. Feu-ne el que vulgueu, digueu d'on surten.</td></tr>
-      <tr><th>Les dades d'origen</th><td>Mantenen la seva llicència. Els conjunts de l'AOC que fem servir són CC0; els de la Generalitat, les condicions d'ús del portal de transparència. L'Idescat demana el seu enllaç al costat de la xifra i l'INE, una citació literal amb la data de la taula: tots dos van al JSON de cada municipi.</td></tr>
-      <tr><th>Cap dada personal</th><td>Només càrrecs electes, i només nom, càrrec i candidatura. Cap correu, cap adreça, cap telèfon, encara que la font els publiqui.</td></tr>
-    </tbody>
-  </table>
+  <ul class="llicencies">
+    <li><b>Les nostres dades derivades</b>Creative Commons BY 4.0. Feu-ne el que vulgueu, dient d'on surten.</li>
+    <li><b>Les dades d'origen</b>Mantenen la seva llicència. Cada fitxer conserva l'enllaç i la citació que demana la font.</li>
+    <li><b>Cap dada personal</b>Només càrrecs electes: nom, càrrec i candidatura. No publiquem correus, adreces ni telèfons.</li>
+  </ul>
   <div class="cita">
     <p style="margin:0"><b>quivoto</b>, <i>Observatori municipal</i>, ${escapa(generatedAt)}.<br>
     https://quivoto.cat/observatori/dades/</p>

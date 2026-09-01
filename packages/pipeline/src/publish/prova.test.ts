@@ -51,4 +51,15 @@ describe("renderProva", () => {
     expect(html).toContain("cosa número 0");
     expect(html.trimEnd().endsWith("</html>")).toBe(true);
   });
+
+  it("no fa desaparèixer cap grup del ple quan encara no en sap deduir la posició", () => {
+    const grups = [
+      { nom: "Govern", sigles: "GOV", escons: 7, govern: true, color: "#123456" },
+      { nom: "Oposició sense vot citable", sigles: "OSC", escons: 2, govern: false, color: null },
+    ];
+    const ambGrups = renderProva(conjunt(), grups, [], "30 d'agost del 2026");
+    expect(ambGrups).toContain('"nom":"Govern"');
+    expect(ambGrups).toContain('"nom":"Oposició sense vot citable"');
+    expect(ambGrups).toContain("Sense prou dades");
+  });
 });

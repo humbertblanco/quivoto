@@ -25,6 +25,13 @@ describe("esActa", () => {
     expect(esActa("https://ajuntament.barcelona.cat/ca/accio-de-govern/el-consell-municipal/acords-del-plenari")).toBe(true);
   });
 
+  it("accepta només les actes plenàries del directori oficial de Girona", () => {
+    expect(esActa("https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-10-11-25.pdf")).toBe(true);
+    expect(esActa("https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-Extraordinari-20-06-25.pdf")).toBe(true);
+    expect(esActa("https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Ordre-dia-Ple-10-11-25.pdf")).toBe(false);
+    expect(esActa("https://seu.girona.cat/noticies/una-nota-de-premsa")).toBe(false);
+  });
+
   it("però no qualsevol pàgina de l'ajuntament de Barcelona", () => {
     expect(esActa("https://ajuntament.barcelona.cat/premsa/2026/01/01/una-nota-de-premsa/")).toBe(false);
   });

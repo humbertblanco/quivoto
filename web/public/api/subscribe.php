@@ -45,6 +45,7 @@ $municipi = $municipi === '' ? null : $municipi;
 
 try {
     $db   = qv_db();
+    qv_purga_metadades($db);
     $hash = qv_ip_hash();
 
     $q = $db->prepare('SELECT COUNT(*) c FROM subscriptors WHERE ip_hash = ? AND creat_el > ?');
@@ -53,11 +54,15 @@ try {
         qv_acaba(false, 'massa', $idioma, $base, 429);
     }
 
-    $ins = $db->prepare('INSERT INTO subscriptors (email, municipi, idioma, token, ip_hash, agent, creat_el)
-                         VALUES (?, ?, ?, ?, ?, ?, ?)');
+    $ara = gmdate('Y-m-d H:i:s');
+    $origen = substr((string) ($_SERVER['HTTP_REFERER'] ?? ($base . '/')), 0, 255);
+    $ins = $db->prepare('INSERT INTO subscriptors
+        (email, municipi, idioma, token, ip_hash, agent, consent_el, consent_versio, pagina_origen, creat_el)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $ins->execute([
         $email, $municipi, $idioma, bin2hex(random_bytes(16)), $hash,
-        substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 190), gmdate('Y-m-d H:i:s'),
+        substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 190),
+        $ara, 'privadesa-2026-08-31', $origen, $ara,
     ]);
 
     $cfg = qv_config();

@@ -1,0 +1,186 @@
+{
+  "municipi": "Manresa",
+  "afirmacions": [
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de finançar amb despesa plurianual la rehabilitació de l'Anònima Manresana.",
+      "context": "La rehabilitació compromet pressupostos futurs per recuperar un edifici industrial municipal.",
+      "evidencia": "Despesa plurianual per a la fase 1 de rehabilitació de l'Anònima, ple del 16-05-2024: 18-0-6 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2024/2453270d-3cf9-4c7c-8fec-5e61027fd0fd/2024%2005%2016%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Permet executar una inversió gran sense concentrar-ne el cost en un exercici; també redueix el marge dels pressupostos següents."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha d'assumir factures sense contracte mitjançant reconeixements extrajudicials de crèdit.",
+      "context": "El mecanisme paga serveis ja prestats, però evidencia que la despesa no va seguir el procediment ordinari.",
+      "evidencia": "Reconeixements extrajudicials de crèdit a diversos proveïdors, ple del 20-02-2025: 13-0-11 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Evita deixar proveïdors sense cobrar; normalitzar aquesta via afebleix el control previ de la contractació."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha de modificar el pressupost durant l'exercici per incorporar noves prioritats de despesa.",
+      "context": "Les modificacions de crèdit donen flexibilitat al govern, però canvien un pressupost ja aprovat.",
+      "evidencia": "Modificació de crèdits P1/2025, ple del 20-02-2025: 13-0-11 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "La ciutat pot adaptar la despesa a necessitats sobrevingudes; l'oposició perd capacitat de condicionar les prioritats inicials."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "Els aparcaments municipals han d'oferir una tarifa plana reduïda als residents de Manresa.",
+      "context": "La proposta abaratia l'estacionament estable als equipaments municipals i afectava els seus ingressos.",
+      "evidencia": "Moció sobre tarifa plana reduïda als aparcaments municipals, ple del 20-02-2025: rebutjada 3-14-8 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Redueix la despesa de qui necessita aparcar; subvenciona l'ús habitual del cotxe i resta ingressos al servei."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha d'alliberar sòl i agilitzar llicències per ampliar l'oferta privada d'habitatge.",
+      "context": "La moció plantejava l'oferta i la simplificació administrativa com a resposta principal a la crisi residencial.",
+      "evidencia": "Moció davant la crisi habitacional amb alliberament de sòl i agilització de llicències, ple del 20-02-2025: rebutjada 1-23-0.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Més oferta pot moderar preus; sense reserva pública, el nou habitatge pot quedar fora de l'abast de moltes rendes."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de revitalitzar els locals buits del Centre Històric amb un programa municipal específic.",
+      "context": "Els baixos buits afecten l'activitat i la percepció de seguretat dels carrers on també es concentra habitatge vulnerable.",
+      "evidencia": "Proposició per revitalitzar locals buits del Centre Històric, ple del 16-05-2024: rebutjada 3-19-2 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2024/2453270d-3cf9-4c7c-8fec-5e61027fd0fd/2024%2005%2016%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "La intervenció pot reactivar carrers degradats; el cost públic pot beneficiar propietaris particulars sense assegurar activitat duradora."
+    },
+    {
+      "tema": "habitatge",
+      "text": "El planejament de Cal Peó ha de facilitar la rehabilitació de la masia i els seus usos.",
+      "context": "Modificar el catàleg de masies permet adaptar una finca concreta i condiciona què s'hi podrà fer.",
+      "evidencia": "Modificació del Pla especial del Catàleg de Masies relativa a Cal Peó, ple del 20-02-2025: 21-0-3 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "La flexibilitat ajuda a conservar patrimoni rural; els canvis singulars poden ampliar usos i valor privats."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament no ha de limitar els habitatges turístics mentre el fenomen sigui minoritari a Manresa.",
+      "context": "Actuar abans que creixi protegeix habitatge residencial, però també restringeix una activitat legal encara petita.",
+      "evidencia": "Moció per limitar l'ús especulatiu dels habitatges d'ús turístic, ple del 21-01-2026: aprovada 18-0-7 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2026/8a571016-eb5b-4ccf-9344-8e47003d2f23/2026%2001%2021%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "La prevenció evita pressió futura sobre el lloguer; regular abans que hi hagi un problema pot frenar inversió i turisme."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha de ratificar les tarifes anuals del servei municipal d'autobús.",
+      "context": "El preu del bus reparteix el cost entre usuaris i pressupost municipal i pot incentivar o desincentivar-ne l'ús.",
+      "evidencia": "Ratificació de les tarifes del transport públic urbà per al 2025, ple del 20-02-2025: 23-0-1 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "La tarifa sosté el servei sense carregar-lo tot al pressupost; un preu més baix afavoreix el canvi del cotxe al bus."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha d'actualitzar les tarifes de l'aparcament soterrani de la plaça Porxada.",
+      "context": "El preu d'un aparcament cèntric influeix tant en els ingressos de la concessió com en l'accés amb cotxe al centre.",
+      "evidencia": "Revisió de tarifes de l'aparcament de la plaça Porxada per al 2025, ple del 20-02-2025: 19-2-3 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Actualitzar preus manté l'equilibri econòmic de la concessió; encarir el pàrquing perjudica residents i comerç del centre."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "El pàrquing de la Reforma ha de funcionar també com a aparcament dissuasiu.",
+      "context": "La mesura busca deixar vehicles a l'entrada del centre aprofitant una infraestructura ja construïda.",
+      "evidencia": "Proposició per habilitar el pàrquing de la Reforma com a aparcament dissuasiu, ple del 16-05-2024: 23-0-1 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2024/2453270d-3cf9-4c7c-8fec-5e61027fd0fd/2024%2005%2016%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Pot reduir circulació cercant plaça; també pot atraure més cotxes fins al límit del nucli urbà."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha d'aprovar una ordenança específica per regular els patinets elèctrics.",
+      "context": "Una norma pròpia pot concretar circulació i sancions, però se superposa a regulacions generals que també evolucionen.",
+      "evidencia": "Moció per aprovar una ordenança d'ús del patinet elèctric, ple del 20-02-2025: rebutjada 11-14-0.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Les regles locals poden resoldre conflictes als carrers; una ordenança separada pot duplicar normes i ser difícil d'actualitzar."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de crear aparcaments dissuasius prop del Centre Històric i dels espais més concorreguts.",
+      "context": "La ubicació de l'aparcament determina fins on arriba el cotxe i quin espai queda disponible per a altres usos.",
+      "evidencia": "Moció per crear aparcaments dissuasius, ple del 20-02-2025: rebutjada 8-14-2 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Faciliten arribar al centre sense circular-hi; construir més oferta d'estacionament pot consolidar la dependència del cotxe."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de prioritzar la reparació integral del paviment del Passeig de la República.",
+      "context": "Prioritzar una actuació concreta accelera la resposta a aquell carrer, però reordena el manteniment previst per al conjunt de la ciutat.",
+      "evidencia": "Moció per reparar el paviment del Passeig de la República, ple del 20-02-2025: rebutjada 3-14-8 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El deteriorament visible justifica una actuació immediata; decidir carrer per carrer al ple pot desfer criteris tècnics de prioritat."
+    },
+    {
+      "tema": "governança",
+      "text": "L'Ajuntament ha d'executar el Pla d'Acció Exterior de Manresa fins al 2030.",
+      "context": "El pla ordena la projecció internacional de la ciutat i hi dedica recursos que competeixen amb necessitats estrictament locals.",
+      "evidencia": "Aprovació del Pla d'Acció Exterior 2024-2030, ple del 20-02-2025: 13-3-8 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Pot captar aliances, talent i activitat; també dispersa diners i personal fora dels serveis quotidians."
+    },
+    {
+      "tema": "governança",
+      "text": "L'Ajuntament ha de modificar la relació de llocs de treball per adaptar l'organització municipal.",
+      "context": "Canviar llocs i funcions pot modernitzar serveis, però té efectes laborals i pressupostaris estables.",
+      "evidencia": "Modificació de la Relació de Llocs de Treball, ple del 20-02-2025: 13-0-11 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "L'organització s'ha d'adaptar a noves tasques; els canvis poden consolidar estructura i cost sense una avaluació externa."
+    },
+    {
+      "tema": "economia",
+      "text": "Manresa ha d'aspirar a ser reconeguda com a capital catalana de la Francofonia.",
+      "context": "La proposta volia convertir els vincles francòfons en un eix de promoció econòmica i cultural de ciutat.",
+      "evidencia": "Proposició perquè Manresa esdevingui capital catalana de la Francofonia, ple del 16-05-2024: rebutjada 5-17-2 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2024/2453270d-3cf9-4c7c-8fec-5e61027fd0fd/2024%2005%2016%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Una marca singular pot atreure activitat i intercanvis; pot ser una etiqueta amb retorn incert i poc arrelament local."
+    },
+    {
+      "tema": "economia",
+      "text": "L'Ajuntament ha de regular per ordenança l'ús dels locals comercials buits.",
+      "context": "La regulació buscava intervenir sobre baixos sense activitat, especialment visibles al Centre Històric.",
+      "evidencia": "Moció per aprovar una ordenança sobre l'ús dels locals buits, ple del 20-02-2025: rebutjada 11-14-0.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2025/48fc4a40-5c7e-4969-8dce-bfdaf397af58/2025%2002%2020%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "La norma pot evitar degradació i usos conflictius; limita decisions dels propietaris i pot afegir traves a noves activitats."
+    },
+    {
+      "tema": "educació",
+      "text": "L'Ajuntament ha de rebutjar una cinquena línia d'ESO i un tercer mòdul prefabricat al Pius Font i Quer.",
+      "context": "La comunitat educativa defensava que créixer amb un altre mòdul empitjoraria espais i condicions del centre.",
+      "evidencia": "Proposició de rebuig a la cinquena línia i al tercer mòdul del Pius Font i Quer, ple del 16-05-2024: rebutjada 10-14-0.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2024/2453270d-3cf9-4c7c-8fec-5e61027fd0fd/2024%2005%2016%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Evita més pressió sobre pati i instal·lacions; rebutjar places pot dificultar escolaritzar l'alumnat previst al sector."
+    },
+    {
+      "tema": "medi ambient",
+      "text": "L'Ajuntament ha d'aplicar el Pla d'Acció per a la Transició Agroecològica de Manresa.",
+      "context": "El pla orienta compra, producció i consum alimentari local, amb costos i canvis per als serveis municipals.",
+      "evidencia": "Pla d'Acció per a la Transició Agroecològica, ple del 16-05-2024: 23-0-1 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/811360009/2024/2453270d-3cf9-4c7c-8fec-5e61027fd0fd/2024%2005%2016%20Acta%20Web%20Ple.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Afavoreix producte local i menys impacte ambiental; pot encarir compres o limitar proveïdors municipals."
+    }
+  ],
+  "notes": "Conjunt elaborat llegint directament 34 actes de ple del mandat disponibles al repositori oficial AOC de Manresa. Les 20 afirmacions citen actes i recomptes explícits; l'extractor automàtic del projecte només havia estructurat el vot per grup en 2 punts, de manera que els recomptes emprats aquí s'han revisat al text original. Equilibri: 10 de 20 amb el govern a favor. No s'hi atribueixen promeses electorals: encara no hi ha programes del 2027. S'han descartat declaracions supramunicipals, acords unànimes sense desacord útil i punts on el sentit del govern no era inequívoc."
+}

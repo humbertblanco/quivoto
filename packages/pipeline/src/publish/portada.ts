@@ -477,6 +477,19 @@ function blocCompara(mostra: PortadaMostra): string {
   </section>`;
 }
 
+/** Dues lectures complementàries: la taula exhaustiva i les peces editorials. */
+function blocDescobreix(): string {
+  return `<section class="bloc" id="descobreix">
+    <h2>Què surt de la norma?</h2>
+    <p class="entrada-bloc">No totes les diferències volen dir el mateix. Ordenem només dades del
+    mateix període i expliquem amb qui es compara cada municipi.</p>
+    <ul class="comparacions">
+      <li><a href="ranquings/"><b>Rànquings comparables</b><span>els primers, els últims i la taula completa</span></a></li>
+      <li><a href="destaquen/"><b>Destaquen</b><span>històries revisades que mereixen context</span></a></li>
+    </ul>
+  </section>`;
+}
+
 function blocLinies(comptes: ComptesPortada, mostra: PortadaMostra): string {
   const linies = [
     mostra.amb
@@ -498,6 +511,8 @@ function seccions(comptes: ComptesPortada): string {
   const enllacos: [string, string][] = [
     ["els947.html", `Els ${xifra(comptes.municipis)} municipis`],
     ["mapa/", "El mapa"],
+    ["ranquings/", "Els rànquings"],
+    ["destaquen/", "Destaquen"],
     ["partit/", "Els partits"],
     ["c/", "Les comarques"],
     ...(comptes.conjuntsPreguntes > 0 ? [["preguntes/", "Les preguntes"] as [string, string]] : []),
@@ -518,6 +533,7 @@ export function renderPortada(comptes: ComptesPortada, generatedAt: string, most
         blocPartits(mostra),
         blocComarques(mostra),
         blocPreguntes(mostra),
+        blocDescobreix(),
         blocCompara(mostra),
         blocLinies(comptes, mostra),
       ].join("\n")

@@ -1,0 +1,185 @@
+{
+  "municipi": "Girona",
+  "afirmacions": [
+    {
+      "tema": "fiscalitat",
+      "text": "Girona ha d'aprovar el pressupost municipal del 2025 en els termes proposats pel govern.",
+      "context": "El govern de Guanyem, Junts i ERC va defensar el pressupost; PSC, PP i VOX hi van votar en contra.",
+      "evidencia": "Ple extraordinari del 03/02/2025, Resolució 2025000039, «Aprovació definitiva pressupost general exercici 2025». Vots a favor: Guanyem Girona, JuntsxCat i ERC-AM. Vots en contra: PSC-CP, PP i VOX.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-03-02-25.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Aprovar-lo permet executar les prioritats del govern; rebutjar-lo obliga a refer els comptes i negociar-ne unes altres."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "Girona ha d'aplicar el paquet d'ordenances fiscals proposat per al 2026.",
+      "context": "El paquet modifica, entre altres figures, la taxa de residus, l'IBI, l'IAE, l'ICIO i l'impost de vehicles.",
+      "evidencia": "Ple extraordinari del 20/10/2025, «Aprovació provisional de les modificacions de les ordenances fiscals de l'any 2026». Vots a favor: els grups del govern; l'acta identifica també els vots contraris i les abstencions.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-20-10-25.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El paquet determina la recaptació municipal i reparteix de manera diferent el cost dels serveis entre contribuents."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "Mercagirona ha de cobrar un preu públic per l'abocament i la gestió de residus.",
+      "context": "El preu afecta les persones usuàries i clientes de la zona de residus del mercat majorista.",
+      "evidencia": "Ple del 10/02/2025, Resolució 2025000081, «Aprovació del preu públic per a l'abocament i gestió de residus». Vots a favor: Guanyem, Junts, ERC, PSC i PP. Vots en contra: VOX.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-10-02-25.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El preu trasllada el cost a qui utilitza el servei; no cobrar-lo obliga a finançar-lo amb ingressos generals."
+    },
+    {
+      "tema": "habitatge",
+      "text": "Girona ha de crear una regidoria i una oficina específiques contra les ocupacions il·legals.",
+      "context": "La proposta del PP incloïa assessorament als propietaris i un protocol específic per a la Policia Municipal.",
+      "evidencia": "Ple del 20/01/2025, Resolució 2025000037, «Crear una regidoria antiokupació a l'Ajuntament de Girona». Vots a favor: PP i VOX. Vots en contra: Guanyem, Junts, ERC i PSC; la moció fou desestimada.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-20-01-25.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Una oficina especialitza la resposta als propietaris; també separa les ocupacions de la política general d'habitatge i serveis socials."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de crear un grup amb promotors per mobilitzar solars cap a habitatge protegit.",
+      "context": "El PSC proposava vincular la reserva pública de solars al Pla 50.000 i donar suport a la regulació del lloguer de temporada.",
+      "evidencia": "Ple del 12/05/2025, Resolució 2025000194, «Crear un grup de treball entre l'Ajuntament i els operadors de promoció i construcció d'habitatges». Vots a favor: PSC. Vots en contra: Guanyem, Junts, ERC, PP i VOX; la moció fou desestimada.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-12-05-25.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Col·laborar amb promotors pot activar solars abans; també condiciona la política pública a interessos privats i a un programa concret."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de recuperar d'ofici un habitatge municipal ocupat sense títol habilitant.",
+      "context": "El ple va tramitar la recuperació possessòria d'un immoble de titularitat municipal i en va ordenar la notificació policial.",
+      "evidencia": "Ple del 10/11/2025, Resolució 2025000331, «Incoar expedient de recuperació d'ofici de la possessió de l'habitatge municipal». Vots a favor: tots els grups municipals; aprovació per unanimitat.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-10-11-25.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Recuperar-lo protegeix el parc públic; executar-ho pot deixar sense allotjament persones que ja hi resideixen."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'aparcament de Pompeu Fabra ha d'apujar les tarifes de la concessió.",
+      "context": "La revisió afecta directament el preu que paguen les persones usuàries de l'aparcament gestionat per SABA.",
+      "evidencia": "Ple del 12/05/2025, Resolució 2025000179, «Aprovar l'increment de tarifes sol·licitat per la societat SABA APARCAMENTS SANTA CATERINA SL». Vots a favor: Guanyem, Junts, ERC i PP. Vots en contra: VOX. Abstencions: PSC.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-12-05-25.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "L'increment actualitza l'equilibri econòmic de la concessió; també encareix estacionar al centre."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "Girona ha de subscriure el conveni urbanístic amb ADIF i ADIF Alta Velocitat.",
+      "context": "El conveni ordena compromisos municipals i ferroviaris sobre terrenys i actuacions urbanes vinculades a les infraestructures d'ADIF.",
+      "evidencia": "Ple del 12/05/2025, «Aprovació del conveni urbanístic entre ADIF, ADIF- Alta velocitat (AV) i l'Ajuntament de Girona». Vots a favor: els grups del govern; l'acta n'ofereix el desglossament nominal.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-12-05-25.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El conveni permet coordinar ciutat i ferrocarril; també fixa ara condicions urbanístiques difícils de reobrir més endavant."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "El ple ha de denunciar el mal funcionament dels trens entre Girona i Barcelona.",
+      "context": "Guanyem, Junts i ERC van atribuir els retards i avaries a la manca de manteniment i inversions de Renfe i ADIF.",
+      "evidencia": "Ple del 10/11/2025, «Moció que presenten els grups municipals Guanyem, Junts i ERC sobre el mal funcionament de RENFE». Vots a favor de la urgència: Guanyem, Junts i ERC. Vots en contra: PSC, PP i VOX.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-10-11-25.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "La denúncia pressiona els operadors ferroviaris; convertir-la en conflicte partidista pot dificultar acords institucionals."
+    },
+    {
+      "tema": "seguretat",
+      "text": "Girona ha d'obrir la comissaria de Santa Eugènia i aprovar un Pla Local de Seguretat el 2025.",
+      "context": "La moció del PSC agrupava comissaria, recursos policials, planificació de plantilla i activació del Consell Municipal de Seguretat.",
+      "evidencia": "Ple del 20/01/2025, Resolució 2025000038, «Elaborar i implementar, durant l'any 2025, un Pla Local de Seguretat». Vots a favor: PSC i VOX. Vots en contra: Guanyem, Junts i ERC. Abstenció: PP; moció desestimada.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-20-01-25.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Fixar terminis força una revisió integral de la seguretat; agrupar sis mesures limita la capacitat de prioritzar-les per separat."
+    },
+    {
+      "tema": "seguretat",
+      "text": "Girona ha de condicionar l'empadronament a mesures addicionals de comprovació proposades per VOX.",
+      "context": "VOX va portar al ple una moció específica sobre el padró; només el seu regidor hi va votar a favor.",
+      "evidencia": "Ple del 14/04/2025, «Moció que presenta el grup municipal VOX sobre l'empadronament». Vots a favor: VOX. Vots en contra: Guanyem, Junts, ERC i PSC; la moció fou desestimada.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-14-04-25.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Més controls poden detectar inscripcions irregulars; també poden dificultar l'accés al padró de persones vulnerables."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "Girona ha de preservar el parc Jordi Vilamitjana i descartar-hi promocions privades d'habitatge.",
+      "context": "La moció veïnal de Can Gibert del Pla reclamava decidir el futur de l'espai amb participació ciutadana i perspectiva de trenta anys.",
+      "evidencia": "Ple del 10/03/2025, Resolució 2025000118, «Moció que presenta l'Associació de Veïns de Can Gibert del Pla en defensa del parc Jordi Vilamitjana». Vots a favor: PSC i VOX. Vots en contra: Guanyem, Junts i ERC. Abstenció: PP.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-10-03-25.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Preservar el parc conserva espai lliure; permetre transformacions pot obtenir habitatge i reordenar l'àmbit."
+    },
+    {
+      "tema": "barris",
+      "text": "Girona ha de dotar plans i partides específiques per als barris de Girona Est.",
+      "context": "La proposta del PSC afectava Font de la Pólvora, Vila-roja, la Creueta, Mas Ramada i Grup Sant Daniel.",
+      "evidencia": "Ple del 14/04/2025, Resolució 2025000170, «Moció que presenta el grup municipal PSC-CP a favor dels diferents barris de Girona Est». Vots a favor: PSC i PP. Vots en contra: Guanyem, Junts i ERC. Abstenció: VOX.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-14-04-25.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Partides finalistes asseguren inversió territorial; també resten marge per repartir recursos segons necessitats sobrevingudes de tota la ciutat."
+    },
+    {
+      "tema": "cultura",
+      "text": "Girona ha d'aprovar un nou catàleg i un pla especial de protecció del patrimoni abans del 2026.",
+      "context": "El PSC proposava crear un grup de treball en sis mesos i ampliar la protecció al patrimoni immaterial, industrial, ecològic i social.",
+      "evidencia": "Ple del 10/02/2025, Resolució 2025000093, «La presentació, abans de que acabi 2025, d'un NOU Pla Especial de Protecció del Patrimoni». Vots a favor: PSC, PP i VOX. Vots en contra: Guanyem, Junts i ERC.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-10-02-25.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "El termini accelera la protecció de béns desatesos; també força una revisió complexa dins d'un únic exercici."
+    },
+    {
+      "tema": "economia",
+      "text": "Girona ha d'aprovar el paquet del PSC per impulsar conjuntament el comerç i el turisme.",
+      "context": "La moció proposava campanyes comercials i preparar un nou pla estratègic de promoció econòmica per al 2027-2031.",
+      "evidencia": "Ple del 10/11/2025, Resolució 2025000346, «Moció que presenta el grup municipal PSC-CP per impulsar el comerç i el turisme a Girona». Vots a favor: PSC i PP. Vots en contra: Guanyem, Junts, ERC i VOX.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-10-11-25.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Un paquet conjunt coordina promoció i calendari; també tracta com a aliats dos sectors amb impactes i interessos diferents."
+    },
+    {
+      "tema": "inclusio",
+      "text": "Els serveis municipals de Girona han d'acceptar el pagament en efectiu.",
+      "context": "VOX va proposar garantir aquesta forma de pagament als serveis municipals; la resta de grups no va donar suport a la moció.",
+      "evidencia": "Ple del 13/10/2025, «Moció que presenta el grup municipal VOX per garantir el pagament en efectiu». Vots a favor: PP i VOX. Vots en contra: Guanyem, Junts, ERC i PSC.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-13-10-25.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "L'efectiu evita excloure qui no usa banca digital; exigir-lo a tot arreu dificulta serveis automatitzats i genera costos de caixa."
+    },
+    {
+      "tema": "residus",
+      "text": "Girona ha de crear un grup ciutadà de seguiment del nou sistema de recollida de residus.",
+      "context": "La moció estableix seguiment institucional, veïnal i tècnic sobre la implantació i funcionament del servei.",
+      "evidencia": "Ple del 10/11/2025, «Moció per a la creació d'un Grup de Seguiment Ciutadà del sistema de recollida». Vots a favor: Guanyem, Junts, ERC, PSC i PP. Vots en contra: VOX.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-10-11-25.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "El grup obre el control del contracte a la ciutadania; també crea una instància consultiva més sense capacitat executiva."
+    },
+    {
+      "tema": "residus",
+      "text": "L'Ajuntament ha de penalitzar la concessionària de neteja pels incompliments del contracte.",
+      "context": "L'expedient atribueix a UTE Sanejament Girona deficiències i retards d'implantació en diversos serveis contractats.",
+      "evidencia": "Ple del 10/11/2025, «Imposar penalitat a la UTE SANEJAMENT GIRONA amb NIF U10968568 per compliment defectuós». Vots a favor: els grups que consten nominalment a l'acta; proposta aprovada.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-10-11-25.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "La penalitat fa exigible el plec; també pot obrir un conflicte contractual i no resol per si sola les deficiències."
+    },
+    {
+      "tema": "educacio",
+      "text": "Girona ha de defensar la continuïtat i ampliació del batxillerat a l'Institut Narcís Xifra.",
+      "context": "La moció demanava conservar les dues modalitats i incorporar doble titulació esportiva, Batxillerat General i itineraris professionalitzadors.",
+      "evidencia": "Ple del 20/01/2025, Resolució 2025000036, «Manifestar el suport inequívoc a la continuïtat dels estudis de batxillerat a l'Institut Narcís Xifra». Vots a favor: tots els grups; aprovada per unanimitat.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-20-01-25.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Ampliar l'oferta evita desplaçaments i diversifica itineraris; també exigeix recursos de la Generalitat en un centre concret."
+    },
+    {
+      "tema": "medi ambient",
+      "text": "Girona ha d'aprovar un pla director i protocols públics per gestionar l'arbrat de la Devesa.",
+      "context": "La proposta del PSC incloïa actualitzar el pla dels plàtans, supervisar les tales i regular les activitats al parc.",
+      "evidencia": "Ple del 14/07/2025, Resolució 2025000234, «Moció que presenta el grup municipal PSC-CP per la protecció i gestió sostenible del parc de la Devesa». Vots a favor: PSC i VOX. Vots en contra: Guanyem, Junts i ERC; la moció fou desestimada.",
+      "url_evidencia": "https://seu.girona.cat/cdn/dades/actes_plenaries/_descarrega/Acta-Ple-14-07-25.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Els protocols redueixen discrecionalitat i protegeixen l'arbrat; també poden alentir el manteniment i l'organització d'activitats."
+    }
+  ]
+}

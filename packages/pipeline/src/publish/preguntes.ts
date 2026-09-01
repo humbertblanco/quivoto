@@ -145,6 +145,8 @@ const EXTRA_CSS = `
   flex-wrap:wrap;background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2);text-decoration:none;color:inherit}
 .llista-municipis b{font-family:var(--display);font-weight:900;font-size:1.2rem;letter-spacing:-.02em}
+.llista-municipis .bloquejada{display:inline-block;margin-top:6px;padding:4px 10px;border-radius:var(--r-max);
+  background:var(--vora);color:var(--ink-suau);font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
 `;
 
 /** Una pàgina amb les 25 preguntes d'un municipi. */
@@ -182,11 +184,12 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
 
   const bloquejos = v.incompliments.filter((i) => i.gravetat === "bloqueja");
   const estat = verifica(conjunt);
+  const disponible = estat.jugable && v.avaluable;
   // Els enllaços que només té aquesta pàgina: la fitxa del poble i, si la
   // demostració existeix, la demostració. La resta —les altres proves, el
   // mapa, els 947— ja és al peu de totes les pàgines.
   const fitxa: EnllacPeu = { text: `La fitxa de ${conjunt.municipi}`, on: `../../m/${conjunt.slug}/` };
-  const extres: EnllacPeu[] = estat.jugable
+  const extres: EnllacPeu[] = disponible
     ? [{ text: "Respon les preguntes", on: "prova/" }, fitxa]
     : [fitxa];
 
@@ -205,14 +208,15 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
     <p class="entrada">${
       conjunt.veredicte.avaluable
         ? `Les ${conjunt.afirmacions.length} preguntes d'aquest mandat, cadascuna amb la votació
-           del ple que la sosté. <b>Es poden respondre</b>, i les anirem millorant els pròxims
-           mesos a mesura que llegim més actes.`
+           del ple que la sosté. <b>Ja es poden respondre</b> i comparar amb el que han votat els
+           grups municipals, encara que els programes electorals del 2027 no estiguin publicats.
+           Les anirem millorant a mesura que llegim més actes.`
         : `Les ${conjunt.afirmacions.length} preguntes que faríem aquí, cadascuna amb l'evidència
            que la sosté. Aquest conjunt <b>encara no es pot respondre</b>: mira'n el veredicte
            aquí sota per saber per què.`
     }</p>
     ${
-      estat.jugable
+      disponible
         ? `<p><a class="boto-prova" href="prova/">Respon-les i mira amb qui coincideixes →</a></p>
     <p class="nota">És una demostració del que es pot fer avui, amb el que hi ha. Les
     afirmacions encara no estan validades.</p>`
@@ -229,10 +233,10 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
         ? "Es pot respondre com a avaluació del mandat"
         : "Encara no es pot respondre"
     }</h3>
-    <p class="secundari">La <b>brúixola electoral</b> —comparar el que una candidatura promet amb
-    el que ha votat— arriba quan les candidatures responguin, a partir de finals d'abril del 2027.
-    Això d'ara és l'altra meitat: <b>què s'ha votat aquests quatre anys</b>, que surt de les actes
-    i no necessita cap programa.</p>
+    <p class="secundari"><b>Aquestes preguntes ja es poden respondre.</b> La comparació actual
+    mostra què han votat els grups durant el mandat i no necessita cap programa. La
+    <b>brúixola electoral completa</b> hi afegirà què promet cada candidatura quan publiquin els
+    programes i responguin, a partir de finals d'abril del 2027.</p>
     <p class="secundari">${v.resum.ambVotCitable} de ${v.total} lligades a una votació del ple ·
     ${v.resum.ambPrograma} amb cita de programa · el govern hi és d'acord en ${v.resum.acordAmbGovern}
     · com a molt ${v.resum.paraulesMaxim} paraules</p>
@@ -253,7 +257,7 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
       ${
         // Només quan la demostració existeix: si no, l'enllaç seria un 404 i
         // la portada d'aquesta mateixa pàgina ja diu per què no hi és.
-        estat.jugable
+        disponible
           ? `<li><a href="prova/"><b>Respon les preguntes</b>
         <span>La demostració: compara't amb els grups del ple a partir de com han votat</span></a></li>`
           : ""
@@ -283,7 +287,7 @@ export function renderIndexPreguntes(conjunts: readonly ConjuntAmbSlug[], genera
       <span class="secundari">${c.veredicte.resum.ambVotCitable} de ${c.veredicte.total} preguntes
       lligades a una votació del ple</span>
     </a>
-    <a class="prova-enllac" href="${escape(c.slug)}/prova/">Respon-les →</a></li>`,
+    ${c.veredicte.avaluable && verifica(c).jugable ? `<a class="prova-enllac" href="${escape(c.slug)}/prova/">Respon-les →</a>` : '<span class="prova-enllac bloquejada">En revisió</span>'}</li>`,
     )
     .join("");
 

@@ -1,4 +1,4 @@
-import { mkdir, readdir, stat, writeFile as writeFileRaw } from "node:fs/promises";
+import { mkdir, readdir, rm, stat, writeFile as writeFileRaw } from "node:fs/promises";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import {
   candidacies, candidatures, electionResults, municipalities,
@@ -33,6 +33,8 @@ import { renderProva } from "./prova";
 import { verifica } from "./verificacio";
 import { renderPortada } from "./portada";
 import { renderMapaCatalunya } from "./mapa-catalunya";
+import { renderDestaquen } from "./destaquen";
+import { renderRanquings } from "./ranquings";
 import { loadVotsPartit } from "./vots-partit";
 import { loadPortadaMostra } from "./portada-mostra";
 import { encaixa, type Grup } from "./posicions";
@@ -205,6 +207,13 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       candidatures: electes.candidatures,
       fitxersDades: XIFRES_PEU.fitxersDades,
     });
+    // Aquestes pàgines també porten el peu global: s'escriuen només després
+    // de fixar-ne els recomptes definitius, com la resta de la publicació.
+    await mkdir(`${OUT_DIR}../destaquen`, { recursive: true });
+    await writeFile(`${OUT_DIR}../destaquen/index.html`, renderDestaquen(carregats, generatedAt), "utf8");
+    await mkdir(`${OUT_DIR}../ranquings`, { recursive: true });
+    await writeFile(`${OUT_DIR}../ranquings/index.html`, renderRanquings(carregats, generatedAt), "utf8");
+    run.say("pàgines Destaquen i Rànquings");
 
     /*
      * Les fitxes de trajectòria, totes de cop i abans del bucle: són 947 files
@@ -463,8 +472,12 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         // respondre allò seria oferir «què n'ha dit el diari» disfressat de «què
         // ha votat cadascú».
         const estat = verifica(conjunt);
-        if (!estat.jugable) {
-          run.say(`  ${conjunt.municipi}: sense demostració (${estat.motiu})`);
+        if (!estat.jugable || !conjunt.veredicte.avaluable) {
+          const motiu = estat.motiu ?? conjunt.veredicte.incompliments.find((i) => i.gravetat === "bloqueja")?.detall ?? "no supera el llindar editorial";
+          // Si abans superava el llindar, no pot quedar una demostració vella
+          // publicada després d'haver-la retirat de l'índex.
+          await rm(`${OUT_DIR}../preguntes/${conjunt.slug}/prova`, { recursive: true, force: true });
+          run.say(`  ${conjunt.municipi}: sense demostració (${motiu})`);
           continue;
         }
         // Necessita el ple d'avui —quins grups hi ha, quants en són i qui és al
@@ -492,6 +505,10 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       `${SITE}/observatori/`,
       `${SITE}/observatori/els947.html`,
       `${SITE}/observatori/mapa/`,
+      `${SITE}/observatori/destaquen/`,
+      `${SITE}/observatori/ranquings/`,
+      `${SITE}/observatori/dades/`,
+      `${SITE}/observatori/preguntes/`,
       `${SITE}/observatori/comparador/`,
       `${SITE}/observatori/partit/`,
       ...partits.map((p) => `${SITE}/observatori/partit/${p.id}/`),
@@ -578,9 +595,10 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
  * El color el posa la candidatura del 2023 que li correspon; el gris és el que
  * queda quan no s'ha pogut lligar, i és preferible a acolorir malament.
  */
-function grupsDelPle(dades: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>): Grup[] {
+export function grupsDelPle(dades: NonNullable<Awaited<ReturnType<typeof loadRadiografia>>>): Grup[] {
   const carrecs = dades.carrecs?.carrecs ?? [];
-  if (carrecs.length === 0) return [];
+  const regidors = dades.councillors;
+  if (regidors.length === 0 && carrecs.length === 0) return [];
 
   // Les sigles s'agafen creuant PERSONES, no noms de grup.
   //
@@ -598,10 +616,27 @@ function grupsDelPle(dades: NonNullable<Awaited<ReturnType<typeof loadRadiografi
     if (regidor.sigles !== null) siglesPerPersona.set(normalizePersonName(regidor.name), regidor.sigles);
   }
 
-  const per = new Map<string, { escons: number; govern: number; sigles: Map<string, number> }>();
-  for (const c of carrecs) {
+  const nomsGovern = new Set(carrecs.filter((c) => c.equipGovern).map((c) => normalizePersonName(c.nom)));
+  const grupsGovern = carrecs.filter((c) => c.equipGovern && c.grup).map((c) => c.grup!);
+  const per = new Map<string, { escons: number; govern: number; sigles: Map<string, number>; colors: Map<string, number> }>();
+
+  // El registre electoral és el cens complet del ple. La seu només l'enriqueix
+  // amb la pertinença al govern; mai no pot fer desaparèixer un grup.
+  for (const c of regidors) {
+    const nom = c.groupName ?? c.sigles ?? "Sense grup";
+    const acumulat = per.get(nom) ?? { escons: 0, govern: 0, sigles: new Map<string, number>(), colors: new Map<string, number>() };
+    acumulat.escons += 1;
+    if (nomsGovern.has(normalizePersonName(c.name)) || grupsGovern.some((g) => sameForce(g, nom))) acumulat.govern += 1;
+    if (c.sigles !== null) acumulat.sigles.set(c.sigles, (acumulat.sigles.get(c.sigles) ?? 0) + 1);
+    if (c.color !== null) acumulat.colors.set(c.color, (acumulat.colors.get(c.color) ?? 0) + 1);
+    per.set(nom, acumulat);
+  }
+
+  // Fallback per a una base antiga sense mandats electorals: conserva el que
+  // publiqui la seu, però només en aquest cas.
+  if (regidors.length === 0) for (const c of carrecs) {
     const nom = c.grup ?? "Sense grup";
-    const acumulat = per.get(nom) ?? { escons: 0, govern: 0, sigles: new Map<string, number>() };
+    const acumulat = per.get(nom) ?? { escons: 0, govern: 0, sigles: new Map<string, number>(), colors: new Map<string, number>() };
     acumulat.escons += 1;
     if (c.equipGovern) acumulat.govern += 1;
     const sigles = siglesPerPersona.get(normalizePersonName(c.nom));
@@ -609,7 +644,21 @@ function grupsDelPle(dades: NonNullable<Awaited<ReturnType<typeof loadRadiografi
     per.set(nom, acumulat);
   }
 
-  return [...per.entries()].map(([nom, { escons, govern, sigles }]) => {
+  // Els noms institucionals i les sigles electorals poden ser molt diferents
+  // ("Partit Popular" / "PP"). Fem servir el mateix encaix prudent que amb
+  // les actes per traslladar la marca de govern al grup electoral complet.
+  const grupsProvisionals: Grup[] = [...per.entries()].map(([nom, x]) => ({
+    nom,
+    sigles: [...x.sigles.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+    escons: x.escons,
+    govern: false,
+    color: [...x.colors.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+  }));
+  const governPerGrup = new Set(
+    grupsGovern.map((nom) => encaixa(nom, grupsProvisionals)?.nom).filter((nom): nom is string => nom !== undefined),
+  );
+
+  return [...per.entries()].map(([nom, { escons, govern, sigles, colors }]) => {
     // Les sigles del grup són les de la majoria dels seus membres: si un ha
     // canviat de grup a mig mandat, no ha d'arrossegar tot el grup.
     const majoritaries = [...sigles.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
@@ -617,14 +666,13 @@ function grupsDelPle(dades: NonNullable<Awaited<ReturnType<typeof loadRadiografi
       nom,
       sigles: majoritaries && majoritaries[1] > escons / 2 ? majoritaries[0] : null,
       escons,
-      // Un grup compta com a govern quan tot el grup hi és. Si només n'hi ha una
-      // part —passa amb els no adscrits— votarà partit i no serveix per orientar.
-      govern: govern === escons && govern > 0,
-      color:
-        dades.councillors.find((r) => r.groupName !== null && sameForce(r.groupName, nom))?.color ??
-        null,
+      // La majoria protegeix contra una errata puntual de nom entre fonts
+      // (Badalona publica Sheila/Shelia) sense convertir un trànsfuga aïllat en
+      // tot un grup de govern.
+      govern: governPerGrup.has(nom) || govern > escons / 2,
+      color: [...colors.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
     };
-  });
+  }).sort((a, b) => b.escons - a.escons || a.nom.localeCompare(b.nom, "ca"));
 }
 
 

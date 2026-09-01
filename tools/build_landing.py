@@ -75,7 +75,7 @@ T = {
   'qui':'Un projecte independent fet a Catalunya. Encara som pocs: si ets periodista local, treballes amb dades obertes o vols ajudar amb el teu municipi, escriu-nos.',
   'contacte':'hola@quivoto.cat',
   'peu_legal':'Avís legal','peu_priv':'Privadesa','peu_metod':'Metodologia (aviat)','peu_obs':'Observatori',
-  'peu':'quivoto — brúixola electoral de les municipals 2027. Un projecte de Damos en el Blanco, S.L.',
+  'peu':'quivoto — brúixola electoral de les municipals 2027. Un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
   'gracies_h':'Fet!','gracies_p':'T’avisarem quan obrim el teu municipi. Mentrestant, ja pots tancar aquesta pestanya.','gracies_torna':'Tornar a l’inici',
  },
  'es': {
@@ -140,7 +140,7 @@ T = {
   'qui':'Un proyecto independiente hecho en Cataluña. Todavía somos pocos: si eres periodista local, trabajas con datos abiertos o quieres ayudar con tu municipio, escríbenos.',
   'contacte':'hola@quivoto.cat',
   'peu_legal':'Aviso legal','peu_priv':'Privacidad','peu_metod':'Metodología (pronto)','peu_obs':'Observatorio',
-  'peu':'quienvoto — brújula electoral de las municipales 2027. Un proyecto de Damos en el Blanco, S.L.',
+  'peu':'quienvoto — brújula electoral de las municipales 2027. Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
   'gracies_h':'¡Hecho!','gracies_p':'Te avisaremos cuando abramos tu municipio. Mientras, ya puedes cerrar esta pestaña.','gracies_torna':'Volver al inicio',
  },
 }
@@ -293,13 +293,15 @@ def wordmark(t, size=30):
 
 
 # El menú de l'Observatori, copiat de packages/pipeline/src/publish/capcalera.ts
-# (DESTINS): les mateixes set entrades, en el mateix ordre i amb els mateixos
+# (DESTINS): les mateixes entrades, en el mateix ordre i amb els mateixos
 # camins. Si allà canvia un nom o l'ordre, aquí també: el web és un de sol i el
 # menú s'ha de veure igual a la portada que a la fitxa d'un poble.
 MENU = [
   ('portada',     'Observatori',  ''),
   ('947',         'Els 947',      'els947.html'),
   ('mapa',        'Mapa',         'mapa/'),
+  ('destaquen',   'Destaquen',    'destaquen/'),
+  ('ranquings',   'Rànquings',    'ranquings/'),
   ('comarques',   'Comarques',    'c/'),
   ('partits',     'Partits',      'partit/'),
   ('trajectoria', 'Trajectòries', 'trajectoria/'),
@@ -436,6 +438,55 @@ def obs_reixa(t):
       f'      <li><a href="{base}{u}"><span class="obs-etiqueta">{et}</span>'
       f'<b>{tit}</b><span class="obs-txt">{txt}</span></a></li>'
       for u, et, tit, txt in t['obs_reixa'])
+
+
+def footer_complet(t):
+    """El mateix peu editorial a la landing, els documents i l'Observatori."""
+    es = t['lang'] == 'es'
+    noms = (
+      ('Los 947', 'El mapa', 'Destacados', 'Rankings', 'El comparador', 'Las comarcas', 'El Área Metropolitana',
+       'Las preguntas', 'Los datos', 'Todas las fuentes', 'Aviso legal', 'Privacidad') if es else
+      ('Els 947', 'El mapa', 'Destaquen', 'Rànquings', 'El comparador', 'Les comarques', "L’Àrea Metropolitana",
+       'Les preguntes', 'Les dades', 'Totes les fonts', 'Avís legal', 'Privadesa')
+    )
+    base = t['obs_url']
+    urls = ('els947.html', 'mapa/', 'destaquen/', 'ranquings/', 'comparador/', 'c/', 'amb/', 'preguntes/', 'dades/', 'dades/#fonts')
+    nav = ''.join(f'<a href="{base}{u}">{n}</a>' for n, u in zip(noms[:10], urls))
+    lema = (
+      'Quién gobierna cada uno de los 947 municipios de Cataluña, qué paga la gente y qué se '
+      'prometió. <b>Sin ningún modelo de lenguaje por medio</b>: fuentes oficiales, cada cifra '
+      'con la suya al lado y cálculos que cualquiera puede repetir.' if es else
+      'Qui mana a cada un dels 947 municipis de Catalunya, què hi paga la gent i què s’hi va '
+      'prometre. <b>Sense cap model de llenguatge pel mig</b>: fonts oficials, cada xifra amb la '
+      'seva al costat i càlculs que qualsevol pot repetir.'
+    )
+    credit = t['peu'].split(' — ', 1)[-1].split('. ', 1)[-1]
+    import datetime
+    data = datetime.date.today().isoformat()
+    fonts = (
+      f'<b>Generado el {data}</b> con datos abiertos de la Generalitat de Cataluña, el Consorcio '
+      f'AOC, Idescat, el Ministerio de Hacienda y el Síndic de Greuges. Consulta '
+      f'<a href="{base}dades/#fonts">el catálogo completo de fuentes, métodos y licencias</a>.' if es else
+      f'<b>Generat el {data}</b> amb dades obertes de la Generalitat de Catalunya, el Consorci '
+      f'AOC, l’Idescat, el Ministeri d’Hisenda i el Síndic de Greuges. Consulta '
+      f'<a href="{base}dades/#fonts">el catàleg complet de fonts, mètodes i llicències</a>.'
+    )
+    catalunya = '''<svg class="catalunya" width="88" height="88" viewBox="0 0 120 120" aria-hidden="true">
+      <path d="M26 18Q36 20 48 25Q55 28 62 30Q70 33 77 33Q85 33 91 29L101 37Q98 47 91 57Q84 62 75 66Q67 72 59 77L41 83Q34 86 32 91L37 96 28 98 21 103Q14 100 14 93L16 79Q17 71 17 64Q19 57 24 52Q28 44 27 34Z" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
+      <g fill="#E2735A"><circle cx="36" cy="30" r="2.6"/><circle cx="58" cy="37" r="2.6"/><circle cx="81" cy="42" r="2.6"/><circle cx="33" cy="39" r="2.6"/><circle cx="23" cy="68" r="2.6"/><circle cx="32" cy="85" r="2.6"/><circle cx="24" cy="94" r="2.6"/></g>
+      <g class="ulls"><circle cx="40" cy="53" r="9" fill="#fff" stroke="#1E1B2E" stroke-width="3"/><circle cx="62" cy="53" r="9" fill="#fff" stroke="#1E1B2E" stroke-width="3"/><circle cx="40" cy="54" r="4.2" fill="#1E1B2E"/><circle cx="62" cy="54" r="4.2" fill="#1E1B2E"/><path d="M40 68q10 9 20 0" stroke="#1E1B2E" stroke-width="4" fill="none" stroke-linecap="round"/></g>
+    </svg>'''
+    return f'''<footer class="peu peu-complet"><div>
+      <div class="crida"><div class="cara">{catalunya}</div>
+        <div class="diu"><a class="marca-peu" href="/">{t['marca']}</a><p class="lema">{lema}</p></div>
+        <ul class="xifres"><li><b>947</b><span>{'municipios' if es else 'municipis'}</span></li>
+          <li><b>4.807</b><span>{'electos' if es else 'electes'}</span></li>
+          <li><b>2.626</b><span>{'candidaturas' if es else 'candidatures'}</span></li></ul></div>
+      <nav class="anar" aria-label="{'Más del Observatorio' if es else 'Més de l’Observatori'}">{nav}</nav>
+      <p class="lletra">{fonts}</p>
+      <p class="legal"><a href="/avis-legal.html">{noms[10]}</a> · <a href="/privadesa.html">{noms[11]}</a></p>
+      <p class="credit">{credit}</p>
+    </div></footer>'''
 
 
 def escala_botons(t):
@@ -841,10 +892,7 @@ PAGE = '''<!doctype html>
 
 </main>
 
-<footer class="peu">
-  <p>{peu}</p>
-  <nav><a href="{obs_url}">{peu_obs}</a> · <a href="/avis-legal.html">{peu_legal}</a> · <a href="/privadesa.html">{peu_priv}</a> · <span>{peu_metod}</span></nav>
-</footer>
+{footer}
 
 <script src="/assets/app.js" defer></script>
 </body>
@@ -873,6 +921,7 @@ GRACIES = '''<!doctype html>
   <p>{gracies_p}</p>
   <p><a class="boto" href="/">{gracies_torna}</a></p>
 </main>
+{footer}
 </body>
 </html>
 '''
@@ -898,7 +947,7 @@ LEGAL = '''<!doctype html>
 {cos}
 <p class="tornar"><a class="boto-secundari" href="/">{tornar}</a></p>
 </main>
-<footer class="peu"><p>{peu}</p></footer>
+{footer}
 </body>
 </html>
 '''
@@ -941,7 +990,8 @@ PRIVADESA = {
 <li><strong>Correu electrònic</strong> (obligatori): per enviar-te un únic avís quan la brúixola del teu municipi estigui disponible.</li>
 <li><strong>Municipi</strong> (opcional): per saber per on començar i per avisar-te en el moment adequat.</li>
 <li><strong>Idioma</strong>: per escriure’t en la llengua en què ens has escrit.</li>
-<li><strong>Empremta tècnica</strong>: un hash irreversible de la teva adreça IP amb sal diària i el nom del navegador, només per aturar enviaments automatitzats. No desem la IP.</li>
+<li><strong>Empremta tècnica</strong>: un hash irreversible de la teva adreça IP amb sal diària i el nom del navegador, només per aturar enviaments automatitzats. No desem la IP i purguem tots dos camps al cap de 48 hores.</li>
+<li><strong>Prova del consentiment</strong>: data, versió de la política acceptada i pàgina des d’on vas enviar el formulari.</li>
 </ul>
 <p>Consultar l’Observatori no demana registre ni compte. Google Analytics recull dades d’ús de manera agregada per ajudar-nos a entendre quines pàgines funcionen i millorar el servei.</p>
 <h2>Base legal de la llista d’espera</h2>
@@ -981,7 +1031,8 @@ PRIVADESA = {
 <li><strong>Correo electrónico</strong> (obligatorio): para enviarte un único aviso cuando la brújula de tu municipio esté disponible.</li>
 <li><strong>Municipio</strong> (opcional): para saber por dónde empezar y avisarte en el momento adecuado.</li>
 <li><strong>Idioma</strong>: para escribirte en la lengua en que nos has escrito.</li>
-<li><strong>Huella técnica</strong>: un hash irreversible de tu dirección IP con sal diaria y el nombre del navegador, solo para frenar envíos automatizados. No guardamos la IP.</li>
+<li><strong>Huella técnica</strong>: un hash irreversible de tu dirección IP con sal diaria y el nombre del navegador, solo para frenar envíos automatizados. No guardamos la IP y purgamos ambos campos a las 48 horas.</li>
+<li><strong>Prueba del consentimiento</strong>: fecha, versión de la política aceptada y página desde la que enviaste el formulario.</li>
 </ul>
 <p>Consultar el Observatorio no requiere registro ni cuenta. Google Analytics recoge datos de uso de forma agregada para ayudarnos a entender qué páginas funcionan y mejorar el servicio.</p>
 <h2>Base legal de la lista de espera</h2>
@@ -1083,10 +1134,24 @@ def build_legal(lang):
         titol, tornar, cos = taula[lang]
         pagina = LEGAL.format(lang=t['lang'], marca=t['marca'], titol=titol, tornar=tornar,
                               capcalera=capcalera(lang), salta=t['salta'], peu=t['peu'],
+                              footer=footer_complet(t),
                               css_v=versio('styles.css'), google_tag=GOOGLE_TAG,
                               canonical=("" if lang == "ca" else "es/") + nom + ".html",
                               cos=cos.replace('{marca}', t['marca']))
         open(os.path.join(sub, nom + '.html'), 'w', encoding='utf-8').write(pagina)
+
+
+def build_404(lang):
+    t = T[lang]
+    es = lang == 'es'
+    sub = OUT if lang == 'ca' else os.path.join(OUT, 'es')
+    title = 'Pàgina no trobada' if not es else 'Página no encontrada'
+    lead = ('Aquesta papereta no és en aquesta urna. Potser l’adreça ha canviat o hi ha una lletra de més.' if not es else
+            'Esta papeleta no está en esta urna. Puede que la dirección haya cambiado o sobre alguna letra.')
+    actions = ('<a class="boto" href="/">Torna a l’inici</a><a class="boto secundari" href="/observatori/">Obre l’Observatori</a>' if not es else
+               '<a class="boto" href="/es/">Volver al inicio</a><a class="boto secundari" href="https://quivoto.cat/observatori/">Abrir el Observatorio</a>')
+    page = f'''<!doctype html><html lang="{t['lang']}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 · {title} · {t['marca']}</title><meta name="robots" content="noindex"><link rel="stylesheet" href="/assets/fonts.css"><link rel="stylesheet" href="/assets/styles.css?v={versio('styles.css')}">{GOOGLE_TAG}<style>.error404{{max-width:760px;margin:0 auto;padding:clamp(70px,12vw,150px) var(--e3);text-align:center}}.error404 .codi{{font-family:var(--display);font-weight:900;font-size:clamp(5rem,20vw,11rem);line-height:.75;color:var(--coral);text-shadow:5px 5px 0 var(--ink);-webkit-text-stroke:2px var(--ink)}}.error404 h1{{margin-top:var(--e4)}}.error404 .accions{{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:var(--e3)}}.error404 .secundari{{background:var(--paper);color:var(--ink)}}</style></head><body><a class="salta" href="#contingut">{t['salta']}</a>{capcalera(lang)}<main id="contingut" class="error404"><div class="codi" aria-hidden="true">404</div><p class="micro">{title}</p><h1>{title}</h1><p class="entrada">{lead}</p><div class="accions">{actions}</div></main>{footer_complet(t)}</body></html>'''
+    open(os.path.join(sub, '404.html'), 'w', encoding='utf-8').write(page)
 
 
 def dies_restants():
@@ -1113,6 +1178,7 @@ def build(lang):
     ctx['cerca_home'] = cerca_home(lang)
     ctx['estil_extra'] = CSS_EXTRA
     ctx['mascota_petita'] = L.papereta(150)
+    ctx['footer'] = footer_complet(t)
     page = PAGE.format(**ctx)
     grac = GRACIES.format(**{**ctx, 'mascota': L.papereta(150)})
     sub = OUT if lang == 'ca' else os.path.join(OUT, 'es')
@@ -1125,5 +1191,6 @@ if __name__ == '__main__':
     for lg in ('ca', 'es'):
         n = build(lg)
         build_legal(lg)
+        build_404(lg)
         print(f'  web/public/{"" if lg=="ca" else "es/"}index.html  ({n//1024} kB)')
     print('Landing generada. Dies fins al 23-05-2027:', dies_restants())

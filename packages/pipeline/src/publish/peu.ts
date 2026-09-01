@@ -103,6 +103,8 @@ footer.peu .lletra b{color:var(--ink)}
 footer.peu .lletra a{color:inherit}
 footer.peu .legal{margin:6px 0 0;color:var(--ink-suau);font-size:.8rem}
 footer.peu .legal a{color:inherit;font-weight:700}
+footer.peu .credit{margin:6px 0 0;color:var(--ink-suau);font-size:.8rem}
+footer.peu .credit a{color:inherit;font-weight:700}
 
 /* Sota de 760px el botó ja no cap al costat de la frase i baixa sencer, a
    l'esquerra, sota el dibuix i el text. */
@@ -208,19 +210,25 @@ export function peu(
       ${extres.map((e) => pastilla(e.text, e.on, true)).join("\n      ")}
       ${pastilla("Els 947", `${base}els947.html`)}
       ${pastilla("El mapa", `${base}mapa/`)}
+      ${pastilla("Destaquen", `${base}destaquen/`)}
+      ${pastilla("Rànquings", `${base}ranquings/`)}
       ${pastilla("El comparador", `${base}comparador/`)}
       ${pastilla("Les comarques", `${base}c/`)}
       ${pastilla("L'Àrea Metropolitana", `${base}amb/`)}
       ${pastilla("Les preguntes", `${base}preguntes/`)}
       ${pastilla("Les dades", `${base}dades/`)}
+      ${pastilla("Totes les fonts", `${base}dades/#fonts`)}
     </nav>
     <p class="lletra"><b>Generat el ${escape(generatedAt)}</b> a partir de les dades obertes de la
     Generalitat de Catalunya, el Consorci AOC, l'Idescat, el Ministeri d'Hisenda i el Síndic de
     Greuges, cadascuna citada a la pàgina on s'utilitza. Reutilització lliure amb atribució, i els
-    conjunts del portal de la Seu-e en CC0; <a href="${escape(`${base}dades/`)}">la taula de fonts</a>
-    diu de quina és cada dada i amb quina llicència. Esborrany intern, encara no indexat.</p>
+    conjunts del portal de la Seu-e en CC0; <a href="${escape(`${base}dades/#fonts`)}">el catàleg complet de fonts</a>
+    diu d'on surt cada dada, com es transforma i amb quina llicència. Esborrany intern, encara no indexat.</p>
     <p class="legal"><a href="${escape(`${arrel(base)}avis-legal.html`)}">Avís legal</a> ·
     <a href="${escape(`${arrel(base)}privadesa.html`)}">Privadesa</a></p>
+    <p class="credit">Un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a
+    <a href="https://damosenelblanco.com">Damos en el Blanco</a> ·
+    <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.</p>
   </div>
 </footer>`;
 }

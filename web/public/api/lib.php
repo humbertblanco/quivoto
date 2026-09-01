@@ -44,12 +44,27 @@ function qv_db(): PDO {
         token       TEXT NOT NULL UNIQUE,
         ip_hash     TEXT,
         agent       TEXT,
+        consent_el  TEXT,
+        consent_versio TEXT,
+        pagina_origen TEXT,
         creat_el    TEXT NOT NULL,
         baixa_el    TEXT
     )');
+    // Migració idempotent per a bases creades abans de documentar el consentiment.
+    $columnes = array_column($pdo->query('PRAGMA table_info(subscriptors)')->fetchAll(), 'name');
+    foreach (['consent_el' => 'TEXT', 'consent_versio' => 'TEXT', 'pagina_origen' => 'TEXT'] as $nom => $tipus) {
+        if (!in_array($nom, $columnes, true)) $pdo->exec("ALTER TABLE subscriptors ADD COLUMN $nom $tipus");
+    }
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_sub_creat ON subscriptors(creat_el)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_sub_iphash ON subscriptors(ip_hash, creat_el)');
     return $pdo;
+}
+
+/** Elimina metadades antiabús que ja no cal conservar. No toca cap correu. */
+function qv_purga_metadades(PDO $pdo): void {
+    $limit = gmdate('Y-m-d H:i:s', time() - 48 * 3600);
+    $q = $pdo->prepare('UPDATE subscriptors SET ip_hash = NULL, agent = NULL WHERE creat_el < ? AND (ip_hash IS NOT NULL OR agent IS NOT NULL)');
+    $q->execute([$limit]);
 }
 
 /** Hash d'IP amb sal + dia: no reversible i caduca cada 24 h. */

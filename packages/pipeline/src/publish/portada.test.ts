@@ -286,6 +286,8 @@ describe("renderPortada sense la mostra", () => {
     expect([...main.matchAll(/<li><a href="([^"]+)">/g)].map((m) => m[1])).toEqual([
       "els947.html",
       "mapa/",
+      "ranquings/",
+      "destaquen/",
       "partit/",
       "c/",
       "preguntes/",
@@ -305,6 +307,8 @@ describe("renderPortada sense la mostra", () => {
     expect([...sense.matchAll(/<li><a href="([^"]+)">/g)].map((m) => m[1])).toEqual([
       "els947.html",
       "mapa/",
+      "ranquings/",
+      "destaquen/",
       "partit/",
       "c/",
       "comparador/",

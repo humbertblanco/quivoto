@@ -58,6 +58,13 @@ export function esActa(url: string | null | undefined): boolean {
         /CPlenari.*\.pdf$/i.test(u.pathname)
       );
     }
+    // Girona publica al portal propi l'acta completa amb vot nominal. Limitem
+    // l'excepció al directori i al nom exactes de les actes (no ordres del dia
+    // ni qualsevol PDF del web municipal).
+    if (u.hostname === "seu.girona.cat" && u.pathname.startsWith("/cdn/dades/actes_plenaries/_descarrega/")) {
+      const fitxer = u.pathname.split("/").pop() ?? "";
+      return /^Acta-Ple(?:-Extraordinari)?-\d{2}-\d{2}-\d{2}\.pdf$/i.test(fitxer);
+    }
     return false;
   } catch {
     return false;

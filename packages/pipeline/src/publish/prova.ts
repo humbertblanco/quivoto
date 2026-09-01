@@ -184,8 +184,9 @@ export function renderProva(
     }
   }
 
+  // Hi entren tots els grups del ple. No tenir cap posició deduïble és una
+  // limitació de les nostres preguntes, no un motiu per fer desaparèixer el partit.
   const ambPosicio = grups
-    .filter((g) => (cobertura.get(g.nom) ?? 0) > 0)
     .map((g) => ({
       nom: g.nom,
       escons: g.escons,
@@ -417,7 +418,7 @@ function acaba() {
   const resultats = GRUPS.map((g) => {
     const r = coincidencia(respostes, (d) => (g.nom in d.p ? d.p[g.nom] : null));
     return { ...g, pct: r ? r.pct : null, respostes: r ? r.n : 0 };
-  }).filter((r) => r.pct !== null);
+  });
 
   /* De més a menys, i prou.
      Abans els grups amb poques afirmacions situades anaven al final encara que
@@ -425,10 +426,12 @@ function acaba() {
      tres preguntes no es pot comparar amb una feta amb vint— però el resultat
      semblava desordenat i ningú no llegia per què. Ara l'ordre és el que
      s'espera i la poca cobertura es diu allà mateix, a cada fila. */
-  const ordenats = resultats.slice().sort((a, b) => b.pct - a.pct);
-  const escassos = ordenats.filter((r) => r.respostes < MINIM);
+  const comparables = resultats.filter((r) => r.pct !== null).sort((a, b) => b.pct - a.pct);
+  const senseDades = resultats.filter((r) => r.pct === null).sort((a, b) => b.escons - a.escons);
+  const ordenats = comparables.concat(senseDades);
+  const escassos = comparables.filter((r) => r.respostes < MINIM);
 
-  if (ordenats.length === 0) {
+  if (comparables.length === 0) {
     const gov = coincidencia(respostes, (d) => d.g);
     $("titol-resultat").textContent = gov
       ? "Coincideixes un " + gov.pct + " % amb el govern"
@@ -438,21 +441,21 @@ function acaba() {
       ? "En aquest municipi encara no s'ha pogut deduir la posició de cap grup a partir de les actes, així que la comparació només es pot fer amb el govern."
       : "";
   } else {
-    const cap = ordenats[0];
+    const cap = comparables[0];
     $("titol-resultat").textContent = "T'assembles més a " + cap.nom;
     $("classificacio").innerHTML = ordenats.map((r) =>
-      '<li class="' + (r.respostes < MINIM ? "poca" : "") + '">' +
+      '<li class="' + (r.pct === null || r.respostes < MINIM ? "poca" : "") + '">' +
       '<div class="fila"><span class="nom">' + r.nom + '</span>' +
       '<span class="cobertura">' + r.escons + (r.escons === 1 ? " regidoria" : " regidories") +
       (r.govern ? " · al govern" : "") +
       ' · situat en ' + r.respostes + ' de les que has respost</span>' +
-      '<span class="pct">' + r.pct + ' %</span></div>' +
-      '<div class="via"><i style="--w:' + r.pct + '%;--c:' + r.color + '"></i></div></li>').join("");
+      '<span class="pct">' + (r.pct === null ? "Sense prou dades" : r.pct + ' %') + '</span></div>' +
+      '<div class="via"><i style="--w:' + (r.pct || 0) + '%;--c:' + r.color + '"></i></div></li>').join("");
     $("nota-cobertura").textContent =
       "El percentatge de cada grup es calcula només sobre les afirmacions on se'l pot situar amb l'acta a la mà. " +
       (escassos.length > 0
         ? "Els que surten en gris estan situats en menys de " + MINIM + " afirmacions: la xifra no és comparable amb la resta."
-        : "");
+        : "") + (senseDades.length > 0 ? " Els grups sense percentatge també hi surten: encara no hi ha cap vot citable per situar-los." : "");
   }
 
   // Queden preguntes per respondre? S'ofereixen, no s'imposen.

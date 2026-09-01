@@ -47,7 +47,7 @@
  * | `m/<slug>/regidor/<persona>/`     | `../../../../`  |
  */
 
-export type Destí = "portada" | "947" | "mapa" | "comarques" | "comparador" | "partits" | "dades" | "trajectoria" | "cap";
+export type Destí = "portada" | "947" | "mapa" | "comarques" | "comparador" | "partits" | "dades" | "trajectoria" | "destaquen" | "ranquings" | "cap";
 
 /**
  * Les descàrregues **no hi són**, i no és un oblit: qui es baixa 1.897 fitxers
@@ -59,6 +59,8 @@ const DESTINS: ReadonlyArray<{ clau: Destí; text: string; on: string }> = [
   { clau: "portada", text: "Observatori", on: "" },
   { clau: "947", text: "Els 947", on: "els947.html" },
   { clau: "mapa", text: "Mapa", on: "mapa/" },
+  { clau: "destaquen", text: "Destaquen", on: "destaquen/" },
+  { clau: "ranquings", text: "Rànquings", on: "ranquings/" },
   { clau: "comarques", text: "Comarques", on: "c/" },
   { clau: "partits", text: "Partits", on: "partit/" },
   { clau: "trajectoria", text: "Trajectòries", on: "trajectoria/" },

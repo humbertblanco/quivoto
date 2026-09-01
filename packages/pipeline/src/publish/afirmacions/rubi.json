@@ -1,0 +1,230 @@
+{
+  "municipi": "Rubí",
+  "afirmacions": [
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha d'aplicar les ordenances fiscals i els preus públics aprovats per al 2024.",
+      "context": "La revisió anual determina impostos, taxes i preus municipals i reparteix el cost dels serveis entre contribuents i usuaris.",
+      "evidencia": "Modificació de les ordenances fiscals i els preus públics de 2024, ple de l'11-10-2023: 9-7-2 (favor-contra-abstenció).",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2023/002d4f91-b035-4713-802c-ac41badb2435/16_Acta_Ple%20extra%2011.10.2023.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Actualitzar els ingressos permet sostenir la despesa municipal; les pujades repercuteixen directament en llars i empreses."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament ha d'executar el pressupost general aprovat per al 2024.",
+      "context": "El pressupost fixa les prioritats anuals d'ingressos, serveis i inversions del govern municipal.",
+      "evidencia": "Pressupost general de l'Ajuntament de Rubí per a 2024, ple del 23-11-2023: 9-7-2.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2023/46c2fca0-2ea6-4abb-8ffc-ec1d32aafe7a/19_Acta%20Ple%2023.11.2023.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Dona recursos a les prioritats del govern; aprovar-lo en bloc limita la capacitat d'escollir entre partides concretes."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament no ha d'assumir factures sense contracte mitjançant reconeixements extrajudicials de crèdit.",
+      "context": "El mecanisme permet pagar serveis ja prestats, però revela que la despesa no va seguir el procediment ordinari.",
+      "evidencia": "Reconeixements extrajudicials de crèdit i obligacions pendents, ple del 28-05-2026: 16-0-9.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/1b5f7f27-606c-4b2f-b8d8-0e1c6b8506d5/5_Acta%20Ple%2028.05.2026_anonimitzada.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Rebutjar-los reforça el control previ de la contractació; també pot deixar sense cobrar proveïdors que ja han prestat el servei."
+    },
+    {
+      "tema": "fiscalitat",
+      "text": "L'Ajuntament no ha de modificar amb crèdit extraordinari el pressupost prorrogat durant l'exercici.",
+      "context": "El crèdit extraordinari incorpora despesa no prevista inicialment i altera les prioritats del pressupost vigent.",
+      "evidencia": "Modificació de crèdit 26/2026 per suplement i crèdit extraordinari, ple extraordinari del 20-05-2026: 11-7-6.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/37c86702-c321-4b88-aa35-290f2c72e88a/5_%20Acta%20Ple%2020.05.2026%20-%20extraordinari%20(anonimitzada).pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Evita canviar prioritats sense un pressupost nou; resta flexibilitat per atendre necessitats aparegudes durant l'any."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de cedir sòl i donar suport tècnic a projectes d'habitatge cooperatiu.",
+      "context": "La cessió d'ús crea habitatge assequible estable sense propietat individual, però compromet sòl i recursos públics.",
+      "evidencia": "Moció per promoure l'habitatge cooperatiu a Rubí, ple del 28-05-2026: 9-5-11.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/1b5f7f27-606c-4b2f-b8d8-0e1c6b8506d5/5_Acta%20Ple%2028.05.2026_anonimitzada.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Amplia opcions fora del mercat especulatiu; reserva patrimoni municipal per a una fórmula que arriba a un nombre limitat de llars."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de regular i diversificar els usos comercials del centre urbà.",
+      "context": "La regulació pot limitar la concentració d'activitats i condicionar quins negocis poden ocupar els locals del centre.",
+      "evidencia": "Moció sobre regulació i diversificació dels usos comercials al centre, ple del 28-05-2026: 12-13-0.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/1b5f7f27-606c-4b2f-b8d8-0e1c6b8506d5/5_Acta%20Ple%2028.05.2026_anonimitzada.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Pot protegir una barreja comercial útil per al veïnat; restringeix la llibertat d'activitat i pot deixar més locals buits."
+    },
+    {
+      "tema": "habitatge",
+      "text": "L'Ajuntament ha de reforçar la resposta municipal davant l'aixecament de la moratòria de desnonaments.",
+      "context": "La fi de la moratòria pot augmentar els llançaments i la demanda d'allotjament i mediació dels serveis locals.",
+      "evidencia": "Moció per reforçar la resposta davant l'aixecament de la moratòria de desnonaments, ple del 26-02-2026: 19-5-0.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/8dd62fd4-d6f8-4e27-b422-35bf682393f4/2_Acta%20Ple%2026.02.2026%20-%20anonimitzada.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Dona més protecció a llars vulnerables; trasllada al municipi costos d'una política d'habitatge que també depèn d'altres administracions."
+    },
+    {
+      "tema": "habitatge",
+      "text": "Les pròrrogues dels contractes de lloguer habitual s'han d'ampliar per frenar l'especulació.",
+      "context": "Allargar contractes dona estabilitat als llogaters, però ajorna la capacitat dels propietaris de recuperar o renegociar l'habitatge.",
+      "evidencia": "Moció sobre pròrrogues dels arrendaments habituals i especulació, ple del 26-02-2026: 19-0-5.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/8dd62fd4-d6f8-4e27-b422-35bf682393f4/2_Acta%20Ple%2026.02.2026%20-%20anonimitzada.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Redueix desplaçaments forçats en zones tensionades; limita durant més temps les decisions dels propietaris."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "Rubí ha d'aplicar una zona de baixes emissions amb restriccions als vehicles més contaminants.",
+      "context": "La zona restringeix l'accés segons les emissions del vehicle per reduir contaminació i complir la normativa ambiental.",
+      "evidencia": "Ordenança reguladora de la zona de baixes emissions, ple del 23-11-2023: 9-3-11.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2023/46c2fca0-2ea6-4abb-8ffc-ec1d32aafe7a/19_Acta%20Ple%2023.11.2023.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Millora la qualitat de l'aire i accelera la renovació del parc mòbil; penalitza qui no pot substituir el vehicle."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament no ha d'ampliar el contracte del servei urbà d'autobús sense una nova licitació.",
+      "context": "Modificar el contracte permet adaptar el servei existent, però evita tornar a comparar ofertes de diferents operadors.",
+      "evidencia": "Modificació del contracte del transport col·lectiu urbà, ple del 21-03-2024: 22-0-2.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2024/7d30904a-3a87-46af-809e-bafbb1f885b0/03_Acta_Ple%20Ordinari%2021.03.2024.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Una licitació nova reforça la competència i la transparència; pot retardar millores necessàries del servei actual."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "L'Ajuntament ha d'actuar al carrer Riera per reduir-hi trànsit, soroll i contaminació.",
+      "context": "La proposta concentra mesures de mobilitat en una cruïlla on el veïnat denuncia trànsit intens i molèsties.",
+      "evidencia": "Moció sobre el carrer Riera amb Santa Llúcia, ple del 28-05-2026: 20-0-5.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/1b5f7f27-606c-4b2f-b8d8-0e1c6b8506d5/5_Acta%20Ple%2028.05.2026_anonimitzada.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Millora salut i descans en aquell entorn; desviar circulació pot traslladar les molèsties als carrers veïns."
+    },
+    {
+      "tema": "mobilitat",
+      "text": "Rubí ha de construir un circuit de pump track per a infants i joves.",
+      "context": "Un circuit ofereix un espai específic per a bicicletes i patinets, amb cost d'obra, sòl i manteniment.",
+      "evidencia": "Moció per crear un circuit de pump track, ple del 26-02-2026: 9-0-15.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/8dd62fd4-d6f8-4e27-b422-35bf682393f4/2_Acta%20Ple%2026.02.2026%20-%20anonimitzada.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Crea una alternativa esportiva gratuïta per al jovent; competeix amb altres equipaments per espai i pressupost."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha d'executar el nou Pla d'Ordenació Urbanística Municipal aprovat inicialment.",
+      "context": "El POUM defineix creixement, usos del sòl, habitatge, equipaments i mobilitat de la ciutat durant anys.",
+      "evidencia": "Aprovació inicial del POUM, ple del 22-06-2026: 17-0-8.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/e68c9ec6-9a96-44dd-b247-79e21e925335/6_Acta%20Ple%2022.06.2026_anonimtzada.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Actualitza un planejament antic i dona certesa a inversions i serveis; consolida opcions urbanístiques difícils de revertir."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "El Vapor Nou s'ha de recuperar com a espai patrimonial, cívic i verd de referència.",
+      "context": "La proposta reserva un conjunt industrial històric per a usos col·lectius i en condiciona el desenvolupament futur.",
+      "evidencia": "Moció per preservar i recuperar el Vapor Nou, ple del 22-06-2026: 7-13-5.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/e68c9ec6-9a96-44dd-b247-79e21e925335/6_Acta%20Ple%2022.06.2026_anonimtzada.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Protegeix patrimoni i guanya espai comunitari; exigeix recursos públics i redueix altres usos possibles del recinte."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "L'Ajuntament ha de reordenar la plaça Pompeu Fabra i reservar-hi un espai digne per a l'Agrupament Escolta Guspira.",
+      "context": "La proposta combina reforma de l'espai públic, atenció al sensellarisme i cessió d'un espai a una entitat de lleure.",
+      "evidencia": "Moció sobre la plaça Pompeu Fabra i l'Agrupament Escolta Guspira, ple del 28-05-2026: 14-11-0.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/1b5f7f27-606c-4b2f-b8d8-0e1c6b8506d5/5_Acta%20Ple%2028.05.2026_anonimitzada.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Resol necessitats socials i associatives en un mateix espai; vincular-les pot dificultar una planificació integral de la plaça."
+    },
+    {
+      "tema": "urbanisme",
+      "text": "Can Ramoneda, Can Xercavins i Can Roig han de rebre protecció especial pels seus usos agrícoles.",
+      "context": "La protecció limita transformacions urbanístiques per conservar finques rurals i activitat agrària dins del terme.",
+      "evidencia": "Moció de protecció de Can Ramoneda, Can Xercavins i Can Roig, ple del 30-04-2026: 9-0-15.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/2a109cff-0d2e-4d2e-8696-4c3d60ded51b/4_Acta%20Ple%2030.04.2026%20(anonimitzada)_m_a.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Conserva paisatge, patrimoni i sòl agrari; restringeix alternatives d'ús i el valor potencial de les finques."
+    },
+    {
+      "tema": "medi ambient",
+      "text": "L'Ajuntament ha de desplegar el nou contracte de recollida de residus i neteja viària.",
+      "context": "El contracte determina durant anys el model, el cost i les obligacions del principal servei quotidià de la ciutat.",
+      "evidencia": "Contracte de recollida de residus, neteja viària i obres, ple del 21-03-2024: 14-2-8.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2024/7d30904a-3a87-46af-809e-bafbb1f885b0/03_Acta_Ple%20Ordinari%2021.03.2024.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Renova mitjans i fixa responsabilitats de servei; compromet molta despesa i dificulta canviar de model fins a la nova licitació."
+    },
+    {
+      "tema": "medi ambient",
+      "text": "Rubí ha d'aplicar el Pla de Refugis Climàtics 2026-2030.",
+      "context": "El pla crea una xarxa d'espais públics per protegir la població durant episodis de calor extrema.",
+      "evidencia": "Pla de Refugis Climàtics de Rubí 2026-2030, ple del 22-06-2026: 13-12-0.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/e68c9ec6-9a96-44dd-b247-79e21e925335/6_Acta%20Ple%2022.06.2026_anonimtzada.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Redueix riscos sanitaris durant les onades de calor; requereix inversió i manteniment d'espais que poden tenir ús estacional."
+    },
+    {
+      "tema": "economia",
+      "text": "L'Ajuntament ha d'autoritzar les tarifes màximes del complex esportiu municipal Duet 25 de Setembre.",
+      "context": "El límit tarifari condiciona tant els ingressos de l'operador com el preu que paguen les persones usuàries.",
+      "evidencia": "Tarifes màximes del complex esportiu Duet 25 de Setembre, ple del 25-01-2024: 13-0-12.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2024/448bb896-673d-4f5e-b8a9-2b938422293f/01_Acta%20Ple%2025.01.2024.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Actualitzar tarifes sosté l'equilibri de la concessió; un preu més alt pot limitar l'accés a l'esport municipal."
+    },
+    {
+      "tema": "governança",
+      "text": "L'Ajuntament ha d'obrir una investigació independent sobre la mort de Brian Ríos i establir garanties de no repetició.",
+      "context": "La proposta demanava transparència i reparació institucional arran d'una mort vinculada a una intervenció policial municipal.",
+      "evidencia": "Moció sobre transparència i reparació per la mort de Brian Ríos, ple del 26-02-2026: 7-10-7.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/8dd62fd4-d6f8-4e27-b422-35bf682393f4/2_Acta%20Ple%2026.02.2026%20-%20anonimitzada.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Una revisió externa reforça la rendició de comptes; pot duplicar procediments judicials o interns encara oberts."
+    },
+    {
+      "tema": "governança",
+      "text": "El Ple ha de delegar competències pròpies a la Junta de Govern Local.",
+      "context": "La delegació agilitza decisions executives, però redueix els assumptes que es debaten i voten al ple públic.",
+      "evidencia": "Delegació de competències del Ple a la Junta de Govern Local, ple del 28-06-2023: 13-3-9.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2023/3b19e7e6-39fe-4891-b5a1-0be91ac9434b/12_Acta%20Ple%20extra%20i%20urgent%2028.06.2023.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Accelera la gestió ordinària; trasllada decisions fora de l'òrgan amb més representació i visibilitat pública."
+    },
+    {
+      "tema": "seguretat",
+      "text": "El govern municipal ha d'intensificar les actuacions contra la multireincidència.",
+      "context": "La moció plantejava més coordinació i mesures locals davant persones que acumulen delictes o infraccions repetides.",
+      "evidencia": "Moció per millorar la lluita contra la multireincidència, ple del 28-05-2026: 14-9-2.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/1b5f7f27-606c-4b2f-b8d8-0e1c6b8506d5/5_Acta%20Ple%2028.05.2026_anonimitzada.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Pot reduir reincidència i sensació d'impunitat; més pressió policial no resol les causes socials i pot afectar drets."
+    },
+    {
+      "tema": "seguretat",
+      "text": "L'Ajuntament ha de crear un equip específic per eliminar pintades de l'espai públic.",
+      "context": "Una unitat dedicada accelera la neteja de façanes, però especialitza personal i despesa en una sola incidència urbana.",
+      "evidencia": "Moció per crear un equip de retirada de pintades, ple del 26-10-2023: 5-18-2.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2023/45b956a3-ee32-4f85-b3f6-037b1881672a/17_Acta%20Ple%2026.10.2023.pdf",
+      "posicio_govern": "desacord",
+      "discrimina": "Millora ràpidament l'aspecte dels carrers; pot duplicar serveis de manteniment i prioritzar l'estètica sobre altres problemes."
+    },
+    {
+      "tema": "educació",
+      "text": "L'Ajuntament ha d'adaptar i climatitzar els equipaments educatius municipals.",
+      "context": "Les onades de calor afecten el confort i la salut a les aules i exigeixen inversions i consum energètic addicional.",
+      "evidencia": "Moció sobre climatització i confort tèrmic dels equipaments educatius, ple del 22-06-2026: 25-0-0.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2026/e68c9ec6-9a96-44dd-b247-79e21e925335/6_Acta%20Ple%2022.06.2026_anonimtzada.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Protegeix alumnat i personal durant episodis de calor; les obres i l'energia tenen un cost permanent."
+    },
+    {
+      "tema": "educació",
+      "text": "Rubí ha d'aplicar el Pla d'Educació per a la Ciutadania Global 2024-2028.",
+      "context": "El pla incorpora drets humans, sostenibilitat i perspectiva global a les actuacions educatives municipals.",
+      "evidencia": "Pla d'Educació per a la Ciutadania Global 2024-2028, ple del 25-06-2024: 20-3-2.",
+      "url_evidencia": "https://media.seu-e.cat/acteca/818460009/2024/311ab863-186f-4526-ad67-73bcbb45d4a5/08_Acta%20Ple%2025.06.2024.pdf",
+      "posicio_govern": "acord",
+      "discrimina": "Connecta l'educació local amb reptes socials amplis; dedica temps i recursos a objectius menys immediats del municipi."
+    }
+  ]
+}
