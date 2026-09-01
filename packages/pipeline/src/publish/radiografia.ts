@@ -2386,7 +2386,7 @@ const signeDe = (n: number): string => (n > 0 ? "+" : n < 0 ? "−" : "");
  * hi és —la despesa o el deute per habitant no en tenen— i un canvi de nom
  * allà peti aquí i no a la pàgina publicada.
  */
-type RanquingId = "poblacio" | "participacio" | "dones" | "renda" | "selectiva" | "aigua" | "ibi" | "alternances";
+type RanquingId = "poblacio" | "participacio" | "renda" | "selectiva" | "aigua" | "ibi" | "alternances";
 
 /**
  * «entre els 947 →»: l'enllaç petit d'una xifra cap al rànquing on surt la

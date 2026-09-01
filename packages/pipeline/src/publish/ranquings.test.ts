@@ -9,7 +9,7 @@ import { extrems, PAS, preparaRanquings, renderRanquings, type RankingRow } from
 const files = (quants = 100): RankingRow[] =>
   Array.from({ length: quants }, (_, i) => ({
     s: `poble-${i}`, n: `Poble ${String(i).padStart(3, "0")}`, c: "Comarca", p: 1_000 + i * 600,
-    pt: i, f: 20 + i / 2, rm: 10_000 + i, rma: 2023, rs: i, rsa: 2024, pa: i / 10, paa: 2025,
+    pt: i, rm: 10_000 + i, rma: 2023, rs: i, rsa: 2024, pa: i / 10, paa: 2025,
     ibi: 300 + i, ibia: 2025, v: i % 5, q: 12,
   }));
 
@@ -20,7 +20,7 @@ describe("preparaRanquings", () => {
     const rows = files();
     for (let i = 0; i < 11; i++) rows[i]!.rs = null;
     expect(ids(rows)).not.toContain("selectiva");
-    expect(ids(rows)).toEqual(["poblacio", "participacio", "dones", "renda", "aigua", "ibi", "alternances"]);
+    expect(ids(rows)).toEqual(["poblacio", "participacio", "renda", "aigua", "ibi", "alternances"]);
     expect(preparaRanquings(files(19))).toHaveLength(0);
   });
 
@@ -42,6 +42,14 @@ describe("preparaRanquings", () => {
     const per = Object.fromEntries(preparaRanquings(rows).map((r) => [r.metrica.id, r]));
     expect(per["participacio"]!.files.some((x) => x.valor === 0)).toBe(true);
     expect(per["renda"]!.files).toHaveLength(99);
+  });
+
+  it("però un preu de l'aigua a zero no és un preu: queda fora del rànquing", () => {
+    const rows = files();
+    rows[0]!.pa = 0;
+    const aigua = preparaRanquings(rows).find((r) => r.metrica.id === "aigua")!;
+    expect(aigua.files).toHaveLength(99);
+    expect(aigua.files.some((x) => x.fila.s === "poble-0")).toBe(false);
   });
 
   it("ordena de més a menys i, en cas d'empat, per nom", () => {
@@ -67,7 +75,7 @@ describe("renderRanquings", () => {
 
   it("obre amb els extrems de cada mètrica i cada targeta porta al seu rànquing", () => {
     expect(html).toContain('<section class="bloc" id="destaquen">');
-    expect(html.match(/<li class="extrem">/g)).toHaveLength(8);
+    expect(html.match(/<li class="extrem">/g)).toHaveLength(7);
     expect(html).toContain('href="#participacio"');
     expect(html).toContain("El més alt");
     expect(html).toContain("El més baix");
@@ -82,7 +90,7 @@ describe("renderRanquings", () => {
   });
 
   it("escriu cada rànquing amb el període, la font, el mètode, el regle i la cautela", () => {
-    expect(html.match(/<section class="bloc ranquing"/g)).toHaveLength(8);
+    expect(html.match(/<section class="bloc ranquing"/g)).toHaveLength(7);
     expect(html).toContain('<p class="micro">2023 · Generalitat de Catalunya · processos electorals</p>');
     expect(html).toContain("Votants sobre el cens a les eleccions municipals del 2023.");
     expect(html).toContain('<figure class="dispersio">');
@@ -92,7 +100,7 @@ describe("renderRanquings", () => {
 
   it("no repeteix la llista: cap top 10 a part, i el servidor només escriu les primeres files", () => {
     expect(html).not.toContain('class="top"');
-    const participacio = html.slice(html.indexOf('id="participacio"'), html.indexOf('id="dones"'));
+    const participacio = html.slice(html.indexOf('id="participacio"'), html.indexOf('id="renda"'));
     expect(participacio.match(/<li><span class="pos">/g)).toHaveLength(PAS);
     expect(participacio).toContain('<span class="pos">1</span>');
     expect(participacio).toContain("../m/poble-99/");

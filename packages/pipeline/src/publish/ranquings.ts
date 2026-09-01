@@ -53,8 +53,6 @@ export type RankingRow = {
   s: string; n: string; c: string; p: number;
   /** participació a les municipals del 2023, en percentatge */
   pt?: number | null;
-  /** dones al ple, en percentatge del mandat 2023-2027 */
-  f?: number | null;
   /** mediana de renda per unitat de consum i any */
   rm?: number | null; rma?: number | null;
   /** recollida selectiva bruta i any */
@@ -105,14 +103,6 @@ export const METRIQUES: readonly Metrica[] = [
     cautela: "La mida del municipi i la competència electoral pesen molt en la participació: un poble de trenta veïns arriba al cent per cent amb més facilitat que una ciutat.",
   },
   {
-    id: "dones", titol: "Dones al ple",
-    valor: (r) => r.f, periode: () => "mandat 2023-2027",
-    decimals: 1, sufix: "%",
-    font: "Generalitat de Catalunya · composició dels plens municipals",
-    metode: "Regidores sobre el total de persones electes del ple d'aquest mandat.",
-    cautela: "La composició canvia amb renúncies i substitucions, i el percentatge no diu res de qui pren les decisions.",
-  },
-  {
     id: "renda", titol: "Renda de les llars",
     valor: (r) => r.rm, periode: (r) => r.rma,
     decimals: 0, sufix: " €",
@@ -130,7 +120,12 @@ export const METRIQUES: readonly Metrica[] = [
   },
   {
     id: "aigua", titol: "Preu de l'aigua",
-    valor: (r) => r.pa, periode: (r) => r.paa,
+    // Un zero aquí no és un preu: és un municipi que no publica cap tarifa de
+    // subministrament (dotze pobles del Pirineu, el 2025). A la fitxa es diu
+    // tal com ve; al rànquing, «el més barat: 0,000 €» seria una comparació
+    // falsa, i per això el zero es tracta com a absència. Decisió editorial
+    // de l'1-09-2026.
+    valor: (r) => (finit(r.pa) && r.pa > 0 ? r.pa : null), periode: (r) => r.paa,
     decimals: 3, sufix: " €/m³",
     font: "Agència Catalana de l'Aigua · Observatori del preu de l'aigua",
     metode: "Tram de subministrament domèstic, amb el mateix consum de referència per a tothom.",
