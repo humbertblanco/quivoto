@@ -11,7 +11,7 @@ import { INDEXABLE, SITE } from "./config";
 import { tintaSobre as tintaDeContrast } from "./contrast";
 import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
-import { serieTemporal } from "./grafics";
+import { GRAFICS_JS, serieTemporal } from "./grafics";
 import { geometria } from "./mapa-catalunya";
 import { assignaSlugs } from "./candidatura";
 import { adrecesRegidors } from "./regidor";
@@ -1978,6 +1978,7 @@ ${
 </script>`
     : ""
 }
+${GRAFICS_JS}
 </body>
 </html>`;
 }

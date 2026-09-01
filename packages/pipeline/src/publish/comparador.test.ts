@@ -349,7 +349,10 @@ const element = (): Fals => ({
  * grup— es publicaria sencer i només fallaria a casa de qui el mira.
  */
 function obre(html: string, slugs: readonly string[]): Record<string, Fals> {
-  const script = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</script>"));
+  // El script de la pàgina és l'últim `<script>` pelat; el de l'etiqueta dels
+  // gràfics ve després, amb `id`, i no és el que es vol executar aquí.
+  const inici = html.lastIndexOf("<script>") + 8;
+  const script = html.slice(inici, html.indexOf("</script>", inici));
   const nodes: Record<string, Fals> = {};
   const document = {
     getElementById: (id: string): Fals => (nodes[id] ??= element()),
@@ -677,5 +680,13 @@ describe("la seguretat al comparador", () => {
     // de la seva mida» duien el denominador mentider: la fila viu a la taula.
     const nodes = obre(html, ["badalona", "girona"]);
     expect(nodes["escales-cos"]!.innerHTML).not.toContain("Fets penals");
+  });
+});
+
+describe("l'etiqueta dels gràfics", () => {
+  it("la pàgina porta el script de l'etiqueta una sola vegada, abans de tancar el cos", () => {
+    const html = pagina();
+    expect(html.match(/<script id="grafics-etiqueta">/g)?.length).toBe(1);
+    expect(html.indexOf('<script id="grafics-etiqueta">')).toBeLessThan(html.indexOf("</body>"));
   });
 });

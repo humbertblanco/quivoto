@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   anysVisibles,
+  atributsEtiqueta,
   GRAFICS_CSS,
+  GRAFICS_JS,
+  textEtiqueta,
   barresDivergents,
   distribucioGrup,
   escalaDivergent,
@@ -226,7 +229,9 @@ describe("serieTemporal", () => {
     expect(html).toContain("<th scope=\"col\">Mediana del grup</th>");
     // I el resum de l'SVG diu d'on a on va, que és el que es llegeix primer.
     expect(html).toContain('aria-label="Deute per habitant: de 800 € el 2015 a 1.100 € el 2025."');
-    expect(html).not.toContain("<title>");
+    // El <title> de cada punt hi és, però és el rètol del ratolí per a qui no
+    // té script, no l'equivalent en text: aquest és la taula, i no depèn d'ell.
+    expect(html.replace(/<title>[^<]*<\/title>/g, "")).toContain("<th scope=\"row\">2015</th>");
   });
 
   it("marca l'últim punt i els mandats que travessa", () => {
@@ -491,7 +496,9 @@ describe("pendent", () => {
     expect(html).toContain(
       'aria-label="Sabadell, Deute per habitant: de 800 € el 2015 a 1.204 € el 2025.',
     );
-    expect(html).not.toContain("<title>");
+    // El <title> de cada cap és el rètol del ratolí per a qui no té script;
+    // l'equivalent en text és la taula, i hi és sense ell.
+    expect(html.replace(/<title>[^<]*<\/title>/g, "")).toContain('<th scope="row">2015</th><td>800 €</td>');
   });
 
   it("escapa el que ve de la base de dades", () => {
@@ -739,5 +746,106 @@ describe("regleDispersio", () => {
     const html = regleDispersio("Renda", bruts, opcions);
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
+  });
+});
+
+describe("l'etiqueta de cada punt: la dada a l'abast del ratolí, del dit i del teclat", () => {
+  const punts = serie([[2019, 500], [2020, 600], [2021, 420], [2022, 700]]);
+  const banda: BandaGrup[] = punts.map((p) => ({ any: p.any, p25: 300, p50: 512, p75: 800 }));
+
+  it("compon la frase en un sol ordre, que és el mateix que el del script", () => {
+    expect(textEtiqueta({ nom: "Deute per habitant", any: 2021, valor: "420 €", mediana: "512 €" })).toBe(
+      "Deute per habitant: 2021 · 420 € · mediana dels seus: 512 €",
+    );
+    expect(textEtiqueta({ nom: "Seguretat", valor: "+13,7 €/hab", grup: "+8,1 €/hab" })).toBe(
+      "Seguretat: +13,7 €/hab · els seus: +8,1 €/hab",
+    );
+    expect(textEtiqueta({ valor: "1.204 €" })).toBe("1.204 €");
+    expect(atributsEtiqueta({ nom: 'A "cometes"', any: 2021, valor: "420 €" })).toBe(
+      ' data-nom="A &quot;cometes&quot;" data-any="2021" data-valor="420 €"',
+    );
+  });
+
+  it("cada any de la sèrie porta els data-*, el <title> amb la mateixa frase i es pot tocar i tabular", () => {
+    const html = serieTemporal(punts, { titol: "Deute per habitant", format: euros, banda, grup: "de més de 50.000 habitants" });
+    const dibuix = ample(html);
+    const grups = [...dibuix.matchAll(/<g class="punt"[^>]*>/g)].map((m) => m[0]);
+    expect(grups).toHaveLength(4);
+    expect(dibuix).toContain(
+      '<g class="punt" tabindex="0" data-nom="Deute per habitant" data-any="2021" data-valor="420 €" data-mediana="512 €">' +
+        "<title>Deute per habitant: 2021 · 420 € · mediana dels seus: 512 €</title>",
+    );
+    // La banda de tacte és tan alta com el dibuix i més ampla que el cercle.
+    for (const g of grups) expect(g).toContain('tabindex="0"');
+    expect(quants(dibuix, /<rect class="toc"/g)).toBe(4);
+    const banda1 = /<rect class="toc" x="[\d.]+" y="18" width="([\d.]+)" height="([\d.]+)"/.exec(dibuix);
+    expect(Number(banda1?.[1])).toBeGreaterThan(16);
+    expect(Number(banda1?.[2])).toBe(300 - 18 - 46);
+    // El punt d'ara viu dins del grup del seu any, no per damunt de tots.
+    expect(dibuix).toMatch(/data-any="2022"[^>]*>.*?<circle class="nus ara"[^>]*><\/g>/s);
+    expect(quants(dibuix, /class="nus ara"/g)).toBe(1);
+  });
+
+  it("sense banda no hi ha mediana a l'etiqueta, i l'espurna només etiqueta el punt d'ara", () => {
+    const sense = serieTemporal(punts, { titol: "Deute", format: euros });
+    expect(sense).not.toContain("data-mediana");
+    expect(sense).toContain("<title>Deute: 2021 · 420 €</title>");
+    const espurna = serieTemporal(punts, { titol: "Deute", format: euros, mida: "espurna" });
+    expect(quants(espurna, /<g class="punt"/g)).toBe(1);
+    expect(espurna).toContain('data-any="2022"');
+  });
+
+  it("les barres divergents porten la dada al canal, amb el canvi dels seus, i sense tabindex", () => {
+    const files: FilaDivergent[] = [{ etiqueta: "Seguretat", valor: 13.7, grup: 8.1 }];
+    const html = barresDivergents(files, { titol: "Canvi", format: (v) => v.toFixed(1).replace(".", ","), unitat: "€/hab" });
+    expect(html).toContain(
+      '<span class="canal" data-nom="Seguretat" data-valor="+13,7 €/hab" data-grup="+8,1 €/hab" title="Seguretat: +13,7 €/hab · els seus: +8,1 €/hab">',
+    );
+    expect(html).not.toContain('tabindex="0"');
+  });
+
+  it("cada marca del regle diu de qui és i quant; només l'enllaç i «aquest» reben el focus", () => {
+    const valors = [
+      { valor: 100, nom: "Poble A", slug: "poble-a" },
+      { valor: 200, nom: "", aquest: true },
+      { valor: 300, nom: "" },
+      { valor: 400, nom: "Poble D", slug: "poble-d" },
+    ];
+    const html = regleDispersio("Deute", valors, { format: euros });
+    expect(html).toContain('href="../../m/poble-a/" data-nom="Poble A" data-valor="100 €" title="Poble A: 100 €"');
+    expect(html).toContain('<i class="marca aquest" style="--p:34.67%" tabindex="0" data-nom="Aquest municipi" data-valor="200 €"');
+    expect(html).toContain('<i class="marca" style="--p:65.33%" data-valor="300 €" title="300 €">');
+    expect(quants(html, /tabindex="0"/g)).toBe(1);
+  });
+
+  it("el salt entre dos anys etiqueta els dos caps amb l'any, la xifra i on era el grup", () => {
+    const html = pendent({
+      titol: "Deute per habitant", etiqueta: "Sabadell", format: euros,
+      anys: { inici: 2019, final: 2023 }, municipi: { inici: 800, final: 1204 }, grup: { inici: 500, final: 520 },
+    });
+    expect(html).toContain('data-nom="Sabadell" data-any="2019" data-valor="800 €" data-grup="500 €"');
+    expect(html).toContain("<title>Sabadell: 2023 · 1.204 € · els seus: 520 €</title>");
+    expect(quants(html, /<circle class="toc"/g)).toBe(2);
+    expect(foraDelQuadre(html)).toEqual([]);
+  });
+
+  it("la distribució diu de cada casella el tram i quants municipis hi cauen", () => {
+    const valors = Array.from({ length: 40 }, (_, i) => 100 + i * 10);
+    const html = distribucioGrup(valors, 250, { format: euros, titol: "Deute", grup: "de la seva mida", unitat: "€" });
+    expect(html).toMatch(/<g class="punt-casella" data-nom="De [\d.]+ € a [\d.]+ €" data-valor="\d+ municipis, aquest entre ells">/);
+    expect(html).toContain("<title>De ");
+  });
+
+  it("el CSS i el script van junts: una sola caixa per pàgina, banda de tacte pintada i focus visible", () => {
+    expect(GRAFICS_CSS).toContain(".etiqueta-grafic{position:fixed");
+    expect(GRAFICS_CSS).toContain(".grafic .toc{fill:transparent;stroke:none;pointer-events:all}");
+    expect(GRAFICS_CSS).toContain(".grafic .punt:focus-visible .nus");
+    expect(GRAFICS_JS).toMatch(/^<script id="grafics-etiqueta">/);
+    expect(GRAFICS_JS).toContain("setAttribute('role', 'status')");
+    expect(GRAFICS_JS).toContain("'mediana dels seus: '");
+    expect(GRAFICS_JS).toContain("'els seus: '");
+    // Llegible: cap línia minificada, i sense cap llibreria.
+    expect(GRAFICS_JS.split("\n").every((l) => l.length < 140)).toBe(true);
+    expect(GRAFICS_JS).not.toContain("<script src=");
   });
 });

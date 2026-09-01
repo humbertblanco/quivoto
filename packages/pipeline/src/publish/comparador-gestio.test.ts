@@ -245,7 +245,11 @@ function element(): Fals {
  * pàgina, en silenci i a casa de qui la llegeix. Aquí peta al test.
  */
 function obre(html: string, slugs: readonly string[]): Record<string, Fals> {
-  const script = html.slice(html.lastIndexOf("<script>") + 8, html.lastIndexOf("</script>"));
+  // L'últim <script> pelat és el del comparador; el de l'etiqueta dels gràfics
+  // (GRAFICS_JS, amb id) va després, així que el tall acaba al primer
+  // </script> que ve darrere de l'obertura, no a l'últim de la pàgina.
+  const inici = html.lastIndexOf("<script>") + 8;
+  const script = html.slice(inici, html.indexOf("</script>", inici));
   const nodes: Record<string, Fals> = {};
   const document = {
     getElementById(id: string): Fals {

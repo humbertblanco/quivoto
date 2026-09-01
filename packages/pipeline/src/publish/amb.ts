@@ -4,6 +4,7 @@ import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
 import { slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { GRAFICS_JS } from "./grafics";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
 import {
@@ -1320,7 +1321,7 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
 
 </main>
 ${peu("../", generatedAt)}
-
+${GRAFICS_JS}
 </body>
 </html>`;
 }

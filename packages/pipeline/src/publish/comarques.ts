@@ -8,7 +8,7 @@ import { slugify } from "../lib/text";
 import { carregaCarrecsAlcaldia, carregaPleDelRegistre, resolAlcaldia } from "./alcaldia";
 import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
-import { regleDispersio } from "./grafics";
+import { GRAFICS_JS, regleDispersio } from "./grafics";
 import { icona } from "./icones";
 import { capsaCami, geometria, projecta } from "./mapa";
 import { sigla } from "./sigla";
@@ -1489,7 +1489,7 @@ ${teIndicadors ? `<section class="bloc" id="indicadors">
 
 </main>
 ${peu("../../", generatedAt)}
-
+${GRAFICS_JS}
 </body>
 </html>`;
 }

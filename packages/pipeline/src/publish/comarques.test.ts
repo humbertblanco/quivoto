@@ -551,3 +551,11 @@ describe("els salts de la portada", () => {
     expect(html).toContain("Tots els seus municipis són de l'<a href=\"../../amb/\">");
   });
 });
+
+describe("l'etiqueta dels gràfics", () => {
+  it("la pàgina porta el script de l'etiqueta una sola vegada, abans de tancar el cos", () => {
+    const html = renderComarca(comarca(), "2026-08-29");
+    expect(html.match(/<script id="grafics-etiqueta">/g)?.length).toBe(1);
+    expect(html.indexOf('<script id="grafics-etiqueta">')).toBeLessThan(html.indexOf("</body>"));
+  });
+});

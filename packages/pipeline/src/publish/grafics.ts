@@ -31,6 +31,73 @@
 const escape = (text: string): string =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+// ─────────────────────────────────────────────────────────────────────────────
+// L'etiqueta d'un punt: la dada que surt en passar-hi per sobre
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * El que es diu d'un punt quan algú s'hi atura: l'any, el valor amb la unitat
+ * i, si el gràfic porta comparació, què feien els seus el mateix any.
+ *
+ * Hi ha dues maneres de dir «els seus» i no són la mateixa cosa: a una sèrie
+ * amb banda, la ratlla discontínua és **la mediana** del grup, i es diu així;
+ * a les barres divergents i al salt entre dos anys, el que hi ha del grup és
+ * el mateix canvi als seus, que és una xifra i no una mediana. Per això són
+ * dos camps i no un: qui crida sap quin dels dos té.
+ */
+export type DadaEtiqueta = {
+  /** De què és el punt: el títol de la sèrie, el nom del municipi, la partida. */
+  nom?: string | null;
+  /** L'any del punt. Les marques d'un regle no en tenen. */
+  any?: number | string | null;
+  /** El valor ja escrit, amb la unitat: «420 €», «+13,7 €/hab», «38,5 %». */
+  valor: string;
+  /** La mediana del grup el mateix any, escrita. */
+  mediana?: string | null;
+  /** El mateix canvi als seus, escrit. */
+  grup?: string | null;
+};
+
+/**
+ * El text de l'etiqueta, tal com el llegeix qui no té JavaScript.
+ *
+ * És el mateix que compon el script de `GRAFICS_JS` a partir dels `data-*`,
+ * en el mateix ordre: qui llegeix el `<title>` del navegador i qui llegeix la
+ * caixa flotant han de llegir la mateixa frase. Si això canvia, ha de canviar
+ * a tots dos llocs.
+ */
+export function textEtiqueta(d: DadaEtiqueta): string {
+  const dada = `${d.any !== null && d.any !== undefined && d.any !== "" ? `${d.any} · ` : ""}${d.valor}`;
+  const seus = d.mediana ? ` · mediana dels seus: ${d.mediana}` : d.grup ? ` · els seus: ${d.grup}` : "";
+  return `${d.nom ? `${d.nom}: ` : ""}${dada}${seus}`;
+}
+
+/**
+ * Els atributs `data-*` d'un punt, que és on el script troba què ha de dir.
+ *
+ * Van a l'element que rep el ratolí, el dit o el focus —un `<g>` a l'SVG, un
+ * `<span>` o un `<a>` a l'HTML— i el text ja hi va escrit i escapat: el
+ * script no formata res, només ajunta. El `<title>` (a l'SVG) o el `title=`
+ * (a l'HTML) porten la mateixa frase per a quan no hi ha script; quan n'hi ha,
+ * el script els treu, que si no cada punt tenia dos rètols.
+ */
+export function atributsEtiqueta(d: DadaEtiqueta): string {
+  const parts = [
+    d.nom ? ` data-nom="${escape(d.nom)}"` : "",
+    d.any !== null && d.any !== undefined && d.any !== "" ? ` data-any="${escape(String(d.any))}"` : "",
+    ` data-valor="${escape(d.valor)}"`,
+    d.mediana ? ` data-mediana="${escape(d.mediana)}"` : "",
+    d.grup ? ` data-grup="${escape(d.grup)}"` : "",
+  ];
+  return parts.join("");
+}
+
+/** El `<title>` d'un punt de l'SVG: el que el navegador ensenya sense script. */
+const titolSvg = (d: DadaEtiqueta): string => `<title>${escape(textEtiqueta(d))}</title>`;
+
+/** El `title=` d'un punt fet d'HTML, amb el mateix text. */
+const titolHtml = (d: DadaEtiqueta): string => ` title="${escape(textEtiqueta(d))}"`;
+
 /** Un punt de la sèrie del municipi. Un any sense dada no hi és, i es nota. */
 export type PuntSerie = { any: number; valor: number };
 
@@ -411,10 +478,37 @@ export function serieTemporal(punts: readonly PuntSerie[], opcions: OpcionsSerie
       .map((t) => t.map((p, i) => `${i === 0 ? "M" : "L"}${n2(x(p.any))} ${n2(y(p.valor))}`).join(" "))
       .join(" ");
 
-    const nusos =
-      d.nusos === "ultim"
-        ? ""
-        : serie.map((p) => `<circle class="nus" cx="${n2(x(p.any))}" cy="${n2(y(p.valor))}" r="${d.radiNus}"/>`).join("");
+    // --- els nusos, cadascun amb la seva dada a l'abast
+    // Un cercle de 3,4 de radi en un dibuix de 720 és, a un telèfon, un punt de
+    // tres píxels que no es pot tocar. Cada any va dins d'un grup amb una banda
+    // invisible tan alta com el dibuix i tan ampla com l'any: el dit hi arriba
+    // sense punteria i el ratolí ensenya la dada abans de ser damunt del punt.
+    // La banda no passa de mig any per banda, que si no un any que falta
+    // quedaria dins de la del veí i diria la xifra d'un altre any.
+    const mitjaBanda = anyMax === anyMin ? 8 : Math.min(40, Math.max(8, (x(anyMin + 1) - x(anyMin)) / 2));
+    const bandaDe = (any: number): string => {
+      const esquerra = Math.max(d.marge.esquerra, x(any) - mitjaBanda);
+      const dreta = Math.min(d.ample - d.marge.dreta, x(any) + mitjaBanda);
+      return `<rect class="toc" x="${n2(esquerra)}" y="${d.marge.dalt}" width="${n2(Math.max(1, dreta - esquerra))}" height="${n2(
+        terra - d.marge.dalt,
+      )}"/>`;
+    };
+    const dadaDe = (p: PuntSerie): DadaEtiqueta => {
+      const b = banda.find((q) => q.any === p.any);
+      return { nom: opcions.titol, any: p.any, valor: opcions.format(p.valor), mediana: b ? opcions.format(b.p50) : null };
+    };
+    // El punt d'ara —el de coral— es dibuixa dins del grup del seu any, i no
+    // després de tots: si anés a sobre, el cercle de coral taparia la banda
+    // del darrer any i el ratolí hi trobaria el cercle i no la dada.
+    const ara = `<circle class="nus ara" cx="${n2(x(ultim.any))}" cy="${n2(y(ultim.valor))}" r="${d.eix ? d.radiNus + 2 : 3}"/>`;
+    const nusos = (d.nusos === "ultim" ? [ultim] : serie)
+      .map((p) => {
+        const propi = d.nusos === "ultim" ? "" : `<circle class="nus" cx="${n2(x(p.any))}" cy="${n2(y(p.valor))}" r="${d.radiNus}"/>`;
+        return `<g class="punt" tabindex="0"${atributsEtiqueta(dadaDe(p))}>${titolSvg(dadaDe(p))}${bandaDe(p.any)}${propi}${
+          p === ultim ? ara : ""
+        }</g>`;
+      })
+      .join("");
 
     return `<svg class="dibuix ${classe}" viewBox="0 0 ${d.ample} ${d.alt}" role="img" aria-label="${resum}"
       preserveAspectRatio="xMidYMid meet">
@@ -426,7 +520,6 @@ export function serieTemporal(punts: readonly PuntSerie[], opcions: OpcionsSerie
       ${eixX}
       <path class="linia" d="${linia}"/>
       ${nusos}
-      <circle class="nus ara" cx="${n2(x(ultim.any))}" cy="${n2(y(ultim.valor))}" r="${d.eix ? d.radiNus + 2 : 3}"/>
     </svg>`;
   };
 
@@ -594,6 +687,19 @@ export function pendent(opcions: OpcionsPendent): string {
     <tbody>${fila(opcions.anys.inici, municipi.inici, grup ? grup.inici : null)}
     ${fila(opcions.anys.final, municipi.final, grup ? grup.final : null)}</tbody></table></div>`;
 
+  // Els dos caps del salt, cadascun amb la seva dada: l'any, la xifra i, si
+  // n'hi ha, on era el grup aquell mateix any. El cercle de tacte fa 9 de
+  // radi en un dibuix que es veu a mida real, que és el mínim per a un dit.
+  const cap = (classe: string, cx: number, r: number, any: number, propi: number, delGrup: number | null): string => {
+    const dada: DadaEtiqueta = {
+      nom: opcions.etiqueta ?? opcions.titol,
+      any,
+      valor: format(propi),
+      grup: delGrup === null ? null : format(delGrup),
+    };
+    return `<g class="punt" tabindex="0"${atributsEtiqueta(dada)}>${titolSvg(dada)}<circle class="toc" cx="${n2(cx)}" cy="${CARRIL_MUNICIPI}" r="9"/><circle class="${classe}" cx="${n2(cx)}" cy="${CARRIL_MUNICIPI}" r="${r}"/></g>`;
+  };
+
   return `<figure class="grafic pendent">
     <svg class="dibuix unic" viewBox="0 0 ${AMPLE_P} ${ALT_P}" role="img" aria-label="${resum}"
       preserveAspectRatio="xMidYMid meet">
@@ -601,8 +707,8 @@ export function pendent(opcions: OpcionsPendent): string {
       ${grupSvg}
       ${xifres}
       <line class="salt" x1="${n2(xi)}" x2="${n2(xf)}" y1="${CARRIL_MUNICIPI}" y2="${CARRIL_MUNICIPI}"/>
-      <circle class="cap-inici" cx="${n2(xi)}" cy="${CARRIL_MUNICIPI}" r="4.5"/>
-      <circle class="cap-final" cx="${n2(xf)}" cy="${CARRIL_MUNICIPI}" r="5"/>
+      ${cap("cap-inici", xi, 4.5, opcions.anys.inici, municipi.inici, grup ? grup.inici : null)}
+      ${cap("cap-final", xf, 5, opcions.anys.final, municipi.final, grup ? grup.final : null)}
     </svg>
     ${taula}
   </figure>`;
@@ -654,8 +760,14 @@ export function distribucioGrup(
       const x0 = (i / caselles) * AMPLE_D;
       const ample = AMPLE_D / caselles;
       const alçada = (quants / alt) * (ALT_D - BAIX - DALT);
-      return `<rect class="casella${i === meva ? " meva" : ""}" x="${n2(x0 + 0.8)}" y="${n2(ALT_D - BAIX - alçada)}"
-        width="${n2(ample - 1.6)}" height="${n2(Math.max(quants > 0 ? 1.5 : 0, alçada))}"/>`;
+      // Cada casella diu quin tram cobreix i quants municipis hi cauen; la
+      // del municipi ho diu, que la fletxa de sota no sempre és on es mira.
+      const dada: DadaEtiqueta = {
+        nom: `De ${opcions.format(min + i * pas)} a ${opcions.format(min + (i + 1) * pas)}`,
+        valor: `${quants} ${quants === 1 ? "municipi" : "municipis"}${i === meva ? ", aquest entre ells" : ""}`,
+      };
+      return `<g class="punt-casella"${atributsEtiqueta(dada)}>${titolSvg(dada)}<rect class="casella${i === meva ? " meva" : ""}" x="${n2(x0 + 0.8)}" y="${n2(ALT_D - BAIX - alçada)}"
+        width="${n2(ample - 1.6)}" height="${n2(Math.max(quants > 0 ? 1.5 : 0, alçada))}"/></g>`;
     })
     .join("");
 
@@ -792,9 +904,14 @@ export function barresDivergents(files: readonly FilaDivergent[], opcions: Opcio
           ? ""
           : `<b class="marca-grup" style="--m:${n2(dins(50 + (50 * f.grup) / escala))}%"></b>`;
       const delGrup = f.grup === null ? "" : `<span class="del-grup">seus ${xifra(f.grup)}</span>`;
+      // La dada va al canal, que és el que es toca: la partida, el canvi
+      // amb el signe i la unitat, i el mateix canvi als seus. Sense
+      // `tabindex`: la llista sencera és `aria-hidden` i el teclat ja té la
+      // taula de sota, que es fa visible quan hi arriba.
+      const dada: DadaEtiqueta = { nom: f.etiqueta, valor: xifra(f.valor), grup: f.grup === null ? null : xifra(f.grup) };
       return `<li class="${sentit}">
       <span class="etq">${nom(f, false)}</span>
-      <span class="canal"><i class="barra" style="--w:${n2(w)}%"></i>${marca}</span>
+      <span class="canal"${atributsEtiqueta(dada)}${titolHtml(dada)}><i class="barra" style="--w:${n2(w)}%"></i>${marca}</span>
       <span class="xifres"><b class="xifra">${xifra(f.valor)}</b>${delGrup}</span>
     </li>`;
     })
@@ -897,10 +1014,16 @@ export function regleDispersio(
     .map((v) => {
       const classe = v.aquest ? "marca aquest" : "marca";
       const veu = v.nom ? `<span class="nomes-lectors">${escape(v.nom)}, ${fmt(v.valor)}</span>` : "";
+      // Cada marca diu de qui és i quant, en passar-hi per sobre. L'enllaç ja
+      // rep el focus; la marca sense enllaç només el rep si és «aquest»: a la
+      // fitxa municipal les altres dues-centes no tenen nom i tabular-les una
+      // per una seria un passadís de dues-centes parades que diuen una xifra.
+      const dada: DadaEtiqueta = { nom: v.nom || (v.aquest ? "Aquest municipi" : null), valor: fmt(v.valor) };
+      const etiqueta = `${atributsEtiqueta(dada)}${titolHtml(dada)}`;
       return v.slug
-        ? `<a class="${classe}" style="--p:${on(v.valor)}%" href="${base}m/${escape(v.slug)}/"
+        ? `<a class="${classe}" style="--p:${on(v.valor)}%" href="${base}m/${escape(v.slug)}/"${etiqueta}
       >${veu}</a>`
-        : `<i class="${classe}" style="--p:${on(v.valor)}%">${veu}</i>`;
+        : `<i class="${classe}" style="--p:${on(v.valor)}%"${v.aquest ? ' tabindex="0"' : ""}${etiqueta}>${veu}</i>`;
     })
     .join("");
 
@@ -951,6 +1074,35 @@ export const GRAFICS_CSS = `
 .grafic .linia{fill:none;stroke:var(--ink);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
 .grafic .nus{fill:var(--paper);stroke:var(--ink);stroke-width:2}
 .grafic .nus.ara{fill:var(--coral);stroke:var(--ink);stroke-width:2.5}
+/* --- el punt que es pot tocar ------------------------------------------- */
+/* La banda de tacte és invisible però pintada: amb «fill:none» el navegador
+   no la trobaria sota el dit. Quan el punt rep el ratolí o el focus, el cercle
+   s'engruixeix del color de la casa: el focus s'ha de veure sense dependre
+   d'un contorn rectangular que a l'SVG no tots els navegadors dibuixen. */
+.grafic .punt{cursor:pointer;outline:none}
+.grafic .toc{fill:transparent;stroke:none;pointer-events:all}
+.grafic .punt:hover .nus,.grafic .punt:focus-visible .nus{stroke:var(--coral-text);stroke-width:4}
+.grafic .punt:hover .cap-inici,.grafic .punt:hover .cap-final,
+.grafic .punt:focus-visible .cap-inici,.grafic .punt:focus-visible .cap-final{stroke:var(--coral-text);stroke-width:3.5}
+.grafic .punt:focus-visible .toc{stroke:var(--coral-text);stroke-width:2;stroke-dasharray:4 3}
+.grafic .punt-casella{cursor:pointer}
+.grafic .punt-casella:hover .casella{stroke:var(--ink);stroke-width:1.5}
+.barres-divergents .canal[data-valor]{cursor:pointer}
+.dispersio .marca[data-valor]{cursor:pointer}
+.dispersio i.marca[tabindex]:focus-visible::before{background:var(--coral-text);opacity:1;left:1px;width:12px;outline:2px solid var(--ink)}
+/* L'etiqueta flotant: una sola caixa per pàgina, que el script crea i mou. Va
+   de tinta sobre paper invertit perquè es distingeixi del fons a la primera i
+   no es confongui amb una tessel·la; «pointer-events:none» perquè no tapi el
+   punt del costat quan el ratolí hi passa. */
+.etiqueta-grafic{position:fixed;z-index:60;max-width:min(320px,calc(100vw - 16px));
+  padding:7px 11px;background:var(--ink);color:var(--paper);border-radius:var(--r-s);
+  box-shadow:3px 3px 0 rgba(0,0,0,.18);font-family:var(--text);font-size:.8rem;font-weight:700;
+  line-height:1.3;pointer-events:none;font-variant-numeric:tabular-nums}
+.etiqueta-grafic[hidden]{display:none}
+.etiqueta-grafic b{display:block;font-family:var(--display);font-weight:900;font-size:.72rem;
+  letter-spacing:.03em;text-transform:uppercase;opacity:.85}
+.etiqueta-grafic .dada{display:block;font-size:.92rem}
+.etiqueta-grafic .seus{display:block;opacity:.85}
 .grafic .tall-mandat{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:3 4;opacity:.45}
 .grafic .etiqueta-mandat{font-family:var(--display);font-size:11px;font-weight:900;
   fill:var(--ink-suau);letter-spacing:.02em}
@@ -1131,3 +1283,151 @@ export const GRAFICS_CSS = `
   .serie-espurna .dibuix,.pendent .dibuix{min-width:0}
 }
 `;
+
+/**
+ * El script de l'etiqueta flotant. Va just abans de `</body>` a cada pàgina
+ * que porta `GRAFICS_CSS`, una sola vegada, i no depèn de res més.
+ *
+ * Sense ell cada punt ja diu la seva dada: el `<title>` de l'SVG i el
+ * `title=` de l'HTML que escriuen les funcions d'aquí dalt, i que el navegador
+ * ensenya al cap d'un segon amb el ratolí —i mai amb el dit ni amb el teclat.
+ * Amb ell, la mateixa frase surt de seguida al costat del punt, en tocar-lo i
+ * en arribar-hi amb el tabulador, en una sola caixa per pàgina que canvia de
+ * text i de lloc. El text el compon el servidor als `data-*` (`atributsEtiqueta`)
+ * i aquí només s'ajunta, en el mateix ordre que `textEtiqueta`.
+ *
+ * S'escriu llegible i sense cap llibreria, com la resta de scripts del lloc:
+ * pesa menys que qualsevol dependència i es pot llegir sencer en un minut.
+ * L'`id` del `<script>` és el que permet comprovar que cada pàgina el porta
+ * una vegada i no dues.
+ */
+export const GRAFICS_JS = `<script id="grafics-etiqueta">
+(function () {
+  var caixa = null;
+  // El punt que s'ha tocat o que té el focus: l'etiqueta s'hi queda encara que
+  // el ratolí marxi, fins que es toca en un altre lloc o es prem Escape.
+  var fixat = null;
+
+  function puntDe(objectiu) {
+    return objectiu && objectiu.closest ? objectiu.closest('[data-valor]') : null;
+  }
+
+  function creaCaixa() {
+    if (caixa) return caixa;
+    caixa = document.createElement('div');
+    caixa.className = 'etiqueta-grafic';
+    caixa.setAttribute('role', 'status');
+    caixa.hidden = true;
+    document.body.appendChild(caixa);
+    return caixa;
+  }
+
+  // La mateixa frase que el <title>: «Deute per habitant», «2021 · 420 €»,
+  // «mediana dels seus: 512 €». Cada tros al seu element per poder-lo
+  // compondre amb CSS; el text ve escrit del servidor i no es toca.
+  function escriu(punt) {
+    var c = creaCaixa();
+    c.textContent = '';
+    var nom = punt.getAttribute('data-nom');
+    if (nom) {
+      var titol = document.createElement('b');
+      titol.textContent = nom;
+      c.appendChild(titol);
+    }
+    var any = punt.getAttribute('data-any');
+    var dada = document.createElement('span');
+    dada.className = 'dada';
+    dada.textContent = (any ? any + ' · ' : '') + punt.getAttribute('data-valor');
+    c.appendChild(dada);
+    var mediana = punt.getAttribute('data-mediana');
+    var grup = punt.getAttribute('data-grup');
+    if (mediana || grup) {
+      var seus = document.createElement('span');
+      seus.className = 'seus';
+      seus.textContent = mediana ? 'mediana dels seus: ' + mediana : 'els seus: ' + grup;
+      c.appendChild(seus);
+    }
+  }
+
+  // A prop del punt i dins de la finestra: a sobre si hi cap, a sota si no, i
+  // mai més enllà de les vores. A la sèrie, el que rep el ratolí és tota la
+  // columna de l'any; el lloc de referència és el cercle de dins.
+  function mostra(punt) {
+    escriu(punt);
+    caixa.hidden = false;
+    var nus = punt.querySelector('.nus, .cap-final, .cap-inici, .casella, .barra');
+    var r = (nus || punt).getBoundingClientRect();
+    var ample = caixa.offsetWidth;
+    var alt = caixa.offsetHeight;
+    var x = r.left + r.width / 2 - ample / 2;
+    var y = r.top - alt - 10;
+    if (y < 8) y = r.bottom + 10;
+    x = Math.max(8, Math.min(window.innerWidth - ample - 8, x));
+    caixa.style.left = x + 'px';
+    caixa.style.top = y + 'px';
+  }
+
+  function amaga() {
+    if (caixa) caixa.hidden = true;
+  }
+
+  // Amb l'etiqueta hi hauria dos rètols per punt: el nostre i el del
+  // navegador. Els <title> i els title= es treuen només quan el script corre,
+  // que és exactament quan sobren.
+  var punts = document.querySelectorAll('[data-valor]');
+  for (var i = 0; i < punts.length; i += 1) {
+    var natiu = punts[i].querySelector('title');
+    if (natiu && natiu.parentNode === punts[i]) punts[i].removeChild(natiu);
+    punts[i].removeAttribute('title');
+  }
+
+  // El ratolí i el llapis ensenyen en passar; el dit va per «click», que és
+  // l'únic gest que un telèfon fa servir per «assenyalar».
+  document.addEventListener('pointerover', function (e) {
+    if (e.pointerType === 'touch') return;
+    var punt = puntDe(e.target);
+    if (punt) mostra(punt);
+  });
+  document.addEventListener('pointerout', function (e) {
+    var punt = puntDe(e.target);
+    if (!punt || punt.contains(e.relatedTarget)) return;
+    if (fixat) mostra(fixat); else amaga();
+  });
+  document.addEventListener('click', function (e) {
+    var punt = puntDe(e.target);
+    if (punt) {
+      fixat = punt;
+      mostra(punt);
+    } else if (fixat) {
+      fixat = null;
+      amaga();
+    }
+  });
+  document.addEventListener('focusin', function (e) {
+    var punt = puntDe(e.target);
+    if (punt) {
+      fixat = punt;
+      mostra(punt);
+    }
+  });
+  document.addEventListener('focusout', function (e) {
+    var punt = puntDe(e.target);
+    if (punt && punt === fixat) {
+      fixat = null;
+      amaga();
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      fixat = null;
+      amaga();
+    }
+  });
+  // La caixa és fixa a la finestra i el punt es mou amb la pàgina: en lliscar,
+  // o es torna a col·locar o marxa.
+  window.addEventListener('scroll', function () {
+    if (fixat) mostra(fixat); else amaga();
+  }, { passive: true });
+  window.addEventListener('resize', amaga);
+})();
+</script>`;

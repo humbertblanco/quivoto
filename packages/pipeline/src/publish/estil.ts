@@ -952,6 +952,30 @@ details.nota > .serie{font-size:1rem}
 .tires .espurna{margin:6px 0 0}
 .tires .espurna svg{height:34px}
 .tires .font-idescat{padding-top:6px}
+/* «Qui hi viu» no s'omple amb les que hi ha: són tres columnes i prou.
+   Amb «auto-fit» i sis tessel·les, a 1.100 px en sortien sis en una fila de
+   160 px cadascuna, amb l'espurna i tres línies de peu esclafades a dins, i
+   es llegia com un tauler i no com tres xifres. Tres a escriptori, dues a una
+   tauleta i una a un telèfon; les edats, que eren tres tessel·les més, van a
+   la taula de sota. */
+.gent-tires{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:760px){ .gent-tires{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:440px){ .gent-tires{grid-template-columns:minmax(0,1fr)} }
+/* La taula de les edats: una fila per tram, la xifra d'aquí en gran, la
+   forma de la sèrie al costat i, a la dreta, amb qui es compara. Va dins de
+   «.taula-envolta» perquè a 320 px llisqui ella i no la pàgina. */
+.edats{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.edats caption{text-align:left;font-weight:800;font-size:.95rem;padding:0 0 8px;caption-side:top}
+.edats th,.edats td{text-align:right;padding:8px 10px;border-bottom:1px solid var(--vora);
+  font-size:.92rem;white-space:nowrap;vertical-align:middle}
+.edats thead th{font-family:var(--display);font-weight:900;font-size:.78rem;color:var(--ink-suau);
+  white-space:normal;vertical-align:bottom;line-height:1.2}
+.edats tbody th{text-align:left;font-weight:900;white-space:normal;min-width:9em}
+.edats td.aqui{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em}
+.edats td.serie-edat{padding-top:4px;padding-bottom:4px}
+.edats .espurna{width:120px;margin:0}
+.edats .espurna svg{height:30px}
+@media (max-width:400px){ .edats th,.edats td{padding:8px 5px;font-size:.84rem} }
 /* Una nota d'una línia i prou, dins d'un bloc: no és lletra petita que es
    plega ni un avís de color, és una frase que es llegeix de passada. */
 .nota-linia{font-size:.9rem;color:var(--ink-suau);margin:var(--e2) 0 0}

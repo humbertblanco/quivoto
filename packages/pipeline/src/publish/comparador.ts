@@ -6,6 +6,7 @@ import { carregaMetriques } from "./metriques";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { GRAFICS_JS } from "./grafics";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -2391,6 +2392,7 @@ triats = llegeixAdreca();
 desaAdreca();
 pinta();
 </script>
+${GRAFICS_JS}
 </body>
 </html>`;
 }

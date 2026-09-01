@@ -16,6 +16,7 @@ import {
   renderTrajectoria,
   type RadiografiaData,
 } from "./radiografia";
+import { RADIOGRAFIA_CSS } from "./estil";
 import {
   LLICENCIA_INTERIOR, NOTA_COMPETENCIES, NOTA_FETS_CONEGUTS, NOTA_LLINDAR,
 } from "../jobs/j29-criminalitat";
@@ -579,22 +580,61 @@ describe("qui hi viu", () => {
     expect(linia.match(/class="font-idescat"/g)?.length).toBe(3);
   });
 
-  it("són cinc tires amb espurna, i una sola lletra petita", () => {
+  it("són dues tires amb espurna (tres amb la renda), una taula d'edats i una sola lletra petita", () => {
     expect(html).toContain('<ul class="tires gent-tires">');
-    expect(html.match(/<li class="tira">/g)?.length).toBe(5);
+    // Eren cinc en una graella que s'omplia sola i a escriptori sortien totes
+    // en una fila: ara les edats van a la taula i a la graella queden quants
+    // hi viuen i d'on venen (i quant guanyen, quan hi ha renda).
+    expect(html.match(/<li class="tira">/g)?.length).toBe(2);
     expect(html).toContain('<span class="etq">Empadronats</span>');
-    expect(html).toContain('<span class="etq">Edat mitjana</span>');
+    expect(html).not.toContain('<span class="etq">Edat mitjana</span>');
     // Cada tira porta el seu enllaç de l'Idescat, que la llicència obliga.
     const tires = html.slice(html.indexOf('<ul class="tires'), html.indexOf("</ul>", html.indexOf('<ul class="tires')));
-    expect(tires.match(/class="font-idescat"/g)?.length).toBe(5);
+    expect(tires.match(/class="font-idescat"/g)?.length).toBe(2);
     expect(html.match(/<details class="nota">/g)?.length).toBe(1);
     // I la sèrie gran del padró ja no hi és.
     expect(html).not.toContain('class="grafic serie');
   });
 
+  it("les edats són una taula: una fila per tram, i cap dada de les tessel·les d'abans no s'ha perdut", () => {
+    const taula = html.slice(html.indexOf('<table class="edats">'), html.indexOf("</table>"));
+    expect(taula).toContain("<caption>Les edats, el 2025: el pes de cada tram sobre la població censada</caption>");
+    // Les columnes: aquí, la sèrie, Catalunya, el mandat i els de la seva mida.
+    expect(taula).toContain('<th scope="col">Aquí</th>');
+    expect(taula).toContain('<th scope="col">Des del 2021</th>');
+    expect(taula).toContain('<th scope="col">A tot Catalunya</th>');
+    expect(taula).toContain('<th scope="col">Del 2023 al 2025</th>');
+    expect(taula).toContain('<th scope="col">Als 22 de la seva mida</th>');
+    // Les files, amb el nom curt: el títol ja diu que són pesos.
+    expect(taula).toContain('<th scope="row">De 0 a 15 anys</th>');
+    expect(taula).toContain('<th scope="row">De 65 anys o més</th>');
+    expect(taula).toContain('<th scope="row">Edat mitjana</th>');
+    // La xifra d'ara, la de Catalunya, el canvi i el dels seus: el que deia la tessel·la.
+    expect(taula).toContain('<td class="aqui">16,4 %</td>');
+    expect(taula).toContain("<td>15,9 %</td>");
+    expect(taula).toContain("<td>−0,8 punts</td>");
+    expect(taula).toContain("<td>−0,5 punts</td>");
+    expect(taula).toContain('<td class="aqui">42,6 anys</td>');
+    // L'espurna del tram de 0 a 15 hi és, amb els mateixos punts; el tram
+    // sense sèrie ho diu i no dibuixa res.
+    expect(taula).toContain('class="espurna"');
+    expect(taula).toContain("sense sèrie");
+    // Sota la taula, l'enllaç de l'Idescat que la llicència obliga, un cop per taula.
+    const fonts = html.slice(html.indexOf('class="nota-linia fonts-edats"'), html.indexOf("</p>", html.indexOf('class="nota-linia fonts-edats"')));
+    expect(fonts.match(/class="font-idescat"/g)?.length).toBe(1);
+    expect(fonts).toContain("https://www.idescat.cat/emex/?id=081871#t25");
+    // I el «què compta» de cada fila, literal, a la lletra petita.
+    expect(html).toContain("Les edats, què compta cada fila:");
+    expect(html).toContain("Persones de 0 a 15 anys sobre el total de població censada, tal com ho calcula l'Idescat.");
+    expect(html).toContain("Edat mitjana de la població censada, calculada per l'Idescat.");
+  });
+
   it("posa el canvi del mandat amb el dels municipis de la seva mida al costat", () => {
     expect(html).toContain("22 municipis de la seva mida");
-    expect(html).toContain("als 22 de la seva mida");
+    // A la taula de les edats, el canvi d'aquí i el dels seus són dues
+    // columnes de la mateixa fila: −0,8 punts aquí, −0,5 als 22 de la seva mida.
+    expect(html).toContain('<th scope="col">Als 22 de la seva mida</th>');
+    expect(html).toMatch(/<td>−0,8 punts<\/td>\s*<td>−0,5 punts<\/td>/);
   });
 });
 
@@ -643,10 +683,10 @@ describe("qui hi viu: percentatges i tants anys com en tenim", () => {
   });
 
   it("porta el pes de 0 a 15 anys, que la dada ja tenia i la fitxa no ensenyava", () => {
-    expect(html).toContain("Pes de la població de 0 a 15 anys");
+    expect(html).toContain("De 0 a 15 anys");
     expect(html).toContain("16,4 %");
     // Els pesos van abans dels recomptes: un pes es compara i un recompte no.
-    expect(html.indexOf("Pes de la població de 0 a 15 anys")).toBeLessThan(
+    expect(html.indexOf("De 0 a 15 anys")).toBeLessThan(
       html.indexOf("infants de 0 a 2 anys"),
     );
   });
@@ -711,9 +751,9 @@ describe("la renda: on cau el poble, dit en paraules", () => {
     ],
   });
 
-  it("la sisena tira diu el lloc a Catalunya en paraules, la font i que no ho decideix l'ajuntament", () => {
+  it("la tercera tira diu el lloc a Catalunya en paraules, la font i que no ho decideix l'ajuntament", () => {
     const html = renderQuiHiViu(poblacio(), riquesa());
-    expect(html.match(/<li class="tira">/g)?.length).toBe(6);
+    expect(html.match(/<li class="tira">/g)?.length).toBe(3);
     expect(html).toContain("Renda neta per persona");
     expect(html).toContain("14.500 €");
     expect(html).toContain("el 214è de 927 municipis amb dada");
@@ -736,7 +776,7 @@ describe("la renda: on cau el poble, dit en paraules", () => {
   });
 
   it("sense la mètrica o sense valor no hi ha tira, i a la fitxa sencera va dins de «Qui hi viu»", () => {
-    expect(renderQuiHiViu(poblacio(), null).match(/<li class="tira">/g)?.length).toBe(5);
+    expect(renderQuiHiViu(poblacio(), null).match(/<li class="tira">/g)?.length).toBe(2);
     const tapat = riquesa();
     tapat.indicadors[0]!.valor = null;
     expect(renderQuiHiViu(poblacio(), tapat)).not.toContain("Renda neta per persona");
@@ -1896,7 +1936,9 @@ describe("la mediana del grup", () => {
   it("sense mediana, la xifra surt sola i no se'n inventa cap", () => {
     const html = renderRadiografia(fitxa({ participation: participacio }));
     expect(html).toContain("60,0 %");
-    expect(html).not.toContain("mediana dels");
+    // El script de l'etiqueta dels gràfics porta la frase «mediana dels seus»
+    // com a text que compon; el que no hi pot haver és cap mediana escrita.
+    expect(html.replace(/<script id="grafics-etiqueta">[\s\S]*?<\/script>/, "")).not.toContain("mediana dels");
   });
 
   it("amb els valors del grup dibuixa el regle de dispersió, amb el «tu ets aquí»", () => {
@@ -2712,5 +2754,23 @@ describe("el balanç del mandat no pinta cap veredicte", () => {
     expect(html).toContain(".balanc tr.igual .canvi{color:var(--ink-suau)");
     // La direcció es llegeix per la fletxa, que porta el seu text.
     expect(html).toMatch(/<td class="fletxa" aria-label="(puja|baixa|sense canvi)">/);
+  });
+});
+
+describe("«Qui hi viu» a la fitxa: tres columnes com a molt, i l'etiqueta dels gràfics", () => {
+  it("la graella de tessel·les es fixa a tres columnes, dues a tauleta i una a telèfon", () => {
+    expect(RADIOGRAFIA_CSS).toContain(".gent-tires{grid-template-columns:repeat(3,minmax(0,1fr))}");
+    expect(RADIOGRAFIA_CSS).toContain("@media (max-width:760px){ .gent-tires{grid-template-columns:repeat(2,minmax(0,1fr))} }");
+    expect(RADIOGRAFIA_CSS).toContain("@media (max-width:440px){ .gent-tires{grid-template-columns:minmax(0,1fr)} }");
+    // I la taula de les edats llisca ella sola en estret, no la pàgina.
+    expect(RADIOGRAFIA_CSS).toContain(".taula-envolta{overflow-x:auto");
+  });
+
+  it("la fitxa sencera porta el script de l'etiqueta una sola vegada, abans de tancar el cos", () => {
+    const html = renderRadiografia(fitxa());
+    expect(html.match(/<script id="grafics-etiqueta">/g)?.length).toBe(1);
+    expect(html.indexOf('<script id="grafics-etiqueta">')).toBeLessThan(html.indexOf("</body>"));
+    // I el CSS de l'etiqueta hi és, via GRAFICS_CSS.
+    expect(html).toContain(".etiqueta-grafic{position:fixed");
   });
 });

@@ -9,7 +9,7 @@ import { sobreColor } from "./contrast";
 import { renderCriminalitat, type GrupCriminalitat } from "./criminalitat";
 import type { CriminalitatMetric } from "../jobs/j29-criminalitat";
 import type { MedianaGrup, MedianesMunicipi } from "./medianes";
-import { barresDivergents, distribucioGrup, escalaDivergent, regleDispersio, serieTemporal, type FilaDivergent } from "./grafics";
+import { barresDivergents, distribucioGrup, escalaDivergent, GRAFICS_JS, regleDispersio, serieTemporal, type FilaDivergent } from "./grafics";
 import type { SeriesMunicipi } from "./series-grup";
 import type { Continuitat, PuntVolatilitat, VotPerdutElecció } from "../derive/trajectoria";
 import { hemicycle } from "./hemicycle";
@@ -2413,16 +2413,25 @@ function indicadorDe(poblacio: PoblacioMetric, clau: string): IndicadorPoblacio 
   return poblacio.indicadors.find((i) => i.clau === clau) ?? null;
 }
 
+/**
+ * Com s'escriu una variació segons la unitat: «+14», «+1,2 punts», «+0,3 anys».
+ *
+ * Un recompte de persones va sencer i sense decimals; qualsevol altra unitat
+ * en porta un i s'escriu al costat de la xifra. Un «+14» pelat al costat d'un
+ * «+8,1» no diu de què parla, i aquí de vegades són euros i de vegades punts.
+ * La fan servir la línia del canvi de cada tira i la taula de les edats, que
+ * han d'escriure el mateix canvi de la mateixa manera.
+ */
+const escriuVariacio = (unitat: string) => (n: number): string => {
+  const sufix = unitat === "%" ? " punts" : unitat === "persones" ? "" : ` ${unitat}`;
+  return unitat === "persones"
+    ? `${signeDe(n)}${number(Math.round(Math.abs(n)))}`
+    : `${signeDe(n)}${decimal(Math.abs(n), 1)}${sufix}`;
+};
+
 /** El canvi del mandat amb el mateix canvi als seus al costat, mai sol. */
 function canviAmbGrup(mandat: Variacio, grup: MandatGrup | null | undefined, unitat: string): string {
-  // Un recompte de persones va sencer i sense decimals; qualsevol altra unitat
-  // en porta un i s'escriu al costat de la xifra. Un «+14» pelat al costat d'un
-  // «+8,1» no diu de què parla, i aquí de vegades són euros i de vegades punts.
-  const sufix = unitat === "%" ? " punts" : unitat === "persones" ? "" : ` ${unitat}`;
-  const escriu = (n: number): string =>
-    unitat === "persones"
-      ? `${signeDe(n)}${number(Math.round(Math.abs(n)))}`
-      : `${signeDe(n)}${decimal(Math.abs(n), 1)}${sufix}`;
+  const escriu = escriuVariacio(unitat);
   const seus =
     grup && grup.diferencia !== null
       ? ` · als ${grup.municipis} de la seva mida, ${escriu(grup.diferencia)}`
@@ -2526,6 +2535,94 @@ function tira(t: {
     : `<li class="${classe}">${dins}</li>`;
 }
 
+/** Un indicador amb xifra i any: l'únic que es pot escriure a la pàgina. */
+const ambValor = (ind: IndicadorPoblacio | null): ind is IndicadorPoblacio & { valor: number; darrerAny: number } =>
+  ind !== null && ind.valor !== null && ind.darrerAny !== null;
+
+/**
+ * Les edats, en una taula i no en tres tessel·les.
+ *
+ * El pes dels menors de 16, el dels majors de 64 i l'edat mitjana eren tres
+ * tessel·les més a la graella de «Qui hi viu», que amb la renda en feia sis
+ * i, a escriptori, les posava totes en una fila de 160 px cadascuna: la
+ * xifra, l'espurna, el peu, el canvi del mandat i l'enllaç esclafats a dins.
+ * Les tres són la mateixa pregunta —quines edats hi ha— i es comparen amb les
+ * mateixes tres coses: Catalunya, el mandat, els de la seva mida. Això és una
+ * taula: una fila per tram i una columna per comparació, i es llegeix d'una
+ * mirada el que abans demanava tres targetes.
+ *
+ * No es perd res del que deien les tessel·les: la xifra d'ara és la columna
+ * «aquí», l'espurna va a la seva columna amb els mateixos punts, el «a tot
+ * Catalunya» del peu és una columna, el canvi del mandat i el dels seus són
+ * dues més, i el «què compta» de cadascuna i l'enllaç de l'Idescat —que la
+ * llicència obliga— van sota la taula i a la lletra petita del bloc.
+ */
+function taulaEdats(indicadors: readonly (IndicadorPoblacio | null)[]): string {
+  const files = indicadors.filter(ambValor);
+  if (files.length === 0) return "";
+
+  // L'any de la taula és el de la primera fila; si una fila és d'un altre any,
+  // ho diu a la seva cel·la, que un 2024 al costat d'un 2025 no es pot callar.
+  const any = files[0]!.darrerAny;
+  const mandat = files.find((f) => f.mandat)?.mandat ?? null;
+  const grup = files.find((f) => f.mandatDelGrup)?.mandatDelGrup ?? null;
+  const ambCatalunya = files.some((f) => f.catalunya?.valor != null);
+  const espurnes = files.map((f) => sparkline(f.serie, valorPoblacio(f)));
+  const ambSerie = espurnes.some((e) => e !== "");
+  const primerAny = Math.min(
+    ...files.flatMap((f) => f.serie.filter((p) => p.valor !== null).map((p) => p.any)),
+  );
+
+  // «Pes de la població de 0 a 15 anys» és el nom que li dona J18 i el títol
+  // de la taula ja diu que són pesos: a la fila hi queda «De 0 a 15 anys».
+  const nomDeFila = (f: IndicadorPoblacio): string => {
+    const curt = f.etiqueta.replace(/^Pes de la població /, "");
+    return curt.charAt(0).toUpperCase() + curt.slice(1);
+  };
+
+  const capcalera = [
+    `<th scope="col">Edat</th>`,
+    `<th scope="col">Aquí</th>`,
+    ambSerie && Number.isFinite(primerAny) ? `<th scope="col">Des del ${primerAny}</th>` : "",
+    ambCatalunya ? `<th scope="col">A tot Catalunya</th>` : "",
+    mandat ? `<th scope="col">Del ${mandat.desDe} al ${mandat.fins}</th>` : "",
+    grup ? `<th scope="col">Als ${grup.municipis} de la seva mida</th>` : "",
+  ]
+    .filter((c) => c !== "")
+    .join("");
+
+  const fila = (f: IndicadorPoblacio & { valor: number; darrerAny: number }, i: number): string => {
+    const escriu = escriuVariacio(f.unitat);
+    const propi = f.mandat
+      ? `${escriu(f.mandat.diferencia)}${
+          mandat && (f.mandat.desDe !== mandat.desDe || f.mandat.fins !== mandat.fins)
+            ? ` <span class="secundari">(del ${f.mandat.desDe} al ${f.mandat.fins})</span>`
+            : ""
+        }`
+      : "sense dada";
+    const seus = f.mandatDelGrup && f.mandatDelGrup.diferencia !== null ? escriu(f.mandatDelGrup.diferencia) : "sense dada";
+    return `<tr><th scope="row">${escape(nomDeFila(f))}</th>
+      <td class="aqui">${valorPoblacio(f)(f.valor)}${f.darrerAny === any ? "" : ` <span class="secundari">(${f.darrerAny})</span>`}</td>
+      ${ambSerie ? `<td class="serie-edat">${espurnes[i] === "" ? "sense sèrie" : espurnes[i]}</td>` : ""}
+      ${ambCatalunya ? `<td>${f.catalunya?.valor != null ? valorPoblacio(f)(f.catalunya.valor) : "sense dada"}</td>` : ""}
+      ${mandat ? `<td>${propi}</td>` : ""}
+      ${grup ? `<td>${seus}</td>` : ""}</tr>`;
+  };
+
+  // Un enllaç per taula de l'Idescat, no un per fila: les tres files surten de
+  // la mateixa taula i repetir-lo tres cops no reconeix res que un cop no
+  // reconegui. La llicència demana l'enllaç, i hi és.
+  const enllacos = new Map<string, EnllacIdescat>();
+  for (const f of files) if (f.enllac) enllacos.set(f.enllac.href, f.enllac);
+  const fonts = [...enllacos.values()].map((e) => enllacIdescat(e)).join(" · ");
+
+  return `<div class="taula-envolta"><table class="edats">
+    <caption>Les edats, el ${any}: el pes de cada tram sobre la població censada</caption>
+    <thead><tr>${capcalera}</tr></thead>
+    <tbody>${files.map(fila).join("")}</tbody></table></div>
+    ${fonts === "" ? "" : `<p class="nota-linia fonts-edats">${fonts}</p>`}`;
+}
+
 /**
  * Qui hi viu.
  *
@@ -2550,12 +2647,16 @@ function tira(t: {
  * no es publica. Cada tira porta el seu.
  *
  * Era el bloc més llarg de la fitxa: cinc paràgrafs, dos avisos, vuit targetes
- * i una línia del padró amb l'eix des de zero que sortia plana. Ara són cinc
- * tires amb la seva espurna, una línia amb els tres recomptes que no es poden
- * comparar amb res, i una sola lletra petita amb tot el que explica com es
- * compta: el padró contra el cens, els anys que no demanem, i la segona xifra
- * de l'origen amb la diferència i la taula creuada. Res no s'ha esborrat;
- * s'ha plegat.
+ * i una línia del padró amb l'eix des de zero que sortia plana. Després van
+ * ser cinc tires (sis amb la renda) en una graella que s'omplia sola, i a
+ * escriptori sortien totes en una fila de 160 px: un tauler, no tres xifres.
+ * Ara són **tres tessel·les** —quants hi viuen, d'on venen, quant guanyen—,
+ * **una taula amb les edats** (els tres trams que eren tres tessel·les més,
+ * amb les mateixes comparacions en columnes), una línia amb els tres recomptes
+ * que no es poden comparar amb res, i una sola lletra petita amb tot el que
+ * explica com es compta: el padró contra el cens, els anys que no demanem, el
+ * «què compta» de cada edat, i la segona xifra de l'origen amb la diferència
+ * i la taula creuada. Res no s'ha esborrat; s'ha plegat o s'ha posat en fila.
  */
 export function renderQuiHiViu(poblacio: PoblacioMetric, riquesa: RiquesaMetric | null = null): string {
   // Sense enllaços de l'Idescat no podem publicar les seves dades. Preferim un
@@ -2688,16 +2789,14 @@ export function renderQuiHiViu(poblacio: PoblacioMetric, riquesa: RiquesaMetric 
         })
       : "";
 
-  const tires = [
-    habitants,
-    origen,
-    tiraIndicador(indicadorDe(poblacio, "pct0a15")),
-    tiraIndicador(indicadorDe(poblacio, "pct65iMes")),
-    tiraIndicador(indicadorDe(poblacio, "edatMitjana")),
-    tiraRenda,
-  ]
-    .filter((t) => t !== "")
-    .join("");
+  // Tres tessel·les i prou —quants, d'on, quant guanyen— i les edats a la
+  // taula de sota. Eren sis en una fila i no es llegien: vegeu `taulaEdats`.
+  const tires = [habitants, origen, tiraRenda].filter((t) => t !== "").join("");
+  const edats = taulaEdats([
+    indicadorDe(poblacio, "pct0a15"),
+    indicadorDe(poblacio, "pct65iMes"),
+    indicadorDe(poblacio, "edatMitjana"),
+  ]);
 
   // Els tres recomptes que no es poden comparar amb res —ni amb Catalunya ni
   // amb el poble del costat— en una línia, cadascun amb el seu enllaç.
@@ -2802,6 +2901,20 @@ export function renderQuiHiViu(poblacio: PoblacioMetric, riquesa: RiquesaMetric 
     }
   }
 
+  // El «què compta» de cada fila de les edats. A les tessel·les anava plegat
+  // en un «Què compta exactament» per tessel·la; a la taula no hi cap, i aquí
+  // hi va sencer i literal, que és com J18 el va escriure.
+  const comptesEdats = [
+    indicadorDe(poblacio, "pct0a15"),
+    indicadorDe(poblacio, "pct65iMes"),
+    indicadorDe(poblacio, "edatMitjana"),
+  ]
+    .filter(ambValor)
+    .map((f) => escape(f.compta));
+  if (comptesEdats.length > 0) {
+    notes.push(`<p><b>Les edats, què compta cada fila:</b> ${comptesEdats.join(" ")}</p>`);
+  }
+
   if (renda && renda.valor !== null && riquesa) {
     if (riquesa.context.sensePostEleccions) {
       notes.push(`<p><b>De la renda:</b> ${escape(riquesa.context.sensePostEleccions)}</p>`);
@@ -2823,7 +2936,7 @@ export function renderQuiHiViu(poblacio: PoblacioMetric, riquesa: RiquesaMetric 
     "\n",
   )}</details>`;
 
-  return `${capcalera}${context}<ul class="tires gent-tires">${tires}</ul>${liniaTambe}${detalls}`;
+  return `${capcalera}${context}<ul class="tires gent-tires">${tires}</ul>${edats}${liniaTambe}${detalls}`;
 }
 
 /** El model de gestió del servei tal com l'escriu el full de l'ACA. */
@@ -5291,6 +5404,7 @@ ${cos}
 ${peu(BASE, data.generatedAt)}
 
 ${SEGUIDOR_INDEX}
+${GRAFICS_JS}
 </body>
 </html>`;
 }

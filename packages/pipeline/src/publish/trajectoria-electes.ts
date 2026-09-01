@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { municipalities, municipalityMetrics, mayors, type Db } from "@quivoto/db";
 import { dataCurta, normalizePersonName } from "../lib/text";
-import { serieTemporal } from "./grafics";
+import { GRAFICS_JS, serieTemporal } from "./grafics";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
@@ -735,6 +735,7 @@ ${
   peu("../", generatedAt, [{ text: "Els partits", on: "../partit/" }])
 }
 ${FILTRE}
+${GRAFICS_JS}
 </body>
 </html>`;
 }
