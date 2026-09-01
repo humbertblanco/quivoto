@@ -4634,8 +4634,25 @@ function filesComparat(data: RadiografiaData, medianes?: MedianesMunicipi): Fila
   const comptes = data.finances;
   const deLaComparacio = (key: string): PeerComparison | null =>
     comptes?.comparison.find((c) => c.key === key) ?? null;
+  /*
+   * Als grups petits (menys de trenta municipis: les ciutats grans) finances.ts
+   * no publica percentil sinó posició —«el 7è de 24»—, i la barra es quedava
+   * buida just als municipis on més gent la mira. La posició es converteix
+   * al mateix eix (0 = el més baix del grup, 100 = el més alt) amb el rang
+   * mitjà, que és el que fa `percentileOf` als grups grans: el primer de 24
+   * cau al 2 %, l'últim al 98 %. Quan la posició és «millor» per ser baixa
+   * (deute, dies de pagament) el primer és el més baix; a l'estalvi, el més
+   * alt. Si tampoc no hi ha posició (un terra de zeros massa poblat), la fila
+   * ho diu i prou.
+   */
   const delsComptes = (key: string, etq: string, format: (v: number) => string): FilaComparat => {
     const c = deLaComparacio(key);
+    const perPosicio =
+      c && c.percentile === null && c.rank !== null && c.groupSize > 0
+        ? Math.round(((c.rank - 0.5) / c.groupSize) * 100)
+        : null;
+    const percentil =
+      c?.percentile ?? (perPosicio === null ? null : c!.lowerIsBetter ? perPosicio : 100 - perPosicio);
     return {
       etq,
       any: comptes?.year ?? null,
@@ -4643,7 +4660,7 @@ function filesComparat(data: RadiografiaData, medianes?: MedianesMunicipi): Fila
       on: "#comptes",
       valor: c?.value ?? null,
       format,
-      percentil: c?.percentile ?? null,
+      percentil,
       mediana: c?.median ?? null,
       quants: c?.groupSize ?? null,
     };
