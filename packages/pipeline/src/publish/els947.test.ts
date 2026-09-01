@@ -436,7 +436,7 @@ describe("les 947 pastilles, ara clicables", () => {
     // res a veure: ajuntar-les diria que existeix un partit que no existeix.
     const p = ambSigles({ g: "AGRUPACIÓ D'ELECTORS-PROGRÉS MUNICIPAL", b: "local", ac: null });
     expect(p).not.toContain("partit/local/");
-    expect(p).toMatch(/<b class="sigla"/);
+    expect(p).toMatch(/<b class="sigla( llarga)?"/);
   });
 
   it("la cara i la pastilla comparteixen el color de la força", () => {

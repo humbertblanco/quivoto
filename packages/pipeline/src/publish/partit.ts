@@ -1652,7 +1652,7 @@ export const PARTIT_CSS = `
    —la candidatura en aquell poble i la fitxa de qui hi mana— i una àncora dins
    d'una altra no és HTML vàlid. */
 .partit-llocs{list-style:none;margin:0;padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))}
 .partit-llocs li{display:flex;flex-direction:column;background:var(--paper-2);
   border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
   transition:transform .12s ease,box-shadow .12s ease}

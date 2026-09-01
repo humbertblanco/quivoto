@@ -348,7 +348,12 @@ const CSS = `
   transition:transform .12s ease,box-shadow .12s ease}
 .marques a:hover{box-shadow:var(--ombra);transform:translate(-1px,-1px)}
 @media (prefers-reduced-motion:reduce){.marques a,.comparacions a,.xip{transition:none}}
+.marques li{max-width:100%;min-width:0}
 .marques .compte{font-size:.8rem;font-weight:700;color:var(--ink-suau);white-space:nowrap;font-variant-numeric:tabular-nums}
+/* En un telèfon, «Independents de la Selva · 2 alcaldies · 50 regidories» no
+   cap en una línia de 360 px i feia sobresortir tota la pàgina per la dreta:
+   la pastilla es parteix i el recompte baixa de línia. */
+@media (max-width:600px){.marques a{flex-wrap:wrap;max-width:100%}.marques .compte{white-space:normal}}
 .marques .compte b{color:var(--ink)}
 
 /* --- les comarques: una taula curta --- */

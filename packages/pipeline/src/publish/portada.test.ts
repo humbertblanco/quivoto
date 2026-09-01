@@ -266,7 +266,7 @@ describe("renderPortada amb la mostra", () => {
   it("posa les quinze marques amb les seves alcaldies i regidories, cadascuna a la seva pàgina", () => {
     const marques = main.slice(main.indexOf('<ul class="marques">'), main.indexOf("</ul>", main.indexOf('<ul class="marques">')));
     expect(marques.match(/<li>/g)).toHaveLength(15);
-    expect(marques.match(/class="sigla"/g)).toHaveLength(15);
+    expect(marques.match(/class="sigla( llarga)?"/g)).toHaveLength(15);
     expect(marques).toContain('<a href="partit/erc/" title="Nom ERC a tot Catalunya">');
     expect(marques).toContain("<b>330</b> alcaldies · <b>2.909</b> regidories");
     expect(marques).toContain("<b>1</b> alcaldia · <b>9</b> regidories");

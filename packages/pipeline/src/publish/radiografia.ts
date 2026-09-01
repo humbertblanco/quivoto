@@ -9,7 +9,10 @@ import { sobreColor } from "./contrast";
 import { renderCriminalitat, type GrupCriminalitat } from "./criminalitat";
 import type { CriminalitatMetric } from "../jobs/j29-criminalitat";
 import type { MedianaGrup, MedianesMunicipi } from "./medianes";
-import { barresDivergents, distribucioGrup, escalaDivergent, GRAFICS_JS, regleDispersio, serieTemporal, type FilaDivergent } from "./grafics";
+import {
+  atributsEtiqueta, barresDivergents, distribucioGrup, escalaDivergent, GRAFICS_JS, regleDispersio, serieTemporal,
+  textEtiqueta, type FilaDivergent,
+} from "./grafics";
 import type { SeriesMunicipi } from "./series-grup";
 import type { Continuitat, PuntVolatilitat, VotPerdutElecció } from "../derive/trajectoria";
 import { hemicycle, seientsHemicicle } from "./hemicycle";
@@ -4559,6 +4562,266 @@ function renderUllada(
 }
 
 /**
+ * On cau entre els seus: deu xifres, cadascuna amb la posició dins del grup.
+ *
+ * Les comparacions ja hi eren, però escampades: l'ullada diu «el més habitual
+ * als de la seva mida», les sèries porten la banda del grup, «Com ha anat el
+ * mandat» compara el canvi amb el dels seus i cada bloc té la seva mediana.
+ * Ningú no veia d'un cop d'ull on cau el municipi. Aquest bloc és el resum, i
+ * les peces de sota, el detall: no en treu cap, i cada fila hi porta.
+ *
+ * La llista és **fixa**: deu indicadors que tenen mediana del grup i percentil
+ * calculats per les feines, sempre en el mateix ordre, i el que falta diu
+ * «sense dada» en comptes de desaparèixer. Si les files es moguessin segons
+ * què hi ha, dues fitxes no es podrien llegir de costat.
+ *
+ * La barra va del municipi més baix del grup al més alt, la ratlla del mig és
+ * la mediana i el punt de coral és aquest municipi: el mateix «tu ets aquí»
+ * dels regles de la fitxa. **Cap barra no diu si és bo o dolent**: un deute
+ * alt pot ser una piscina nova, i un rebut alt, un servei més. La frase diu
+ * «més alt que el 74 %» i mai «millor» ni «pitjor».
+ *
+ * La despesa per habitant no hi és, i no és un descuit: J8 desa la mediana
+ * del total però no el percentil (vegeu `DespesaProgramesMetric.medianaGrupTotal`),
+ * i pintar-hi un punt calculat d'una altra manera seria dibuixar una posició
+ * que ningú no ha mesurat. El dia que arribi, és una entrada més a la llista.
+ */
+type FilaComparat = {
+  etq: string;
+  /** L'any de la xifra: va al costat de l'etiqueta i a l'etiqueta del punt. */
+  any: number | string | null;
+  /** D'on surt, en una paraula. Amb enllaç quan la llicència obliga a posar-lo. */
+  font: string;
+  fontHref?: string;
+  /** L'àncora del bloc que en dona el detall. */
+  on: string;
+  valor: number | null;
+  format: (v: number) => string;
+  /** De 0 (el més baix del grup) a 100 (el més alt), com el dona `percentileOf`. */
+  percentil: number | null;
+  mediana: number | null;
+  /** Quants municipis del grup tenen la dada: el percentil és entre aquests. */
+  quants: number | null;
+  /** Context que l'ajuntament no decideix: es diu a la fila, no s'amaga. */
+  context?: boolean;
+};
+
+/**
+ * La posició dins del grup, en una frase neutra.
+ *
+ * «Més alt que el 74 %» i no «millor»: la fitxa no dona veredictes enlloc, i
+ * aquest bloc, que els ensenya tots junts, és on més fàcil seria colar-ne un.
+ * Als extrems el percentil de rang mitjà pot arrodonir a 0 o a 100, i «més
+ * alt que el 100 %» seria fals: allà es diu que és el més alt del grup.
+ */
+function fraseComparat(percentil: number, quants: number | null, mediana: string): string {
+  const dels = quants === null ? "dels municipis de la seva mida" : `dels ${number(quants)} municipis de la seva mida`;
+  const posicio =
+    percentil >= 100
+      ? `el més alt ${dels}`
+      : percentil <= 0
+        ? `el més baix ${dels}`
+        : percentil === 50
+          ? `just al mig ${dels}`
+          : percentil > 50
+            ? `més alt que el ${percentil} % ${dels}`
+            : `més baix que el ${100 - percentil} % ${dels}`;
+  return `${posicio} · mediana ${mediana}`;
+}
+
+function filesComparat(data: RadiografiaData, medianes?: MedianesMunicipi): FilaComparat[] {
+  const euros = (v: number): string => `${number(Math.round(v))} €`;
+  const comptes = data.finances;
+  const deLaComparacio = (key: string): PeerComparison | null =>
+    comptes?.comparison.find((c) => c.key === key) ?? null;
+  const delsComptes = (key: string, etq: string, format: (v: number) => string): FilaComparat => {
+    const c = deLaComparacio(key);
+    return {
+      etq,
+      any: comptes?.year ?? null,
+      font: "AOC",
+      on: "#comptes",
+      valor: c?.value ?? null,
+      format,
+      percentil: c?.percentile ?? null,
+      mediana: c?.median ?? null,
+      quants: c?.groupSize ?? null,
+    };
+  };
+
+  const ibi = data.rebutIbi;
+  const aigua = data.preuAigua;
+  const residus = data.residus;
+  const contractacio = data.contractacio;
+  const renda = data.riquesa?.indicadors.find((i) => i.clau === "rendaNetaPersona") ?? null;
+  const votar = data.participation.find((r) => r.electionId === "M20231") ?? null;
+  const participacio = medianes?.participacio["M20231"] ?? null;
+  const dones = medianes?.donesAlPle ?? null;
+  // Només compta com a paritat el que és una paritat de debò: amb menys electes
+  // que regidories, el percentatge és d'una llista incompleta (vegeu medianes.ts).
+  const donesPct = data.parity?.complet === true ? (data.parity.womenElectedPct ?? null) : null;
+  const unaOferta = contractacio?.comparacio ?? null;
+  const finestra = contractacio?.finestraDates ?? null;
+  const anyFinestra =
+    finestra?.desDe && finestra.finsA
+      ? `${finestra.desDe.slice(0, 4)}–${finestra.finsA.slice(0, 4)}`
+      : (contractacio?.ultimAnyComplet ?? null);
+
+  return [
+    delsComptes("deute-habitant", "Deute per habitant", euros),
+    delsComptes("estalvi-net", "El que sobra cada any (estalvi net)", percent),
+    delsComptes("pmp", "Dies que triga a pagar els proveïdors", (v) => `${number(Math.round(v))} dies`),
+    {
+      etq: "Rebut mitjà d'IBI",
+      any: ibi?.darrerAny ?? null,
+      font: "Idescat",
+      fontHref: ibi?.font.url,
+      on: "#que-paga",
+      valor: ibi?.rebutMitja ?? null,
+      format: euros,
+      percentil: ibi?.comparacio?.percentil ?? null,
+      mediana: ibi?.comparacio?.mediana ?? null,
+      quants: ibi?.comparacio?.grup.ambDada ?? null,
+    },
+    {
+      etq: "Preu de l'aigua (subministrament)",
+      any: aigua?.darrerAny ?? null,
+      font: "ACA",
+      on: "#que-paga",
+      valor: aigua?.preu.subministrament ?? null,
+      format: (v) => `${decimal(v, 2)} €/m³`,
+      percentil: aigua?.comparacio?.percentil ?? null,
+      mediana: aigua?.comparacio?.mediana ?? null,
+      quants: aigua?.comparacio?.grup.ambDada ?? null,
+    },
+    {
+      etq: "Recollida selectiva",
+      any: residus?.darrerAny ?? null,
+      font: "ARC",
+      on: "#escombraries",
+      valor: residus?.taxaSelectiva ?? null,
+      format: percent,
+      percentil: residus?.comparacio?.percentil ?? null,
+      mediana: residus?.comparacio?.mediana ?? null,
+      quants: null,
+    },
+    {
+      etq: "Licitacions amb una sola oferta",
+      any: anyFinestra,
+      font: "PSCP",
+      on: "#contractacio",
+      valor: contractacio?.finestra.unaOfertaPct ?? null,
+      format: percent,
+      percentil: unaOferta?.percentilUnaOferta ?? null,
+      mediana: unaOferta?.medianaUnaOferta ?? null,
+      quants: unaOferta?.municipisUnaOferta ?? null,
+    },
+    {
+      etq: "Participació a les municipals",
+      any: 2023,
+      font: "Generalitat",
+      on: "#participacio",
+      valor: votar?.censusSize && votar.voters !== null ? (100 * votar.voters) / votar.censusSize : null,
+      format: percent,
+      percentil: participacio?.percentil ?? null,
+      mediana: participacio?.mediana ?? null,
+      quants: participacio?.quants ?? null,
+    },
+    {
+      etq: "Dones al ple",
+      any: 2023,
+      font: "Generalitat",
+      on: "#dones-i-homes",
+      valor: donesPct,
+      format: percent,
+      percentil: dones?.percentil ?? null,
+      mediana: dones?.mediana ?? null,
+      quants: dones?.quants ?? null,
+    },
+    {
+      etq: "Renda neta per persona",
+      any: renda?.any ?? null,
+      font: "INE",
+      on: "#qui-hi-viu",
+      valor: renda?.valor ?? null,
+      format: euros,
+      percentil: renda?.comparacio?.percentil ?? null,
+      mediana: renda?.comparacio?.mediana ?? null,
+      quants: renda?.comparacio?.grup.ambDada ?? null,
+      context: true,
+    },
+  ];
+}
+
+/** Amb qui es compara: el primer grup de mida que alguna feina hagi desat. */
+function grupComparat(data: RadiografiaData, medianes?: MedianesMunicipi): { etiqueta: string; mida: number } | null {
+  if (data.finances?.group) return { etiqueta: data.finances.group.label, mida: data.finances.group.size };
+  const ambGrup = data.rebutIbi?.comparacio?.grup ?? data.preuAigua?.comparacio?.grup ?? data.despesaProgrames?.grup;
+  if (ambGrup) return { etiqueta: ambGrup.etiqueta, mida: ambGrup.mida };
+  if (data.spending?.grup) return { etiqueta: data.spending.grup.etiqueta, mida: data.spending.grup.mida };
+  const p = medianes?.participacio["M20231"];
+  return p ? { etiqueta: p.etiqueta, mida: p.quants } : null;
+}
+
+export function renderComparat(data: RadiografiaData, medianes?: MedianesMunicipi): string {
+  const files = filesComparat(data, medianes);
+  const ambPosicio = files.filter((f) => f.valor !== null && f.percentil !== null && f.mediana !== null);
+  const grup = grupComparat(data, medianes);
+  // Amb menys de tres posicions no hi ha resum: hi ha dues xifres, i ja les
+  // diuen els seus blocs. I sense grup no se sap amb qui es compara.
+  if (ambPosicio.length < 3 || !grup) return "";
+
+  const fila = (f: FilaComparat): string => {
+    const anyIFont = [
+      f.any === null ? "" : escape(String(f.any)),
+      f.fontHref ? `<a href="${escape(f.fontHref)}" rel="noopener nofollow">${escape(f.font)}</a>` : escape(f.font),
+      f.context ? "no ho decideix l'ajuntament" : "",
+    ]
+      .filter((t) => t !== "")
+      .join(" · ");
+    const etq = `<span class="etq"><a href="${escape(f.on)}">${escape(f.etq)}</a><small>${anyIFont}</small></span>`;
+
+    if (f.valor === null) {
+      return `<li class="sense">${etq}
+      <span class="xifra buit">sense dada</span>
+      <span class="comparat-barra buida" aria-hidden="true"></span>
+      <span class="frase">d'aquest municipi no en tenim la xifra</span></li>`;
+    }
+    const valor = f.format(f.valor);
+    if (f.percentil === null || f.mediana === null) {
+      return `<li class="sense-posicio">${etq}
+      <span class="xifra">${valor}</span>
+      <span class="comparat-barra buida" aria-hidden="true"></span>
+      <span class="frase">sense comparació amb els de la seva mida</span></li>`;
+    }
+    const mediana = f.format(f.mediana);
+    const dada = { nom: f.etq, any: f.any, valor, mediana };
+    // Del 3 % al 97 % i no de 0 a 100: el punt fa 20 px i als extrems mitja
+    // marca sortia de la barra; el 50 es queda al 50, que és on hi ha la mediana.
+    const on = (3 + 0.94 * Math.max(0, Math.min(100, f.percentil))).toFixed(1);
+    return `<li>${etq}
+      <span class="xifra">${valor}</span>
+      <span class="comparat-barra"><i class="mig"></i><b class="punt" style="--p:${on}%"${atributsEtiqueta(dada)} title="${escape(textEtiqueta(dada))}" tabindex="0"></b></span>
+      <span class="frase">${escape(fraseComparat(f.percentil, f.quants, mediana))}</span></li>`;
+  };
+
+  return `<section class="bloc comparat" id="comparat">
+  <h2>On cau entre els seus</h2>
+  <p class="entrada-bloc">Comparat amb els <b>${number(grup.mida)} municipis ${escape(grup.etiqueta)}</b>, que és el que
+  vol dir «els seus» a tota la fitxa. Cada barra va del municipi més baix del grup al més alt; la ratlla del mig
+  és la mediana i el punt de coral, aquest municipi.</p>
+  <p class="comparat-llegenda" aria-hidden="true"><span>el més baix del grup</span><span>la mediana</span><span>el més alt</span></p>
+  <ol class="comparat-files">
+    ${files.map(fila).join("\n    ")}
+  </ol>
+  <p class="nota oberta">Les barres diuen on cau, no cap veredicte: un deute alt pot ser una piscina nova, i un
+  rebut alt, un servei més. Cada fila porta al bloc que ho explica. Per triar les xifres i els municipis
+  hi ha el <a href="${BASE}comparador/?m=${escape(data.municipality.slug)}">comparador</a>, i per veure
+  els 947 ordenats, els <a href="${BASE}ranquings/">rànquings</a>.</p>
+</section>`;
+}
+
+/**
  * El cercador: la casella que treu la fitxa del cul-de-sac.
  *
  * Una fitxa municipal és una pantalla final: quan s'hi arriba, l'única manera
@@ -5274,10 +5537,16 @@ export function renderRadiografia(
 
   // L'índex i el cos, de la mateixa llista. El client (`SEGUIDOR_INDEX`, i el
   // cercador amb els seus resultats «Bloc») llegeix `.index a[href^='#']`.
-  const index = seccions
-    .filter((seccio) => seccio.alIndex !== false)
-    .map((seccio) => `<a href="#${seccio.id}">${escape(seccio.curt ?? seccio.titol)}</a>`)
-    .join("\n  ");
+  // «On cau entre els seus» viu abans de l'índex, entre l'ullada i la banda
+  // del 23-M, però és un bloc amb id com els altres i l'índex hi ha de portar:
+  // va el primer, que és on és a la pàgina.
+  const comparat = renderComparat(data, medianes);
+  const index = [
+    ...(comparat === "" ? [] : ['<a href="#comparat">On cau entre els seus</a>']),
+    ...seccions
+      .filter((seccio) => seccio.alIndex !== false)
+      .map((seccio) => `<a href="#${seccio.id}">${escape(seccio.curt ?? seccio.titol)}</a>`),
+  ].join("\n  ");
   const cos = seccions
     .map(
       (seccio) => `<section class="bloc${seccio.classe ? ` ${seccio.classe}` : ""}" id="${seccio.id}">
@@ -5384,6 +5653,8 @@ ${cercador(BASE)}
 </section>
 
 ${renderUllada(data, medianes, colorPerGrup)}
+
+${comparat}
 
 ${joc}
 

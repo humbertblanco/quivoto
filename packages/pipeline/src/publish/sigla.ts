@@ -69,7 +69,9 @@ export function sigla(sigles: string, opcions: OpcionsSigla = {}): string {
   const color =
     marca?.color ?? (oficial && /^#[0-9a-f]{6}$/i.test(oficial) ? oficial : "#8b8b8b");
   const { fons, tinta } = sobreColor(color);
-  const classe = ["sigla", opcions.classe].filter(Boolean).join(" ");
+  // «llarga» és el que permet que la pastilla es parteixi en un telèfon: les
+  // sigles de debò mai no hi arriben; els noms sencers de grup, sí.
+  const classe = ["sigla", sigles.length >= 20 ? "llarga" : null, opcions.classe].filter(Boolean).join(" ");
   const estil = `--c:${fons};--t:${tinta}`;
   if (!id || !opcions.base) {
     return `<b class="${classe}" style="${estil}">${escape(sigles)}</b>`;

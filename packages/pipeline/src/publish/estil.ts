@@ -183,7 +183,12 @@ main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
 .sigla{display:inline-block;background:var(--c,var(--coral));color:var(--t,#FBF7EE);
   border:2px solid var(--ink);border-radius:var(--r-max);padding:0 9px;font-weight:900;
   font-size:.82em;line-height:1.45;white-space:nowrap;letter-spacing:0;
-  vertical-align:.06em;text-decoration:none}
+  vertical-align:.06em;text-decoration:none;max-width:100%}
+/* Unes sigles no es parteixen mai, però a la fitxa hi ha pastilles amb el nom
+   sencer del grup («PARTIT DELS SOCIALISTES DE CATALUNYA»), i a 360 px una
+   pastilla d'una sola línia feia sobresortir la pàgina per la dreta. A partir
+   de vint lletres la pastilla es pot partir; les sigles curtes, mai. */
+@media (max-width:560px){.sigla.llarga{white-space:normal;overflow-wrap:anywhere;line-height:1.25;padding-top:2px;padding-bottom:2px}}
 a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
 /* Dins d'una frase de titular la pastilla no ha de fer de botó: amb la mida de
    la lletra del voltant trencava el ritme de lectura i pesava més que el nom
@@ -350,7 +355,7 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
 .ullada a.entre-947:hover,.ullada a.entre-947:focus-visible{text-decoration:underline;text-decoration-thickness:2px}
 /* A les tires («.tires .peu») l'enllaç va dins del peu, en línia, i només
    canvia de color: allà el peu no és cap enllaç i no cal treure'l de res. */
-.tires .peu .entre-947{color:var(--coral-text);font-weight:800;white-space:nowrap}
+.tires .peu .entre-947{color:var(--coral-text);font-weight:800;display:inline-block}
 @media (prefers-reduced-motion:reduce){.ullada .xifra{transition:none}}
 
 /* --- una persona amb cara i partit --------------------------------------
@@ -444,7 +449,7 @@ details.nota > .serie{font-size:1rem}
 /* Tres posicions fixes per força: marca i sigles, regidories, vots. Amb
    «flex-wrap» cada fila partia per un lloc diferent i no es podien comparar. */
 .llegenda{list-style:none;margin:0;padding:0;display:grid;gap:0;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));column-gap:var(--e3)}
+  grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));column-gap:var(--e3)}
 .llegenda li{display:grid;grid-template-columns:1fr auto;align-items:baseline;
   gap:2px var(--e2);padding:9px 0;border-bottom:1px solid var(--vora)}
 .llegenda .qui{display:flex;align-items:center;gap:8px;min-width:0}
@@ -522,7 +527,7 @@ details.nota > .serie{font-size:1rem}
    60,6 % de participació o un 36,6 % de dones al ple no es poden jutjar, i el
    bloc es llegia com una xifra que no diu res. Les targetes creixen una mica
    perquè hi càpiga la comparació, i per això demanen més amplada mínima. */
-.participacio,.paritat{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.participacio,.paritat{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))}
 .participacio li,.paritat li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:4px}
 /* El regle dins d'una targeta no té els 32px de marge que necessita al bloc
    dels diners, on l'etiqueta penja de la marca i pot anar al 94 % del recorregut. */
@@ -545,7 +550,7 @@ details.nota > .serie{font-size:1rem}
    com que els grups no tenen la mateixa mida el resultat era mig full de caixes
    buides: a 900px, 513px de targeta amb el contorn pintat i res a dins. Amb
    «align-items:start» cada grup fa l'alçada que li toca. */
-.plens{display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+.plens{display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));
   align-items:start;align-content:start;margin-bottom:var(--e2)}
 .grup{background:var(--paper-2);border:2.5px solid var(--ink);border-left-width:10px;border-left-color:var(--c);
   border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2);container-type:inline-size}
@@ -593,8 +598,12 @@ details.nota > .serie{font-size:1rem}
 .retrats a[data-tip]::after{content:attr(data-tip);position:absolute;z-index:20;left:50%;bottom:calc(100% + 7px);
   transform:translateX(-50%);width:max-content;max-width:240px;padding:6px 9px;border:1.5px solid var(--ink);
   border-radius:7px;background:var(--ink);color:var(--paper);font:700 .74rem/1.2 var(--text);
-  pointer-events:none;opacity:0;visibility:hidden;transition:opacity .12s ease;box-shadow:var(--ombra)}
-.retrats a[data-tip]:hover::after,.retrats a[data-tip]:focus-visible::after{opacity:1;visibility:visible}
+  pointer-events:none;display:none;box-shadow:var(--ombra)}
+/* Amagat amb «display:none» i no amb «visibility:hidden» A POSTA: un rètol
+   invisible però present segueix comptant per a l'amplada de la pàgina, i a
+   un telèfon el nom llarg de l'última cara de cada fila feia sobresortir tota
+   la fitxa 10 px per la dreta. Es perd el fos en aparèixer; no es perd res més. */
+.retrats a[data-tip]:hover::after,.retrats a[data-tip]:focus-visible::after{display:block}
 /* Els títols natius de les minigràfiques són útils però massa discrets i no es
    poden llegir bé en pantalles tàctils. Repetim el context en una etiqueta
    visual quan l'element rep focus o hover; la taula accessible continua sent
@@ -1209,12 +1218,14 @@ h2.amb-icona .icona{width:40px;height:40px;flex:0 0 auto}
    s'estiren totes, i el que sobra queda dins de la targeta amb el darrer peu
    —i l'enllaç de la font, que ja porta «margin-top:auto»— enganxat a baix. */
 .gent .sub:last-child,.origens .sub:last-child,.preus .sub:last-child{margin-top:auto}
-.gent{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-.origens{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+/* «min(300px,100%)» i no «300px» a seques: a 320 px la columna mínima era més
+   ampla que la pàgina i la targeta sobresortia per la dreta. */
+.gent{grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))}
+.origens{grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))}
 /* Les targetes de «Què costa el govern», «Què contracta» i «Quant fa que
    mana» no tenien columnes i s'apilaven a tota amplada: tres targetes d'una
    xifra cadascuna feien tres pantalles. En fila, com les de «Qui hi viu». */
-.preus{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.preus{grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))}
 /* Fill directe i no qualsevol «li»: dins d'aquestes targetes n'hi ha una altra
    llista —els càrrecs que té algú en un altre ens— i heretava la targeta
    sencera, contorn i ombra incloses, i el «flex-direction:column» hi partia
@@ -1363,6 +1374,53 @@ details.compta > summary:hover{color:var(--coral-text);text-decoration-color:cur
 .prova-enllac{display:inline-flex;align-items:center;min-height:44px;margin-top:6px;font-weight:800;font-size:.85rem;
   border:2px solid var(--ink);border-radius:var(--r-max);padding:0 16px;text-decoration:none}
 .prova-enllac:hover{background:var(--presec);color:#1E1B2E}
+
+/* --- on cau entre els seus ---------------------------------------------
+   Deu files iguals: etiqueta i any, la xifra en gros, una barra del percentil
+   dins del grup i una frase. La barra és la posició de 0 a 100 i no l'escala
+   dels valors, per això la mediana és sempre al mig i totes es llegeixen igual.
+   Res no té amplada fixa ni «nowrap»: a 390px la barra s'encongeix amb la fila
+   i els textos es parteixen on calgui, i cap fila no surt per la dreta. */
+.comparat-llegenda{display:flex;justify-content:space-between;gap:var(--e1);margin:var(--e3) 0 0;
+  font-size:.68rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-suau)}
+.comparat-llegenda span{min-width:0;overflow-wrap:anywhere}
+.comparat-llegenda span:nth-child(2){text-align:center}
+.comparat-llegenda span:last-child{text-align:right}
+.comparat-files{list-style:none;margin:var(--e1) 0 0;padding:0}
+.comparat-files li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px var(--e2);align-items:center;
+  min-width:0;padding:12px 0;border-bottom:1px solid var(--vora)}
+.comparat-files .etq{min-width:0;overflow-wrap:anywhere;font-family:var(--display);font-weight:900;
+  font-size:1rem;line-height:1.2}
+.comparat-files .etq a{color:inherit;text-decoration:none}
+.comparat-files .etq a:hover,.comparat-files .etq a:focus-visible{text-decoration:underline;text-decoration-thickness:2px}
+.comparat-files .etq small{display:block;font-family:var(--text);font-weight:700;font-size:.74rem;
+  letter-spacing:0;color:var(--ink-suau);margin-top:2px}
+.comparat-files .xifra{min-width:0;overflow-wrap:anywhere;text-align:right;font-family:var(--display);
+  font-weight:900;font-size:1.45rem;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.comparat-files .xifra.buit{font-family:var(--text);font-weight:700;font-size:.86rem;color:var(--ink-suau)}
+/* La barra ocupa tota l'amplada de la fila: és fluida, i el punt s'hi col·loca
+   en percentatge. Sobresurt per dalt i per baix (el punt fa 20px sobre 14px)
+   però mai per la dreta: el 97 % més mig punt cap dins de la barra. */
+.comparat-barra{grid-column:1/-1;position:relative;display:block;width:100%;min-width:0;height:14px;
+  margin:6px 0;background:var(--vora);border-radius:var(--r-max)}
+.comparat-barra .mig{position:absolute;left:50%;top:-4px;bottom:-4px;width:2.5px;margin-left:-1.25px;
+  background:var(--ink);border-radius:2px}
+.comparat-barra .punt{position:absolute;left:var(--p);top:-3px;width:20px;height:20px;margin-left:-10px;
+  box-sizing:border-box;background:var(--coral);border:2px solid var(--ink);border-radius:50%;cursor:default}
+.comparat-barra .punt:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.comparat-barra.buida{background:repeating-linear-gradient(90deg,var(--vora) 0 6px,transparent 6px 12px)}
+.comparat-files .frase{grid-column:1/-1;min-width:0;overflow-wrap:anywhere;font-size:.86rem;line-height:1.35;
+  font-weight:700;color:var(--ink-suau)}
+.comparat-files .sense .etq,.comparat-files .sense-posicio .etq{color:var(--ink-suau)}
+/* Amb lloc, tres columnes: la barra i la frase van a la dreta de la xifra i
+   deu files hi caben en una pantalla, que és la gràcia d'un resum. */
+@media (min-width:760px){
+  .comparat-files li{grid-template-columns:minmax(0,220px) minmax(0,130px) minmax(0,1fr);gap:2px var(--e3)}
+  .comparat-files .etq,.comparat-files .xifra{grid-row:1/3;align-self:center}
+  .comparat-barra{grid-column:3;grid-row:1;margin:8px 0 2px}
+  .comparat-files .frase{grid-column:3;grid-row:2}
+  .comparat-llegenda{margin-left:calc(220px + 130px + 2 * var(--e3))}
+}
 ${GRAFICS_CSS}${PEU_CSS}${ESCUT_CSS}`;
 
 /**

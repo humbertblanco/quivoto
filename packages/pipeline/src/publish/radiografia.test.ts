@@ -9,6 +9,7 @@ import {
   renderQuantGasta,
   renderQuePaga,
   renderQuiHiViu,
+  renderComparat,
   renderContractacio,
   renderPapers,
   renderRadiografia,
@@ -1938,7 +1939,13 @@ describe("la mediana del grup", () => {
     expect(html).toContain("60,0 %");
     // El script de l'etiqueta dels gràfics porta la frase «mediana dels seus»
     // com a text que compon; el que no hi pot haver és cap mediana escrita.
-    expect(html.replace(/<script id="grafics-etiqueta">[\s\S]*?<\/script>/, "")).not.toContain("mediana dels");
+    // I «On cau entre els seus» porta les medianes de l'IBI, l'aigua i la
+    // selectiva, que són seves i no de la participació: es treu de la comprovació.
+    expect(
+      html
+        .replace(/<script id="grafics-etiqueta">[\s\S]*?<\/script>/, "")
+        .replace(/<section class="bloc comparat"[\s\S]*?<\/section>/, ""),
+    ).not.toContain("mediana dels");
   });
 
   it("amb els valors del grup dibuixa el regle de dispersió, amb el «tu ets aquí»", () => {
@@ -2070,7 +2077,9 @@ describe("el registre de seccions", () => {
     );
     const ids = seccions(html);
     for (const id of ["regidors", "alcaldies", "trajectoria", "moviments", "impostos", "joc"]) expect(ids, id).not.toContain(id);
-    expect(ids[0]).toBe("ple");
+    // «On cau entre els seus» va abans de l'índex i és el primer bloc amb id;
+    // el primer de després de l'índex continua sent «Qui mana».
+    expect(ids.slice(0, 2)).toEqual(["comparat", "ple"]);
     expect(html).toContain('<a href="#ple">Qui mana</a>');
     const on = html.indexOf('id="ple"');
     const bloc = html.slice(on, html.indexOf("<section", on));
@@ -2363,7 +2372,7 @@ describe("la portada i el cap de pàgina", () => {
     const html = renderRadiografia(fitxa());
     const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
     expect(css).not.toContain("/*");
-    expect(css).toContain(".preus{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}");
+    expect(css).toContain(".preus{grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))}");
   });
 
   it("amb set entrades, el menú baixa sencer a la seva fila i la regla d'encongir toca els enllaços", () => {
@@ -2772,5 +2781,173 @@ describe("«Qui hi viu» a la fitxa: tres columnes com a molt, i l'etiqueta dels
     expect(html.indexOf('<script id="grafics-etiqueta">')).toBeLessThan(html.indexOf("</body>"));
     // I el CSS de l'etiqueta hi és, via GRAFICS_CSS.
     expect(html).toContain(".etiqueta-grafic{position:fixed");
+  });
+});
+
+/**
+ * «On cau entre els seus»: el resum de les comparacions que fins ara anaven
+ * escampades per la fitxa. Deu files fixes, cadascuna amb la posició dins del
+ * grup en una barra i en una frase, i cap veredicte.
+ */
+describe("on cau entre els seus", () => {
+  const participacio = [{ electionId: "M20231", censusSize: 1000, voters: 600, blankVotes: 5 }] as unknown as RadiografiaData["participation"];
+  const medianes = {
+    participacio: { M20231: { mediana: 51.5, quants: 24, etiqueta: "de més de 50.000 habitants", percentil: 88, valors: [] } },
+    donesAlPle: { mediana: 44, quants: 22, etiqueta: "de més de 50.000 habitants", percentil: 72, valors: [] },
+  };
+  const paritat = {
+    candidates: 297, womenCandidates: 144, womenCandidatesPct: 48, elected: 27, womenElected: 14,
+    womenElectedPct: 52, heads: 11, womenHeads: 5, expectedElected: 27, complet: true,
+  } as unknown as RadiografiaData["parity"];
+  const riquesa = {
+    font: { ine: { organisme: "INE", conjunt: "ADRH", extret: "2026-08-29" } },
+    context: { decideixLAjuntament: false, nota: "", sensePostEleccions: null },
+    any: 2023,
+    cobertura: { municipisAmbDada: 927, de: 947, nota: "" },
+    indicadors: [{
+      clau: "rendaNetaPersona", etiqueta: "Renda neta per persona", unitat: "€", nota: "", any: 2023, valor: 14_500,
+      darrerAnyPropi: 2023, serie: [], variacio: null,
+      comparacio: {
+        grup: { clau: "gran", etiqueta: "de més de 50.000 habitants", mida: 23, ambDada: 23 },
+        percentil: 50, mediana: 14_500, diferencia: 0, percentual: 0,
+      },
+      catalunya: null,
+    }],
+  } as unknown as RadiografiaData["riquesa"];
+  const completa = () =>
+    renderRadiografia(fitxa({ finances: finances(), participation: participacio, parity: paritat, riquesa }), [], new Map(), medianes);
+  const bloc = (html: string): string => {
+    const on = html.indexOf('id="comparat"');
+    return on < 0 ? "" : html.slice(on, html.indexOf("</section>", on));
+  };
+
+  it("és un bloc amb id, entre l'ullada i la banda del 23-M, i l'índex hi porta el primer", () => {
+    const html = completa();
+    expect(html).toContain('<section class="bloc comparat" id="comparat">');
+    expect(html).toContain("<h2>On cau entre els seus</h2>");
+    const ullada = html.indexOf('<section class="ullada');
+    const comparat = html.indexOf('id="comparat"');
+    const index = html.indexOf('<nav class="index"');
+    expect(ullada).toBeGreaterThan(0);
+    expect(comparat).toBeGreaterThan(ullada);
+    expect(index).toBeGreaterThan(comparat);
+    const nav = html.slice(index, html.indexOf("</nav>", index));
+    expect(nav).toContain('<a href="#comparat">On cau entre els seus</a>');
+    expect(nav.indexOf('href="#comparat"')).toBeLessThan(nav.indexOf('href="#comptes"'));
+  });
+
+  it("diu amb qui es compara i enllaça el comparador i els rànquings", () => {
+    const b = bloc(completa());
+    expect(b).toContain("Comparat amb els <b>23 municipis de més de 50.000 habitants</b>");
+    expect(b).toContain('href="../../comparador/?m=sabadell"');
+    expect(b).toContain('href="../../ranquings/"');
+  });
+
+  it("té deu files fixes, en aquest ordre, i cada una porta al seu bloc", () => {
+    const b = bloc(completa());
+    const files = b.match(/<li[ >]/g) ?? [];
+    expect(files.length).toBeGreaterThanOrEqual(8);
+    expect(files.length).toBeLessThanOrEqual(10);
+    const etiquetes = [...b.matchAll(/<span class="etq"><a href="(#[^"]+)">([^<]+)<\/a>/g)].map((m) => [m[1], m[2]]);
+    expect(etiquetes).toEqual([
+      ["#comptes", "Deute per habitant"],
+      ["#comptes", "El que sobra cada any (estalvi net)"],
+      ["#comptes", "Dies que triga a pagar els proveïdors"],
+      ["#que-paga", "Rebut mitjà d'IBI"],
+      ["#que-paga", "Preu de l'aigua (subministrament)"],
+      ["#escombraries", "Recollida selectiva"],
+      ["#contractacio", "Licitacions amb una sola oferta"],
+      ["#participacio", "Participació a les municipals"],
+      ["#dones-i-homes", "Dones al ple"],
+      ["#qui-hi-viu", "Renda neta per persona"],
+    ]);
+  });
+
+  it("cada xifra porta el valor en gros, l'any i la font, i la frase diu la posició i la mediana", () => {
+    const b = bloc(completa());
+    // El deute: percentil 40 vol dir que el 60 % del grup deu més que ell.
+    expect(b).toContain('<span class="xifra">450 €</span>');
+    expect(b).toContain("més baix que el 60 % dels 23 municipis de la seva mida · mediana 520 €");
+    // L'IBI, de l'Idescat, amb l'enllaç que la llicència obliga.
+    expect(b).toContain("362 €");
+    expect(b).toContain("més alt que el 58 % dels 23 municipis de la seva mida · mediana 348 €");
+    expect(b).toContain('2025 · <a href="https://www.idescat.cat/emex/?id=081871#h173" rel="noopener nofollow">Idescat</a>');
+    // L'aigua, en euros per metre cúbic amb dos decimals.
+    expect(b).toContain("1,50 €/m³");
+    expect(b).toContain("mediana 1,61 €/m³");
+    // La participació contra la mediana dels seus, en punts de percentatge.
+    expect(b).toContain("60,0 %");
+    expect(b).toContain("més alt que el 88 % dels 24 municipis de la seva mida · mediana 51,5 %");
+    // La renda: just al mig, i dit que no ho decideix l'ajuntament.
+    expect(b).toContain("just al mig dels 23 municipis de la seva mida · mediana 14.500 €");
+    expect(b).toContain("2023 · INE · no ho decideix l'ajuntament");
+  });
+
+  it("no diu mai «millor» ni «pitjor», ni cap color de veredicte", () => {
+    const b = bloc(completa());
+    expect(b).not.toMatch(/millor|pitjor|dolent|\bbo\b|\bbon[as]?\b/i);
+    expect(b).not.toMatch(/class="(millora|empitjora|posicio-dalt|posicio-baix)"/);
+  });
+
+  it("cada punt de barra porta les dades de l'etiqueta comuna i la mediana marcada al mig", () => {
+    const b = bloc(completa());
+    const punts = b.match(/<b class="punt"[^>]*>/g) ?? [];
+    expect(punts.length).toBeGreaterThanOrEqual(7);
+    for (const punt of punts) {
+      expect(punt).toContain("data-nom=");
+      expect(punt).toContain("data-any=");
+      expect(punt).toContain("data-valor=");
+      expect(punt).toContain("data-mediana=");
+      expect(punt).toContain('style="--p:');
+    }
+    expect(b).toContain('data-nom="Deute per habitant" data-any="2025" data-valor="450 €" data-mediana="520 €"');
+    // El percentil 40 cau al 40,6 % del recorregut (del 3 al 97, amb el 50 al mig).
+    expect(b).toContain('style="--p:40.6%"');
+    expect(b).toContain('title="Deute per habitant: 2025 · 450 € · mediana dels seus: 520 €"');
+    expect(b.match(/<i class="mig"><\/i>/g)?.length).toBe(punts.length);
+  });
+
+  it("sense dada, la fila diu «sense dada» i no s'inventa cap posició", () => {
+    // La fitxa de base no té comptes, contractació, paritat ni renda.
+    const b = bloc(renderRadiografia(fitxa()));
+    expect(b).not.toBe("");
+    const sense = b.match(/<li class="sense">/g) ?? [];
+    expect(sense.length).toBe(7);
+    expect(b).toContain('<span class="xifra buit">sense dada</span>');
+    // Les que sí que hi són —IBI, aigua, selectiva— porten punt; les altres no.
+    expect(b.match(/<b class="punt"/g)?.length).toBe(3);
+    expect(b).toContain('<span class="comparat-barra buida" aria-hidden="true"></span>');
+  });
+
+  it("amb la xifra però sense comparació ho diu, sense punt", () => {
+    const b = renderComparat(fitxa({ finances: finances(), residus: { ...residus(), comparacio: null } }));
+    expect(b).toContain("48,6 %");
+    expect(b).toContain('<li class="sense-posicio">');
+    expect(b).toContain("sense comparació amb els de la seva mida");
+  });
+
+  it("amb menys de tres posicions no hi ha bloc ni entrada a l'índex", () => {
+    const html = renderRadiografia(fitxa({ residus: null, preuAigua: null, rebutIbi: null }));
+    expect(html).not.toContain('id="comparat"');
+    expect(html).not.toContain('href="#comparat"');
+  });
+
+  it("als extrems no diu «més alt que el 100 %»: diu el més alt del grup", () => {
+    const b = renderComparat(fitxa({ rebutIbi: ibi({ comparacio: { grup: { clau: "gran", etiqueta: "de més de 50.000 habitants", mida: 23, ambDada: 23 }, percentil: 100, mediana: 348.2 } }) }));
+    expect(b).toContain("el més alt dels 23 municipis de la seva mida · mediana 348 €");
+    expect(b).not.toContain("100 %");
+  });
+
+  it("res del bloc no porta «nowrap» ni amplades fixes: a 390px no ha de sortir per la dreta", () => {
+    const b = bloc(completa());
+    expect(b).not.toContain("nowrap");
+    expect(b).not.toMatch(/width:\s*\d+px/);
+    // Les regles del full que toquen el bloc: cap «white-space:nowrap», i la
+    // barra amb amplada fluida.
+    const regles = (RADIOGRAFIA_CSS.match(/[^{}]*\.comparat[^{}]*\{[^{}]*\}/g) ?? []).map((r) => r.trim());
+    expect(regles.length).toBeGreaterThan(5);
+    for (const regla of regles) expect(regla).not.toContain("nowrap");
+    expect(regles.some((r) => r.startsWith(".comparat-barra{") && r.includes("width:100%"))).toBe(true);
+    expect(regles.some((r) => r.includes(".comparat-files li{") && r.includes("min-width:0"))).toBe(true);
   });
 });
