@@ -230,6 +230,25 @@ describe("renderPortada amb la mostra", () => {
     expect(svg).toContain('<path class="contorn" d="M');
     expect(svg).toContain('<pattern id="pm-ratlles"');
     expect(svg.match(/<path /g)!.length).toBeLessThan(12);
+  });
+
+  it("cada taca del mapa petit diu la força i quantes alcaldies pinta, amb l'etiqueta comuna i el títol per a qui no té script", () => {
+    const svg = main.slice(main.indexOf('<svg class="minimapa"'), main.indexOf("</svg>", main.indexOf('<svg class="minimapa"')) + 6);
+    // Cinc del PSC: les sis ciutats de la mostra menys l'Hospitalet, que la geometria no té; el recompte és el de la taca.
+    expect(svg).toMatch(/<path fill="#d00c3c" d="M[^"]+" data-valor="PSC · 5 alcaldies"><title>PSC · 5 alcaldies<\/title><\/path>/);
+    expect(svg).toContain('data-valor="ERC · 1 alcaldia"><title>ERC · 1 alcaldia</title></path>');
+    expect(svg).toMatch(/<path class="local" d="M[^"]+" data-valor="Llistes locals o sense marca · 2 alcaldies">/);
+    expect(svg).toMatch(/<path class="cap" d="M[^"]+" data-valor="Sense identificar · \d+ municipis">/);
+    // El contorn no és cap força i no diu res.
+    expect(svg).toMatch(/<path class="contorn" d="M[^"]+"\/>/);
+    // L'enllaç no porta cap rètol nadiu: seria el segon.
+    expect(main).toContain('<a class="minimapa-enllac" href="mapa/"><svg class="minimapa"');
+  });
+
+  it("porta el script de l'etiqueta una sola vegada, abans de tancar el cos", () => {
+    expect(html.split('<script id="grafics-etiqueta">')).toHaveLength(2);
+    expect(html.indexOf('<script id="grafics-etiqueta">')).toBeLessThan(html.indexOf("</body>"));
+    expect(html).toContain(".etiqueta-grafic{position:fixed");
     // La clau: les forces amb alcaldia, el gris i el ratllat.
     const clau = main.slice(main.indexOf('<ul class="clau-mini">'), main.indexOf("</ul>", main.indexOf('<ul class="clau-mini">')));
     expect(clau).toContain('href="./partit/erc/"');

@@ -8,6 +8,7 @@ import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { de } from "../lib/text";
+import { atributsEtiqueta, GRAFICS_JS, type DadaEtiqueta } from "./grafics";
 import {
   colorDe, etiquetesPct, graoDe, MARQUES, quintilsDe, rampaDe, siglesDe, type VotsPartit,
 } from "./vots-partit";
@@ -68,6 +69,15 @@ type Capa = {
   talls?: number[];
   etiquetes?: string[];
   format: (v: number) => string;
+  /**
+   * El que diu l'etiqueta d'un municipi quan el valor formatat no ho diu tot.
+   *
+   * A «qui mana» el valor és el número de la família a la taula i el format
+   * en treu el nom de la força, i el que el lector vol saber en passar-hi el
+   * ratolí és també qui és l'alcaldia: aquesta funció ho pot escriure perquè
+   * rep la fila sencera. `null` és «sense dada» i es diu com la clau.
+   */
+  text?: (r: Els947Row, v: number | null) => string | null;
   /**
    * Colors propis de la capa, un per graó, quan el que separa els municipis no
    * és una escala sinó una categoria. La rampa coral de la resta de capes diu
@@ -188,6 +198,15 @@ const CAPA_PARTIT: Capa = {
   etiquetes: FAMILIES_MAPA.map(([, nom]) => nom),
   colors: FAMILIES_MAPA.map(([, , color]) => color),
   format: (v) => FAMILIES_MAPA[v]?.[1] ?? "sense marca",
+  // «ERC (alcaldia: Nom Cognom)». Un municipi gris no és un municipi sense
+  // alcaldia: si en sabem les sigles es diuen, amb el que són —una llista
+  // local o una marca que el mapa no pinta— perquè el gris no es llegeixi
+  // com un forat.
+  text: (r, v) => {
+    const forca = v === null ? (r.g ? `${r.g}, llista local o sense marca` : null) : FAMILIES_MAPA[v]![1];
+    if (!forca) return null;
+    return r.a ? `${forca} (alcaldia: ${r.a})` : forca;
+  },
 };
 
 const CAPES: Capa[] = [
@@ -469,20 +488,11 @@ function clauSvg(i: number, titol: string, entrades: readonly { classe: string; 
  */
 const css = (capes: readonly Capa[]): string => `
 .mapa-marc{margin:var(--e4) 0 0;position:relative}
-/* La fitxa que segueix el ratolí. No intercepta cap clic —el que hi ha a sota
-   és l'enllaç al municipi— i no surt mai amb el dit: allà el toc ja obre la
-   fitxa del poble, que és millor que qualsevol previsualització. */
-.ullada-mapa[hidden]{display:none}
-.ullada-mapa{position:absolute;z-index:5;pointer-events:none;background:var(--paper-2);
-  border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
-  padding:10px 14px;min-width:190px;max-width:280px;display:flex;flex-direction:column;gap:2px}
-.ullada-mapa b{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.01em;line-height:1.15}
-.ullada-mapa .hab{font-size:.76rem;color:var(--ink-suau);font-weight:700;font-variant-numeric:tabular-nums}
-.ullada-mapa .qui{display:flex;align-items:center;gap:7px;font-size:.82rem;font-weight:800;margin-top:4px}
-.ullada-mapa .qui i{width:11px;height:11px;border-radius:3px;border:1.5px solid var(--ink);flex:none}
-.ullada-mapa .qui i.sense{background:#DED8CB}
-.ullada-mapa .capa{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
-  color:var(--ink-suau);margin-top:5px;padding-top:5px;border-top:1px solid var(--vora)}
+/* El rètol de cada municipi és l'etiqueta comuna de tots els gràfics
+   —«.etiqueta-grafic», que ve amb GRAFICS_CSS dins de RADIOGRAFIA_CSS— i no
+   una fitxa pròpia del mapa: una sola caixa per pàgina, que surt amb el
+   ratolí, amb el dit i amb el tabulador, i que diu el nom i el que hi ha
+   pintat a la capa d'ara. */
 .mapa947{width:100%;height:auto;display:block;max-width:900px;margin:0 auto}
 .mapa947 path{stroke:var(--ink);stroke-width:.7;stroke-linejoin:round;transition:fill .3s ease}
 .mapa947 a:hover path,.mapa947 a:focus path{stroke-width:3.5}
@@ -539,7 +549,6 @@ ${capes.map((c, i) =>
      canvi que fa la rampa: el patró de l'SVG llegeix aquestes dues variables i
      no cal tornar-lo a declarar. */
   .mapa947,.llegenda,.clau-mapa{--nd-fons:#2E2A3A;--nd-ratlla:#8A83A3}
-  .ullada-mapa .qui i.sense{background:#3A3545}
 }
 /* Les rampes de cada partit, girades en fosc pel mateix motiu que la coral.
    Van després del bloc fosc de la coral i amb més especificitat que ella, que
@@ -668,6 +677,38 @@ export function renderMapaCatalunya(
       ? capa.cobertura(ambDada, slugs.length, migText)
       : `${ambDada} dels ${slugs.length} municipis tenen aquesta dada.` +
         (migText ? ` El municipi del mig en té ${migText}.` : "");
+    /*
+     * El que diu l'etiqueta de cada municipi en aquesta capa: «62,3 %»,
+     * «420 €», «amb majoria absoluta». Es formata aquí, una sola vegada i amb
+     * les mateixes funcions que la clau, i el navegador només ho llegeix.
+     *
+     * No es guarda un text per municipi sinó un diccionari dels textos
+     * diferents i, per municipi, l'índex al diccionari: a les capes de
+     * categories hi ha dos o tres textos per a 947 municipis, i a les de
+     * xifres els repetits també hi són. L'índex va en base 36 i separat per
+     * barres, perquè pot passar de 36; el buit és «sense dada» i es diu com
+     * la clau.
+     */
+    const paraules: string[] = [];
+    const posicioDe = new Map<string, number>();
+    const textos = slugs.map((s) => {
+      const fila = perSlug.get(s);
+      if (!fila) return null;
+      const v = capa.valor(fila);
+      return capa.text ? capa.text(fila, v) : v === null ? null : capa.format(v);
+    });
+    const indexs = textos
+      .map((t) => {
+        if (t === null) return "";
+        let i = posicioDe.get(t);
+        if (i === undefined) {
+          i = paraules.length;
+          paraules.push(t);
+          posicioDe.set(t, i);
+        }
+        return i.toString(36);
+      })
+      .join("|");
     return {
       ...capa,
       graons,
@@ -677,6 +718,9 @@ export function renderMapaCatalunya(
       mig: migText,
       textCobertura,
       senseDada: capa.senseDada ?? "sense dada",
+      textos,
+      paraules,
+      indexs,
     };
   });
 
@@ -691,27 +735,30 @@ export function renderMapaCatalunya(
    */
   const capes = totes.filter((c, i) => i === 0 || c.ambDada > 0);
 
-  // El que ensenya la fitxa flotant, en el mateix ordre que els camins: nom,
-  // habitants, alcaldia, sigles i color de la seva força. Va com una llista
-  // paral·lela i no com a atributs de cada camí perquè 947 camins amb cinc
-  // atributs cadascun són 947 lectures del DOM a cada moviment del ratolí.
-  const info = slugs.map((slug) => {
-    const f = perSlug.get(slug);
-    if (!f) return [slug, 0, "", "", ""];
-    // La mateixa regla que pinta el mapa. Si aquí es tornés a mirar només les
-    // sigles, el Prat sortiria morat al mapa i sense color a la fitxa flotant.
-    const familia = familiaAlcaldia(f);
-    const color = familia ? FAMILIES_MAPA.find(([id]) => id === familia)?.[2] ?? "" : "";
-    return [f.n, f.p, f.a ?? "", f.g ?? "", color];
-  });
-
   const primera = capes[0]!;
+  /*
+   * Cada municipi porta el nom i la comarca a «data-nom» i, a «data-valor»,
+   * el que hi ha pintat a la primera capa: és el contracte de l'etiqueta
+   * comuna (`atributsEtiqueta`, a grafics.ts), i és el que fa que el mapa
+   * digui alguna cosa en passar-hi per sobre abans que arrenqui el
+   * JavaScript de les capes. Quan una altra capa es pinta, el script
+   * reescriu el «data-valor» dels 947 amb el text d'aquella capa.
+   *
+   * Els atributs van a l'enllaç i no al camí perquè l'enllaç és el que rep el
+   * focus: el tabulador hi arriba i l'etiqueta hi surt. El `<title>` diu
+   * només el nom: és el rètol de qui no té script, i 947 frases senceres
+   * serien 60 kB per dir dues vegades el mateix.
+   */
   const camins = slugs
     .map((slug, i) => {
       const fila = perSlug.get(slug);
       const nom = fila?.n ?? slug;
       const g = primera.graons[i] === "x" ? "gnd" : `g${primera.graons[i]}`;
-      return `<a href="/observatori/m/${escape(slug)}/"><title>${escape(nom)}</title><path class="${g}" d="${geometria.municipis[slug]}"/></a>`;
+      const dada: DadaEtiqueta = {
+        nom: fila?.c ? `${nom} · ${fila.c}` : nom,
+        valor: primera.textos[i] ?? primera.senseDada,
+      };
+      return `<a href="/observatori/m/${escape(slug)}/"${atributsEtiqueta(dada)}><title>${escape(nom)}</title><path class="${g}" d="${geometria.municipis[slug]}"/></a>`;
     })
     .join("");
 
@@ -817,7 +864,6 @@ ${cercador("../")}
       ${geometria.contorn ? `<path class="contorn" d="${geometria.contorn}"/>` : ""}
       ${claus}
     </svg>
-    <div class="ullada-mapa" id="ullada" hidden aria-hidden="true"></div>
     <p class="nota" id="cobertura-capa">${escape(primera.textCobertura)}</p>
     <p class="nota" id="enllac-capa"${primera.enllac ? "" : " hidden"}><a href="${escape(
       primera.enllac?.href ?? "",
@@ -881,7 +927,7 @@ ${peu("../", generatedAt)}
 
 <script>
 var CAPES = ${JSON.stringify(
-    capes.map((c) => ({
+    capes.map((c, i) => ({
       t: c.titol,
       p: c.peu.replace(/\s+/g, " ").trim(),
       g: c.graons,
@@ -891,15 +937,29 @@ var CAPES = ${JSON.stringify(
       x: c.senseDada,
       c: c.textCobertura,
       u: c.enllac ? [c.enllac.href, c.enllac.text] : null,
+      /* El text de l'etiqueta de cada municipi: el diccionari i els índexs.
+         La primera capa no els porta: ja són escrits als «data-valor» dels
+         camins, i el script els llegeix d'allà en arrencar. */
+      w: i === 0 ? null : c.paraules,
+      k: i === 0 ? null : c.indexs,
     })),
   )};
 var camins = document.querySelectorAll('.mapa947 a path');
+var enllacos = document.querySelectorAll('.mapa947 a');
 var enllac = document.getElementById('enllac-capa');
+/* El que diu cada municipi a la primera capa, tal com ha arribat escrit. */
+var inicials = [];
+for (var e = 0; e < enllacos.length; e++) inicials.push(enllacos[e].getAttribute('data-valor'));
 function pinta(i) {
   var c = CAPES[i];
+  var claus = c.k === null ? null : c.k.split('|');
   for (var n = 0; n < camins.length; n++) {
     var g = c.g.charAt(n);
     camins[n].setAttribute('class', g === 'x' ? 'gnd' : 'g' + parseInt(g, 36));
+    /* L'etiqueta comuna llegeix «data-valor» en el moment de sortir: canviar
+       de capa és també canviar què diu cada municipi. */
+    var text = claus === null ? inicials[n] : claus[n] === '' ? c.x : c.w[parseInt(claus[n], 36)];
+    enllacos[n].setAttribute('data-valor', text);
   }
   document.querySelector('.mapa947').setAttribute('data-capa', i);
   document.getElementById('llegenda').setAttribute('data-capa', i);
@@ -912,56 +972,14 @@ function pinta(i) {
   /* L'enllaç a la pàgina del partit, només a les capes que en tenen. */
   if (c.u) { enllac.querySelector('a').href = c.u[0]; enllac.querySelector('a').textContent = c.u[1]; }
   enllac.hidden = !c.u;
-  capaAra = i;
   /* Els botons van en dues fileres i l'índex que mana és el que porten escrit,
      no el lloc que ocupen: el primer botó de la segona filera és la capa dotze. */
   var botons = document.querySelectorAll('.tries button');
   for (var b = 0; b < botons.length; b++) botons[b].setAttribute('aria-pressed', Number(botons[b].getAttribute('data-capa')) === i ? 'true' : 'false');
 }
-/* La fitxa que surt en passar el ratolí per un municipi.
-   El mapa és de 947 taques i cap no diu com es diu: el títol nadiu del
-   navegador triga un segon llarg i no hi cap res més que el nom. Aquí hi va
-   qui mana i quant hi viu, que és el que fa que passar-hi el ratolí valgui la
-   pena. Amb el dit no s'hi mostra res: el toc obre la fitxa del poble, que és
-   millor que qualsevol previsualització. */
-var INFO = ${JSON.stringify(info)};
-var ullada = document.getElementById('ullada');
-var marc = document.querySelector('.mapa-marc');
-var capaAra = 0;
-function ensenya(i, x, y) {
-  var d = INFO[i];
-  if (!d) return;
-  var c = CAPES[capaAra];
-  var g = c.g.charAt(i);
-  var quin = g === 'x' ? c.x : c.e[parseInt(g, 36)];
-  ullada.innerHTML =
-    '<b>' + d[0] + '</b>' +
-    '<span class="hab">' + d[1].toLocaleString('ca-ES') + ' habitants</span>' +
-    (d[2] ? '<span class="qui">' + (d[4] ? '<i style="background:' + d[4] + '"></i>' : '<i class="sense"></i>') + d[2] + (d[3] ? ' · ' + d[3] : '') + '</span>' : '') +
-    '<span class="capa">' + quin + '</span>';
-  var r = marc.getBoundingClientRect();
-  ullada.hidden = false;
-  var w = ullada.offsetWidth, h = ullada.offsetHeight;
-  var px = x - r.left + 16, py = y - r.top + 16;
-  if (px + w > r.width) px = x - r.left - w - 16;
-  if (py + h > r.height) py = y - r.top - h - 16;
-  ullada.style.left = Math.max(0, px) + 'px';
-  ullada.style.top = Math.max(0, py) + 'px';
-}
-if (window.matchMedia('(hover: hover)').matches) {
-  for (var q = 0; q < camins.length; q++) {
-    (function (n) {
-      var a = camins[n].parentNode;
-      a.addEventListener('mousemove', function (e) { ensenya(n, e.clientX, e.clientY); });
-      a.addEventListener('mouseleave', function () { ullada.hidden = true; });
-      a.addEventListener('focus', function () {
-        var b = camins[n].getBoundingClientRect();
-        ensenya(n, b.left + b.width / 2, b.top + b.height / 2);
-      });
-      a.addEventListener('blur', function () { ullada.hidden = true; });
-    })(q);
-  }
-}
+/* El rètol de cada municipi ja no és d'aquest script: és l'etiqueta comuna
+   de tots els gràfics (GRAFICS_JS, just a sota), que llegeix el «data-nom» i
+   el «data-valor» de l'enllaç que «pinta» acaba d'escriure. */
 var fileres = document.querySelectorAll('.tries');
 for (var f = 0; f < fileres.length; f++) {
   fileres[f].addEventListener('click', function (e) {
@@ -971,5 +989,6 @@ for (var f = 0; f < fileres.length; f++) {
 }
 pinta(0);
 </script>
+${GRAFICS_JS}
 </body></html>`;
 }

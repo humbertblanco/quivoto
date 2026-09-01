@@ -12,13 +12,24 @@ const fila = (s: string, extra: Partial<Els947Row> = {}): Els947Row => ({
 });
 
 /** Les capes tal com arriben al navegador, que és on es pot comprovar què pinten. */
-const capesDe = (
-  html: string,
-): { t: string; g: string; e: string[]; n: number; m: string; x: string; c: string; u: [string, string] | null }[] =>
+type CapaAlNavegador = {
+  t: string; g: string; e: string[]; n: number; m: string; x: string; c: string;
+  u: [string, string] | null;
+  /** El diccionari de textos de l'etiqueta i l'índex de cada municipi; la primera capa no els porta. */
+  w: string[] | null; k: string | null;
+};
+const capesDe = (html: string): CapaAlNavegador[] =>
   JSON.parse(/var CAPES = (\[[\s\S]*?\]);\nvar camins/.exec(html)![1]!) as never;
 
-const infoDe = (html: string): [string, number, string, string, string][] =>
-  JSON.parse(/var INFO = (\[[\s\S]*?\]);\nvar ullada/.exec(html)![1]!) as never;
+/** L'enllaç d'un municipi al mapa, amb els atributs de l'etiqueta. */
+const enllacDe = (html: string, slug: string): string =>
+  /<a href="\/observatori\/m\/[^"]+\/"[^>]*>/.exec(html.slice(html.indexOf(`<a href="/observatori/m/${slug}/"`)))![0];
+
+/** El que diu l'etiqueta d'un municipi a una capa, tal com ho compondrà el script. */
+const textDe = (capa: CapaAlNavegador, i: number): string => {
+  const clau = capa.k!.split("|")[i]!;
+  return clau === "" ? capa.x : capa.w![parseInt(clau, 36)]!;
+};
 
 /** On cau un municipi dins de les cadenes de graons: els camins van ordenats. */
 const posicio = (slug: string): number => Object.keys(geometria.municipis).sort().indexOf(slug);
@@ -126,8 +137,8 @@ describe("qui mana: mana el codi d'agrupació, no l'acrònim", () => {
     const capa = capesDe(html)[0]!;
     // El quart color de la llista de famílies del mapa és el dels comuns.
     expect(capa.e[parseInt(capa.g.charAt(posicio("prat-de-llobregat")), 36)]).toBe("Comuns");
-    // I la fitxa flotant ha de dir el mateix color, no un altre.
-    expect(infoDe(html)[posicio("prat-de-llobregat")]![4]).toBe("#662483");
+    // I l'etiqueta ha de dir la mateixa força, no una altra.
+    expect(enllacDe(html, "prat-de-llobregat")).toContain('data-valor="Comuns"');
   });
 
   it("Terrassa es queda grisa: «TxT» és Tot per Terrassa i no és cap marca gran", () => {
@@ -149,6 +160,70 @@ describe("qui mana: mana el codi d'agrupació, no l'acrònim", () => {
     // del mapa: ha de sortir grisa i no pas del color de la que se li assembli.
     const html = renderMapaCatalunya(tots({ corca: { g: "FP-TE", b: "te" } }), "2026-08-29");
     expect(capesDe(html)[0]!.g.charAt(posicio("corca"))).toBe("x");
+  });
+});
+
+describe("l'etiqueta de cada municipi", () => {
+  const tots = (extra: Record<string, Partial<Els947Row>>): Els947Row[] =>
+    Object.keys(geometria.municipis).map((s) => fila(s, extra[s] ?? {}));
+
+  it("cada camí porta el nom amb la comarca i el que hi ha pintat a la primera capa, i el títol per a qui no té script", () => {
+    const html = renderMapaCatalunya(tots({ girona: { n: "Girona", c: "Gironès", a: "Lluc Salellas", g: "CUP-AMUNT", b: "cup" } }), "2026-08-29");
+    expect(enllacDe(html, "girona")).toBe(
+      '<a href="/observatori/m/girona/" data-nom="Girona · Gironès" data-valor="CUP (alcaldia: Lluc Salellas)">',
+    );
+    expect(html).toContain('data-valor="CUP (alcaldia: Lluc Salellas)"><title>Girona</title><path class="g');
+    // Tots els 947, i cap sense el que diu.
+    expect(html.match(/<a href="\/observatori\/m\/[^"]+\/" data-nom="[^"]+" data-valor="[^"]+">/g)).toHaveLength(947);
+  });
+
+  it("un municipi gris no és un municipi sense alcaldia: diu les sigles i qui hi mana", () => {
+    const html = renderMapaCatalunya(tots({ terrassa: { g: "TxT", b: null, a: "Jordi Ballart" } }), "2026-08-29");
+    expect(enllacDe(html, "terrassa")).toContain('data-valor="TxT, llista local o sense marca (alcaldia: Jordi Ballart)"');
+    // I sense ni sigles ni alcaldia, el que diu la clau.
+    expect(enllacDe(html, "barcelona")).toContain('data-valor="sense dada"');
+  });
+
+  it("la resta de capes porten el text de cada municipi, formatat com la clau, en un diccionari i un índex per municipi", () => {
+    const html = renderMapaCatalunya(
+      tots({ barcelona: { pt: 62.34, d: 1234, m: 1 }, girona: { pt: null, d: 0, m: 0 } }),
+      "2026-08-29",
+    );
+    const capes = capesDe(html);
+    // La primera capa ja és escrita als camins i no viatja dues vegades.
+    expect(capes[0]!.w).toBeNull();
+    expect(capes[0]!.k).toBeNull();
+    for (const capa of capes.slice(1)) {
+      expect(capa.k!.split("|")).toHaveLength(947);
+      // Cap índex fora del diccionari.
+      for (const clau of capa.k!.split("|")) if (clau !== "") expect(capa.w![parseInt(clau, 36)]).toBeTypeOf("string");
+    }
+    const participacio = capes.find((c) => c.t.includes("anar a votar"))!;
+    expect(textDe(participacio, posicio("barcelona"))).toBe("62,3 %");
+    expect(textDe(participacio, posicio("girona"))).toBe("sense dada");
+    const deute = capes.find((c) => c.t.includes("deu cada ajuntament"))!;
+    expect(textDe(deute, posicio("barcelona"))).toBe("1.234 €");
+    expect(textDe(deute, posicio("girona"))).toBe("0 €");
+    const majoria = capes.find((c) => c.t.includes("majoria absoluta"))!;
+    expect(textDe(majoria, posicio("barcelona"))).toBe("amb majoria absoluta");
+    expect(textDe(majoria, posicio("girona"))).toBe("sense majoria absoluta");
+    // Dos textos per a 947 municipis: el diccionari és el que estalvia.
+    expect(majoria.w).toEqual(["sense majoria absoluta", "amb majoria absoluta"]);
+  });
+
+  it("el script pinta la capa i reescriu el «data-valor» dels 947 amb el text d'aquella capa", () => {
+    const html = renderMapaCatalunya(tots({}), "2026-08-29");
+    expect(html).toContain("enllacos[n].setAttribute('data-valor', text)");
+    expect(html).toContain("inicials.push(enllacos[e].getAttribute('data-valor'))");
+  });
+
+  it("és l'etiqueta comuna de tots els gràfics, una sola vegada i sense cap fitxa pròpia del mapa", () => {
+    const html = renderMapaCatalunya(tots({}), "2026-08-29");
+    expect(html.split('<script id="grafics-etiqueta">')).toHaveLength(2);
+    expect(html.indexOf('<script id="grafics-etiqueta">')).toBeLessThan(html.indexOf("</body>"));
+    expect(html).toContain(".etiqueta-grafic{position:fixed");
+    expect(html).not.toContain("ullada-mapa");
+    expect(html).not.toContain("var INFO");
   });
 });
 

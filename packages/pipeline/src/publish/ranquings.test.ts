@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extrems, PAS, preparaRanquings, renderRanquings, type RankingRow } from "./ranquings";
+import { extrems, nomsMarca, PAS, preparaRanquings, renderRanquings, valorMarca, type RankingRow } from "./ranquings";
 
 /**
  * Cent pobles amb totes les mètriques i el mateix any: el cas net. Les
@@ -127,9 +127,55 @@ describe("renderRanquings", () => {
     expect(html).toContain("Com s'han triat");
   });
 
+  it("cada marca del regle diu de qui és i quant, i la mediana diu que és la mediana", () => {
+    const participacio = html.slice(html.indexOf('id="participacio"'), html.indexOf('id="renda"'));
+    const regle = participacio.slice(participacio.indexOf('<div class="regle-dispersio"'), participacio.indexOf("</div>"));
+    // Cent valors diferents, cent marques, i cadascuna amb el seu municipi.
+    expect(regle.match(/<i class="marca"/g)).toHaveLength(100);
+    expect(regle).toContain('<i class="marca" style="--p:4.0%" data-nom="Poble 000" data-valor="0,00%" title="Poble 000: 0,00%"></i>');
+    expect(regle).toContain('data-nom="Poble 099" data-valor="99,00%"');
+    expect(regle).toContain('<i class="mig" style="--p:50.0%" data-nom="La mediana" data-valor="49,50%" title="La mediana: 49,50%"></i>');
+  });
+
+  it("dues a la mateixa posició són una marca amb tots els noms, fins a tres i «i N més»", () => {
+    const rows = files();
+    for (let i = 0; i < 5; i++) rows[i]!.pt = -1;
+    // Poble 007 ja val 7: amb aquests dos són tres empatats.
+    rows[6]!.pt = rows[5]!.pt = 7;
+    const amb = renderRanquings(rows, "avui");
+    const participacio = amb.slice(amb.indexOf('id="participacio"'), amb.indexOf('id="renda"'));
+    expect(participacio).toContain('data-nom="Poble 000, Poble 001, Poble 002 i 2 més" data-valor="-1,00%"');
+    expect(participacio).toContain('data-nom="Poble 005, Poble 006 i Poble 007" data-valor="7,00%"');
+    expect(participacio.match(/<i class="marca"/g)).toHaveLength(94);
+  });
+
+  it("porta el script de l'etiqueta flotant una sola vegada, i el CSS que la pinta", () => {
+    expect(html.match(/<script id="grafics-etiqueta">/g)).toHaveLength(1);
+    expect(html).toContain(".etiqueta-grafic{");
+    // El navegador refà les marques amb els mateixos data-* quan canvia l'àmbit.
+    expect(html).toContain("data-nom=\"' + esc(noms(colla))");
+    expect(html).toContain("data-nom=\"La mediana\" data-valor=\"' + esc(fmt(mig, d, s))");
+  });
+
   it("amb massa pocs municipis no publica res i ho diu", () => {
     const buit = renderRanquings(files(10), "avui");
     expect(buit).not.toContain('class="ranquing"');
     expect(buit).toContain("Cap indicador no arriba avui al llindar");
+  });
+});
+
+describe("nomsMarca i valorMarca", () => {
+  it("escriu els noms com una frase, per ordre alfabètic i amb la cua resumida", () => {
+    expect(nomsMarca(["Vinaixa"])).toBe("Vinaixa");
+    expect(nomsMarca(["Vinaixa", "Fulleda"])).toBe("Fulleda i Vinaixa");
+    expect(nomsMarca(["Vinaixa", "Fulleda", "Sarroca"])).toBe("Fulleda, Sarroca i Vinaixa");
+    expect(nomsMarca(["Vinaixa", "Fulleda", "Sarroca", "Alfés", "Bovera"])).toBe("Alfés, Bovera, Fulleda i 2 més");
+  });
+
+  it("dona la xifra si tots els valors són iguals i «de X a Y» si són veïns", () => {
+    const fmt = (v: number) => `${v} €`;
+    expect(valorMarca([3], fmt)).toBe("3 €");
+    expect(valorMarca([3, 3], fmt)).toBe("3 €");
+    expect(valorMarca([3.2, 3, 3.1], fmt)).toBe("de 3 € a 3.2 €");
   });
 });

@@ -584,6 +584,43 @@ describe("cap a 320 px", () => {
   });
 });
 
+// ---------------------------------------------- l'any que diu cada punt
+
+describe("l'etiqueta del punt del regle", () => {
+  it("diu l'any de la fila, i el seu propi any el municipi que va d'un altre", () => {
+    const ambAnys = [
+      { ...ESPLUGUES, anys: { cost_govern: 2024 } },
+      { ...SANT_JUST, anys: { cost_govern: 2023 } },
+      { ...ABELLA, anys: { cost_govern: 2024 } },
+    ];
+    const html = obre(pagina(ambAnys), ["esplugues-de-llobregat", "sant-just-desvern"])["escales-cos"]!.innerHTML;
+    const desDelCost = html.slice(html.indexOf("Cost del govern per habitant"));
+    const regle = desDelCost.slice(0, desDelCost.indexOf("</article>"));
+    // L'any comú és el 2024; Sant Just va del 2023 i el seu punt ho ha de dir,
+    // que és el mateix que diu el peu de la seva casella a la taula.
+    expect(regle).toContain('data-nom="Esplugues de Llobregat" data-any="2024" data-valor="8,4 €"');
+    expect(regle).toContain('data-nom="Sant Just Desvern" data-any="2023" data-valor="12,7 €"');
+    expect(regle).toContain("<title>Sant Just Desvern: 2023 · 12,7 €</title>");
+    // Un grup de dos no té mediana, i el punt no se n'inventa cap.
+    expect(regle).not.toContain("data-mediana");
+  });
+
+  it("l'any i el municipi arriben al navegador només quan difereixen de la fila", () => {
+    const html = pagina([
+      { ...ESPLUGUES, anys: { cost_govern: 2024 } },
+      { ...SANT_JUST, anys: { cost_govern: 2023 } },
+      { ...ABELLA, anys: { cost_govern: 2024 } },
+    ]);
+    const dades = html.slice(html.indexOf("const DADES = "), html.indexOf("const COMARQUES = "));
+    // Sant Just porta el seu any; els altres dos, que van de l'any comú, no.
+    expect(dades).toContain('"a":{"cost_govern":2023}');
+    expect(dades.match(/"a":\{/g)!.length).toBe(1);
+    const xifres = html.slice(html.indexOf("const XIFRES = "), html.indexOf("const TEXTOS = "));
+    expect(xifres).toContain('"clau":"cost_govern"');
+    expect(xifres).toContain('"any":2024');
+  });
+});
+
 // ------------------------------------------------ una pàgina per mirar-se-la
 
 describe("la pàgina sencera", () => {

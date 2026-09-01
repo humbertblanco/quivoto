@@ -5,6 +5,7 @@ import { capcalera, tipografia } from "./capcalera";
 import { cara } from "./cara";
 import { cercador } from "./cercador";
 import { geometria } from "./mapa";
+import { atributsEtiqueta, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { peu } from "./peu";
 import { METRIQUES } from "./ranquings";
 import { sigla } from "./sigla";
@@ -208,6 +209,7 @@ const GRIS_LOCAL = "#8b8b8b";
 export function mapaQuiMana(mostra: PortadaMostra): string {
   const geo = geometriaCompacta();
   const colors = new Map(mostra.partits.map((p) => [p.id, p.color]));
+  const sigles = new Map(mostra.partits.map((p) => [p.id, p.sigles]));
   const marcaDe = new Map(mostra.quiMana.map((q) => [q.slug, q.brandId]));
   const grups = new Map<string, string[]>();
   for (const [slug, cami] of geo.municipis) {
@@ -215,12 +217,29 @@ export function mapaQuiMana(mostra: PortadaMostra): string {
     const grup = marca && colors.has(marca) ? marca : marca === "local" ? "local" : "cap";
     grups.set(grup, [...(grups.get(grup) ?? []), cami]);
   }
+  /*
+   * L'etiqueta de cada camí és la de la força sencera: «ERC · 330 alcaldies».
+   * Amb un camí per força no es pot dir el nom del municipi sense tornar a
+   * les 947 etiquetes que aquest dibuix estalvia, i el que hi ha pintat és
+   * exactament això, la taca d'una força. El recompte és el de la taca —els
+   * municipis que el dibuix pinta d'aquell color— i no el de la clau del
+   * costat, perquè l'etiqueta digui el que es veu. El `<title>` de dins del
+   * camí és el mateix text per a qui no té script.
+   */
+  const dadaDe = (grup: string, quants: number): DadaEtiqueta => {
+    const alcaldies = `${xifra(quants)} ${plural(quants, "alcaldia", "alcaldies")}`;
+    if (grup === "cap") return { valor: `Sense identificar · ${xifra(quants)} ${plural(quants, "municipi", "municipis")}` };
+    if (grup === "local") return { valor: `Llistes locals o sense marca · ${alcaldies}` };
+    return { valor: `${sigles.get(grup) ?? grup} · ${alcaldies}` };
+  };
   const camins = [...grups]
     .map(([grup, seus]) => {
       const d = seus.join("");
-      if (grup === "cap") return `<path class="cap" d="${d}"/>`;
-      if (grup === "local") return `<path class="local" d="${d}"/>`;
-      return `<path fill="${escape(colors.get(grup)!)}" d="${d}"/>`;
+      const dada = dadaDe(grup, seus.length);
+      const etiqueta = `${atributsEtiqueta(dada)}><title>${escape(textEtiqueta(dada))}</title></path>`;
+      if (grup === "cap") return `<path class="cap" d="${d}"${etiqueta}`;
+      if (grup === "local") return `<path class="local" d="${d}"${etiqueta}`;
+      return `<path fill="${escape(colors.get(grup)!)}" d="${d}"${etiqueta}`;
     })
     .join("\n  ");
   return `<svg class="minimapa" viewBox="0 0 ${LLENC_MINIMAPA} ${LLENC_MINIMAPA}" role="img"
@@ -455,7 +474,7 @@ function blocQuiMana(mostra: PortadaMostra): string {
   return `<section class="bloc" id="mana">
     <h2><a href="mapa/">Qui mana</a></h2>
     <div class="mana-reixa">
-      <a class="minimapa-enllac" href="mapa/" title="El mapa dels 947, capa a capa">${mapaQuiMana(mostra)}</a>
+      <a class="minimapa-enllac" href="mapa/">${mapaQuiMana(mostra)}</a>
       <ul class="clau-mini">${clau}</ul>
     </div>
   </section>`;
@@ -644,5 +663,6 @@ ${cercador("./")}
   </section>
 </main>
 ${peu("./", generatedAt)}
+${GRAFICS_JS}
 </body></html>`;
 }

@@ -11,7 +11,7 @@ import { INDEXABLE, SITE } from "./config";
 import { tintaSobre as tintaDeContrast } from "./contrast";
 import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
-import { GRAFICS_JS, serieTemporal } from "./grafics";
+import { atributsEtiqueta, GRAFICS_JS, serieTemporal, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { geometria } from "./mapa-catalunya";
 import { assignaSlugs } from "./candidatura";
 import { adrecesRegidors } from "./regidor";
@@ -570,20 +570,27 @@ function renderMapa(data: PartitData): string {
       // Els apagats van sense classe: són la majoria —de 700 a 940 dels 947
       // segons la marca— i escriure-la a cadascun costava 14 kB per pàgina de
       // dir el que el color per defecte ja diu. L'apagat és l'estat de base
-      // del mapa i el CSS ho ha de dir així, a les dues capes.
+      // del mapa i el CSS ho ha de dir així, a les dues capes. Tampoc no
+      // porten etiqueta: la pàgina no sap com es diuen —només coneix els
+      // municipis on la marca hi és o hi va treure vots— i un rètol que no
+      // digui el nom no diu res.
       if (!lloc && !v) return `<path d="${d}"/>`;
       const on = lloc?.candidatura ? `../../m/${slug}/${lloc.candidatura}/` : `../../m/${slug}/`;
       const nom = lloc?.name ?? v!.nom;
+      // L'etiqueta diu les dues capes alhora —el que hi té i el pes del vot—
+      // perquè el mateix municipi és a totes dues i canviar de capa no fa
+      // canviar el que és veritat d'ell; és el mateix text que el `<title>`.
       const que = lloc
         ? lloc.alcaldia
-          ? `${nom}: hi té l'alcaldia, amb ${lloc.seats} de ${lloc.totalSeats} ${plural(lloc.totalSeats, "regidoria", "regidories")}`
-          : `${nom}: ${lloc.seats} de ${lloc.totalSeats} ${plural(lloc.totalSeats, "regidoria", "regidories")}, sense l'alcaldia`
-        : `${nom}: s'hi va presentar sense treure cap regidoria`;
+          ? `hi té l'alcaldia, amb ${lloc.seats} de ${lloc.totalSeats} ${plural(lloc.totalSeats, "regidoria", "regidories")}`
+          : `${lloc.seats} de ${lloc.totalSeats} ${plural(lloc.totalSeats, "regidoria", "regidories")}, sense l'alcaldia`
+        : `s'hi va presentar sense treure cap regidoria`;
+      const dada: DadaEtiqueta = { nom, valor: v ? `${que} · ${percent(v.pct)} dels vots` : que };
       const classes = [lloc ? (lloc.alcaldia ? "mana" : "hi-es") : "", v ? `v${graoDe(v.pct, talls)}` : ""]
         .filter(Boolean)
         .join(" ");
-      return `<a href="${escape(on)}"><title>${escape(
-        v ? `${que} · ${percent(v.pct)} dels vots` : que,
+      return `<a href="${escape(on)}"${atributsEtiqueta(dada)}><title>${escape(
+        textEtiqueta(dada),
       )}</title><path class="${classes}" d="${d}"/></a>`;
     })
     .join("");

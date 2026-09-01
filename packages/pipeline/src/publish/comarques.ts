@@ -8,7 +8,7 @@ import { slugify } from "../lib/text";
 import { carregaCarrecsAlcaldia, carregaPleDelRegistre, resolAlcaldia } from "./alcaldia";
 import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
-import { GRAFICS_JS, regleDispersio } from "./grafics";
+import { atributsEtiqueta, GRAFICS_JS, regleDispersio, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { icona } from "./icones";
 import { capsaCami, geometria, projecta } from "./mapa";
 import { sigla } from "./sigla";
@@ -221,6 +221,30 @@ const colorSegur = (color: string): string => (/^#[0-9a-f]{6}$/i.test(color) ? c
 /** El color de la força que té l'alcaldia d'un municipi, sempre pintable. */
 const colorAlcaldia = (brandId: string | null | undefined): string =>
   colorSegur(colorOf(brandId ?? SENSE_MARCA));
+
+/**
+ * L'etiqueta d'un municipi als mapes: el nom, i el que hi ha pintat.
+ *
+ * El que hi ha pintat és la força de l'alcaldia, amb el nom que té a les
+ * cintes —el mateix color, el mateix nom— i les sigles de la llista quan no
+ * són el mateix que la força: «ERC (ERC-AM) · alcaldia: Maria Puig». Sense
+ * marca, el gris del mapa es diu pel seu nom, «Sense identificar», que és el
+ * que la clau de les cintes també diu. És el contracte de l'etiqueta comuna
+ * de tots els gràfics (`atributsEtiqueta`, a grafics.ts): els mateixos
+ * `data-*` i el mateix `<title>` per a qui no té script.
+ */
+function etiquetaMunicipi(m: {
+  name: string;
+  mayorBrandId: string | null;
+  mayorSigles: string | null;
+  mayorName?: string | null;
+}): string {
+  const forca = labelOf(m.mayorBrandId ?? SENSE_MARCA);
+  const sigles = m.mayorSigles && m.mayorSigles !== forca ? ` (${m.mayorSigles})` : "";
+  const alcaldia = m.mayorName ? ` · alcaldia: ${m.mayorName}` : "";
+  const dada: DadaEtiqueta = { nom: m.name, valor: `${forca}${sigles}${alcaldia}` };
+  return `${atributsEtiqueta(dada)}><title>${escape(textEtiqueta(dada))}</title>`;
+}
 
 function formatValue(value: number, unit: ComarcaIndicador["unit"]): string {
   return unit === "euros" ? `${number(Math.round(value))} €` : `${decimal(value)} %`;
@@ -747,6 +771,8 @@ export type PuntTerritori = {
   population: number | null;
   mayorBrandId: string | null;
   mayorSigles: string | null;
+  /** Qui hi mana, si es diu: l'etiqueta del punt ho afegeix a la força. */
+  mayorName?: string | null;
 };
 
 /**
@@ -808,8 +834,7 @@ export function renderMapaTerritori(
     .map((p, i) => {
       const m = punts[i]!;
       const color = colorOf(m.mayorBrandId ?? SENSE_MARCA);
-      const qui = m.mayorSigles ? `${m.name} — ${m.mayorSigles}` : m.name;
-      return `<a href="${base}m/${escape(m.slug)}/"><title>${escape(qui)}</title>
+      return `<a href="${base}m/${escape(m.slug)}/"${etiquetaMunicipi(m)}
       <circle cx="${(p.x + desplaca).toFixed(1)}" cy="${(p.y + marge).toFixed(1)}" r="${radi(m.population).toFixed(1)}"
         fill="${color}" stroke="#1E1B2E" stroke-width="1.5"/></a>`;
     })
@@ -929,8 +954,7 @@ export function renderMapaComarca(
 
   const taques = dins
     .map((m) => {
-      const qui = [m.name, m.mayorName, m.mayorSigles].filter(Boolean).join(" — ");
-      return `<a href="${base}m/${escape(m.slug)}/"><title>${escape(qui)}</title>
+      return `<a href="${base}m/${escape(m.slug)}/"${etiquetaMunicipi(m)}
       <path class="dins" style="--c:${colorAlcaldia(m.mayorBrandId)}" d="${geometria.municipis[m.slug]!}"/></a>`;
     })
     .join("");

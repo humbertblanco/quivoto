@@ -12,7 +12,7 @@ import type { MedianaGrup, MedianesMunicipi } from "./medianes";
 import { barresDivergents, distribucioGrup, escalaDivergent, GRAFICS_JS, regleDispersio, serieTemporal, type FilaDivergent } from "./grafics";
 import type { SeriesMunicipi } from "./series-grup";
 import type { Continuitat, PuntVolatilitat, VotPerdutElecció } from "../derive/trajectoria";
-import { hemicycle } from "./hemicycle";
+import { hemicycle, seientsHemicicle } from "./hemicycle";
 import { icona } from "./icones";
 import { renderMapa, type PuntMapa } from "./mapa";
 import { assignaSlugs } from "./candidatura";
@@ -961,23 +961,21 @@ function renderHemicycle(candidatures: readonly CandidatureShare[], totalSeats: 
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
   });
 
-  let cursor = 0;
-  const circles: string[] = [];
-  for (const candidature of sorted) {
-    for (let i = 0; i < candidature.seats && cursor < seats.length; i += 1, cursor += 1) {
-      const seat = seats[cursor]!;
-      circles.push(
-        `<circle cx="${seat.x}" cy="${seat.y}" r="${seat.r}" fill="${colorDeCandidatura(candidature)}" stroke="var(--ink)" stroke-width="1.5"><title>${escape(candidature.sigles)}</title></circle>`,
-      );
-    }
-  }
+  // Els cercles els escriu hemicycle.ts: cada seient porta el grup i «N de M
+  // regidories» en atributs i en un <title>, que és el que fa que en passar-hi
+  // el cursor surti l'etiqueta comuna dels gràfics (GRAFICS_JS).
+  const circles = seientsHemicicle(
+    seats,
+    sorted.map((c) => ({ nom: c.sigles, regidories: c.seats, color: colorDeCandidatura(c) })),
+    totalSeats,
+  );
 
   const majorityX = width / 2;
   return `<figure class="hemicicle">
   <svg viewBox="0 0 ${width} ${height + 6}" role="img"
        aria-label="Hemicicle de ${totalSeats} regidories. ${sorted.map((c) => `${c.sigles}, ${c.seats}`).join("; ")}.">
     <line x1="${majorityX}" y1="0" x2="${majorityX}" y2="${height}" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="5 5" opacity=".45"/>
-    ${circles.join("\n    ")}
+    ${circles}
   </svg>
   <figcaption>${totalSeats} regidories · la ratlla marca la majoria absoluta, que són ${majority}. Cada cercle és una regidoria: ${seatRadius > 0 ? "es poden comptar" : ""}</figcaption>
 </figure>`;

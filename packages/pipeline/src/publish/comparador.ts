@@ -6,7 +6,7 @@ import { carregaMetriques } from "./metriques";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
 import { RADIOGRAFIA_CSS } from "./estil";
-import { GRAFICS_JS } from "./grafics";
+import { GRAFICS_JS, textEtiqueta } from "./grafics";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -1327,6 +1327,18 @@ const CSS = `
 .escala-punt.q3{fill:var(--lavanda)}
 .escala-punt.q4{fill:var(--presec)}
 .escala-num{font-family:var(--display);font-size:17px;font-weight:900;fill:#1E1B2E}
+/* El punt que es pot tocar, com el de les gràfiques de la fitxa («.grafic
+   .punt» a grafics.ts, que no aplica aquí perquè aquests dibuixos no són
+   «.grafic»): la banda de tacte és transparent però pintada, que amb
+   «fill:none» el navegador no la trobaria sota el dit, i el punt s'engruixeix
+   amb el ratolí o el focus perquè el focus es vegi sense dependre d'un contorn
+   rectangular que a l'SVG no tots els navegadors dibuixen. */
+.escala-svg .punt,.serie-marc .punt{cursor:pointer;outline:none}
+.escala-svg .toc,.serie-marc .toc{fill:transparent;stroke:none;pointer-events:all}
+.escala-svg .punt:hover .escala-punt,.escala-svg .punt:focus-visible .escala-punt,
+.serie-marc .punt:hover .escala-punt,.serie-marc .punt:focus-visible .escala-punt{stroke-width:4}
+.escala-svg .punt:hover .escala-mediana,.escala-svg .punt:focus-visible .escala-mediana{stroke-width:4}
+.escala-svg .punt:focus-visible .toc,.serie-marc .punt:focus-visible .toc{stroke:var(--coral-text);stroke-width:2;stroke-dasharray:4 3}
 .escala-xifra{font-family:var(--display);font-size:21px;font-weight:900;fill:var(--ink);
   font-variant-numeric:tabular-nums}
 .escala-limits{display:flex;justify-content:space-between;gap:var(--e2);margin:2px 0 0;
@@ -1442,6 +1454,19 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
   const dades = rows.map((r) => {
     const g = indexDe(grups, r.grup);
     if (mides[g] === undefined) mides[g] = r.grupMida ?? null;
+    /**
+     * L'any de cada xifra quan no és el de la fila, per clau.
+     *
+     * El peu de la casella ja ho diu amb paraules («dada del 2021»), però
+     * l'etiqueta del punt del regle ha de dir l'any del punt i no el de la
+     * fila, i no pot anar a pescar-lo d'una frase. Només hi va quan difereix:
+     * la resta de municipis llegeixen l'any de la xifra a `XIFRES`.
+     */
+    const anysPropis: Record<string, number> = {};
+    for (const i of xifres) {
+      const any = r.anys?.[i.clau];
+      if (typeof any === "number" && any !== anyComu.get(i.clau)) anysPropis[i.clau] = any;
+    }
     return {
       s: r.slug,
       n: r.nom,
@@ -1462,6 +1487,7 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
           })
           .filter(([, peu]) => peu !== ""),
       ),
+      ...(Object.keys(anysPropis).length > 0 ? { a: anysPropis } : {}),
       // L'enllaç de l'Idescat, un per municipi: el demana la llicència al
       // costat de cada xifra seva.
       ...(r.enllacIdescat ? { e: r.enllacIdescat } : {}),
@@ -1656,7 +1682,7 @@ const DADES = ${jsonSegur(dades)};
 const COMARQUES = ${jsonSegur(comarques)};
 const GRUPS = ${jsonSegur(grups)};
 const MIDES = ${jsonSegur(mides.map((m) => m ?? null))};
-const XIFRES = ${jsonSegur(xifres.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), format: i.format, sentit: i.sentit, objectiu: i.objectiu ?? null, percentil: i.percentil, absent: i.absent, extrems: i.extrems ?? null, idescat: i.enllacFont === "idescat", com: textDeLaFila(i, anyComu.get(i.clau)) })))};
+const XIFRES = ${jsonSegur(xifres.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), format: i.format, sentit: i.sentit, objectiu: i.objectiu ?? null, percentil: i.percentil, absent: i.absent, extrems: i.extrems ?? null, idescat: i.enllacFont === "idescat", com: textDeLaFila(i, anyComu.get(i.clau)), any: anyComu.get(i.clau) ?? null })))};
 const TEXTOS = ${jsonSegur(textos.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), absent: i.absent, com: textDelSentit(i) })))};
 const SECCIONS = ${jsonSegur(SECCIONS)};
 const REPARTIMENT = ${jsonSegur(repartiments)};
@@ -1669,6 +1695,9 @@ const escalaDomini = ${codiPerAlNavegador(escalaDomini)};
 const nivellsSenseSolapar = ${codiPerAlNavegador(nivellsSenseSolapar)};
 const marquesRodones = ${codiPerAlNavegador(marquesRodones)};
 const anysEscrits = ${codiPerAlNavegador(anysEscrits)};
+// La frase de l'etiqueta d'un punt és literalment la funció del servidor, no
+// una còpia: si un dia canvia allà, canvia aquí.
+const textEtiqueta = ${codiPerAlNavegador(textEtiqueta)};
 
 for (const row of DADES) row.k = normalitza(row.n) + " " + normalitza(COMARQUES[row.c]);
 const PER_SLUG = new Map(DADES.map((row) => [row.s, row]));
@@ -2033,6 +2062,31 @@ const n1 = (v) => Math.round(v * 10) / 10;
 const euros = (v) => milers(Math.round(v)) + " €";
 const minuscula = (frase) => frase.charAt(0).toLowerCase() + frase.slice(1);
 
+// ------------------------------------------------------ l'etiqueta del punt
+//
+// Els punts que es dibuixen aquí porten els mateixos «data-*» que els gràfics
+// que escriu el servidor («atributsEtiqueta», a grafics.ts): el script comú de
+// l'etiqueta flotant, que ve després d'aquest i escolta el document sencer, no
+// distingeix d'on surt un punt i només ajunta el que hi troba. El nom, l'any i
+// el valor ja hi van escrits i escapats; el <title> porta la mateixa frase,
+// composta per la mateixa funció, per a qui no vegi la caixa flotar.
+function atributsEtiqueta(d){
+  return (d.nom ? ' data-nom="' + esc(d.nom) + '"' : "") +
+    (d.any !== null && d.any !== undefined && d.any !== "" ? ' data-any="' + esc(d.any) + '"' : "") +
+    ' data-valor="' + esc(d.valor) + '"' +
+    (d.mediana ? ' data-mediana="' + esc(d.mediana) + '"' : "");
+}
+
+// Un punt que es pot tocar: el grup és el que rep el ratolí, el dit i el
+// tabulador, i el que va a dins hi va tal com es dibuixava. La banda de tacte
+// —un cercle transparent però pintat, que amb «fill:none» el navegador no
+// trobaria sota el dit— hi va abans del dibuix i té 12 unitats de radi: a 320
+// px el regle es veu a 0,8 i la sèrie a 0,72, que són més de 16 px de diàmetre.
+function puntTocable(d, cx, cy, dins){
+  return '<g class="punt" tabindex="0"' + atributsEtiqueta(d) + "><title>" + esc(textEtiqueta(d)) + "</title>" +
+    '<circle class="toc" cx="' + n1(cx) + '" cy="' + n1(cy) + '" r="12"/>' + dins + "</g>";
+}
+
 function xEscala(valor, domini){
   const dins = domini.max === domini.min ? 0.5 : (valor - domini.min) / (domini.max - domini.min);
   return ESC.marge + Math.max(0, Math.min(1, dins)) * (ESC.ample - ESC.marge * 2);
@@ -2102,21 +2156,40 @@ function blocEscala(def, i, files){
   }
   dibuix += '<line class="escala-via" x1="' + ESC.marge + '" x2="' + (ESC.ample - ESC.marge) +
     '" y1="' + ESC.via + '" y2="' + ESC.via + '"/>';
+  // La mediana escrita, que els punts diuen al costat del seu valor: 237 € no
+  // volen dir res sols i volen dir molt al costat de la mediana dels seus.
+  const medianaEscrita = repart ? formata(def, repart[1]) : null;
   if (repart) {
     const xm = xEscala(repart[1], domini);
-    dibuix += '<line class="escala-mediana" x1="' + n1(xm) + '" x2="' + n1(xm) + '" y1="24" y2="56"/>' +
+    // La marca de la mediana també es pot tocar, i diu de quants municipis és
+    // la mediana: una ratlla discontínua sense dir de què no és res. La banda
+    // de tacte és un rectangle de 20 d'ample sobre la ratlla, que és prima.
+    const mediana = { nom: "Mediana dels " + nomDelGrup(grupsAmb[0], repart[3]), any: def.any, valor: medianaEscrita };
+    dibuix += '<g class="punt" tabindex="0"' + atributsEtiqueta(mediana) + "><title>" + esc(textEtiqueta(mediana)) + "</title>" +
+      '<rect class="toc" x="' + n1(xm - 10) + '" y="20" width="20" height="40"/>' +
+      '<line class="escala-mediana" x1="' + n1(xm) + '" x2="' + n1(xm) + '" y1="24" y2="56"/>' +
       '<text class="escala-marge" x="' + n1(Math.max(50, Math.min(ESC.ample - 50, xm))) +
-      '" y="14" text-anchor="middle">mediana</text>';
+      '" y="14" text-anchor="middle">mediana</text></g>';
   }
   for (let n = 0; n < amb.length; n += 1) {
+    const row = files[amb[n]];
+    // L'any del punt és el de la fila, tret que aquest municipi vagi d'un
+    // altre any: llavors és el seu, que és el que diu el peu de la casella.
+    const dada = {
+      nom: row.n,
+      any: (row.a && row.a[def.clau]) || def.any,
+      valor: escrits[n],
+      mediana: medianaEscrita,
+    };
     // El cèrcol del color del paper és el que separa dos punts que cauen a
     // tocar: sense ell, dos municipis amb 237 € i 280 € es tapen mig número i
     // el dibuix deixa de dir de qui és cadascun.
-    dibuix += '<circle class="escala-halo" cx="' + n1(centres[n]) + '" cy="' + ESC.via + '" r="14"/>' +
+    dibuix += puntTocable(dada, centres[n], ESC.via,
+      '<circle class="escala-halo" cx="' + n1(centres[n]) + '" cy="' + ESC.via + '" r="14"/>' +
       '<circle class="escala-punt q' + (amb[n] + 1) + '" cx="' + n1(centres[n]) +
       '" cy="' + ESC.via + '" r="11"/>' +
       '<text class="escala-num" x="' + n1(centres[n]) + '" y="' + (ESC.via + 5.5) +
-      '" text-anchor="middle">' + (amb[n] + 1) + "</text>" +
+      '" text-anchor="middle">' + (amb[n] + 1) + "</text>") +
       '<text class="escala-xifra" x="' + n1(Math.max(40, Math.min(ESC.ample - 40, centres[n]))) +
       '" y="' + (ESC.primeraXifra + ESC.entreXifres * nivells[n]) + '" text-anchor="middle">' +
       esc(escrits[n]) + "</text>";
@@ -2254,8 +2327,9 @@ function pintaSerie(){
     const row = files[amb[n]];
     let cami = "";
     let obert = false;
-    let ultimX = null;
-    let ultimY = null;
+    // Cada any amb dada és un punt que es pot tocar, encara que només l'últim
+    // es dibuixi: la línia diu la forma i el punt diu la xifra de cada any.
+    const punts = [];
     let primerText = "";
     for (let a = primer; a <= ultim; a += 1) {
       const v = row.d[a];
@@ -2264,17 +2338,23 @@ function pintaSerie(){
       if (typeof v !== "number") { obert = false; continue; }
       cami += (obert ? "L" : "M") + n1(x(a)) + " " + n1(y(v)) + " ";
       obert = true;
-      ultimX = x(a);
-      ultimY = y(v);
+      punts.push({ any: ANYS[a], valor: v, cx: x(a), cy: y(v) });
       if (primerText === "") primerText = euros(v) + " el " + ANYS[a];
     }
     if (cami !== "") dibuix += '<path class="serie-linia q' + (amb[n] + 1) + '" d="' + cami.trim() + '"/>';
-    if (ultimX !== null) {
-      dibuix += '<circle class="escala-halo" cx="' + n1(ultimX) + '" cy="' + n1(ultimY) + '" r="14"/>' +
-        '<circle class="escala-punt q' + (amb[n] + 1) + '" cx="' + n1(ultimX) +
-        '" cy="' + n1(ultimY) + '" r="11"/>' +
-        '<text class="escala-num" x="' + n1(ultimX) + '" y="' + n1(ultimY + 5) +
-        '" text-anchor="middle">' + (amb[n] + 1) + "</text>";
+    for (let p = 0; p < punts.length; p += 1) {
+      const punt = punts[p];
+      const darrer = p === punts.length - 1;
+      // El número del municipi va només a la punta de la línia, com abans: la
+      // resta d'anys són bandes de tacte invisibles damunt de la línia.
+      dibuix += puntTocable({ nom: row.n, any: punt.any, valor: euros(punt.valor) }, punt.cx, punt.cy,
+        darrer
+          ? '<circle class="escala-halo" cx="' + n1(punt.cx) + '" cy="' + n1(punt.cy) + '" r="14"/>' +
+            '<circle class="escala-punt q' + (amb[n] + 1) + '" cx="' + n1(punt.cx) +
+            '" cy="' + n1(punt.cy) + '" r="11"/>' +
+            '<text class="escala-num" x="' + n1(punt.cx) + '" y="' + n1(punt.cy + 5) +
+            '" text-anchor="middle">' + (amb[n] + 1) + "</text>"
+          : "");
     }
     if (primerText !== "") alt += row.n + ": de " + primerText + " endavant. ";
   }

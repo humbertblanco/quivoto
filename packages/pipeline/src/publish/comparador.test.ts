@@ -11,6 +11,7 @@ import {
   repartimentDe,
   type ComparadorRow,
 } from "./comparador";
+import { textEtiqueta } from "./grafics";
 
 describe("normalitza", () => {
   it("troba un municipi sense accents ni article", () => {
@@ -579,6 +580,134 @@ describe("el deute any a any", () => {
   it("sense cap sèrie no hi ha secció buida", () => {
     const nodes = obre(renderComparador([FARCIMENT[0]!, FARCIMENT[1]!], "2026-08-30"), ["poble-0", "poble-1"]);
     expect(nodes.serie!.hidden).toBe(true);
+  });
+});
+
+// ---------------------------------------------- l'etiqueta de cada punt
+//
+// L'etiqueta flotant la posa el script comú de grafics.ts, que escolta el
+// document sencer i només llegeix «data-*»: perquè funcioni aquí, cada punt
+// que es dibuixa al navegador ha de portar els mateixos atributs que un punt
+// escrit pel servidor, i la mateixa frase al <title>.
+
+/** Els grups tocables d'un tros d'HTML, amb els seus atributs i el que tenen a dins. */
+function puntsDe(html: string): { atributs: string; dins: string }[] {
+  return [...html.matchAll(/<g class="punt" tabindex="0"([^>]*)>([\s\S]*?)<\/g>/g)]
+    .map((m) => ({ atributs: m[1]!, dins: m[2]! }));
+}
+
+const atribut = (atributs: string, nom: string): string | null =>
+  atributs.match(new RegExp(` ${nom}="([^"]*)"`))?.[1] ?? null;
+
+describe("l'etiqueta dels punts del regle", () => {
+  const html = obre(pagina(), ["esplugues-de-llobregat", "sant-just-desvern"])["escales-cos"]!.innerHTML;
+  const bloc = html.slice(html.indexOf("Deute per habitant"));
+  const regle = bloc.slice(0, bloc.indexOf("</article>"));
+  const punts = puntsDe(regle);
+
+  it("cada municipi és un grup tocable amb nom, valor amb unitat i la mediana dels seus", () => {
+    const esplugues = punts.find((p) => atribut(p.atributs, "data-nom") === "Esplugues de Llobregat");
+    const santJust = punts.find((p) => atribut(p.atributs, "data-nom") === "Sant Just Desvern");
+    expect(esplugues).toBeDefined();
+    expect(santJust).toBeDefined();
+    expect(atribut(esplugues!.atributs, "data-valor")).toBe("237 €");
+    expect(atribut(santJust!.atributs, "data-valor")).toBe("120 €");
+    // La mediana que diu el punt és la mateixa que diu el peu del regle.
+    const alPeu = regle.match(/; la mediana és ([^.]+)\./)![1];
+    expect(atribut(esplugues!.atributs, "data-mediana")).toBe(alPeu);
+    // El dibuix del punt no ha canviat: el cèrcol, el punt i el número, dins del grup.
+    expect(esplugues!.dins).toContain('class="escala-halo"');
+    expect(esplugues!.dins).toContain('class="escala-punt q1"');
+    expect(esplugues!.dins).toContain('class="escala-num"');
+    expect(santJust!.dins).toContain('class="escala-punt q2"');
+  });
+
+  it("sense any conegut de la xifra, el punt no se n'inventa cap", () => {
+    // Les files de prova no porten anys: ni «data-any» ni un «undefined» escrit.
+    for (const p of punts) expect(atribut(p.atributs, "data-any")).toBeNull();
+    expect(regle).not.toContain("undefined");
+  });
+
+  it("la marca de la mediana també es toca, i diu de quants municipis és", () => {
+    const mediana = punts.find((p) => p.dins.includes('class="escala-mediana"'));
+    expect(mediana).toBeDefined();
+    expect(atribut(mediana!.atributs, "data-nom")).toBe("Mediana dels 14 municipis de 20.001 a 50.000 habitants");
+    expect(atribut(mediana!.atributs, "data-valor")).toBe(regle.match(/; la mediana és ([^.]+)\./)![1]);
+    // La mediana és el valor, no la seva pròpia mediana.
+    expect(atribut(mediana!.atributs, "data-mediana")).toBeNull();
+    // Una ratlla d'un píxel no es toca: la banda de tacte és un rectangle.
+    expect(mediana!.dins).toMatch(/<rect class="toc" x="[\d.]+" y="20" width="20" height="40"\/>/);
+  });
+
+  it("el punt es pot tocar: una banda transparent de 12 de radi sota el dibuix, i focus amb el teclat", () => {
+    for (const p of punts.filter((p) => !p.dins.includes("escala-mediana"))) {
+      expect(p.dins).toMatch(/<\/title><circle class="toc" cx="[\d.]+" cy="40" r="12"\/>/);
+    }
+    // El CSS del tacte va amb el regle, que no és un «.grafic» de la fitxa.
+    const css = pagina();
+    expect(css).toContain(".escala-svg .toc,.serie-marc .toc{fill:transparent;stroke:none;pointer-events:all}");
+    expect(css).toContain(".escala-svg .punt,.serie-marc .punt{cursor:pointer;outline:none}");
+  });
+
+  it("el <title> diu la mateixa frase que compon el servidor per als seus gràfics", () => {
+    for (const p of punts) {
+      const titol = p.dins.match(/<title>([^<]*)<\/title>/)![1];
+      expect(titol).toBe(textEtiqueta({
+        nom: atribut(p.atributs, "data-nom"),
+        any: atribut(p.atributs, "data-any"),
+        valor: atribut(p.atributs, "data-valor")!,
+        mediana: atribut(p.atributs, "data-mediana"),
+      }));
+    }
+  });
+
+  it("sense mediana comuna, el punt no en diu cap", () => {
+    const dues = obre(pagina(), ["esplugues-de-llobregat", "abella-de-la-conca"])["escales-cos"]!.innerHTML;
+    const desDelDeute = dues.slice(dues.indexOf("Deute per habitant"));
+    const senseMediana = desDelDeute.slice(0, desDelDeute.indexOf("</article>"));
+    const punts = puntsDe(senseMediana);
+    expect(punts.length).toBe(2);
+    for (const p of punts) expect(atribut(p.atributs, "data-mediana")).toBeNull();
+  });
+});
+
+describe("l'etiqueta dels punts del deute any a any", () => {
+  const html = obre(pagina(), ["esplugues-de-llobregat", "sant-just-desvern"])["serie-cos"]!.innerHTML;
+  const punts = puntsDe(html);
+
+  it("cada any amb dada és un punt tocable amb el nom, l'any i els euros", () => {
+    const esplugues = punts.filter((p) => atribut(p.atributs, "data-nom") === "Esplugues de Llobregat");
+    const santJust = punts.filter((p) => atribut(p.atributs, "data-nom") === "Sant Just Desvern");
+    expect(esplugues.map((p) => atribut(p.atributs, "data-any"))).toEqual(["2019", "2021", "2023"]);
+    expect(esplugues.map((p) => atribut(p.atributs, "data-valor"))).toEqual(["421 €", "380 €", "237 €"]);
+    // Sant Just no té el 2021: no hi ha cap punt que s'inventi l'any que falta.
+    expect(santJust.map((p) => atribut(p.atributs, "data-any"))).toEqual(["2019", "2023"]);
+    expect(santJust.map((p) => atribut(p.atributs, "data-valor"))).toEqual(["68 €", "120 €"]);
+    // A la sèrie no hi ha mediana del grup: el punt no en diu cap.
+    for (const p of punts) expect(atribut(p.atributs, "data-mediana")).toBeNull();
+  });
+
+  it("només la punta de la línia es dibuixa, com abans; la resta són bandes de tacte", () => {
+    const esplugues = punts.filter((p) => atribut(p.atributs, "data-nom") === "Esplugues de Llobregat");
+    expect(esplugues[2]!.dins).toContain('class="escala-punt q1"');
+    expect(esplugues[2]!.dins).toContain('class="escala-num"');
+    expect(esplugues[0]!.dins).not.toContain("escala-punt");
+    expect(esplugues[1]!.dins).not.toContain("escala-punt");
+    for (const p of punts) expect(p.dins).toMatch(/<\/title><circle class="toc" cx="[\d.]+" cy="[\d.]+" r="12"\/>/);
+    // Un sol punt dibuixat per municipi, i els cercles van després de la seva línia.
+    expect(html.match(/class="escala-punt q1"/g)!.length).toBe(1);
+    expect(html.indexOf('class="serie-linia q1"')).toBeLessThan(html.indexOf('class="escala-punt q1"'));
+  });
+
+  it("el <title> diu la mateixa frase que compon el servidor", () => {
+    for (const p of punts) {
+      const titol = p.dins.match(/<title>([^<]*)<\/title>/)![1];
+      expect(titol).toBe(textEtiqueta({
+        nom: atribut(p.atributs, "data-nom"),
+        any: atribut(p.atributs, "data-any"),
+        valor: atribut(p.atributs, "data-valor")!,
+      }));
+    }
   });
 });
 

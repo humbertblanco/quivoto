@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hemicycle } from "./hemicycle";
+import { etiquetaSeient, hemicycle, seientsHemicicle } from "./hemicycle";
 
 describe("hemicycle", () => {
   it("dibuixa exactament els escons que té el ple", () => {
@@ -73,5 +73,57 @@ describe("empaquetat", () => {
 
   it("dona escons més grossos als plens petits", () => {
     expect(hemicycle(5).seatRadius).toBeGreaterThan(hemicycle(41).seatRadius);
+  });
+});
+
+describe("seientsHemicicle", () => {
+  const { seats } = hemicycle(21);
+  const grups = [
+    { nom: "ERC", regidories: 8, color: "#ffb232", govern: true },
+    { nom: "PSC", regidories: 7, color: "#e4001c" },
+    { nom: "Junts", regidories: 6, color: "#00c3b2" },
+  ];
+
+  it("escriu un cercle per escó, en l'ordre dels grups, amb el color de cadascun", () => {
+    const svg = seientsHemicicle(seats, grups, 21);
+    expect(svg.match(/<circle /g)).toHaveLength(21);
+    expect(svg.match(/fill="#ffb232"/g)).toHaveLength(8);
+    expect(svg.match(/fill="#e4001c"/g)).toHaveLength(7);
+    expect(svg.indexOf("#ffb232")).toBeLessThan(svg.indexOf("#00c3b2"));
+  });
+
+  it("cada escó porta l'etiqueta del grup: el nom, el recompte i «al govern» si hi és", () => {
+    const svg = seientsHemicicle(seats, grups, 21);
+    expect(svg.match(/data-nom="ERC" data-valor="8 de 21 regidories · al govern"/g)).toHaveLength(8);
+    expect(svg).toContain('data-nom="PSC" data-valor="7 de 21 regidories"');
+    expect(svg).not.toContain('data-nom="PSC" data-valor="7 de 21 regidories · al govern"');
+    expect(svg).toContain("<title>ERC: 8 de 21 regidories · al govern</title>");
+  });
+
+  it("quan sap qui hi seu, el nom és la persona i el grup passa a la dada", () => {
+    const svg = seientsHemicicle(seats, [{ ...grups[1]!, persones: ["Marta Farrés"] }, grups[0]!, grups[2]!], 21);
+    expect(svg).toContain('data-nom="Marta Farrés" data-valor="PSC · 7 de 21 regidories"');
+    expect(svg).toContain("<title>Marta Farrés: PSC · 7 de 21 regidories</title>");
+    // Els sis escons del PSC sense nom continuen dient el grup.
+    expect(svg.match(/data-nom="PSC" data-valor="7 de 21 regidories"/g)).toHaveLength(6);
+  });
+
+  it("no rep el focus: la llista de sota ja és l'equivalent accessible", () => {
+    expect(seientsHemicicle(seats, grups, 21)).not.toContain("tabindex");
+  });
+
+  it("escapa el que ve de fora: sigles amb cometes o angles", () => {
+    const svg = seientsHemicicle(hemicycle(3).seats, [{ nom: 'A "B" <C>', regidories: 3, color: "#000" }], 3);
+    expect(svg).toContain('data-nom="A &quot;B&quot; &lt;C&gt;"');
+    expect(svg).not.toContain("<C>");
+  });
+
+  it("no dibuixa més escons dels que hi ha ni dels que sumen els grups", () => {
+    expect(seientsHemicicle(hemicycle(5).seats, grups, 21).match(/<circle /g)).toHaveLength(5);
+    expect(seientsHemicicle(seats, grups.slice(0, 1), 21).match(/<circle /g)).toHaveLength(8);
+  });
+
+  it("amb un sol regidor diu «regidoria»", () => {
+    expect(etiquetaSeient({ nom: "AM", regidories: 1, color: "#000" }, 1).valor).toBe("1 de 1 regidoria");
   });
 });

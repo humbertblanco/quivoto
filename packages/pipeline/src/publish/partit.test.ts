@@ -232,6 +232,16 @@ describe("renderPartit", () => {
     expect(html.match(/<path class="(?:mana|hi-es)[ "]/g)).toHaveLength(3);
   });
 
+  it("cada municipi encès porta el nom i l'estat a l'etiqueta comuna; els apagats, res, que no en sabem el nom", () => {
+    const html = renderPartit(mostra(), "2026-08-30");
+    const comenca = html.indexOf('<figure class="partit-mapa"');
+    const mapa = html.slice(comenca, html.indexOf("</svg>", comenca));
+    expect(mapa).toMatch(/<a href="[^"]+" data-nom="[^"]+" data-valor="hi té l'alcaldia, amb \d+ de \d+ regidories[^"]*">/);
+    expect(mapa).toMatch(/data-valor="\d+ de \d+ regidories, sense l'alcaldia[^"]*"/);
+    expect((mapa.match(/ data-valor="/g) ?? []).length).toBe((mapa.match(/<a href=/g) ?? []).length);
+    expect(html.split('<script id="grafics-etiqueta">')).toHaveLength(2);
+  });
+
   describe("el segon mapa: on el voten més", () => {
     const html = renderPartit(mostra(), "2026-08-30");
     const figura = html.slice(html.indexOf('<figure class="partit-mapa"'), html.indexOf("</figure>"));
@@ -283,7 +293,8 @@ describe("renderPartit", () => {
 
     it("on es va presentar sense treure cap regidoria és clicable i porta al municipi", () => {
       expect(figura).toContain(
-        '<a href="../../m/salt/"><title>Salt: s\'hi va presentar sense treure cap regidoria · 4,1 % dels vots</title><path class="v1"',
+        '<a href="../../m/salt/" data-nom="Salt" data-valor="s\'hi va presentar sense treure cap regidoria · 4,1 % dels vots">' +
+          '<title>Salt: s\'hi va presentar sense treure cap regidoria · 4,1 % dels vots</title><path class="v1"',
       );
       // I on hi és, el títol diu les dues coses: regidories i pes del vot.
       expect(figura).toContain("Vic: 3 de 21 regidories, sense l'alcaldia · 12,3 % dels vots");

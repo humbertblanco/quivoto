@@ -34,7 +34,7 @@ import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { INDEXABLE, SITE } from "./config";
 import { cohortHomogenia, extremsEmpatats } from "./contracte-metriques";
-import { GRAFICS_CSS } from "./grafics";
+import { atributsEtiqueta, GRAFICS_CSS, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { peu } from "./peu";
 import { RADIOGRAFIA_CSS } from "./estil";
 
@@ -244,14 +244,48 @@ function targetaExtrems(r: RanquingPreparat): string {
 }
 
 /**
+ * Els noms d'una marca del regle, escrits com una frase: «Fulleda»,
+ * «Fulleda i Sarroca», «Fulleda, Sarroca i Vinaixa» i, a partir de quatre,
+ * «Fulleda, Sarroca, Vinaixa i 9 més». Tres i no quatre com a `llistaNoms()`:
+ * l'etiqueta flotant és una caixa de 320 píxels i el rànquing de sota ja els
+ * té tots. El navegador fa exactament el mateix a `noms()` del script.
+ */
+export function nomsMarca(noms: readonly string[]): string {
+  const ordenats = [...noms].sort((a, b) => a.localeCompare(b, "ca"));
+  const tres = ordenats.slice(0, 3);
+  const resta = ordenats.length - tres.length;
+  if (resta > 0) return `${tres.join(", ")} i ${n(resta)} més`;
+  if (tres.length === 1) return tres[0]!;
+  return `${tres.slice(0, -1).join(", ")} i ${tres[tres.length - 1]}`;
+}
+
+/**
+ * El valor d'una marca. Dues marques a la mateixa dècima de tant per cent
+ * són una, i no sempre tenen el mateix valor: a un regle de 947 municipis en
+ * 920 posicions possibles hi cauen valors veïns que no són iguals. Si ho són,
+ * la xifra; si no, «de X a Y», que és el que la marca vol dir de debò.
+ */
+export function valorMarca(valors: readonly number[], fmt: (v: number) => string): string {
+  const baix = Math.min(...valors);
+  const alt = Math.max(...valors);
+  return baix === alt ? fmt(baix) : `de ${fmt(baix)} a ${fmt(alt)}`;
+}
+
+/**
  * El regle de dispersió d'aquest rànquing, escrit pel servidor per a l'àmbit
  * inicial. Fa el mateix dibuix que `regleDispersio()` de `grafics.ts` i en
  * reutilitza el CSS, però no en crida la funció per dues raons: aquella posa
  * un enllaç per municipi —947 enllaços en una barra de 46 píxels no són
  * clicables i pesen 130 bytes cadascun— i la mediana la calcula del que
- * dibuixa, i aquí les marques es resumeixen (dues del mateix valor són una)
- * mentre que la mediana ha de ser la de tots. El navegador refà aquest mateix
- * dibuix quan canvia l'àmbit, amb `regle()` del JavaScript de sota.
+ * dibuixa, i aquí les marques es resumeixen (dues a la mateixa posició són
+ * una) mentre que la mediana ha de ser la de tots. El navegador refà aquest
+ * mateix dibuix quan canvia l'àmbit, amb `regle()` del JavaScript de sota.
+ *
+ * Cada marca porta l'etiqueta comuna de `grafics.ts` —`data-nom` amb els
+ * municipis d'aquella posició, `data-valor` amb la xifra— i el `title=` amb
+ * la mateixa frase per a quan no hi ha script. La barra és `aria-hidden` i
+ * les marques no reben el focus: les tres xifres de sota i el rànquing són
+ * l'equivalent que es llegeix; el regle és per al ratolí i el dit.
  */
 function regle(r: RanquingPreparat): string {
   if (r.files.length < 4) return "";
@@ -263,11 +297,24 @@ function regle(r: RanquingPreparat): string {
   const meitat = Math.floor(asc.length / 2);
   const mig = asc.length % 2 === 0 ? (asc[meitat - 1]!.valor + asc[meitat]!.valor) / 2 : asc[meitat]!.valor;
   const on = (v: number): string => (4 + (92 * (v - baix.valor)) / (alt.valor - baix.valor)).toFixed(1);
-  const posicions = [...new Set(asc.map((f) => on(f.valor)))];
-  const marques = posicions.map((p) => `<i class="marca" style="--p:${p}%"></i>`).join("");
+  const perPosicio = new Map<string, FilaRanquing[]>();
+  for (const f of asc) {
+    const p = on(f.valor);
+    const colla = perPosicio.get(p);
+    if (colla) colla.push(f);
+    else perPosicio.set(p, [f]);
+  }
+  const etiqueta = (dada: DadaEtiqueta): string => `${atributsEtiqueta(dada)} title="${escape(textEtiqueta(dada))}"`;
+  const marques = [...perPosicio]
+    .map(([p, colla]) => {
+      const dada = { nom: nomsMarca(colla.map((f) => f.fila.n)), valor: valorMarca(colla.map((f) => f.valor), fmt) };
+      return `<i class="marca" style="--p:${p}%"${etiqueta(dada)}></i>`;
+    })
+    .join("");
+  const mediana = { nom: "La mediana", valor: fmt(mig) };
   return `<figure class="dispersio">
   <figcaption class="titol">Del més baix al més alt <span class="secundari">${n(r.files.length)} municipis amb dada</span></figcaption>
-  <div class="regle-dispersio" aria-hidden="true"><i class="mig" style="--p:${on(mig)}%"></i>${marques}</div>
+  <div class="regle-dispersio" aria-hidden="true"><i class="mig" style="--p:${on(mig)}%"${etiqueta(mediana)}></i>${marques}</div>
   <ul class="extrems">
     <li><span class="cap">El més baix</span>${fitxa(baix.fila)}<b>${escape(fmt(baix.valor))}</b></li>
     <li><span class="cap">La mediana</span><span class="secundari">el municipi del mig</span><b>${escape(fmt(mig))}</b></li>
@@ -399,7 +446,28 @@ const JS = `<script>
   };
   const enllac = (m) => '<a href="../m/' + esc(m.s) + '/">' + esc(m.n) + "</a>";
 
-  // El mateix dibuix que fa el servidor: mediana de tots, marques resumides.
+  // Els noms d'una marca, com els escriu nomsMarca() al servidor: fins a tres
+  // i «i N més».
+  const noms = (colla) => {
+    const ordenats = colla.map((f) => f.n).sort((a, b) => a.localeCompare(b, "ca"));
+    const tres = ordenats.slice(0, 3);
+    const resta = ordenats.length - tres.length;
+    if (resta > 0) return tres.join(", ") + " i " + fmt(resta, 0, "") + " més";
+    if (tres.length === 1) return tres[0];
+    return tres.slice(0, -1).join(", ") + " i " + tres[tres.length - 1];
+  };
+  // El valor d'una marca, com valorMarca(): la xifra, o «de X a Y» quan a la
+  // mateixa posició hi cauen valors veïns.
+  const valor = (colla, d, s) => {
+    const vs = colla.map((f) => f.valor);
+    const baix = Math.min(...vs), alt = Math.max(...vs);
+    return baix === alt ? fmt(baix, d, s) : "de " + fmt(baix, d, s) + " a " + fmt(alt, d, s);
+  };
+
+  // El mateix dibuix que fa el servidor: mediana de tots, marques resumides,
+  // i a cada marca els data-* de l'etiqueta flotant. Sense title=: el script
+  // de l'etiqueta només treu els title= que troba en carregar, i una marca
+  // escrita després en tindria dos rètols.
   const regle = (files, d, s) => {
     if (files.length < 4) return "";
     const asc = files.slice().reverse();
@@ -408,10 +476,16 @@ const JS = `<script>
     const meitat = Math.floor(asc.length / 2);
     const mig = asc.length % 2 === 0 ? (asc[meitat - 1].valor + asc[meitat].valor) / 2 : asc[meitat].valor;
     const on = (v) => (4 + (92 * (v - baix.valor)) / (alt.valor - baix.valor)).toFixed(1);
-    const posicions = [...new Set(asc.map((f) => on(f.valor)))];
+    const perPosicio = new Map();
+    for (const f of asc) {
+      const p = on(f.valor);
+      if (perPosicio.has(p)) perPosicio.get(p).push(f); else perPosicio.set(p, [f]);
+    }
+    const marques = [...perPosicio].map(([p, colla]) =>
+      '<i class="marca" style="--p:' + p + '%" data-nom="' + esc(noms(colla)) + '" data-valor="' + esc(valor(colla, d, s)) + '"></i>').join("");
     return '<figcaption class="titol">Del més baix al més alt <span class="secundari">' + fmt(files.length, 0, "") + ' municipis amb dada</span></figcaption>' +
-      '<div class="regle-dispersio" aria-hidden="true"><i class="mig" style="--p:' + on(mig) + '%"></i>' +
-      posicions.map((p) => '<i class="marca" style="--p:' + p + '%"></i>').join("") + "</div>" +
+      '<div class="regle-dispersio" aria-hidden="true"><i class="mig" style="--p:' + on(mig) + '%" data-nom="La mediana" data-valor="' + esc(fmt(mig, d, s)) + '"></i>' +
+      marques + "</div>" +
       '<ul class="extrems"><li><span class="cap">El més baix</span>' + enllac(baix) + "<b>" + esc(fmt(baix.valor, d, s)) + "</b></li>" +
       '<li><span class="cap">La mediana</span><span class="secundari">el municipi del mig</span><b>' + esc(fmt(mig, d, s)) + "</b></li>" +
       '<li><span class="cap">El més alt</span>' + enllac(alt) + "<b>" + esc(fmt(alt.valor, d, s)) + "</b></li></ul>";
@@ -525,6 +599,7 @@ ${cos}
 ${peu("../", generatedAt)}
 <script type="application/json" id="dades-ranquings">${dadesJson(rows, preparats, grups)}</script>
 ${JS}
+${GRAFICS_JS}
 </body>
 </html>`;
 }

@@ -360,6 +360,30 @@ describe("l'AMB llegida com una fitxa", () => {
  * indicadors per respondre «i el meu poble, com hi queda». El que es prova aquí
  * és que cap de les dues coses no es pugui perdre sense que això peti.
  */
+describe("l'etiqueta als mapes de l'AMB", () => {
+  it("el mapa dels 36 diu, a cada punt, el nom i la força que hi mana; el segell, la taca sencera", () => {
+    const punts = Array.from({ length: 120 }, (_, i) => ({ lat: 41 + i / 100, lon: 1 + (i % 10) / 10, dins: i < 36 }));
+    const html = renderAmb(
+      amb({
+        situacio: punts,
+        municipis: [
+          municipi({ slug: "a", name: "A", lat: 41.3, lon: 2.0 }),
+          municipi({ slug: "b", name: "B", lat: 41.4, lon: 2.1, mayorBrandId: null, mayorSigles: "AxB" }),
+          municipi({ slug: "c", name: "C", lat: 41.5, lon: 2.2 }),
+        ],
+      }),
+      "2026-08-30",
+    );
+    expect(html).toContain(
+      '<a href="../m/a/" data-nom="A" data-valor="PSC (PSC-CP) · alcaldia: Antonio Balmón"><title>A: PSC (PSC-CP) · alcaldia: Antonio Balmón</title>',
+    );
+    expect(html).toContain('<a href="../m/b/" data-nom="B" data-valor="Sense identificar (AxB) · alcaldia: Antonio Balmón">');
+    expect(html).toContain('data-valor="Els 36 municipis metropolitans"><title>Els 36 municipis metropolitans</title></path>');
+    expect(html).toContain('data-valor="La resta de Catalunya · 84 municipis">');
+    expect(html.split('<script id="grafics-etiqueta">')).toHaveLength(2);
+  });
+});
+
 describe("on cau l'àrea i com hi queda cada poble", () => {
   /** Els 947 punts falsos, escampats, amb els primers marcats com a metropolitans. */
   const situacio = Array.from({ length: 947 }, (_, i) => ({

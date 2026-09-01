@@ -229,10 +229,9 @@ describe("renderMapaTerritori", () => {
 
   it("fa de cada punt un enllaç a la fitxa, no un dibuix mut", () => {
     const html = renderMapaTerritori(punts, "../../", "del Priorat");
-    expect(html).toContain('<a href="../../m/a/">');
-    expect(html).toContain("<title>A — ERC-AM</title>");
-    // Sense sigles no s'inventa cap guionet penjat després del nom.
-    expect(html).toContain("<title>C</title>");
+    expect(html).toContain('<a href="../../m/a/" data-nom="A" data-valor="ERC (ERC-AM)"><title>A: ERC (ERC-AM)</title>');
+    // Sense marca ni sigles, el gris del mapa es diu pel seu nom.
+    expect(html).toContain('<a href="../../m/c/" data-nom="C" data-valor="Sense identificar"><title>C: Sense identificar</title>');
     expect(html).toContain('href="../../mapa/"');
   });
 
@@ -315,8 +314,11 @@ describe("renderMapaComarca", () => {
 
   it("pinta cada terme del color de qui hi mana i el fa enllaç a la seva fitxa", () => {
     const html = renderMapaComarca(taques, "../../", "Priorat");
-    expect(html).toContain('<a href="../../m/falset/">');
-    expect(html).toContain("<title>falset — Maria Puig — ERC-AM</title>");
+    expect(html).toContain(
+      '<a href="../../m/falset/" data-nom="falset" data-valor="ERC (ERC-AM) · alcaldia: Maria Puig"><title>falset: ERC (ERC-AM) · alcaldia: Maria Puig</title>',
+    );
+    // Sense marca, «Sense identificar», i les sigles i l'alcaldia igualment.
+    expect(html).toContain('data-nom="gratallops" data-valor="Sense identificar (ERC-AM) · alcaldia: Maria Puig"');
     // Sense marca, el gris: mai el color de la força del costat.
     expect(html).toContain("--c:#8b8b8b");
   });

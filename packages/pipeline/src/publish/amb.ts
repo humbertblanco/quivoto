@@ -4,7 +4,7 @@ import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
 import { slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
-import { GRAFICS_JS } from "./grafics";
+import { atributsEtiqueta, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
 import {
@@ -799,12 +799,19 @@ function renderSituacio(punts: readonly PuntSituacio[]): string {
   const fora = punts.map((p, i) => (p.dins ? "" : quadrat(i, 2.2))).join("");
   const metropolitans = punts.map((p, i) => (p.dins ? quadrat(i, 4.2) : "")).join("");
   const quants = punts.filter((p) => p.dins).length;
+  // Dos camins i dues etiquetes: el segell no sap el nom de cap punt —no
+  // porta ni slug— i el que hi ha pintat és la taca sencera. És el contracte
+  // de l'etiqueta comuna de tots els gràfics (grafics.ts).
+  const etiqueta = (dada: DadaEtiqueta): string =>
+    `${atributsEtiqueta(dada)}><title>${escape(textEtiqueta(dada))}</title></path>`;
+  const dinsDada: DadaEtiqueta = { valor: `Els ${quants} municipis metropolitans` };
+  const foraDada: DadaEtiqueta = { valor: `La resta de Catalunya · ${punts.length - quants} municipis` };
 
   return `<figure class="situacio">
   <svg viewBox="0 0 ${amplada} ${alcada.toFixed(0)}" role="img"
     aria-label="Mapa de Catalunya amb un punt per municipi: els ${quants} metropolitans, marcats, ocupen una taca a la costa central.">
-    <path d="${fora}" fill="var(--vora)"/>
-    <path d="${metropolitans}" fill="var(--coral)" stroke="#1E1B2E" stroke-width="0.6"/>
+    <path d="${fora}" fill="var(--vora)"${etiqueta(foraDada)}
+    <path d="${metropolitans}" fill="var(--coral)" stroke="#1E1B2E" stroke-width="0.6"${etiqueta(dinsDada)}
   </svg>
   <figcaption>On cau la taca: els ${quants} metropolitans damunt dels ${punts.length} municipis
   del país. A dalt es veuen ampliats perquè, a aquesta escala, tots ells fan un centímetre.</figcaption>

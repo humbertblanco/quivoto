@@ -1326,6 +1326,12 @@ export const GRAFICS_JS = `<script id="grafics-etiqueta">
   // «mediana dels seus: 512 €». Cada tros al seu element per poder-lo
   // compondre amb CSS; el text ve escrit del servidor i no es toca.
   function escriu(punt) {
+    // Els punts que un altre script crea després de carregar (el comparador
+    // en dibuixa al vol) encara porten el rètol natiu: es treu la primera
+    // vegada que s'ensenya el nostre, que és quan sobraria.
+    var natiu = punt.querySelector('title');
+    if (natiu && natiu.parentNode === punt) punt.removeChild(natiu);
+    punt.removeAttribute('title');
     var c = creaCaixa();
     c.textContent = '';
     var nom = punt.getAttribute('data-nom');
