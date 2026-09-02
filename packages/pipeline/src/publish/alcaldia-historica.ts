@@ -327,13 +327,64 @@ type Pas = FilaHistorial & { clau: string; anyInici: number; anyFi: number };
  * arribar després sempre la porta.
  */
 function passos(historial: HistorialAlcaldies): Pas[] {
-  return historial.history
+  const ordenats = historial.history
     .map((h) => {
       const anys = anysDelTerm(h.term);
       return { ...h, clau: normalizePersonName(h.name), anyInici: anys.inici, anyFi: anys.fi };
     })
     .filter((h) => h.clau !== "")
     .sort((a, b) => a.term.localeCompare(b.term) || (a.tookOfficeOn ?? "").localeCompare(b.tookOfficeOn ?? ""));
+  return unificaVariants(ordenats);
+}
+
+/** Distància d'edició entre dues cadenes curtes (Levenshtein), per a cognoms amb una lletra de més. */
+function distancia(a: string, b: string): number {
+  const fila = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    let anterior = fila[0]!;
+    fila[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const temp = fila[j]!;
+      fila[j] = Math.min(fila[j]! + 1, fila[j - 1]! + 1, anterior + (a[i - 1] === b[j - 1] ? 0 : 1));
+      anterior = temp;
+    }
+  }
+  return fila[b.length]!;
+}
+
+/**
+ * La mateixa persona escrita de dues maneres és una sola persona.
+ *
+ * L'historial de la Generalitat escriu el nom a cada mandat, i a Alcanar hi
+ * havia «Alfons Monserrat Esteller» i «Alfons Montserrat Esteller», i «Joan
+ * B. Beltran Queralt» i «Juan Bautista Beltran Queralt»: quatre fitxes per a
+ * dues persones, i cap de les dues amb la trajectòria sencera. Dins d'un
+ * mateix municipi, dos noms amb els mateixos cognoms (o amb una lletra de
+ * diferència) i la mateixa inicial del nom es donen per la mateixa persona,
+ * i la clau que mana és la del mandat més recent, que és també la que fa el
+ * slug de la fitxa a totes les pàgines. Entre municipis no es fusiona res.
+ */
+function unificaVariants(ordenats: Pas[]): Pas[] {
+  const parts = (clau: string): { inicial: string; cognoms: string } => {
+    const tokens = clau.split(/\s+/).filter((t) => t.length > 0);
+    const cognoms = tokens.length >= 3 ? tokens.slice(-2).join(" ") : tokens.slice(-1).join(" ");
+    return { inicial: tokens[0]?.[0] ?? "", cognoms };
+  };
+  const mateixa = (a: string, b: string): boolean => {
+    const pa = parts(a);
+    const pb = parts(b);
+    if (pa.inicial === "" || pa.inicial !== pb.inicial || pa.cognoms.length < 5) return false;
+    return pa.cognoms === pb.cognoms || distancia(pa.cognoms, pb.cognoms) <= 1;
+  };
+  // Del més recent al més antic: cada clau nova busca una de posterior amb qui
+  // s'assembli, i s'hi ajunta. Així la canònica és sempre la del mandat més tard.
+  const canonica = new Map<string, string>();
+  const claus = [...new Set([...ordenats].reverse().map((p) => p.clau))];
+  for (const clau of claus) {
+    const iguals = claus.find((c) => canonica.has(c) && c !== clau && mateixa(c, clau));
+    canonica.set(clau, iguals ? canonica.get(iguals)! : clau);
+  }
+  return ordenats.map((p) => ({ ...p, clau: canonica.get(p.clau) ?? p.clau }));
 }
 
 /** Els dies entre dues dates ISO. */
