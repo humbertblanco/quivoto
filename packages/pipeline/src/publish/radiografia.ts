@@ -1115,7 +1115,7 @@ function renderLegend(candidatures: readonly CandidatureShare[], slugPer: (sigle
       )}/">${escape(c.sigles)}</a></b></span>
       <span class="xifra"><b>${c.seats}</b> ${c.seats === 1 ? "regidoria" : "regidories"}</span>
       <span class="proporcio" aria-hidden="true"><i style="--c:${colorDeCandidatura(c)};--w:${(100 * c.share) / maxim}%"></i></span>
-      <span class="secundari">${number(c.votes)} vots · ${percent(c.share)}</span></li>`,
+      <span class="secundari">${number(c.votes)} vots · ${percent(c.share)} · ${number(Math.round(c.votes / c.seats))} vots per regidoria</span></li>`,
     )
     .join("")}</ul>`;
 }
@@ -1956,7 +1956,20 @@ function renderPleCompacte(
   fitxa: FitxaCarrecs,
   colorPer: (grup: string | null) => string,
   government: GovernmentMetric | null = null,
+  registre: readonly Councillor[] = [],
 ): string {
+  /*
+   * El grup de cada persona el diu la seu electrònica; quan no el diu (a
+   * Tarragona no en diu cap, i els 27 regidors sortien «Sense grup»), el
+   * registre electoral de la Generalitat sap amb quina llista va sortir
+   * elegida cadascú, i la llista és el grup mentre ningú no digui el contrari.
+   * Es busca pel nom normalitzat; qui no hi és, es queda sense grup de debò.
+   */
+  const siglesDelRegistre = new Map(
+    registre.map((c) => [normalizePersonName(c.name), c.sigles ?? c.groupName ?? null] as const),
+  );
+  const grupDe = (c: CarrecSeue): string | null =>
+    c.grup ?? siglesDelRegistre.get(normalizePersonName(c.nom)) ?? null;
   // La mateixa funció que fa servir el generador de pàgines de regidor, sobre la
   // mateixa llista i en el mateix ordre: així l'enllaç sempre existeix.
   const adreces = adrecesRegidors(fitxa.carrecs);
@@ -1980,7 +1993,7 @@ function renderPleCompacte(
 
   const groups = new Map<string, CarrecSeue[]>();
   for (const carrec of fitxa.carrecs) {
-    const key = carrec.grup ?? "Sense grup";
+    const key = grupDe(carrec) ?? "Sense grup";
     const list = groups.get(key);
     if (list) list.push(carrec);
     else groups.set(key, [carrec]);
@@ -2027,7 +2040,7 @@ function renderPleCompacte(
   // Qui forma el govern, que sovint no és un sol partit: de 453 municipis amb
   // la dada, 195 tenen regidors de més d'un grup a l'equip de govern. La fitxa
   // ho deia només a través de l'alcaldia, i això amagava totes les coalicions.
-  const grupsGovern = [...new Set(govern.map((c) => c.grup).filter((g): g is string => Boolean(g)))];
+  const grupsGovern = [...new Set(govern.map((c) => grupDe(c)).filter((g): g is string => Boolean(g)))];
   const siglesAlcaldia = government?.mayorSigles ?? government?.winnerSigles ?? null;
   const resumGovern =
     banderesIncompletes && government && siglesAlcaldia
@@ -2445,6 +2458,29 @@ function summarySentence(
  *   quan en té, i si no, la taula d'alcaldies d'aquesta mateixa pàgina. El nom
  *   de qui mana no és mai text mort.
  */
+/**
+ * El relleu a mig mandat, si n'hi ha hagut: des de quan hi és qui hi és i,
+ * quan la font ho diu, qui hi havia abans. Per al mandat en curs l'historial
+ * de la Generalitat només desa l'alcaldia vigent, així que sovint se sap la
+ * data d'arribada però no el nom anterior; llavors es diu el que se sap i
+ * prou, i la taula d'alcaldies ho explica.
+ */
+type RelleuAlcaldia = { desDe: string | null; anteriors: string[] };
+
+function relleuDelMandat(mayorsMetric: MayorsMetric | null | undefined, nomActual: string): RelleuAlcaldia | null {
+  const change = mayorsMetric?.currentTermChange ?? null;
+  if (!change) return null;
+  const actual = normalizePersonName(nomActual);
+  const delMandat = mayorsMetric!.history.filter((h) => h.term === change.term);
+  const jo = [...delMandat, ...change.mayors].find((h) => normalizePersonName(h.name) === actual) ?? null;
+  const anteriors = [...new Map(
+    [...delMandat, ...change.mayors]
+      .filter((h) => normalizePersonName(h.name) !== actual)
+      .map((h) => [normalizePersonName(h.name), nomLlegible(h.name)] as const),
+  ).values()];
+  return { desDe: jo?.tookOfficeOn ?? null, anteriors };
+}
+
 function renderAlcaldia(
   nom: string,
   carrec: string,
@@ -2452,11 +2488,19 @@ function renderAlcaldia(
   color: string,
   foto: string | null,
   adreca: string | null,
+  relleu: RelleuAlcaldia | null = null,
 ): string {
   const etiqueta = `${escape(carrec)}${sigles ? ` · ${sigla(sigles, { base: BASE, color })}` : ""}`;
+  const desDe = relleu?.desDe ? `des del ${formatDate(relleu.desDe)}` : "va arribar a mig mandat";
+  const abans = relleu && relleu.anteriors.length > 0
+    ? ` · abans, ${relleu.anteriors.map(escape).join(" i ")}`
+    : "";
+  const liniaRelleu = relleu
+    ? `<span class="relleu-alcaldia"><a href="#alcaldies">${desDe}${abans}</a></span>`
+    : "";
   return `<p class="alcaldia">${cara(nom, foto, { color })}<span class="qui-mana">
     <span class="nom-alcaldia"><a href="${escape(adreca ?? "#alcaldies")}">${escape(nom)}</a></span>
-    <span class="carrec-alcaldia">${etiqueta}</span></span></p>`;
+    <span class="carrec-alcaldia">${etiqueta}</span>${liniaRelleu}</span></p>`;
 }
 
 // ----------------------------------------------------- qui hi viu i què paga
@@ -5558,7 +5602,7 @@ export function renderRadiografia(
 
   const regidors =
     data.carrecs && data.carrecs.carrecs.length > 0
-      ? renderPleCompacte(data.carrecs, colorPerGrup, government)
+      ? renderPleCompacte(data.carrecs, colorPerGrup, government, data.councillors)
       : data.councillors.length > 0
         ? renderCouncillors(data.councillors, government)
         : "";
@@ -5971,6 +6015,7 @@ ${cercador(BASE)}
           mayorColor,
           alcaldia.foto,
           alcaldia.adreca,
+          relleuDelMandat(data.mayors, alcaldia.nom),
         )
       : ""
   }

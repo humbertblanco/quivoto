@@ -205,6 +205,8 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
 .qui-mana{display:flex;flex-direction:column;gap:3px;min-width:0}
 .nom-alcaldia{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.01em}
 .nom-alcaldia a{color:inherit;text-decoration:none;border-bottom:2.5px solid var(--coral)}
+.relleu-alcaldia{display:block;font-size:.78rem;color:var(--ink-suau);font-weight:700;margin-top:2px}
+.relleu-alcaldia a{color:inherit;text-decoration-color:var(--vora)}
 .carrec-alcaldia{font-size:.84rem;color:var(--ink-suau);font-weight:700;
   display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 
