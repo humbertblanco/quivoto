@@ -1,5 +1,7 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import { clauCerca, classifica, qualitat, TIPUS } from "./cerca";
 import { de, normalize, slugify } from "../lib/text";
+import { CERCADOR_CSS, senseComentaris } from "./estil";
 
 /**
  * La casella per anar a qualsevol lloc, a totes les pàgines.
@@ -67,32 +69,63 @@ import { de, normalize, slugify } from "../lib/text";
  * adreces: el fitxer no porta el slug de cap regidor, el calcula el navegador
  * amb `slugify()`. Si la del guió divergís de la del generador, l'enllaç aniria
  * a un 404 —o, pitjor, a la fitxa d'una altra persona amb un nom semblant.
+ *
+ * ## Un cercador, dues sortides
+ *
+ * La landing (`tools/build_landing.py`) tenia el seu propi cercador: un altre
+ * aspecte, sense fletxes ni accents ni alcaldies d'abans, i la seva capçalera
+ * no tenia el botó. El propietari vol el mateix cercador a tot arreu, i la
+ * manera de tenir-lo no és copiar-lo sinó que el guió, el full i el diàleg
+ * surtin d'aquí en dues formes: incrustats a cada pàgina de l'Observatori,
+ * com sempre, i escrits com a fitxers a `web/public/assets/` —`cercador.js`,
+ * `cercador.css`, `cercador.html`— per a qui no passa pel generador. Les dues
+ * formes són **la mateixa cadena**: `CERCADOR_JS` i `CERCADOR_CSS` no es
+ * construeixen dos cops, i `cercador.test.ts` ho comprova.
+ *
+ * Perquè el mateix guió serveixi des de qualsevol lloc, el camí fins a
+ * `/observatori/` ja no va escrit dins del guió: el porta el diàleg a
+ * `data-base`, i el guió el llegeix. L'Observatori hi posa el camí relatiu del
+ * seu nivell; la landing, `/observatori/` en absolut.
  */
 
+/** El text de la casella quan és buida; la landing castellana en posa un altre. */
+export const PLACEHOLDER_CERCA = "Un municipi, un alcalde, un regidor, un partit";
+
+const escape = (t: string): string =>
+  t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
 /**
- * El diàleg i el seu guió. `base` és el camí fins a `/observatori/` amb la
+ * El diàleg sol, sense guió. `base` és el camí fins a `/observatori/` amb la
  * barra final; la taula de bases per nivell és al capçal de `capcalera.ts`.
  */
-export function cercador(base: string): string {
-  return `
-<dialog class="cercador" aria-label="Cerca un municipi, una persona, un partit o un bloc d'aquesta pàgina">
+export function dialegCercador(base: string, placeholder = PLACEHOLDER_CERCA): string {
+  return `<dialog class="cercador" data-base="${escape(base)}" aria-label="Cerca un municipi, una persona, un partit o un bloc d'aquesta pàgina">
   <form method="dialog" class="cerca-cap">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>
     <input type="search" id="cerca-camp" autocomplete="off" spellcheck="false"
            role="combobox" aria-expanded="false" aria-controls="cerca-llista" aria-autocomplete="list"
-           placeholder="Un municipi, un alcalde, un regidor, un partit" aria-label="Cerca">
+           placeholder="${escape(placeholder)}" aria-label="Cerca">
     <button value="tanca" class="cerca-tanca">Esc</button>
   </form>
   <div class="cerca-resultats" id="cerca-llista" role="listbox" aria-label="Resultats"></div>
-</dialog>
-<script>
-(function(){
+</dialog>`;
+}
+
+/**
+ * El guió, un sol cop per a tothom. Es construeix en carregar el mòdul perquè
+ * la serialització de les funcions del generador (`toString()`) no es repeteixi
+ * a cada pàgina, i perquè l'asset i l'incrustat siguin, literalment, la mateixa
+ * cadena.
+ */
+export const CERCADOR_JS = `(function(){
   var dialeg = document.querySelector(".cercador");
   if (!dialeg || typeof dialeg.showModal !== "function") return;
   var camp = dialeg.querySelector("#cerca-camp");
   var caixa = dialeg.querySelector(".cerca-resultats");
-  var BASE = ${JSON.stringify(base)};
+  // El camí fins a /observatori/ el porta el diàleg, no el guió: així el mateix
+  // fitxer serveix des d'una fitxa («../../») i des de la landing («/observatori/»).
+  var BASE = dialeg.getAttribute("data-base") || "/observatori/";
 
   // El botó el posa el guió: sense ell seria un control que no fa res. Va a la
   // ranura que la capçalera li deixa, i si aquella pàgina encara no en té, al
@@ -336,8 +369,32 @@ export function cercador(base: string): string {
     nodes[tria].scrollIntoView({ block: "nearest" });
   }
 
-  function obre(){ dialeg.showModal(); camp.value = ""; pinta(); baixa(); camp.focus(); }
+  /**
+   * Obre el diàleg, buit o amb un text ja escrit: el que s'ha teclejat a una
+   * casella de fora o el que porta l'adreça a «?q=». El cursor va al final,
+   * que és on continua escrivint qui ja havia començat.
+   */
+  function obre(text){
+    if (!dialeg.open) dialeg.showModal();
+    camp.value = typeof text === "string" ? text : "";
+    pinta(); baixa(); camp.focus();
+    if (camp.value && camp.setSelectionRange) camp.setSelectionRange(camp.value.length, camp.value.length);
+  }
   boto.addEventListener("click", obre);
+  // Les caselles que una pàgina posa al seu contingut —la landing en té una de
+  // gran al primer bloc— són camps de debò dins d'un formulari: sense guió
+  // porten a la portada de l'Observatori amb «?q=» i el que s'hi ha escrit;
+  // amb guió, el primer clic o la primera lletra obren el diàleg amb aquest
+  // text. No s'obre en rebre el focus perquè, en tancar el diàleg, el focus hi
+  // torna i el tornaria a obrir.
+  var camps = document.querySelectorAll("[data-cerca-camp]");
+  for (var c = 0; c < camps.length; c++) {
+    (function(extern){
+      extern.addEventListener("click", function(){ obre(extern.value); });
+      extern.addEventListener("input", function(){ obre(extern.value); });
+      if (extern.form) extern.form.addEventListener("submit", function(e){ e.preventDefault(); obre(extern.value); });
+    })(camps[c]);
+  }
   // Els botons que una pàgina posa dins del seu contingut —la portada en té
   // un a la targeta de la fitxa: «Escriu el nom del teu poble»— neixen amb
   // «hidden» i s'ensenyen aquí, per la mateixa regla que el de dalt: sense
@@ -363,6 +420,39 @@ export function cercador(base: string): string {
       e.preventDefault(); obre();
     }
   });
-})();
+  // Qui arriba amb «?q=» a l'adreça ve del formulari d'una pàgina sense guió:
+  // se li obre el diàleg amb el que hi havia escrit, com si l'hagués obert aquí.
+  var q = window.location && /[?&]q=([^&]*)/.exec(window.location.search || "");
+  if (q && q[1]) {
+    try { obre(decodeURIComponent(q[1].replace(/\\+/g, " "))); } catch (err) { /* una adreça mal escrita no és cosa nostra */ }
+  }
+})();`;
+
+/**
+ * El diàleg i el seu guió, incrustats: el que posen les pàgines de l'Observatori.
+ */
+export function cercador(base: string): string {
+  return `
+${dialegCercador(base)}
+<script>
+${CERCADOR_JS}
 </script>`;
+}
+
+/**
+ * Les tres peces del cercador com a fitxers, per a les pàgines que no fa el
+ * generador: la landing de quivoto i el que vingui. `dir` és `web/public/assets/`
+ * amb la barra final. El diàleg va amb la base absoluta perquè des de la
+ * landing els índexs viuen a `/observatori/`; el guió i el full són les
+ * mateixes constants que s'incrusten, amb una ratlla al davant que diu d'on
+ * surten perquè ningú no els editi a mà.
+ */
+export async function escriuCercadorCompartit(dir: string): Promise<void> {
+  const avis = "generat per packages/pipeline/src/publish/cercador.ts: no editar a mà";
+  await mkdir(dir, { recursive: true });
+  await Promise.all([
+    writeFile(`${dir}cercador.js`, `/* ${avis} */\n${CERCADOR_JS}\n`, "utf8"),
+    writeFile(`${dir}cercador.css`, `/* ${avis} */\n${senseComentaris(CERCADOR_CSS).trim()}\n`, "utf8"),
+    writeFile(`${dir}cercador.html`, `<!-- ${avis} -->\n${dialegCercador("/observatori/")}\n`, "utf8"),
+  ]);
 }

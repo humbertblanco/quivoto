@@ -5,7 +5,7 @@
 
 Font única: tools/icons_lib.py (icones + mascota). No cal cap dependència.
 """
-import os, sys, html
+import os, re, sys, html
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import icons_lib as L
 
@@ -33,6 +33,7 @@ T = {
   'form_titol':'Avisa’m quan la meva ciutat estigui llesta',
   'form_sub':'Un sol correu quan obrim el teu municipi. Res més, i te’n pots donar de baixa quan vulguis.',
   'email_ph':'El teu correu','muni_ph':'El teu municipi (opcional)',
+  'cerca_ph':'Busca el teu municipi, alcaldia o regidor',
   'consent':'Accepto rebre un avís quan quivoto obri el meu municipi i he llegit la <a href="/privadesa.html">política de privadesa</a>.',
   'boto':'Avisa’m','boto_ok':'Fet! Ens veiem aviat.','boto_error':'No ha funcionat. Torna-ho a provar.',
   'obs_url':'/observatori/',
@@ -101,6 +102,7 @@ T = {
   'form_titol':'Avísame cuando mi ciudad esté lista',
   'form_sub':'Un solo correo cuando abramos tu municipio. Nada más, y puedes darte de baja cuando quieras.',
   'email_ph':'Tu correo','muni_ph':'Tu municipio (opcional)',
+  'cerca_ph':'Busca tu municipio, alcaldía o concejal',
   'consent':'Acepto recibir un aviso cuando quienvoto abra mi municipio y he leído la <a href="/privadesa.html">política de privacidad</a>.',
   'boto':'Avísame','boto_ok':'¡Hecho! Nos vemos pronto.','boto_error':'No ha funcionado. Inténtalo otra vez.',
   'obs_url':'https://quivoto.cat/observatori/',
@@ -282,7 +284,11 @@ def versio(fitxer):
     exemple. Canvia el fitxer, canvia l'adreça, i el navegador el torna a demanar.
     """
     import hashlib
-    with open(os.path.join(OUT, 'assets', fitxer), 'rb') as f:
+    cami = os.path.join(OUT, 'assets', fitxer)
+    if not os.path.exists(cami):
+        raise SystemExit(f'Falta {cami}. Els fitxers cercador.* els escriu el generador de '
+                         "l'Observatori (packages/pipeline/src/publish/cercador.ts) i van al git.")
+    with open(cami, 'rb') as f:
         return hashlib.sha1(f.read()).hexdigest()[:8]
 
 
@@ -317,6 +323,10 @@ MENU = [
 def capcalera(lang, actual='cap'):
     """La mateixa capçalera que l'Observatori, a totes les pàgines de la landing.
 
+    La ranura buida després del menú és on el guió del cercador compartit
+    (assets/cercador.js) posa el botó «Cerca», igual que a capcalera.ts: sense
+    guió no hi ha botó, en comptes d'una lupa que no fa res.
+
     La marca porta a la portada de l'idioma; el menú és el de capcalera.ts, amb
     enllaços absoluts (t['obs_url']) perquè funcionin des de / i des de /es/:
     '/observatori/…' en català i 'https://quivoto.cat/observatori/…' en
@@ -338,6 +348,7 @@ def capcalera(lang, actual='cap'):
     return f'''<header class="capcalera">
   <a class="logo" href="{arrel}">{wordmark(t, 30)}</a>
   <nav class="menu" aria-label="{t['menu_aria']}">{items}</nav>
+  <span class="ranura-cerca"></span>
   <span class="etiqueta">{t['aviat']}</span>
   <a href="{t['altra_url']}" hreflang="{t['altra_lang']}" class="idioma">{t['altra']}</a>
 </header>'''
@@ -368,38 +379,48 @@ def passos(items):
       f'      <li><b>{i+1}</b><div><h3>{h}</h3><p>{p}</p></div></li>'
       for i, (h, p) in enumerate(items))
 
-def cerca_home(lang):
-    ca = lang == 'ca'
-    return f'''<section class="cerca-home" aria-labelledby="cerca-home-titol">
-  <div class="cerca-home-cos">
-    <p class="micro">{'Entra directament' if ca else 'Entra directamente'}</p>
-    <h2 id="cerca-home-titol">{'Busca el teu municipi o electe' if ca else 'Busca tu municipio o electo'}</h2>
-    <p>{'Escriu un nom i ves directament a la fitxa, sense haver de navegar pels menús.' if ca else 'Escribe un nombre y ve directamente a la ficha, sin tener que navegar por los menús.'}</p>
-    <label class="nomes-lectors" for="cerca-home-camp">{'Cerca' if ca else 'Buscar'}</label>
-    <input id="cerca-home-camp" class="cerca-home-camp" type="search" autocomplete="off" spellcheck="false" placeholder="{'Sabadell, alcaldessa o regidor' if ca else 'Sabadell, alcaldesa o concejal'}" aria-controls="cerca-home-resultats">
-    <div id="cerca-home-resultats" class="cerca-home-resultats" role="listbox" aria-live="polite"></div>
-  </div>
-</section>
-<script>
-(function(){{
-  var input=document.getElementById('cerca-home-camp'), out=document.getElementById('cerca-home-resultats');
-  if(!input||!out) return;
-  var data=null, electes=null;
-  function norm(s){{return String(s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();}}
-  function slug(s){{return norm(s).replace(/\\s+/g,'-').replace(/-+/g,'-');}}
-  function esc(s){{return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}}
-  function render(){{
-    var q=norm(input.value).trim(); if(q.length<2){{out.innerHTML='';return;}}
-    var rows=[];
-    if(data&&data.mun) data.mun.forEach(function(m){{if(norm(m.n).includes(q)||(m.a&&norm(m.a).includes(q))) rows.push({{t:m.n,s:m.c||'',u:'/observatori/m/'+m.s+'/',k:'Municipi'}});}});
-    if(electes&&electes.reg) electes.reg.forEach(function(r,ri){{if(norm(r[0]).includes(q)){{var m=data.mun[r[1]];if(m) rows.push({{t:r[0],s:m.n+(r[2]<0?'':' · '+electes.sig[r[2]]),u:'/observatori/m/'+m.s+'/regidor/'+(electes.exr[ri]||slug(r[0]))+'/',k:'Regidor'}});}}}});
-    rows=rows.slice(0,8);
-    out.innerHTML=rows.length?rows.map(function(r){{return '<a class="cerca-home-fila" role="option" href="'+r.u+'"><b>'+esc(r.t)+'</b><span>'+esc(r.k+' · '+r.s)+'</span></a>';}}).join(''):'<p class="cerca-home-buit">{'No hi ha cap coincidència.' if ca else 'No hay coincidencias.'}</p>';
-  }}
-  fetch('/observatori/cerca.json').then(function(r){{return r.json();}}).then(function(d){{data=d;render();fetch('/observatori/cerca-electes.json').then(function(r){{return r.json();}}).then(function(d){{electes=d;render();}});}});
-  input.addEventListener('input',render);
-}})();
-</script>'''
+def cercador_compartit(lang):
+    """El diàleg del cercador de l'Observatori, tal com l'escriu
+    packages/pipeline/src/publish/cercador.ts a web/public/assets/cercador.html.
+
+    La landing tenia un cercador propi —un altre aspecte, sense fletxes ni
+    accents ni alcaldies d'abans— i el propietari vol el mateix a tot arreu.
+    Aquí no se'n copia res: es llegeix el fragment, i el guió i el full
+    s'enllacen des de /assets/. El diàleg queda en català; en castellà només
+    canvia el text de la casella buida, que és l'únic que es llegeix abans
+    d'escriure-hi."""
+    with open(os.path.join(OUT, 'assets', 'cercador.html'), encoding='utf-8') as f:
+        fragment = f.read().strip()
+    if lang != 'ca':
+        fragment, n = re.subn(r'placeholder="[^"]*"',
+                              f'placeholder="{html.escape(T[lang]["cerca_ph"], quote=True)}"', fragment, count=1)
+        assert n == 1, 'el fragment del cercador ha canviat de forma: mira cercador.ts'
+    return fragment
+
+
+def ctx_cercador(lang):
+    """Les tres peces que tota pàgina de la landing necessita del cercador."""
+    return {'cercador': cercador_compartit(lang),
+            'cercador_css_v': versio('cercador.css'),
+            'cercador_js_v': versio('cercador.js')}
+
+
+LUPA = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2.4" stroke-linecap="round" aria-hidden="true">'
+        '<circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>')
+
+
+def casella_hero(t):
+    """La casella gran del primer bloc: un camp de debò que obre el diàleg
+    compartit amb el que s'hi ha escrit (data-cerca-camp, a cercador.ts).
+    Sense guió és un formulari GET cap a la portada de l'Observatori amb «?q=»,
+    que el guió d'allà llegeix i obre: no hi ha cap control que no faci res."""
+    ph = html.escape(t['cerca_ph'], quote=True)
+    return f"""<form class="cerca-hero" role="search" action="{t['obs_url']}" method="get">
+        <label for="cerca-hero-camp">{LUPA}<span class="nomes-lectors">{ph}</span></label>
+        <input id="cerca-hero-camp" type="search" name="q" data-cerca-camp autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="{ph}">
+      </form>"""
+
 
 def cards(items, cls):
     return '\n'.join(
@@ -596,19 +617,6 @@ CSS_EXTRA = '''<style>
 @media(min-width:820px){.obs-reixa{grid-template-columns:repeat(3,1fr)}}
 .obs-accions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin:var(--e3) 0 0}
 .obs-nota{margin:var(--e2) 0 0;font-size:.9rem;color:var(--ink-suau);max-width:52ch}
-
-/* ---------- cercador a la portada --------------------------------------- */
-.cerca-home{background:var(--paper-2);border-bottom:2.5px solid var(--ink);padding:var(--e4) var(--e3)}
-.cerca-home-cos{max-width:var(--ample);margin:0 auto}
-.cerca-home h2{margin:0 0 6px;max-width:24ch}
-.cerca-home p:not(.micro){max-width:55ch}
-.cerca-home-camp{display:block;width:min(100%,620px);margin-top:var(--e2);padding:14px 16px;border:2.5px solid var(--ink);border-radius:var(--r-m);font:inherit;font-size:1.05rem;background:var(--paper);color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
-.cerca-home-camp:focus{outline:3px solid var(--coral);outline-offset:3px}
-.cerca-home-resultats{display:grid;gap:6px;width:min(100%,620px);margin-top:var(--e2)}
-.cerca-home-fila{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:10px 12px;border:1.5px solid var(--vora);background:var(--paper);text-decoration:none}
-.cerca-home-fila:hover,.cerca-home-fila:focus-visible{border-color:var(--coral);transform:translateX(2px)}
-.cerca-home-fila span{font-size:.78rem;color:var(--ink-suau);text-align:right}
-.cerca-home-buit{font-size:.88rem;color:var(--ink-suau)}
 
 /* ---------- la demostració jugable ----------------------------------------
    Les afirmacions són reals i encara no estan validades. L'avís va a dalt de
@@ -810,6 +818,7 @@ PAGE = '''<!doctype html>
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/styles.css?v={css_v}">
+<link rel="stylesheet" href="/assets/cercador.css?v={cercador_css_v}">
 {estil_extra}
 <script type="application/ld+json">
 {json_ld}
@@ -820,6 +829,7 @@ PAGE = '''<!doctype html>
 <a class="salta" href="#contingut">{salta}</a>
 
 {capcalera}
+{cercador}
 
 <main id="contingut">
 
@@ -828,6 +838,7 @@ PAGE = '''<!doctype html>
   <h1>{h1}</h1>
   <div class="hero-cos">
     <div>
+      {casella}
       <p class="entrada">{entrada}</p>
       <form class="form-rapid" method="post" action="/api/subscribe.php" novalidate data-idioma="{lang}">
         <input type="hidden" name="lang" value="{lang}">
@@ -847,8 +858,6 @@ PAGE = '''<!doctype html>
     </div>
   </div>
 </section>
-
-{cerca_home}
 
 <section class="xifres-banda">
   <div class="cinta">
@@ -923,7 +932,7 @@ PAGE = '''<!doctype html>
   <div class="final-mascota">{mascota_petita}</div>
 </section>
 
-<section class="qui">
+<section class="qui-som">
   <h2>{qui_titol}</h2>
   <p>{qui}</p>
   <p><a class="correu" href="mailto:{contacte}">{contacte}</a></p>
@@ -934,6 +943,7 @@ PAGE = '''<!doctype html>
 {footer}
 
 <script src="/assets/app.js" defer></script>
+<script src="/assets/cercador.js?v={cercador_js_v}" defer></script>
 </body>
 </html>
 '''
@@ -949,11 +959,13 @@ GRACIES = '''<!doctype html>
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/styles.css?v={css_v}">
+<link rel="stylesheet" href="/assets/cercador.css?v={cercador_css_v}">
 {google_tag}
 </head>
 <body class="pagina-simple">
 <a class="salta" href="#contingut">{salta}</a>
 {capcalera}
+{cercador}
 <main id="contingut">
   {mascota}
   <h1>{gracies_h}</h1>
@@ -961,6 +973,7 @@ GRACIES = '''<!doctype html>
   <p><a class="boto" href="/">{gracies_torna}</a></p>
 </main>
 {footer}
+<script src="/assets/cercador.js?v={cercador_js_v}" defer></script>
 </body>
 </html>
 '''
@@ -989,17 +1002,20 @@ LEGAL = '''<!doctype html>
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/styles.css?v={css_v}">
+<link rel="stylesheet" href="/assets/cercador.css?v={cercador_css_v}">
 {google_tag}
 </head>
 <body>
 <a class="salta" href="#contingut">{salta}</a>
 {capcalera}
+{cercador}
 <main id="contingut" class="document">
 <h1>{titol}</h1>
 {cos}
 <p class="tornar"><a class="boto-secundari" href="/">{tornar}</a></p>
 </main>
 {footer}
+<script src="/assets/cercador.js?v={cercador_js_v}" defer></script>
 </body>
 </html>
 '''
@@ -1202,6 +1218,7 @@ def build_legal(lang):
                               capcalera=capcalera(lang), salta=t['salta'], peu=t['peu'],
                               footer=footer_complet(t),
                               css_v=versio('styles.css'), google_tag=GOOGLE_TAG,
+                              **ctx_cercador(lang),
                               canonical=("" if lang == "ca" else "es/") + nom + ".html",
                               nom=nom, desc=DESC_LEGAL[nom][lang], locale=t['locale'],
                               cos=cos.replace('{marca}', t['marca']))
@@ -1265,7 +1282,7 @@ def build_404(lang):
             'Esta papeleta no está en esta urna. Puede que la dirección haya cambiado o sobre alguna letra.')
     actions = ('<a class="boto" href="/">Torna a l’inici</a><a class="boto secundari" href="/observatori/">Obre l’Observatori</a>' if not es else
                '<a class="boto" href="/es/">Volver al inicio</a><a class="boto secundari" href="https://quivoto.cat/observatori/">Abrir el Observatorio</a>')
-    page = f'''<!doctype html><html lang="{t['lang']}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 · {title} · {t['marca']}</title><meta name="robots" content="noindex, nofollow"><meta name="description" content="{lead}"><link rel="stylesheet" href="/assets/fonts.css"><link rel="stylesheet" href="/assets/styles.css?v={versio('styles.css')}">{GOOGLE_TAG}<style>.error404{{max-width:760px;margin:0 auto;padding:clamp(70px,12vw,150px) var(--e3);text-align:center}}.error404 .codi{{font-family:var(--display);font-weight:900;font-size:clamp(5rem,20vw,11rem);line-height:.75;color:var(--coral);text-shadow:5px 5px 0 var(--ink);-webkit-text-stroke:2px var(--ink)}}.error404 h1{{margin-top:var(--e4)}}.error404 .accions{{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:var(--e3)}}.error404 .secundari{{background:var(--paper);color:var(--ink)}}</style></head><body><a class="salta" href="#contingut">{t['salta']}</a>{capcalera(lang)}<main id="contingut" class="error404"><div class="codi" aria-hidden="true">404</div><p class="micro">{title}</p><h1>{title}</h1><p class="entrada">{lead}</p><div class="accions">{actions}</div></main>{footer_complet(t)}</body></html>'''
+    page = f'''<!doctype html><html lang="{t['lang']}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 · {title} · {t['marca']}</title><meta name="robots" content="noindex, nofollow"><meta name="description" content="{lead}"><link rel="stylesheet" href="/assets/fonts.css"><link rel="stylesheet" href="/assets/styles.css?v={versio('styles.css')}"><link rel="stylesheet" href="/assets/cercador.css?v={versio('cercador.css')}">{GOOGLE_TAG}<style>.error404{{max-width:760px;margin:0 auto;padding:clamp(70px,12vw,150px) var(--e3);text-align:center}}.error404 .codi{{font-family:var(--display);font-weight:900;font-size:clamp(5rem,20vw,11rem);line-height:.75;color:var(--coral);text-shadow:5px 5px 0 var(--ink);-webkit-text-stroke:2px var(--ink)}}.error404 h1{{margin-top:var(--e4)}}.error404 .accions{{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:var(--e3)}}.error404 .secundari{{background:var(--paper);color:var(--ink)}}</style></head><body><a class="salta" href="#contingut">{t['salta']}</a>{capcalera(lang)}{cercador_compartit(lang)}<main id="contingut" class="error404"><div class="codi" aria-hidden="true">404</div><p class="micro">{title}</p><h1>{title}</h1><p class="entrada">{lead}</p><div class="accions">{actions}</div></main>{footer_complet(t)}<script src="/assets/cercador.js?v={versio('cercador.js')}" defer></script></body></html>'''
     open(os.path.join(sub, '404.html'), 'w', encoding='utf-8').write(page)
 
 
@@ -1290,7 +1307,8 @@ def build(lang):
     ctx['obs_xifres_items'] = obs_xifres(t)
     ctx['obs_reixa_items'] = obs_reixa(t)
     ctx['prova'] = prova_html(t)
-    ctx['cerca_home'] = cerca_home(lang)
+    ctx['casella'] = casella_hero(t)
+    ctx.update(ctx_cercador(lang))
     ctx['estil_extra'] = CSS_EXTRA
     ctx['mascota_petita'] = L.papereta(150)
     ctx['footer'] = footer_complet(t)
@@ -1299,9 +1317,30 @@ def build(lang):
     grac = GRACIES.format(**{**ctx, 'mascota': L.papereta(150)})
     sub = OUT if lang == 'ca' else os.path.join(OUT, 'es')
     os.makedirs(sub, exist_ok=True)
+    comprova_cercador(page, sub)
     open(os.path.join(sub, 'index.html'), 'w', encoding='utf-8').write(page)
     open(os.path.join(sub, 'gracies.html'), 'w', encoding='utf-8').write(grac)
     return len(page)
+
+
+def comprova_cercador(page, sub):
+    """La portada porta el cercador compartit i cap resta del vell.
+
+    És la prova de la landing: es passa a cada generació, sense cap eina més,
+    i peta abans d'escriure res si la pàgina no té la ranura del botó a la
+    capçalera, la casella del hero, el diàleg o els dos fitxers de /assets/,
+    o si encara hi queda la secció «Busca el teu municipi o electe» que
+    tenia el seu propi guió."""
+    ha_de_tenir = ('class="ranura-cerca"', 'data-cerca-camp', '<dialog class="cercador"',
+                   'data-base="/observatori/"', 'href="/assets/cercador.css?v=',
+                   'src="/assets/cercador.js?v=', 'defer')
+    no_pot_tenir = ('cerca-home', 'cerca-home-camp', "fetch('/observatori/cerca.json')")
+    for tros in ha_de_tenir:
+        if tros not in page:
+            raise SystemExit(f'{sub}/index.html: hi falta {tros!r}')
+    for tros in no_pot_tenir:
+        if tros in page:
+            raise SystemExit(f'{sub}/index.html: encara hi ha el cercador vell ({tros!r})')
 
 if __name__ == '__main__':
     for lg in ('ca', 'es'):

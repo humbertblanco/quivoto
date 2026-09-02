@@ -11,6 +11,7 @@ import { mitjanesPerGrup } from "./criminalitat";
 import { carregaMetriques } from "./metriques";
 import { buildPeerGroups } from "../derive/peers";
 import { escriuCerca, escriuCercaAlcaldies, escriuCercaElectes } from "./cerca";
+import { escriuCercadorCompartit } from "./cercador";
 import { carregaSeriesGrup } from "./series-grup";
 import { loadEls947, renderEls947 } from "./els947";
 import { INDEXABLE, SITE } from "./config";
@@ -190,6 +191,8 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     // la consulta dels 947 acabada de llegir i no la torna a demanar.
     const quants = await escriuCerca(carregats, `${OUT_DIR}../cerca.json`);
     run.say(`índex de cerca amb ${quants} municipis`);
+    // El cercador mateix —guió, full i diàleg— com a fitxers a /assets/, per a la landing.
+    await escriuCercadorCompartit(`${OUT_DIR}../../assets/`);
     /*
      * El segon índex: qui seu als plens i amb quina llista s'hi va presentar.
      *

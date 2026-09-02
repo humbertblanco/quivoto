@@ -21,7 +21,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
-<link rel="stylesheet" href="/assets/styles.css?v=feb5e356">
+<link rel="stylesheet" href="/assets/styles.css?v=09209f16">
+<link rel="stylesheet" href="/assets/cercador.css?v=13f0c534">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-9ZB1XZ3LHT"></script>
 <script>
@@ -37,9 +38,22 @@
 <header class="capcalera">
   <a class="logo" href="/es/"><span class="marca" style="font-size:30px">quienvoto</span></a>
   <nav class="menu" aria-label="Secciones del Observatorio"><a href="https://quivoto.cat/observatori/" hreflang="ca">Observatori</a><a href="https://quivoto.cat/observatori/els947.html" hreflang="ca">Els 947</a><a href="https://quivoto.cat/observatori/mapa/" hreflang="ca">Mapa</a><a href="https://quivoto.cat/observatori/ranquings/" hreflang="ca">Rànquings</a><a href="https://quivoto.cat/observatori/c/" hreflang="ca">Comarques</a><a href="https://quivoto.cat/observatori/partit/" hreflang="ca">Partits</a><a href="https://quivoto.cat/observatori/trajectoria/" hreflang="ca">Trajectòries</a><a href="https://quivoto.cat/observatori/comparador/" hreflang="ca">Comparador</a></nav>
+  <span class="ranura-cerca"></span>
   <span class="etiqueta">Pronto</span>
   <a href="https://quivoto.cat" hreflang="ca" class="idioma">Català</a>
 </header>
+<!-- generat per packages/pipeline/src/publish/cercador.ts: no editar a mà -->
+<dialog class="cercador" data-base="/observatori/" aria-label="Cerca un municipi, una persona, un partit o un bloc d'aquesta pàgina">
+  <form method="dialog" class="cerca-cap">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>
+    <input type="search" id="cerca-camp" autocomplete="off" spellcheck="false"
+           role="combobox" aria-expanded="false" aria-controls="cerca-llista" aria-autocomplete="list"
+           placeholder="Busca tu municipio, alcaldía o concejal" aria-label="Cerca">
+    <button value="tanca" class="cerca-tanca">Esc</button>
+  </form>
+  <div class="cerca-resultats" id="cerca-llista" role="listbox" aria-label="Resultats"></div>
+</dialog>
 <main id="contingut" class="document">
 <h1>Aviso legal</h1>
 
@@ -96,5 +110,6 @@
       <p class="legal"><a href="/avis-legal.html">Aviso legal</a> · <a href="/privadesa.html">Privacidad</a></p>
       <p class="credit">Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a></p>
     </div></footer>
+<script src="/assets/cercador.js?v=7003944b" defer></script>
 </body>
 </html>
