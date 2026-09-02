@@ -2095,6 +2095,49 @@ describe("el registre de seccions", () => {
     expect(html).not.toContain("<h2>Moviments al ple</h2>");
   });
 
+  it("cada fila de les alcaldies porta a la fitxa de la persona, i la vigent a la de regidor", () => {
+    const mayors: NonNullable<RadiografiaData["mayors"]> = {
+      history: [
+        { term: "2023-2027", name: "MARTA FARRÉS FALGUERAS", partyRaw: "PSC-CP", tookOfficeOn: "2023-06-17" },
+        { term: "2019-2023", name: "MARTA FARRÉS FALGUERAS", partyRaw: "PSC-CP", tookOfficeOn: "2019-06-15" },
+        { term: "2015-2019", name: "JULI FERNÀNDEZ OLIVARES", partyRaw: "ERC-AM", tookOfficeOn: "2015-06-13" },
+      ],
+      changes: [], currentTermChange: null, distinctPeople: 2,
+    };
+    const retrat = {
+      qid: "Q1", nom: "Juli Fernàndez i Olivares", naixement: 1960, defuncio: null, cami: "/observatori/fotos/wikimedia/Q1.jpg",
+      format: "jpg" as const, amplada: 240, alcada: 320, fitxer: "File:Juli.jpg",
+      paginaFitxer: "https://commons.wikimedia.org/wiki/File:Juli.jpg", autor: "Algú",
+      llicencia: { codi: "cc-by-sa-4.0", nom: "CC BY-SA 4.0", url: "https://creativecommons.org/licenses/by-sa/4.0/" },
+    };
+    const html = renderRadiografia(fitxa({
+      government: govern(), mayors,
+      fotosExalcaldes: {
+        font: "Wikidata", fontImatges: "Commons", llicenciaDades: "CC0 1.0", consultat: "2026-08-30", ine5: "08187",
+        totalPersones: 1, ambFoto: 1, persones: [retrat], descartades: [],
+      },
+      carrecs: {
+        font: "seu-e", url: "https://seu-e.cat/ca/web/sabadell/govern", slug: "sabadell",
+        descarregat: "29 d'agost del 2026", totalCarrecs: 2, ambFoto: 0, cobertura: "completa",
+        carrecs: [
+          { nom: "Marta Farrés Falgueras", carrec: "Alcaldessa", grup: "Grup Municipal del PSC", equipGovern: true, foto: null, fotoPetita: null, fitxa: null },
+          { nom: "Regidor Republicà", carrec: "Regidor", grup: "Grup Municipal d'ERC", equipGovern: false, foto: null, fotoPetita: null, fitxa: null },
+        ],
+      } as unknown as RadiografiaData["carrecs"],
+    }));
+    const on = html.indexOf('id="alcaldies"');
+    const taula = html.slice(on, html.indexOf("</section>", on));
+    // L'alcaldia vigent té fitxa de regidor i la taula hi porta: cap fitxa duplicada.
+    expect(taula).toContain('<a class="qui-alcaldia" href="regidor/marta-farres-falgueras/">');
+    expect(taula).not.toContain("alcaldia/marta-farres-falgueras/");
+    // L'exalcalde té la seva, amb el retrat de Commons dins de l'enllaç i el crèdit sota la taula.
+    expect(taula).toContain('<a class="qui-alcaldia" href="alcaldia/juli-fernandez-olivares/"><img class="cara-alcaldia petita" style="--mida:28px;" src="/observatori/fotos/wikimedia/Q1.jpg"');
+    expect(taula).toContain("<summary>D'on surt el retrat</summary>");
+    expect(taula).toContain("Foto: Algú, ");
+    // Qui no té retrat porta les inicials del color de la seva força.
+    expect(taula).toMatch(/<span class="cara-alcaldia inicials petita" style="--mida:28px;--c:#[0-9a-fA-F]{6};--t:#[0-9a-fA-F]{6}" aria-hidden="true">MF<\/span>Marta Farrés Falgueras/);
+  });
+
   it("l'ordre és el de la fitxa: qui mana, els comptes, els diners, el vot, la gent", () => {
     const html = renderRadiografia(fitxa({ finances: finances(), participation: [{ electionId: "M20231", censusSize: 1000, voters: 600, blankVotes: 5 }] as unknown as RadiografiaData["participation"] }));
     const ids = seccions(html);

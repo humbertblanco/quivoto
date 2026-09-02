@@ -188,6 +188,22 @@ describe("renderRanquings", () => {
     expect(buit).not.toContain('class="ranquing"');
     expect(buit).toContain("Cap indicador no arriba avui al llindar");
   });
+
+  it("sense les dades de curiositats no escriu la secció ni l'enllaç; amb elles, sí, després dels rànquings", () => {
+    expect(html).not.toContain('id="curiositats"');
+    expect(html).not.toContain('href="#curiositats"');
+    const rows = files().map((r, i) => ({ ...r, r: 7 + (i % 5) * 2, a: `Alcaldia ${i}`, ad: `regidor/alcaldia-${i}/`, f: i % 2 ? 40 : 60, sa: 20_000 + i }));
+    const amb = renderRanquings(rows, "avui", {
+      alcaldies: { "poble-3": [{ mandat: "2023-2027", nom: "Alcaldia 3", possessio: "2023-06-17" }] },
+      llistes2023: {}, ple2023: {}, naixements: {}, retribucions: {},
+    });
+    expect(amb).toContain('<section class="bloc" id="curiositats">');
+    expect(amb).toContain('<a href="#curiositats">les curiositats</a>');
+    expect(amb.indexOf('id="curiositats"')).toBeGreaterThan(amb.lastIndexOf('<section class="bloc ranquing"'));
+    expect(amb.indexOf('id="curiositats"')).toBeLessThan(amb.indexOf('id="metode"'));
+    expect(amb).toContain('<a href="../m/poble-3/regidor/alcaldia-3/">Alcaldia 3</a>');
+    expect(amb).toContain(".llista-curiosa .pos{");
+  });
 });
 
 describe("les peces de l'etiqueta: ordinal, posició, signe i mediana", () => {

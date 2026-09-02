@@ -35,6 +35,7 @@ import { cercador } from "./cercador";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { cohortHomogenia, extremsEmpatats } from "./contracte-metriques";
+import { CURIOSITATS_CSS, preparaCuriositats, renderCuriositats, type DadesCuriositats } from "./curiositats";
 import { atributsEtiqueta, GRAFICS_CSS, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { peu } from "./peu";
 import { RADIOGRAFIA_CSS } from "./estil";
@@ -64,6 +65,19 @@ export type RankingRow = {
   ibi?: number | null; ibia?: number | null;
   /** canvis de la força més votada des del 1979, i quantes eleccions tenen dada */
   v?: number | null; q?: number | null;
+  /*
+   * Els camps que segueixen no fan cap rànquing: els llegeixen les curiositats
+   * (`curiositats.ts`), que comparteixen la fila per no tornar a carregar els
+   * 947. Són els mateixos noms que a `Els947Row`.
+   */
+  /** regidories del ple */
+  r?: number | null;
+  /** nom de l'alcaldia i el camí de la seva fitxa, relatiu a `m/<slug>/` */
+  a?: string | null; ad?: string | null;
+  /** dones al ple en percentatge, `null` quan la llista d'electes no és completa */
+  f?: number | null;
+  /** sou anual de l'alcaldia, només quan és un sou */
+  sa?: number | null;
 };
 
 /**
@@ -463,7 +477,7 @@ function dadesJson(rows: readonly RankingRow[], preparats: readonly RanquingPrep
 
 // -------------------------------------------------------------------- estil
 
-const CSS = `${GRAFICS_CSS}
+const CSS = `${GRAFICS_CSS}${CURIOSITATS_CSS}
 .intro{max-width:72ch;margin-bottom:var(--e4)}
 
 /* --- Destaquen: una fila per mètrica, els dos pols al costat --------------- */
@@ -692,15 +706,25 @@ const JS = `<script>
 
 // -------------------------------------------------------------------- pàgina
 
-export function renderRanquings(rows: readonly RankingRow[], generatedAt: string): string {
+/**
+ * La pàgina. `curiositats` és el que `loadCuriositats()` ha llegit de la base
+ * i la fila no porta; sense això la secció de curiositats no s'escriu, que és
+ * el que passa a la vista prèvia i als tests que només tenen files.
+ */
+export function renderRanquings(
+  rows: readonly RankingRow[],
+  generatedAt: string,
+  curiositats?: DadesCuriositats,
+): string {
   const preparats = preparaRanquings(rows);
   const grups = grupsOrdenats(rows, buildPeerGroups(rows.map((r, id) => ({ id, population: r.p }))));
   const targetes = preparats.map(targetaExtrems).join("\n");
+  const fets = curiositats ? preparaCuriositats(rows, curiositats) : [];
   const cos = preparats.length
     ? `<section class="bloc" id="destaquen">
   <h2>Destaquen</h2>
   <p class="entrada-bloc">El municipi més alt i el més baix de cada indicador, amb els empats sencers.
-  Cada fila porta al rànquing complet.</p>
+  Cada fila porta al rànquing complet${fets.length ? `; al final, <a href="#curiositats">les curiositats</a>` : ""}.</p>
   <ul class="extrems-llista">
 ${targetes}
   </ul>
@@ -740,6 +764,7 @@ ${cercador("../")}
   d'una mida semblant. Una posició descriu una xifra: no diu quin ajuntament ho fa millor.</p>
 </header>
 ${cos}
+${renderCuriositats(fets)}
 <section class="bloc" id="metode">
   <h2>Com s'han triat</h2>
   <p>Un indicador només es publica quan té dada del mateix període per a almenys el 90 % dels
@@ -748,6 +773,8 @@ ${cos}
   recompte de cada rànquing ho diu. Un zero publicat compta com a dada; un buit no.</p>
   <p>Els grups de mida són els trams de població que fixen quants regidors té cada ple, i per
   tant no els hem triat nosaltres. Els empats surten sencers i per ordre alfabètic.</p>
+  <p>Les curiositats no són rànquings i no passen pel llindar del 90 %: són llistes curtes, i
+  cadascuna diu sobre quants municipis o persones s'ha mirat. Si una dada no hi és, el fet no surt.</p>
   <p><a href="../dades/">Les dades sencera i l'esquema de cada camp →</a></p>
 </section>
 </main>

@@ -2,28 +2,220 @@ import { describe, expect, it } from "vitest";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
   TRAJECTORIA_CSS,
-  llistaDestins,
+  barresDurades,
   barresFamilia,
+  barresRelleus,
+  calculaHistorial,
   decades,
+  fitxaAlcaldia,
+  fitxaDe,
   fitxaPersona,
-  graellaDeCent,
-  inicials,
-  mapaOrigen,
+  inicisDeMandat,
+  llistaDestins,
+  llistaLongeus,
+  llistaMunicipisRelleus,
   ocupacions,
   percent,
   renderTrajectoriaElectes,
-  type MunicipiTrajectoria,
+  type FilaHistorial,
+  type HistorialAlcaldies,
+  type MunicipiBasic,
   type SaltPersona,
+  type SaltWikidata,
   type TrajectoriaData,
 } from "./trajectoria-electes";
 import type { Retrat } from "./fotos-wikidata";
 
 /**
- * Les xifres d'aquestes proves són les de l'extracció real del 30-08-2026:
- * 2.917 persones amb alcaldia catalana des del 1979 a Wikidata, 284 amb un
- * càrrec per sobre de l'ajuntament, 195 municipis dels 947. Són les mateixes
- * que la pàgina ha de saber escriure sempre amb el seu denominador al costat.
+ * Les proves de l'historial van amb un poble sintètic de tres municipis, prou
+ * petit per comptar-ho a mà: una alcaldia de nou mandats, un poble que canvia
+ * de persona a cada mandat i té dos relleus, i un tercer amb un relleu dins
+ * del mateix partit. Les xifres del salt són les de l'extracció real del
+ * 30-08-2026: 2.917 persones a Wikidata, 284 amb un càrrec per sobre de
+ * l'ajuntament.
  */
+
+const TERMES = [
+  "1979-1983", "1983-1987", "1987-1991", "1991-1995", "1995-1999", "1999-2003",
+  "2003-2007", "2007-2011", "2011-2015", "2015-2019", "2019-2023", "2023-2027",
+];
+
+const MUNICIPIS = new Map<number, MunicipiBasic>([
+  [1, { slug: "poble-a", nom: "Poble A" }],
+  [2, { slug: "poble-b", nom: "Poble B" }],
+  [3, { slug: "poble-c", nom: "Poble C" }],
+]);
+
+const fila = (municipalityId: number, term: string, name: string, partyRaw: string | null, tookOfficeOn: string | null = null): FilaHistorial =>
+  ({ municipalityId, term, name, partyRaw, tookOfficeOn });
+
+/** El dia de constitució de cada mandat, com el dona la font per a algun poble. */
+const constitucio = (term: string): string => `${term.slice(0, 4)}-06-17`;
+
+const FILES: FilaHistorial[] = [
+  // Poble A: nou mandats de Joan Roig, escrit de dues maneres, i tres de Maria Puig, que hi és avui.
+  ...TERMES.slice(0, 9).map((t, i) => fila(1, t, i < 5 ? "JOAN ROIG I CASTELL" : "Joan Roig Castell", "CiU", constitucio(t))),
+  ...TERMES.slice(9).map((t) => fila(1, t, "Maria Puig Serra", "ERC", constitucio(t))),
+  // Poble B: una persona per mandat, amb dos relleus: el 2007-2011 amb canvi
+  // de color, i el mandat en curs amb una alcaldia que arriba tard.
+  ...TERMES.slice(0, 11).map((t, i) => fila(2, t, `Persona ${i} B`, i % 2 === 0 ? "PSC" : "CiU", constitucio(t))),
+  fila(2, "2007-2011", "Substitut Colomer", "ERC", "2009-03-01"),
+  fila(2, "2023-2027", "Tard Arribat", "Junts", "2024-10-15"),
+  // Poble C: un relleu dins del mateix partit el 1991-1995, i la resta sense data.
+  ...TERMES.map((t) => fila(3, t, t < "2003" ? "Pere Vila" : "Anna Coll", "ERC")),
+  fila(3, "1991-1995", "Jordi Mas", "ERC", "1993-05-05"),
+];
+
+const ACTUALS = new Map([[1, { clau: "maria puig serra", adreca: "regidor/maria-puig-serra/" }]]);
+
+const HISTORIAL = calculaHistorial(FILES, MUNICIPIS, { avui: "2026-08-30", actuals: ACTUALS })!;
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("percent", () => {
+  it("escriu el tant per cent a la catalana i sense decimals inútils", () => {
+    expect(percent(284, 2_917)).toBe("9,7 %");
+    expect(percent(272, 284)).toBe("96 %");
+    expect(percent(0, 10)).toBe("0,0 %");
+    expect(percent(1, 0)).toBe("—");
+  });
+});
+
+describe("on porta cada nom", () => {
+  /**
+   * La convenció de la fitxa d'alcaldia històrica, feta prova: el slug surt
+   * del nom tal com el publiquem, no tal com el crida la font.
+   */
+  it("la fitxa històrica es diu pel nom llegible, en slug", () => {
+    expect(fitxaAlcaldia("poble-a", "JOAN ROIG I CASTELL")).toBe("../m/poble-a/alcaldia/joan-roig-i-castell/");
+    expect(fitxaAlcaldia("poble-a", "Josep Sánchez I Camps")).toBe("../m/poble-a/alcaldia/josep-sanchez-i-camps/");
+  });
+
+  it("qui té l'alcaldia avui i fitxa de regidor va a la de regidor, i ningú més", () => {
+    const muni = { slug: "poble-a", nom: "Poble A" };
+    const actual = { clau: "maria puig serra", adreca: "regidor/maria-puig-serra/" };
+    expect(fitxaDe(muni, "MARIA PUIG I SERRA", actual)).toBe("../m/poble-a/regidor/maria-puig-serra/");
+    expect(fitxaDe(muni, "Joan Roig Castell", actual)).toBe("../m/poble-a/alcaldia/joan-roig-castell/");
+    expect(fitxaDe(muni, "Maria Puig Serra", null)).toBe("../m/poble-a/alcaldia/maria-puig-serra/");
+  });
+});
+
+describe("calculaHistorial", () => {
+  it("compta les persones per municipi, i una persona escrita de dues maneres és una", () => {
+    // Poble A: 2 · Poble B: 11 + 2 relleus = 13 · Poble C: 3
+    expect(HISTORIAL.persones).toBe(18);
+    expect(HISTORIAL.municipis).toBe(3);
+    expect(HISTORIAL.municipisTotal).toBe(3);
+    expect(HISTORIAL.primerMandat).toBe("1979-1983");
+    expect(HISTORIAL.mandatActual).toBe("2023-2027");
+    expect(HISTORIAL.mandats).toBe(12);
+  });
+
+  it("reparteix la gent per mandats i marca qui encara hi és", () => {
+    const trams = Object.fromEntries(HISTORIAL.durades.map((d) => [d.mandats, d]));
+    // Un mandat: els 13 del poble B i Jordi Mas. Avui hi és Tard Arribat.
+    expect(trams[1]).toMatchObject({ etiqueta: "Un mandat", persones: 14, enCurs: 1 });
+    expect(trams[2]).toMatchObject({ persones: 0, enCurs: 0 });
+    // Tres mandats: Maria Puig, que hi és avui.
+    expect(trams[3]).toMatchObject({ etiqueta: "Tres mandats", persones: 1, enCurs: 1 });
+    // Quatre o més: Joan Roig (9), Pere Vila (6) i Anna Coll (6, i hi és avui).
+    expect(trams[4]).toMatchObject({ etiqueta: "Quatre o més", persones: 3, enCurs: 1 });
+    expect(HISTORIAL.repeteixen).toBe(4);
+    expect(HISTORIAL.actuals).toBe(3);
+  });
+
+  it("els més longeus van per anys, amb el nom llegible i la fitxa que toca", () => {
+    const [primer, segon] = HISTORIAL.longeus;
+    expect(primer).toMatchObject({
+      nom: "Joan Roig Castell",
+      mandats: 9,
+      primerMandat: "1979-1983",
+      ultimMandat: "2011-2015",
+      actual: false,
+      fitxa: "../m/poble-a/alcaldia/joan-roig-castell/",
+    });
+    // Del 17-06-1979 al 17-06-2015: trenta-sis anys.
+    expect(primer!.anys).toBe(36);
+    expect(segon!.mandats).toBe(6);
+    // Qui té l'alcaldia avui compta fins avui i porta a la fitxa de regidor.
+    const maria = HISTORIAL.longeus.find((p) => p.nom === "Maria Puig Serra")!;
+    expect(maria.actual).toBe(true);
+    expect(maria.fitxa).toBe("../m/poble-a/regidor/maria-puig-serra/");
+    expect(maria.anys).toBeCloseTo(11.2, 1);
+  });
+
+  /**
+   * Els relleus es compten amb la regla de `derive/mayor-changes.ts`, no amb
+   * una de nova: un mandat amb dues persones, o una de sola que arriba molt
+   * després del ple de constitució.
+   */
+  it("compta els relleus per mandat amb la regla de la fitxa municipal", () => {
+    const per = Object.fromEntries(HISTORIAL.relleus.map((r) => [r.term, r]));
+    expect(per["2007-2011"]).toMatchObject({ municipis: 1, ambCanviDeColor: 1, nomesSuccessor: 0 });
+    expect(per["1991-1995"]).toMatchObject({ municipis: 1, ambCanviDeColor: 0 });
+    expect(per["2023-2027"]).toMatchObject({ municipis: 1, ambCanviDeColor: 0, nomesSuccessor: 1 });
+    expect(per["1979-1983"]).toMatchObject({ municipis: 0 });
+    expect(HISTORIAL.totalRelleus).toBe(3);
+    expect(HISTORIAL.totalAmbCanviDeColor).toBe(1);
+    expect(HISTORIAL.municipisAmbMesRelleus[0]).toMatchObject({ slug: "poble-b", relleus: 2, ambCanviDeColor: 1 });
+  });
+
+  it("sense cap fila no hi ha historial, i les files de municipis desconeguts no compten", () => {
+    expect(calculaHistorial([], MUNICIPIS, { avui: "2026-08-30" })).toBeNull();
+    expect(calculaHistorial([fila(99, "2023-2027", "Ningú", null)], MUNICIPIS, { avui: "2026-08-30" })).toBeNull();
+  });
+
+  it("el dia de constitució surt de la font, i si no en dona cap, de mitjan juny", () => {
+    const inicis = inicisDeMandat([
+      fila(1, "2019-2023", "A", null, "2019-06-15"),
+      fila(2, "2019-2023", "B", null, "2019-06-20"),
+      fila(3, "1979-1983", "C", null),
+    ]);
+    expect(inicis.get("2019-2023")).toBe("2019-06-15");
+    expect(inicis.get("1979-1983")).toBe("1979-06-15");
+  });
+});
+
+describe("les barres de l'historial", () => {
+  it("les durades van a la mateixa escala i diuen qui encara hi és", () => {
+    const html = barresDurades(HISTORIAL.durades, HISTORIAL.persones);
+    expect(html).toContain("width:100.0%");
+    expect(html).toContain("<b>14</b> 78 %");
+    expect(html).toContain("<small>1 encara hi és</small>");
+    expect(html).toContain("Sobre les 18 persones");
+    // El tram buit no desapareix: una barra a zero és una dada.
+    expect(html).toContain("Dos mandats");
+    expect(barresDurades(HISTORIAL.durades, 0)).toBe("");
+  });
+
+  it("els longeus enllacen la persona i el municipi, i diuen anys i mandats", () => {
+    const html = llistaLongeus(HISTORIAL.longeus);
+    expect(html).toContain('<a href="../m/poble-a/alcaldia/joan-roig-castell/">Joan Roig Castell</a>');
+    expect(html).toContain('<a href="../m/poble-a/">Poble A</a> · 1979–2015');
+    expect(html).toContain("36 anys<small>9 mandats</small>");
+    expect(html).toContain('<a href="../m/poble-a/regidor/maria-puig-serra/">Maria Puig Serra</a>');
+    expect(html).toContain("2015–avui");
+    expect(llistaLongeus([])).toBe("");
+  });
+
+  it("els relleus marquen el mandat en curs i el canvi de color", () => {
+    const html = barresRelleus(HISTORIAL.relleus, HISTORIAL.mandatActual, HISTORIAL.municipis);
+    expect(html).toContain("2007–2011");
+    expect(html).toContain("1 amb canvi de color");
+    expect(html).toContain("<small>en curs</small>");
+    expect(html).toContain("Sobre els 3 municipis");
+    expect(barresRelleus(HISTORIAL.relleus.map((r) => ({ ...r, municipis: 0 })), "2023-2027", 3)).toBe("");
+  });
+
+  it("la llista de municipis amb més relleus només porta els que en tenen dos o més", () => {
+    const html = llistaMunicipisRelleus(HISTORIAL.municipisAmbMesRelleus);
+    expect(html).toContain('<a href="../m/poble-b/#alcaldies">Poble B</a>');
+    expect(html).toContain("2 mandats amb relleu, 1 amb canvi de color");
+    expect(html).not.toContain("Poble C");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const persona = (extra: Partial<SaltPersona> = {}): SaltPersona => ({
   qid: "Q76350582",
@@ -34,14 +226,7 @@ const persona = (extra: Partial<SaltPersona> = {}): SaltPersona => ({
   primerAny: 1986,
   ultimAny: 2004,
   families: ["parlament"],
-  carrecs: [
-    {
-      nom: "diputat al Parlament de Catalunya",
-      familia: "parlament",
-      inici: "1995-10-01",
-      fi: "1999-09-01",
-    },
-  ],
+  carrecs: [{ nom: "diputat al Parlament de Catalunya", familia: "parlament", inici: "1995-10-01", fi: "1999-09-01" }],
   ocupacions: ["advocat"],
   aparellat: true,
   fitxa: "../m/granollers/regidor/josep-pujadas-i-maspons/",
@@ -62,26 +247,15 @@ const RETRAT: Retrat = {
   alcada: 320,
 };
 
-const municipi = (i: number, ambSalt: number): MunicipiTrajectoria => ({
-  slug: `poble-${i}`,
-  nom: `Poble ${i}`,
-  lat: 41 + (i % 40) / 40,
-  lon: 0.6 + (i % 50) / 25,
-  alcaldes: 3,
-  ambSalt,
-});
-
-const DADES: TrajectoriaData = {
+const SALT: SaltWikidata = {
   font: "Wikidata (wikidata.org)",
   fontUrl: "https://query.wikidata.org/sparql",
   llicencia: "CC0 1.0",
   descarregat: "2026-08-30",
   totalPersones: 2_917,
   aparellades: 1_900,
-  alcaldesHistorial: 6_400,
-  municipisAmbAlcalde: 947,
-  municipisTotal: 947,
   ambSalt: 284,
+  municipisAmbSalt: 195,
   families: [
     { clau: "parlament", etiqueta: "Parlament de Catalunya", frase: "al Parlament de Catalunya", persones: 213 },
     { clau: "congres", etiqueta: "Congrés dels Diputats", frase: "al Congrés dels Diputats", persones: 46 },
@@ -104,52 +278,51 @@ const DADES: TrajectoriaData = {
     { nom: "advocat", quants: 50 },
   ],
   ambOcupacio: 603,
-  ambViquipedia: 613,
   ambViquipediaSalt: 272,
   ambViquipediaSenseSalt: 341,
-  municipis: [
-    ...Array.from({ length: 195 }, (_, i) => municipi(i, 1)),
-    ...Array.from({ length: 752 }, (_, i) => municipi(195 + i, 0)),
-  ],
-  persones: [persona(), persona({ qid: "Q9999", nom: "Maria Roig", families: ["senat"], viquipedia: null, aparellat: false, primerAny: 2015, ultimAny: 2015, carrecs: [{ nom: "senador al Senat espanyol", familia: "senat", inici: "2019-05-21", fi: null }], ocupacions: [] })],
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
+/** Un historial amb les mides de debò, per a les frases d'entrada i el cap. */
+const HISTORIAL_GRAN: HistorialAlcaldies = {
+  ...HISTORIAL,
+  persones: 6_400,
+  municipis: 947,
+  municipisTotal: 947,
+  durades: [
+    { mandats: 1, etiqueta: "Un mandat", persones: 3_100, enCurs: 400 },
+    { mandats: 2, etiqueta: "Dos mandats", persones: 1_700, enCurs: 250 },
+    { mandats: 3, etiqueta: "Tres mandats", persones: 900, enCurs: 150 },
+    { mandats: 4, etiqueta: "Quatre o més", persones: 700, enCurs: 147 },
+  ],
+  repeteixen: 3_300,
+  actuals: 947,
+  totalRelleus: 512,
+  totalAmbCanviDeColor: 140,
+};
 
-describe("percent", () => {
-  it("escriu el tant per cent a la catalana i sense decimals inútils", () => {
-    expect(percent(284, 2_917)).toBe("9,7 %");
-    expect(percent(272, 284)).toBe("96 %");
-    expect(percent(0, 10)).toBe("0,0 %");
-    expect(percent(1, 0)).toBe("—");
-  });
-});
-
-describe("graellaDeCent", () => {
-  it("pinta els quadrats que toquen sobre cent", () => {
-    const svg = graellaDeCent(284, 2_917, "prova");
-    expect((svg.match(/class="ple"/g) ?? []).length).toBe(10);
-    expect((svg.match(/class="buit"/g) ?? []).length).toBe(90);
-  });
-
-  /**
-   * Una proporció petita però real no pot sortir com una graella tota buida:
-   * diria «cap», que és fals. I un total zero no pot sortir amb res pintat.
-   */
-  it("mai no diu «cap» quan n'hi ha, ni «algun» quan no n'hi ha", () => {
-    expect((graellaDeCent(3, 2_917, "p").match(/class="ple"/g) ?? []).length).toBe(1);
-    expect((graellaDeCent(0, 2_917, "p").match(/class="ple"/g) ?? []).length).toBe(0);
-    expect(graellaDeCent(5, 0, "p")).toBe("");
-  });
-
-  it("porta el text equivalent a l'etiqueta, no només al dibuix", () => {
-    expect(graellaDeCent(284, 2_917, "10 de cada 100")).toContain('aria-label="10 de cada 100"');
-    expect(graellaDeCent(284, 2_917, "10 de cada 100")).toContain("<figcaption>10 de cada 100");
-  });
-});
+const DADES: TrajectoriaData = {
+  historial: HISTORIAL_GRAN,
+  salt: SALT,
+  persones: [
+    persona(),
+    persona({
+      qid: "Q9999",
+      nom: "Maria Roig",
+      families: ["senat"],
+      viquipedia: null,
+      aparellat: false,
+      primerAny: 2015,
+      ultimAny: 2015,
+      carrecs: [{ nom: "senador al Senat espanyol", familia: "senat", inici: "2019-05-21", fi: null }],
+      ocupacions: [],
+      fitxa: "../m/granollers/#alcaldies",
+      foto: null,
+    }),
+  ],
+};
 
 describe("barresFamilia", () => {
-  const svg = barresFamilia(DADES.families, DADES.totalPersones);
+  const svg = barresFamilia(SALT.families, SALT.totalPersones);
 
   it("totes les barres comparteixen escala: la més gran omple i la petita no", () => {
     expect(svg).toContain("width:100.0%");
@@ -158,58 +331,20 @@ describe("barresFamilia", () => {
     expect(svg).toContain("width:1.5%");
   });
 
-  it("cada xifra va amb el seu denominador", () => {
+  it("cada xifra va amb el seu denominador i explica per què les barres no sumen el total", () => {
     expect(svg).toContain("<b>213</b> 7,3 %");
     expect(svg).toContain("sobre les 2.917 persones");
-  });
-
-  /**
-   * 213 + 46 + 46 + 36 + 29 + 3 fa 373 i el total és 284: qui ha estat al
-   * Parlament i després al Congrés compta a totes dues. Una suma que no quadra
-   * i no s'explica fa desconfiar de tota la pàgina.
-   */
-  it("explica per què les barres no sumen el total", () => {
     expect(svg).toContain("<b>Les barres no sumen 2.917</b>");
   });
 
   it("no dibuixa les famílies buides ni peta sense cap", () => {
-    const cap = barresFamilia(DADES.families.map((f) => ({ ...f, persones: 0 })), 2_917);
-    expect(cap).toBe("");
-  });
-});
-
-describe("mapaOrigen", () => {
-  const svg = mapaOrigen(DADES.municipis);
-
-  it("pinta un punt per municipi i cada punt porta a la seva fitxa", () => {
-    expect((svg.match(/<circle/g) ?? []).length).toBe(947);
-    expect(svg).toContain('href="../m/poble-0/"');
-  });
-
-  /**
-   * La regla dura de la pàgina, feta codi: si el radi creixés amb el padró,
-   * Barcelona seria una taca i el mapa diria «les ciutats grans en fan més»,
-   * que és mesurar el biaix de la font.
-   */
-  it("el punt no creix amb la població: només hi ha tres mides", () => {
-    const radis = new Set([...svg.matchAll(/r="([\d.]+)"/g)].map((m) => m[1]));
-    expect(radis.size).toBeLessThanOrEqual(3);
-  });
-
-  it("diu quants n'han donat i quants no", () => {
-    expect(svg).toContain("N'ha donat algun (195)");
-    expect(svg).toContain("Cap que consti (752)");
-  });
-
-  it("sense prou municipis situats no dibuixa res", () => {
-    expect(mapaOrigen(DADES.municipis.slice(0, 5))).toBe("");
-    expect(mapaOrigen(DADES.municipis.map((m) => ({ ...m, lat: null, lon: null })))).toBe("");
+    expect(barresFamilia(SALT.families.map((f) => ({ ...f, persones: 0 })), 2_917)).toBe("");
   });
 });
 
 describe("decades i ocupacions", () => {
   it("la sèrie porta les dues xifres, no només el percentatge", () => {
-    const html = decades(DADES.decades);
+    const html = decades(SALT.decades);
     expect(html).toContain("<b>Anys 1980</b><span>54 de 309</span>");
     expect(html).toContain("<b>Anys 2010</b><span>65 de 958</span>");
   });
@@ -219,40 +354,29 @@ describe("decades i ocupacions", () => {
   });
 
   it("les ocupacions diuen de quants se'n sap i de quants no", () => {
-    const html = ocupacions(DADES.ocupacions, DADES.ambOcupacio, DADES.totalPersones);
+    const html = ocupacions(SALT.ocupacions, SALT.ambOcupacio, SALT.totalPersones);
     expect(html).toContain("de les 603 persones que en declaren");
     expect(html).toContain("<b>De les altres 2.314, Wikidata no en té cap d'escrita</b>");
   });
 });
 
 describe("fitxaPersona", () => {
-  it("enllaça el municipi i l'ítem d'origen", () => {
-    const html = fitxaPersona(persona());
-    expect(html).toContain('href="../m/granollers/"');
-    expect(html).toContain('href="https://www.wikidata.org/wiki/Q76350582"');
-    expect(html).toContain("alcaldia a");
-    expect(html).toContain("1986–2004");
-    expect(html).toContain("Abans: advocat");
-  });
-
-  it("qui no lliga amb el nostre historial ho porta escrit", () => {
-    expect(fitxaPersona(persona({ aparellat: false }))).toContain("no lliga amb el nostre historial");
-    expect(fitxaPersona(persona({ aparellat: true }))).not.toContain("no lliga amb el nostre");
-  });
-
-  it("el nom porta a la fitxa de la persona quan en té, i el retrat hi surt", () => {
+  it("enllaça la fitxa, el municipi i l'ítem d'origen, i porta el nom cercable", () => {
     const html = fitxaPersona(persona());
     expect(html).toContain('href="../m/granollers/regidor/josep-pujadas-i-maspons/"');
-    expect(html).toContain('src="/observatori/fotos/160/8096.webp"');
-    // La Viquipedia continua sent-hi, però al peu i com a font: el nom porta a
-    // la nostra pàgina, que és la que respon qui és aquesta persona.
+    expect(html).toContain('href="../m/granollers/"');
+    expect(html).toContain('href="https://www.wikidata.org/wiki/Q76350582"');
+    expect(html).toContain('data-nom="josep pujadas maspons"');
+    expect(html).toContain("1986–2004");
+    expect(html).toContain("Abans: advocat");
     expect(html).toContain("Viquipedia</a>");
   });
 
-  it("qui no té fitxa pròpia porta a l'historial d'alcaldies del seu municipi", () => {
-    const html = fitxaPersona(persona({ fitxa: "../m/granollers/#alcaldies", foto: null }));
+  it("qui no lliga amb el nostre historial ho porta escrit i va a l'historial del municipi", () => {
+    const html = fitxaPersona(persona({ aparellat: false, fitxa: "../m/granollers/#alcaldies" }));
+    expect(html).toContain("no lliga amb el nostre historial");
     expect(html).toContain('href="../m/granollers/#alcaldies"');
-    expect(html).not.toContain("<img");
+    expect(fitxaPersona(persona({ aparellat: true }))).not.toContain("no lliga amb el nostre");
   });
 
   it("un nom amb signes no es converteix en marques", () => {
@@ -262,8 +386,17 @@ describe("fitxaPersona", () => {
 
   /**
    * La política de fotografies, feta codi: primer el retrat oficial, després
-   * el de Wikimedia Commons amb el crèdit a la vista, i si no, les inicials.
+   * el de Wikimedia Commons amb el crèdit a la vista, i si no, les inicials
+   * de la cara de la casa.
    */
+  it("el retrat oficial mana, i llavors no hi ha crèdit de Commons", () => {
+    const html = fitxaPersona(persona({ retrat: RETRAT }));
+    expect(html).toContain('class="cara-alcaldia petita"');
+    expect(html).toContain('src="/observatori/fotos/160/8096.webp"');
+    expect(html).not.toContain("wikimedia");
+    expect(html).not.toContain("Foto:");
+  });
+
   it("sense retrat oficial surt el de Commons, amb el crèdit al peu de la targeta", () => {
     const html = fitxaPersona(persona({ foto: null, retrat: RETRAT }));
     expect(html).toContain('src="/observatori/fotos/wikimedia/Q76350582.jpg"');
@@ -271,41 +404,30 @@ describe("fitxaPersona", () => {
     expect(html).toContain('width="56" height="56"');
     expect(html).toContain("Foto: Davidpar, ");
     expect(html).toContain('rel="license noopener nofollow">CC BY-SA 4.0</a>');
-    expect(html).toContain('href="https://commons.wikimedia.org/wiki/File:Josep_Pujadas.jpg"');
-    // El crèdit és text de la targeta, no un «title» que només surt amb el ratolí.
     expect(html).not.toContain('title="');
   });
 
-  it("el retrat oficial mana sobre el de Commons, i llavors no hi ha crèdit de Commons", () => {
-    const html = fitxaPersona(persona({ retrat: RETRAT }));
-    expect(html).toContain('src="/observatori/fotos/160/8096.webp"');
-    expect(html).not.toContain("wikimedia");
-    expect(html).not.toContain("Foto:");
-  });
-
-  it("sense cap retrat hi van les inicials, amb la mateixa classe que la cara", () => {
+  it("sense cap retrat hi van les inicials de la cara de la casa", () => {
     const html = fitxaPersona(persona({ foto: null, retrat: null }));
-    expect(html).toContain('<span class="retrat inicials" aria-hidden="true">JP</span>');
+    expect(html).toContain('class="cara-alcaldia inicials petita"');
+    expect(html).toContain(">JP</span>");
     expect(html).not.toContain("<img");
-    expect(inicials("Maria del Carme Roig")).toBe("MD");
-    expect(inicials("  ")).toBe("?");
   });
 });
 
 describe("llistaDestins", () => {
   it("escriu els destins que de debò tenen algú, i cap més", () => {
-    expect(llistaDestins(DADES.families)).toBe(
+    expect(llistaDestins(SALT.families)).toBe(
       "al Parlament de Catalunya, al Congrés dels Diputats, al Senat, " +
         "a la presidència d'una diputació, al Govern o al Parlament Europeu",
     );
-  });
-
-  it("una família buida no surt a la frase", () => {
-    const sense = DADES.families.map((f) => (f.clau === "europeu" ? { ...f, persones: 0 } : f));
+    const sense = SALT.families.map((f) => (f.clau === "europeu" ? { ...f, persones: 0 } : f));
     expect(llistaDestins(sense)).not.toContain("Europeu");
     expect(llistaDestins(sense.map((f) => ({ ...f, persones: 0 })))).toBe("");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 describe("renderTrajectoriaElectes", () => {
   const html = renderTrajectoriaElectes(DADES, "30 d'agost del 2026");
@@ -316,40 +438,40 @@ describe("renderTrajectoriaElectes", () => {
     expect(html).toContain('class="capcalera"');
     expect(html).toContain('class="cercador"');
     expect(html).toContain('<footer class="peu">');
-    expect(html).toContain("Generat el 30 d&#039;agost del 2026".replace("&#039;", "'"));
+    expect(html).toContain("Generat el 30 d'agost del 2026");
     expect(html.trimEnd().endsWith("</html>")).toBe(true);
   });
 
   /**
-   * La regla dura del projecte, comprovada a la pàgina i no només al capçal:
-   * la xifra gran no pot sortir mai sola.
+   * L'ordre és el de les preguntes: primer el que se sap de tothom —quant
+   * duren, els relleus— i després el que només diu Wikidata.
    */
-  it("la xifra gran surt sempre amb el seu denominador", () => {
+  it("respon les tres preguntes en aquest ordre, amb l'índex al davant", () => {
+    const ordre = ['id="duren"', 'id="relleus"', 'id="despres"', 'id="gent"', 'id="font"'].map((s) => html.indexOf(s));
+    expect(ordre.every((n) => n > 0)).toBe(true);
+    expect([...ordre].sort((a, b) => a - b)).toEqual(ordre);
+    expect(html).toContain('<a href="#duren">Quant duren</a>');
+    expect(html).toContain('<a href="#relleus">Relleus a mig mandat</a>');
+    expect(html).toContain('<a href="#despres">On van després</a>');
+  });
+
+  it("l'entrada porta la xifra forta amb el seu denominador i la font de cada part", () => {
+    expect(html).toContain("<b>6.400 persones</b> han tingut l'alcaldia d'algun dels\n  947 municipis des del 1979");
+    expect(html).toContain("3.100\n  (48 %) hi han estat un sol mandat i 3.300\n  n'han repetit");
+    expect(html).toContain("a mig mandat 512 vegades");
+    expect(html).toContain("l'historial de la Generalitat");
+  });
+
+  it("el salt es diu amb el denominador de Wikidata, i el biaix queda escrit", () => {
     expect(html).toContain("<b>284 de 2.917</b>");
-    expect(html).not.toMatch(/<b>284<\/b>\s*alcaldes/);
-  });
-
-  /**
-   * El bloc «què *no* diu» obria la pàgina i era feixuc i escrit del revés:
-   * l'usuari va demanar amagar-lo més i dir-ho en positiu. El fons no marxa
-   * —el biaix i la regla del rànquing continuen escrits— però ara viu en un
-   * desplegable al costat de la font, i l'entrada n'avisa amb una línia.
-   */
-  it("la lletra del biaix viu recollida al costat de la font, no com a primer bloc", () => {
+    expect(html).toContain("dels 6.400 de\n  l'historial oficial");
     expect(html).toContain('<details class="nota" id="cobertura">');
-    expect(html.indexOf('id="cobertura"')).toBeGreaterThan(html.indexOf('id="gent"'));
-    // I l'entrada hi porta amb una línia honesta, abans de cap secció.
-    expect(html.indexOf('href="#cobertura"')).toBeLessThan(html.indexOf('id="on"'));
-  });
-
-  it("ho diu en positiu: es mostren dades quan n'hi ha, i el biaix queda escrit", () => {
-    expect(html).toContain("es mostren dades quan n'hi ha");
-    expect(html).not.toContain("no ho sabem");
     expect(html).toContain("cobreix molt millor la gent famosa");
-    expect(html).toContain("no hi ha cap rànquing de municipis");
-    // I la prova numèrica del biaix, no només l'afirmació.
     expect(html).toContain("96 % té article a la Viquipedia");
     expect(html).toMatch(/un\s+13 %/);
+    expect(html).toContain("no hi ha cap rànquing de\n    municipis");
+    expect(html).toContain("es mostren dades quan n'hi ha");
+    expect(html).not.toContain("no ho sabem");
   });
 
   it("avisa que la baixada de les últimes dècades no és cap troballa", () => {
@@ -357,52 +479,56 @@ describe("renderTrajectoriaElectes", () => {
     expect(html).toContain("vol dir que encara no han passat");
   });
 
-  it("cita la font, la llicència i la data d'extracció", () => {
+  it("cita les dues fonts, amb la llicència i la data d'extracció de Wikidata", () => {
+    expect(html).toContain("<b>Generalitat de Catalunya, historial d'alcaldies</b>");
     expect(html).toContain("Wikidata (wikidata.org)");
     expect(html).toContain("https://query.wikidata.org/sparql");
     expect(html).toContain("<b>CC0 1.0</b>");
-    expect(html).toContain("el 30 d&#039;agost del 2026".replace("&#039;", "'"));
+    expect(html).toContain("el 30 d'agost del 2026");
   });
 
-  it("el filtre de la llista neix amagat i cada fitxa porta les seves famílies", () => {
+  it("sense J21, la pàgina surt igualment amb les dues primeres preguntes i ho diu", () => {
+    const sense = renderTrajectoriaElectes({ historial: HISTORIAL_GRAN, salt: null, persones: [] }, "avui");
+    expect(sense).toContain('id="duren"');
+    expect(sense).toContain('id="relleus"');
+    expect(sense).not.toContain('id="despres"');
+    expect(sense).not.toContain('id="gent"');
+    expect(sense).not.toContain('href="#despres"');
+    expect(sense).toContain("encara no s'ha carregat");
+    expect(sense.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+
+  it("la llista porta cerca i filtre, que neixen amagats, i cada fitxa les seves claus", () => {
     expect(html).toContain('<div class="filtra" hidden>');
-    expect(html).toContain('data-familia="tots"');
-    expect(html).toContain('data-families="parlament"');
+    expect(html).toContain('<input type="search"');
+    expect(html).toContain('data-familia="tots" aria-pressed="true"');
+    expect(html).toContain('<li class="persona" data-families="parlament" data-nom="josep pujadas maspons">');
     expect(html).toContain('data-families="senat"');
+    expect(html).toContain('<button type="button" data-familia="parlament" aria-pressed="false">');
   });
 
   /**
    * El filtre no anava: «.gent > li» d'estil.ts posa display:flex a cada
-   * targeta i guanya al [hidden] del navegador, de manera que el guió canviava
-   * l'atribut i no s'amagava res. Aquesta prova lliga les tres peces —el guió,
-   * els atributs de les targetes i la regla que fa valer el [hidden]— perquè
-   * no es tornin a separar.
+   * targeta i guanya al [hidden] del navegador. Aquesta prova lliga el guió,
+   * els atributs de les targetes i la regla que fa valer el [hidden].
    */
-  it("el guió del filtre toca exactament els atributs que porten les targetes i els botons", () => {
-    const guio = html.slice(html.lastIndexOf("<script>"));
+  it("el guió toca exactament els atributs que porten les targetes, i el [hidden] val", () => {
+    const guio = html.slice(html.lastIndexOf('<script>\n(function(){'));
     expect(guio).toContain('querySelectorAll("button[data-familia]")');
     expect(guio).toContain('querySelectorAll(".persona[data-families]")');
-    expect(guio).toContain('getAttribute("data-familia")');
-    expect(guio).toContain('getAttribute("data-families")');
+    expect(guio).toContain('querySelector("input[type=search]")');
+    expect(guio).toContain('getAttribute("data-nom")');
     expect(guio).toContain("li.hidden = amaga");
-    expect(html).toContain('<li class="persona" data-families="parlament">');
-    expect(html).toContain('<button type="button" data-familia="parlament" aria-pressed="false">');
-    // «Tots» torna a ensenyar-ho tot: la clau és la mateixa al botó i al guió.
-    expect(html).toContain('data-familia="tots" aria-pressed="true"');
     expect(guio).toContain('clau !== "tots"');
-  });
-
-  it("el [hidden] de les targetes i de la caixa val de debò, encara que estil.ts els posi display", () => {
-    expect(TRAJECTORIA_CSS).toContain(".gent > .persona[hidden],.filtra[hidden]{display:none}");
     // Les famílies es comparen senceres: «senat» no es busca dins de cap altre text.
-    expect(html).toContain('split(" ")');
-    expect(html).toContain("families.indexOf(clau) === -1");
+    expect(guio).toContain('split(" ")');
+    expect(guio).toContain("families.indexOf(clau) === -1");
+    expect(TRAJECTORIA_CSS).toContain(".gent > .persona[hidden],.filtra[hidden]{display:none}");
   });
 
-  it("el compte de la llista neix amb totes i el guió el refà a cada clic", () => {
+  it("el compte de la llista neix amb totes i el guió el refà a cada canvi", () => {
     expect(html).toContain('<p class="quants-gent" aria-live="polite">Es mostren les 2 persones.</p>');
-    const guio = html.slice(html.lastIndexOf("<script>"));
-    expect(guio).toContain('querySelector(".quants-gent")');
+    const guio = html.slice(html.lastIndexOf('<script>\n(function(){'));
     expect(guio).toContain('"Es mostren " + visibles + " de " + targetes.length + " persones."');
     expect(guio).toContain('"Es mostren les " + visibles + " persones."');
   });
@@ -429,18 +555,13 @@ describe("renderTrajectoriaElectes", () => {
 
   it("el peu porta als partits, que és el que no hi ha a totes les pàgines", () => {
     expect(html).toContain('<a class="propi" href="../partit/">Els partits</a>');
-    // El mapa ja hi és pel menú i pel peu de sempre: no cal repetir-lo com a propi.
-    expect(html).not.toContain("El mapa dels 947");
     expect(html).not.toContain('class="propi" href="../mapa/"');
   });
 
-  it("el full d'estil hi va sencer", () => {
+  it("el full d'estil hi va sencer i sense cap accent greu", () => {
     expect(html).toContain(TRAJECTORIA_CSS);
     expect(TRAJECTORIA_CSS.length).toBeGreaterThan(500);
-    // La regla del projecte: cap accent greu dins d'un template string. Al
-    // full que escriu aquest fitxer es pot comprovar; a la pàgina sencera no,
-    // perquè el cercador hi serialitza funcions que no són d'aquí.
-    expect(TRAJECTORIA_CSS).not.toContain("\u0060");
+    expect(TRAJECTORIA_CSS).not.toContain("`");
   });
 });
 
@@ -454,14 +575,22 @@ describe("el cap SEO de la trajectòria", () => {
 
   const html = renderTrajectoriaElectes(DADES, "avui");
 
-  it("porta el numerador i el denominador a la descripció, i canònica —abans no en tenia", () => {
-    expect(titolDe(html)).toBe("D'on surten els que manen · quivoto");
-    expect(descripcioDe(html)).toMatch(/^284 de 2\.917 alcaldes catalans que Wikidata coneix des del 1979 han fet el salt per sobre de l'ajuntament\. Els \d+ municipis d'on surten i què feien abans\.$/);
+  it("porta les tres respostes amb els seus denominadors, i canònica", () => {
+    expect(titolDe(html)).toBe("Quant duren els que manen · quivoto");
+    expect(descripcioDe(html)).toBe(
+      "Quants mandats duren les 6.400 persones amb alcaldia als 947 municipis des del 1979, 512 relleus a mig mandat i els 284 que han fet el salt.",
+    );
     expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/trajectoria/">');
   });
 
+  it("sense J21 la descripció no promet cap salt", () => {
+    const sense = renderTrajectoriaElectes({ historial: HISTORIAL_GRAN, salt: null, persones: [] }, "avui");
+    expect(descripcioDe(sense)).not.toContain("salt");
+    expect(descripcioDe(sense).endsWith("relleus a mig mandat.")).toBe(true);
+  });
+
   it("porta el fil d'Ariadna fins a la pàgina", () => {
-    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "D'on surten els que manen"]);
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Quant duren els que manen"]);
   });
 
   it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {

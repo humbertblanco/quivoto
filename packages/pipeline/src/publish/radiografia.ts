@@ -22,8 +22,11 @@ import { assignaSlugs } from "./candidatura";
 import { adrecesRegidors, carrecCurt, frasesQueCaben, titolQueCap } from "./regidor";
 import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { esAlcaldia, resolAlcaldia } from "./alcaldia";
+import { adrecesAlcaldies, alcaldiesHistoriques } from "./alcaldia-historica";
+import { FOTOS_WIKIMEDIA_CSS, creditsRetrats, retratsPerNom, type Retrat } from "./fotos-wikidata";
+import type { FitxaFotosExalcaldes } from "../jobs/j28-fotos-exalcaldes";
 import {
-  dataCurta, delDia, elDia, nomLlegible, nomPreferit, nomsOficials, normalize, normalizePersonName, slugify,
+  dataCurta, de, delDia, elDia, nomLlegible, nomPreferit, nomsOficials, normalize, normalizePersonName, slugify,
 } from "../lib/text";
 import { SITE } from "./config";
 import { RADIOGRAFIA_CSS, senseComentaris } from "./estil";
@@ -2273,8 +2276,24 @@ function renderTransparencyDetail(items: readonly EstatItem[], resum: Transparen
   dada que no ho diu.</details>`;
 }
 
-function renderMayors(mayorsMetric: MayorsMetric): string {
+/**
+ * La taula de les alcaldies des del 1979.
+ *
+ * @param adreces On porta cada nom, per nom normalitzat i relatiu a
+ *   `m/<slug>/`: la fitxa d'alcaldia històrica (`alcaldia/<persona>/`) o, per a
+ *   qui hi és avui, la seva fitxa de regidor. Les calcula
+ *   `alcaldiesHistoriques()` sobre aquest mateix historial, que és el que
+ *   escriu les pàgines: la taula no pot enllaçar una adreça que no existeixi.
+ * @param retrats Les cares de Wikimedia Commons per nom normalitzat, quan J28
+ *   n'ha baixat cap. Porten el crèdit obligatori plegat sota la taula.
+ */
+function renderMayors(
+  mayorsMetric: MayorsMetric,
+  adreces: ReadonlyMap<string, string> = new Map(),
+  retrats: ReadonlyMap<string, Retrat> = new Map(),
+): string {
   const history = [...mayorsMetric.history].sort((a, b) => b.term.localeCompare(a.term));
+  const ambRetrat = new Map<string, Retrat>();
   const rows = history.map((m, i) => {
     const change = mayorsMetric.changes.find((c) => c.term === m.term);
     const late = change?.onlySuccessorKnown && change.mayors[0]?.name === m.name;
@@ -2285,9 +2304,21 @@ function renderMayors(mayorsMetric: MayorsMetric): string {
     const familia = m.partyRaw ? siglesFamily(m.partyRaw) : null;
     const color = familia ? BRANDS_BY_ID.get(familia)?.color : undefined;
     const marca = color ? `<span class="punt-partit" style="--c:${color}" aria-hidden="true"></span>` : "";
+    // El nom porta a la fitxa de la persona, i la cara —de Commons, quan n'hi
+    // ha— hi va dins del mateix enllaç: és la mateixa `cara()` de la
+    // capçalera, en petit, i amb les inicials del color de la força si no hi
+    // ha retrat. Sense adreça el nom es queda com a text, que és el cas de
+    // les proves i de cap dels 947.
+    const clau = normalizePersonName(m.name);
+    const adreca = adreces.get(clau) ?? null;
+    const retrat = retrats.get(clau) ?? null;
+    if (retrat && adreca) ambRetrat.set(clau, retrat);
+    const qui = adreca
+      ? `<a class="qui-alcaldia" href="${escape(adreca)}">${cara(nomLlegible(m.name), retrat?.cami ?? null, { mida: 28, color })}${escape(nomLlegible(m.name))}</a>`
+      : escape(nomLlegible(m.name));
     return `<tr${repeteix ? ' class="mateix-mandat"' : ""}>
       <th scope="row">${escape(m.term)}</th>
-      <td>${escape(nomLlegible(m.name))}${late ? ' <span class="marca-canvi">va arribar a mig mandat</span>' : ""}</td>
+      <td>${qui}${late ? ' <span class="marca-canvi">va arribar a mig mandat</span>' : ""}</td>
       <td class="partit">${marca}${escape(m.partyRaw ?? "—")}</td>
       <td class="secundari">${m.tookOfficeOn ? formatDate(m.tookOfficeOn) : "<span class=\"buit\" title=\"la font no en dona la data\">—</span>"}</td>
     </tr>`;
@@ -2316,7 +2347,7 @@ function renderMayors(mayorsMetric: MayorsMetric): string {
           relleus === 1 ? "dues vegades" : "més d'una vegada"
         } no són cap duplicat: hi va haver un relleu a l'alcaldia sense passar per les urnes.</p>`
       : ""
-  }`;
+  }${creditsRetrats(ambRetrat.values())}`;
 }
 
 // ------------------------------------------------------------------- pàgina
@@ -2327,6 +2358,12 @@ export type RadiografiaData = {
   government: GovernmentMetric | null;
   parity: ParityMetric | null;
   mayors: MayorsMetric | null;
+  /**
+   * Els retrats dels exalcaldes que J28 ha baixat de Wikimedia Commons, per a
+   * la taula d'alcaldies i les fitxes de cadascú. Optatiu perquè és l'única
+   * mètrica que la fitxa pot no tenir sense que li falti res.
+   */
+  fotosExalcaldes?: FitxaFotosExalcaldes | null;
   finances: FinancesMetric | null;
   history: ElectoralHistory | null;
   taxes: TaxesMetric | null;
@@ -5610,8 +5647,14 @@ export function renderRadiografia(
   const alcaldies =
     data.mayors && data.mayors.history.length > 0
       ? `<p class="entrada-bloc">${data.mayors.distinctPeople} ${data.mayors.distinctPeople === 1 ? "persona ha ocupat" : "persones han ocupat"} l'alcaldia
-  d'${escape(m.name)} des de les primeres eleccions municipals democràtiques.</p>
-  ${renderMayors(data.mayors)}`
+  ${de(escape(m.name))} des de les primeres eleccions municipals democràtiques.</p>
+  ${renderMayors(
+    data.mayors,
+    // Les adreces de cada persona de l'historial, calculades pel mateix codi
+    // que escriu les seves fitxes; l'alcaldia vigent hi va amb la de regidor.
+    adrecesAlcaldies(alcaldiesHistoriques(data.mayors, { actual: { nom: alcaldia.nom, adreca: alcaldia.adreca } })),
+    retratsPerNom(data.fotosExalcaldes),
+  )}`
       : "";
 
   const trajectoria = renderTrajectoria(data.continuitat, data.votPerdut, { nom: alcaldia.nom, adreca: alcaldia.adreca });
@@ -5956,7 +5999,7 @@ ${capSeo({
   jsonLd: [fil, municipiJsonLd(m, url, coordenades(m, mapa))],
 })}
 ${tipografia(BASE)}
-<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}</style>
+<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -6129,6 +6172,7 @@ export async function loadRadiografia(db: Db, slug: string, generatedAt: string)
       .where(eq(councillorMandates.municipalityId, municipality.id))
       .orderBy(asc(councillorMandates.orderNum)),
     mayors: (byKind.get("mayors") ?? null) as MayorsMetric | null,
+    fotosExalcaldes: (byKind.get("fotosExalcaldes") ?? null) as FitxaFotosExalcaldes | null,
     participation,
     issues: (
       await db

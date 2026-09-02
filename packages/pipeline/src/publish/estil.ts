@@ -697,6 +697,11 @@ details.nota > .serie{font-size:1rem}
    duplicat. El mandat continua escrit —amagar-lo obliga a mirar la fila de
    dalt— però esvaït, que és el que diu que ja s'ha llegit. */
 .alcaldies tr.mateix-mandat th{color:var(--ink-suau);font-weight:600}
+/* El nom de cada alcaldia porta a la seva fitxa, amb la cara al davant (vegeu
+   cara.ts, en petit): tot dins del mateix enllaç, perquè la cara sola no
+   sigui un segon lloc on clicar. */
+.alcaldies .qui-alcaldia{display:inline-flex;align-items:center;gap:8px;font-weight:700;text-decoration:none}
+.alcaldies .qui-alcaldia:hover,.alcaldies .qui-alcaldia:focus-visible{text-decoration:underline;text-decoration-thickness:2px}
 .marca-canvi{display:inline-block;background:var(--presec);color:#1E1B2E;border-radius:var(--r-max);padding:2px 9px;font-size:.7rem;font-weight:800;white-space:nowrap}
 /* Les alcaldies de fa més de deu anys. Mateixa manera de plegar que la lletra
    petita, perquè és el mateix tracte: hi són senceres, no s'obren soles. */

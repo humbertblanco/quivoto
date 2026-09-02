@@ -1,10 +1,11 @@
-import { mkdir, readdir, rm, stat, writeFile as writeFileRaw } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, writeFile as writeFileRaw } from "node:fs/promises";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import {
   candidacies, candidatures, electionResults, municipalities,
   municipalityMetrics, people, type Db,
 } from "@quivoto/db";
 import { loadRadiografia, renderRadiografia } from "./radiografia";
+import { escriuAlcaldiesHistoriques, esRedireccioAlcaldia } from "./alcaldia-historica";
 import { carregaMedianes } from "./medianes";
 import { mitjanesPerGrup } from "./criminalitat";
 import { carregaMetriques } from "./metriques";
@@ -34,6 +35,7 @@ import { verifica } from "./verificacio";
 import { renderPortada } from "./portada";
 import { renderMapaCatalunya } from "./mapa-catalunya";
 import { renderRanquings } from "./ranquings";
+import { loadCuriositats } from "./curiositats";
 import { loadVotsPartit } from "./vots-partit";
 import { loadPortadaMostra } from "./portada-mostra";
 import { encaixa, type Grup } from "./posicions";
@@ -149,6 +151,9 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
      * acabat d'obrir.
      */
     const carregats = await loadEls947(db);
+    // Les curiositats dels rànquings: llegeixen l'historial sencer d'alcaldies i
+    // les candidatures del 2023, un sol cop per publicació.
+    const curiositats = await loadCuriositats(db);
     /**
      * Les medianes del grup, calculades un sol cop per a les 947 fitxes.
      *
@@ -217,7 +222,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     // Els rànquings porten el peu global: s'escriuen després de fixar-ne els
     // recomptes, com la resta de la publicació.
     await mkdir(`${OUT_DIR}../ranquings`, { recursive: true });
-    await writeFile(`${OUT_DIR}../ranquings/index.html`, renderRanquings(carregats, generatedAt), "utf8");
+    await writeFile(`${OUT_DIR}../ranquings/index.html`, renderRanquings(carregats, generatedAt, curiositats), "utf8");
     run.say("pàgina de rànquings");
 
     /*
@@ -266,6 +271,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     run.say(`candidatures del 2023 de ${candidatures2023.size} municipis · fitxes de caps de llista de ${capsPerMunicipi.size}`);
 
     let regidorsEscrits = 0;
+    let alcaldiesEscrites = 0;
     for (const slug of wanted) {
       const data = await loadRadiografia(db, slug, generatedAt);
       if (!data) {
@@ -294,6 +300,16 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         candidatures2023.get(data.municipality.id),
         historialMandats.get(data.municipality.id),
       );
+      // I les de qui ha tingut l'alcaldia des del 1979, una per persona, a
+      // `m/<slug>/alcaldia/<persona>/`. Wikidata (J21) hi posa la trajectòria.
+      alcaldiesEscrites += await escriuAlcaldiesHistoriques(
+        db,
+        OUT_DIR,
+        data,
+        slug,
+        generatedAt,
+        trajectoriaPerMunicipi.get(data.municipality.id) ?? null,
+      );
       if (!all) run.say(`${data.municipality.name} → observatori/m/${slug}/ (${Math.round(html.length / 1024)} kB)`);
       done.push(slug);
       run.rowsOut += 1;
@@ -301,6 +317,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
 
     if (all) run.say(`${done.length} radiografies generades`);
     run.say(`${regidorsEscrits} fitxes de regidor`);
+    run.say(`${alcaldiesEscrites} fitxes d'alcaldia històrica`);
 
     // Tot el que les pàgines globals han de comptar: el que hi ha publicat, no
     // el que s'acaba d'escriure. En ordre de població, com els 947.
@@ -589,6 +606,14 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       }
       for (const persona of await fillsAmbFitxa(`${OUT_DIR}${slug}/regidor`)) {
         persones.push(await adreca(`m/${slug}/regidor/${persona}/`, "0.5", `${OUT_DIR}${slug}/regidor/${persona}/index.html`));
+      }
+      // Les alcaldies històriques, amb la mateixa prioritat que les persones
+      // del ple. La de qui hi és avui és una redirecció a la seva fitxa de
+      // regidor i no hi va: al sitemap només hi van pàgines de debò.
+      for (const persona of await fillsAmbFitxa(`${OUT_DIR}${slug}/alcaldia`)) {
+        const fitxer = `${OUT_DIR}${slug}/alcaldia/${persona}/index.html`;
+        if (esRedireccioAlcaldia(await readFile(fitxer, "utf8"))) continue;
+        persones.push(await adreca(`m/${slug}/alcaldia/${persona}/`, "0.5", fitxer));
       }
     }
 
