@@ -9,7 +9,7 @@ import { carregaCarrecsAlcaldia, carregaPleDelRegistre, resolAlcaldia } from "./
 import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { atributsEtiqueta, GRAFICS_JS, regleDispersio, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { icona } from "./icones";
 import { capsaCami, geometria, projecta } from "./mapa";
@@ -1428,6 +1428,7 @@ export function renderComarca(data: ComarcaData, generatedAt: string): string {
     titol: `${data.name}: qui mana ${alsMunicipis}`,
     descripcio: `Qui mana a ${data.name}: alcaldies per força ${alsMunicipis} (${number(data.habitants)} habitants), ${number(data.pacte)} ${plural(data.pacte, "governat", "governats")} per qui no va guanyar i ${number(data.canvisAlcaldia)} ${plural(data.canvisAlcaldia, "canvi", "canvis")} d'alcaldia.`,
     url,
+    imatge: imatgeOg(FITXER_OG.comarca(data.slug)),
     jsonLd: [
       filAriadna([...ARREL_OBSERVATORI, { nom: "Les comarques", url: `${SITE}/observatori/c/` }, { nom: data.name, url }]),
       {

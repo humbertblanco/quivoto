@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { triaFrase, type OgMunicipi } from "./og";
+import {
+  creditPla, feinaMunicipi, feinaPartit, feinaTerritori, feinesGlobals, feinesPersones, resumDe, senyalTerritori, triaFrase,
+  type Feina, type OgFitxa, type OgMunicipi,
+} from "./og";
+import { FITXER_OG } from "./seo";
 
 /** Un municipi mínim, al qual cada prova hi afegeix només el que li interessa. */
 function municipi(canvis: Partial<OgMunicipi> = {}): OgMunicipi {
@@ -117,5 +121,152 @@ describe("triaFrase", () => {
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
     expect(html.replace(/<\/?b>/g, "")).not.toMatch(/<[^>]/);
+  });
+});
+
+/** Una fitxa sencera, amb el ple i l'historial: el que carrega `loadOgMunicipis`. */
+function fitxa(canvis: Partial<OgFitxa> = {}): OgFitxa {
+  const { results: _results, ...base } = municipi();
+  return {
+    ...base,
+    ine5: "00000",
+    results: null,
+    carrecs: {
+      carrecs: [
+        // Un retrat que no és a disc: la imatge ha de caure a les inicials i no petar.
+        { nom: "Anna Puig Roca", carrec: "Alcaldessa", grup: "ERC-AM", equipGovern: true, foto: "/observatori/fotos/320/no-hi-es.webp", fotoPetita: null, fitxa: null },
+        { nom: "Pere Vila Mas", carrec: "Regidor", grup: "AIV", equipGovern: false, foto: null, fotoPetita: null, fitxa: null },
+        { nom: "Pere Vila Mas", carrec: "Regidor", grup: "AIV", equipGovern: false, foto: null, fotoPetita: null, fitxa: null },
+      ],
+    },
+    councillors: [
+      { municipalityId: 1, name: "Anna Puig Roca", role: "Alcaldessa", groupName: "ERC-AM", sigles: "ERC-AM", color: "#ffb232", brandId: "erc", orderNum: 1 },
+      { municipalityId: 1, name: "Pere Vila Mas", role: "Regidor", groupName: "AIV", sigles: "AIV", color: "#123456", brandId: null, orderNum: 2 },
+    ],
+    mayors: {
+      currentTermChange: null,
+      history: [
+        { term: "2011-2015", name: "JOAN SOLÀ I FONT", partyRaw: "CiU", tookOfficeOn: "2011-06-11" },
+        { term: "2015-2019", name: "JOAN SOLÀ I FONT", partyRaw: "CiU", tookOfficeOn: "2015-06-13" },
+        { term: "2019-2023", name: "Anna Puig Roca", partyRaw: "ERC-AM", tookOfficeOn: "2019-06-15" },
+        { term: "2023-2027", name: "Anna Puig Roca", partyRaw: "ERC-AM", tookOfficeOn: "2023-06-17" },
+      ],
+      changes: [],
+    },
+    fotosExalcaldes: null,
+    ...canvis,
+  };
+}
+
+const persona = (f: Feina) => (f.dades.tipus === "persona" ? f.dades : null)!;
+
+describe("les feines", () => {
+  it("la imatge d'un municipi va on diu FITXER_OG, i sense escut porta la silueta del poble", () => {
+    const feina = feinaMunicipi({ ...municipi(), slug: "sabadell", ine5: "00000" });
+    expect(feina.fitxer).toBe(FITXER_OG.municipi("sabadell"));
+    expect(feina.format).toBe("png");
+    expect(feina.dades.tipus).toBe("municipi");
+    if (feina.dades.tipus !== "municipi") return;
+    expect(feina.dades.figura).toContain("mapa-silueta");
+    expect(feina.dades.frase).toBe(triaFrase(municipi()).html);
+    // Sense geometria ni escut no hi ha figura, i la imatge es fa igualment.
+    expect((feinaMunicipi({ ...municipi(), slug: "poble-inventat", ine5: "00000" }).dades as { figura: string }).figura).toBe("");
+  });
+
+  it("fa una imatge per persona del ple, amb la mateixa adreça que la pàgina, i una per alcaldia amb pàgina pròpia", () => {
+    const feines = feinesPersones(fitxa(), new Map());
+    expect(feines.map((f) => f.fitxer)).toEqual([
+      "p/vilaprova--anna-puig-roca.jpg",
+      "p/vilaprova--pere-vila-mas.jpg",
+      // Dos noms iguals no s'escriuen l'un damunt de l'altre: sufix, com a la pàgina.
+      "p/vilaprova--pere-vila-mas-2.jpg",
+      // L'alcaldia vigent té fitxa de regidor i la seva pàgina d'alcaldia redirigeix: cap imatge.
+      "p/vilaprova--alcaldia--joan-sola-i-font.jpg",
+    ]);
+    expect(feines.every((f) => f.format === "jpeg")).toBe(true);
+  });
+
+  it("escriu el càrrec amb el municipi i la pastilla de sigles amb el color de la força", () => {
+    const [alcaldessa, regidor] = feinesPersones(fitxa(), new Map()).map(persona);
+    expect(alcaldessa!.carrec).toBe("Alcaldessa de Vilaprova");
+    expect(alcaldessa!.on).toBe("Vilaprova · Comarca de Prova");
+    expect(alcaldessa!.sigla).toContain("ERC-AM");
+    // El retrat no és a disc: inicials amb el color de la marca (ERC), no gris.
+    expect(alcaldessa!.retrat).toBeNull();
+    expect(alcaldessa!.inicials).toBe("AP");
+    expect(alcaldessa!.fons.toLowerCase()).not.toBe("#8b8b8b");
+    // Sense marca coneguda mana el color de la font, a la pastilla i a les inicials.
+    expect(regidor!.carrec).toBe("Regidor de Vilaprova");
+    expect(regidor!.sigla).toContain("--c:#123456");
+    expect(regidor!.fons).toBe("#123456");
+  });
+
+  it("l'alcaldia històrica diu el gènere quan alguna font el sap, els anys i quants mandats", () => {
+    const sense = persona(feinesPersones(fitxa(), new Map()).at(-1)!);
+    expect(sense.carrec).toBe("Alcaldia de Vilaprova · 2011-2019");
+    expect(sense.nom).toBe("Joan Solà i Font");
+    expect(sense.frase).toContain("<b>2 mandats</b>");
+    expect(sense.credit).toBeNull();
+    const amb = persona(feinesPersones(fitxa(), new Map([["joan sola font", "H"]])).at(-1)!);
+    expect(amb.carrec).toBe("Alcalde de Vilaprova · 2011-2019");
+  });
+
+  it("sense seu electrònica, el ple surt del registre d'electes", () => {
+    const feines = feinesPersones(fitxa({ carrecs: null }), new Map());
+    expect(feines.filter((f) => f.fitxer.startsWith("p/vilaprova--") && !f.fitxer.includes("--alcaldia--")).map((f) => f.fitxer))
+      .toEqual(["p/vilaprova--anna-puig-roca.jpg", "p/vilaprova--pere-vila-mas.jpg"]);
+  });
+
+  it("el crèdit d'un retrat de Commons diu l'autor, la llicència i l'origen, i sense autor identifica l'obra", () => {
+    const base = { nom: "Algú", cami: "/x.jpg", paginaFitxer: "https://commons.wikimedia.org/x", llicencia: { nom: "CC BY-SA 4.0", url: null } };
+    expect(creditPla({ ...base, autor: "Davidpar" })).toBe("Foto: Davidpar · CC BY-SA 4.0 · Wikimedia Commons");
+    expect(creditPla({ ...base, autor: null, fitxer: "File:Algú.jpg" })).toBe("Foto: Algú.jpg · CC BY-SA 4.0 · Wikimedia Commons");
+  });
+
+  it("la comarca porta el mapa pintat i qui hi té més alcaldies; sense geometria, Catalunya amb els termes encesos", () => {
+    const taca = (slug: string) => ({ slug, name: slug, mayorName: null, mayorSigles: null, mayorBrandId: "psc" });
+    const comarca = feinaTerritori({
+      slug: "valles-occidental", name: "Vallès Occidental", municipis: [taca("sabadell"), taca("terrassa")], habitants: 951000,
+      forces: [{ label: "PSC", color: "#e30613", alcaldies: 10 }, { label: "Junts", color: "#00c3b2", alcaldies: 8 }],
+    }, "comarca");
+    expect(comarca.fitxer).toBe("c/valles-occidental.png");
+    if (comarca.dades.tipus !== "territori") throw new Error("tipus");
+    expect(comarca.dades.xifres).toBe("2 municipis · 951.000 habitants");
+    expect(pla(comarca.dades.frase)).toBe("PSC té 10 alcaldies de 2; Junts, 8.");
+    expect(comarca.dades.figura).toContain("mapa-comarca");
+    const amb = feinaTerritori({ slug: "amb", name: "AMB", municipis: [taca("poble-inventat")], habitants: 1, forces: [] }, "amb");
+    expect(amb.fitxer).toBe("amb.png");
+    expect((amb.dades as { figura: string }).figura).toContain("senyal-territori");
+    expect(senyalTerritori([taca("sabadell")])).toContain("<path d=");
+  });
+
+  it("el partit porta les sigles amb un color on la tinta es llegeix, i les tres xifres", () => {
+    const feina = feinaPartit({ id: "cup", sigles: "CUP", name: "Candidatura d'Unitat Popular", color: "#ffed00", alcaldies: 1, regidories: 240, poblacioGovernada: 12345 });
+    expect(feina.fitxer).toBe("partit/cup.png");
+    if (feina.dades.tipus !== "partit") throw new Error("tipus");
+    expect(feina.dades.tinta).toMatch(/^#/);
+    expect(pla(feina.dades.frase)).toBe("1 alcaldia · 240 regidories · 12.345 habitants governats");
+    // Un color que no és hexadecimal no entra a cap atribut d'estil.
+    expect((feinaPartit({ id: "x", sigles: "X", name: "X", color: "red;", alcaldies: 0, regidories: 0, poblacioGovernada: 0 }).dades as { fons: string }).fons).toBe("#8b8b8b");
+  });
+
+  it("les globals són vuit, una per pàgina, amb el nom que les plantilles demanen a FITXER_OG", () => {
+    const feines = feinesGlobals({ municipis: 947, comarques: 43, partits: 15, regidories: 9146, habitants: 8000000, preguntes: 12 });
+    expect(feines.map((f) => f.fitxer)).toEqual(
+      ["observatori", "els947", "mapa", "ranquings", "comparador", "dades", "preguntes", "trajectoria"].map(FITXER_OG.global),
+    );
+    for (const f of feines) {
+      if (f.dades.tipus !== "global") throw new Error("tipus");
+      expect(f.dades.figura).toContain("<svg");
+      expect(f.dades.titol.length).toBeGreaterThan(5);
+    }
+  });
+
+  it("el resum d'una imatge canvia amb les dades, el format i la plantilla, i amb res més", () => {
+    const feina = feinaMunicipi({ ...municipi(), ine5: "00000" });
+    expect(resumDe(feina, "v1")).toBe(resumDe({ ...feina, fitxer: "altre.png" }, "v1"));
+    expect(resumDe(feina, "v1")).not.toBe(resumDe(feina, "v2"));
+    expect(resumDe(feina, "v1")).not.toBe(resumDe({ ...feina, format: "jpeg" }, "v1"));
+    expect(resumDe(feina, "v1")).not.toBe(resumDe(feinaMunicipi({ ...municipi(), name: "Vilanova", ine5: "00000" }), "v1"));
   });
 });

@@ -8,7 +8,7 @@ import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna, ORGANITZACIO } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg, ORGANITZACIO } from "./seo";
 import { SOURCES, type SourceKey } from "./source-registry";
 import { FONTS_CSS, renderSourcesList, writeSourceCatalogue, type PublishedField } from "./source-catalogue";
 
@@ -1504,6 +1504,7 @@ export function renderDadesIndex(generatedAt: string, stats: { municipis: number
     titol: "Dades obertes de l'Observatori",
     descripcio,
     url,
+    imatge: imatgeOg(FITXER_OG.global("dades")),
     jsonLd: [
       filAriadna([...ARREL_OBSERVATORI, { nom: "Dades obertes", url }]),
       ORGANITZACIO,

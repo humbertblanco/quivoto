@@ -1,14 +1,38 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { inArray } from "drizzle-orm";
-import { municipalities, municipalityMetrics, type Db } from "@quivoto/db";
+import { dirname, extname, join } from "node:path";
+import { asc, count, eq, inArray } from "drizzle-orm";
+import {
+  candidatures, councillorMandates, municipalities, municipalityMetrics, people, politicalGroups, type Db,
+} from "@quivoto/db";
+import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
+import type { FitxaFotosExalcaldes } from "../jobs/j28-fotos-exalcaldes";
+import { de, nomLlegible, normalizePersonName } from "../lib/text";
+import { resolAlcaldia } from "./alcaldia";
+import {
+  alcaldiesHistoriques, anysDeLaPersona, duradaEscrita, genereDe, sexesPerNom,
+  type HistorialAlcaldies, type ResultatsPerEleccio,
+} from "./alcaldia-historica";
+import { loadAmb } from "./amb";
+import { inicials } from "./cara";
+import { loadComarques, renderMapaComarca, type TacaComarca } from "./comarques";
+import { sobreColor } from "./contrast";
+import type { Retrat } from "./fotos-wikidata";
+import { geometria, renderSilueta } from "./mapa";
+import { catalunya, papereta } from "./mascota";
+import { loadPartits } from "./partit";
+import { carregaPreguntes } from "./preguntes";
+import { adrecesRegidors, carrecAmbMunicipi } from "./regidor";
+import { FITXER_OG } from "./seo";
+import { partitDe, sigla } from "./sigla";
+import { colorDe } from "./vots-partit";
 
 /**
- * Una imatge social per municipi (1200×630), la que surt quan algú comparteix
- * la fitxa a WhatsApp, Bluesky o X.
+ * Les imatges socials (1200×630): la que surt quan algú comparteix una pàgina
+ * de l'Observatori a WhatsApp, Bluesky o X.
  *
  * Fins ara les 947 fitxes compartien la mateixa imatge, i per tant compartir-ne
  * una no deia de quin poble era. Aquí cada municipi en té una de seva, amb el
@@ -16,12 +40,20 @@ import { municipalities, municipalityMetrics, type Db } from "@quivoto/db";
  * decoratiu: és el mateix criteri que mana a tot el projecte —«què han fet
  * aquests quatre anys al meu poble»— reduït a una frase.
  *
+ * I des d'ara també en tenen les altres pàgines que es comparteixen: la de
+ * cada persona del ple i de cada alcaldia històrica (amb el retrat, que és el
+ * que fa que algú s'aturi), la de cada comarca i de l'AMB (amb el mapa pintat
+ * de qui hi mana), la de cada partit i les globals. On va cada fitxer ho diu
+ * `FITXER_OG` de `seo.ts`, que és el mateix lloc on les plantilles el demanen.
+ *
  * Es dibuixa amb Chrome sense finestra perquè és l'única manera d'aconseguir la
  * tipografia del projecte (Gabarito 900 i Nunito Sans, incrustades al document)
  * sense afegir cap dependència al `package.json`. Chrome s'obre **una sola
  * vegada** i es parla amb ell pel protocol de depuració: obrir-lo una vegada per
  * imatge costava 2,6 s cadascuna —41 minuts per als 947— i així baixa a
- * desenes de mil·lisegons.
+ * desenes de mil·lisegons. Amb les persones són unes deu mil imatges, i per
+ * això cada una porta un resum del que la fa (`.hashos.json`): la que no ha
+ * canviat no es torna a dibuixar.
  */
 
 // ------------------------------------------------------------------ mesures
@@ -46,6 +78,127 @@ const CHROME_CANDIDATS = [
   "/usr/bin/chromium",
 ].filter((x): x is string => Boolean(x));
 
+// ----------------------------------------------------------------- feines
+
+/**
+ * El que la plantilla necessita per pintar cada mena d'imatge. Tot hi va ja
+ * resolt —el retrat com a `data:`, el mapa com a SVG, la sigla com a HTML—
+ * perquè el document de Chrome es carrega des d'un fitxer temporal i no pot
+ * anar a buscar res al web. I perquè així el resum de la imatge (vegeu
+ * `resumDe`) inclou tot el que la fa: si canvia la foto, canvia la imatge.
+ */
+export type DadesImatge =
+  | {
+      tipus: "municipi";
+      comarca: string | null;
+      nom: string;
+      /** HTML, només amb `<b>`. */
+      frase: string;
+      banda: string;
+      /** L'escut o la silueta, com a HTML; buit si no hi ha res a ensenyar. */
+      figura: string;
+    }
+  | {
+      tipus: "persona";
+      /** El text de la pastilla de dalt a la dreta: «Qui seu al ple», «Alcaldies des del 1979». */
+      pastilla: string;
+      /** «Sabadell · Vallès Occidental». */
+      on: string;
+      nom: string;
+      /** «Alcaldessa de Sabadell», «Alcaldia d'Alcanar · 2003-2023». */
+      carrec: string;
+      /** La pastilla de sigles, com a HTML de `sigla()`; buida si no en té. */
+      sigla: string;
+      /** El retrat com a `data:`; sense, les inicials. */
+      retrat: string | null;
+      inicials: string;
+      fons: string;
+      tinta: string;
+      /** El crèdit de Commons, en text pla; només quan el retrat és d'allà. */
+      credit: string | null;
+      frase: string;
+      banda: string;
+    }
+  | {
+      tipus: "territori";
+      /** «Comarca», «Àrea metropolitana». */
+      ambit: string;
+      nom: string;
+      /** «30 municipis · 812.000 habitants». */
+      xifres: string;
+      frase: string;
+      banda: string;
+      figura: string;
+    }
+  | {
+      tipus: "partit";
+      sigles: string;
+      nom: string;
+      fons: string;
+      tinta: string;
+      frase: string;
+      banda: string;
+    }
+  | {
+      tipus: "global";
+      titol: string;
+      sota: string;
+      /** La mascota o el senyal, com a SVG. */
+      figura: string;
+      frase: string;
+      banda: string;
+    };
+
+/** Una imatge per fer: on va (relatiu a `og/`), en quin format i amb què. */
+export type Feina = {
+  fitxer: string;
+  /** JPEG per a les persones: un retrat en PNG pesa cinc vegades més. */
+  format: "png" | "jpeg";
+  dades: DadesImatge;
+};
+
+// ------------------------------------------------------------- recursos
+
+/** L'arrel del que se serveix: on són les fotos, els escuts i les imatges. */
+const ARREL_PUBLIC = join(ARREL_WEB, "public");
+
+const MIME: Record<string, string> = {
+  ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml",
+};
+
+/**
+ * Un fitxer del web com a `data:`, o `null` si no hi és.
+ *
+ * `cami` és el públic, amb la barra inicial (`/observatori/fotos/320/25009.webp`),
+ * que és com el desen les fitxes de càrrecs i els retrats de Commons. Es mira el
+ * disc perquè una fitxa pot apuntar a una foto que una ingesta posterior ha
+ * retirat, i una imatge social amb un retrat trencat és pitjor que una amb
+ * les inicials.
+ */
+export function fitxerPublic(cami: string | null | undefined): string | null {
+  if (!cami) return null;
+  const mime = MIME[extname(cami).toLowerCase()];
+  if (!mime) return null;
+  const ruta = join(ARREL_PUBLIC, cami);
+  if (!existsSync(ruta)) return null;
+  return `data:${mime};base64,${readFileSync(ruta).toString("base64")}`;
+}
+
+/**
+ * L'escut del municipi, si J26 el va baixar, i si no la silueta del poble dins
+ * de Catalunya —la mateixa de la fitxa. Els escuts són de Commons i el `.json`
+ * del costat en porta la llicència; a la imatge social no hi cap el crèdit i
+ * per això només s'hi posen els que J26 ha desat, que són els que la fitxa ja
+ * acredita al bloc de fonts.
+ */
+export function figuraMunicipi(slug: string, ine5: string): string {
+  const escut = fitxerPublic(`/observatori/escuts/${ine5}.svg`);
+  if (escut && existsSync(join(ARREL_PUBLIC, "observatori/escuts", `${ine5}.json`))) {
+    return `<img class="escut" src="${escut}" alt="">`;
+  }
+  return renderSilueta(slug, { descripcio: `On és ${slug}` });
+}
+
 // ---------------------------------------------------------------- les dades
 
 type GovernmentMetric = {
@@ -55,6 +208,9 @@ type GovernmentMetric = {
 };
 type MayorsMetric = {
   currentTermChange: { term: string; mayors: { name: string; tookOfficeOn: string | null }[] } | null;
+  /** L'historial sencer i els relleus, que és el que llegeixen les alcaldies històriques. */
+  history?: HistorialAlcaldies["history"];
+  changes?: HistorialAlcaldies["changes"];
 };
 type ElectoralHistory = { series: { year: number; winnerFamily: string | null }[] };
 type ResultsMetric = Record<string, { candidatures: { sigles: string; brandId: string | null }[] }>;
@@ -329,10 +485,18 @@ const COLORS_BANDA: Record<Frase["banda"], string> = {
 
 /**
  * El document que Chrome té obert tota l'estona. Es carrega una vegada i
- * després només se li crida `pinta()` amb les dades de cada municipi: així les
- * tipografies es descodifiquen un sol cop per als 947.
+ * després només se li crida `pinta()` amb les dades de cada imatge: així les
+ * tipografies es descodifiquen un sol cop per a les deu mil.
+ *
+ * Totes les menes d'imatge comparteixen la mateixa ossada —capçalera amb la
+ * marca, cos amb un text a l'esquerra i una figura a la dreta, banda de color
+ * a baix— i `data-tipus` al `body` és el que decideix què s'hi posa i com:
+ * per a una persona la figura és el retrat i va a l'esquerra; per a un
+ * municipi és l'escut; per a una comarca, el mapa. Així un lector que vegi
+ * dues imatges de quivoto seguides a la mateixa xarxa les reconeix com a
+ * germanes, que és el que fa que la marca existeixi.
  */
-function plantilla(): string {
+export function plantilla(): string {
   // Gabarito i Nunito Sans són variables: el mateix fitxer serveix totes les
   // gruixàries. Calen els dos subconjunts (llatí i llatí estès) perquè el
   // català hi porta «ŀ», «ï» i «à» repartits entre tots dos.
@@ -348,7 +512,7 @@ function plantilla(): string {
 @font-face{font-family:Gabarito;font-weight:400 900;src:${gabaritoEstes}}
 @font-face{font-family:"Nunito Sans";font-weight:200 1000;src:${nunitoLlati}}
 @font-face{font-family:"Nunito Sans";font-weight:200 1000;src:${nunitoEstes}}
-:root{--paper:#FBF7EE;--ink:#1E1B2E;--coral:#E2735A;--presec:#FFD8B8}
+:root{--paper:#FBF7EE;--ink:#1E1B2E;--ink-suau:#5B5870;--coral:#E2735A;--presec:#FFD8B8;--vora:#EDE7DA}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:${AMPLE}px;height:${ALT}px;overflow:hidden}
 body{background:var(--paper);color:var(--ink);font-family:"Nunito Sans",sans-serif;
@@ -361,11 +525,68 @@ body{background:var(--paper);color:var(--ink);font-family:"Nunito Sans",sans-ser
   box-shadow:3px 3px 0 var(--ink);padding:7px 18px;font-size:17px;font-weight:800;
   text-transform:uppercase;letter-spacing:.09em}
 
-.cos{height:${ALT_COS}px;padding:0 64px;display:flex;flex-direction:column;justify-content:center;flex:none}
-.comarca{height:34px;line-height:34px;font-size:24px;font-weight:800;letter-spacing:.15em;
+/* El cos: el text a l'esquerra, la figura a la dreta. Les alçades són fixes
+   perquè l'ajust de la mida de lletra mesura contra caixes conegudes. */
+.cos{height:${ALT_COS}px;padding:0 64px;display:flex;align-items:center;gap:44px;flex:none}
+.text{flex:1 1 auto;min-width:0;height:100%;padding:8px 0 22px;display:flex;flex-direction:column;justify-content:center}
+.sobre{flex:none;height:34px;line-height:34px;font-size:24px;font-weight:800;letter-spacing:.15em;
   text-transform:uppercase;color:var(--coral);white-space:nowrap;overflow:hidden}
-.caixa-nom{height:296px;display:flex;align-items:center;overflow:hidden;margin-top:10px}
+.caixa-nom{flex:1 1 0;min-height:0;display:flex;align-items:center;overflow:hidden;margin-top:10px}
 #nom{width:100%;font-family:Gabarito,sans-serif;font-weight:900;letter-spacing:-.035em;line-height:.98}
+.sota{flex:none;margin-top:14px;font-size:30px;font-weight:600;line-height:1.2;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.sota:empty{display:none;margin:0}
+.figura{flex:none;display:none;align-items:center;justify-content:center}
+.figura:not(:empty){display:flex}
+
+/* La pastilla de sigles, com a les pàgines, però a mida d'imatge. */
+.sigla{display:inline-block;background:var(--c);color:var(--t);font-weight:900;font-size:24px;
+  letter-spacing:.04em;padding:5px 16px;border-radius:999px;border:2.5px solid var(--ink);white-space:nowrap}
+
+/* Municipi: l'escut o la silueta, a la dreta. */
+body[data-tipus="municipi"] .figura{width:270px;height:300px}
+body[data-tipus="municipi"] .figura>*{max-width:270px;max-height:300px}
+
+/* Persona: el retrat a l'esquerra, en cercle i sempre de la mateixa mida. */
+body[data-tipus="persona"] .cos{flex-direction:row-reverse}
+body[data-tipus="persona"] .figura{width:290px;flex-direction:column;gap:12px}
+.retrat,.inicials{width:260px;height:260px;border-radius:50%;flex:none;border:4px solid var(--ink);
+  box-shadow:7px 7px 0 var(--ink);background:#fff}
+.retrat{object-fit:cover}
+.inicials{display:flex;align-items:center;justify-content:center;background:var(--c);color:var(--t);
+  font-family:Gabarito,sans-serif;font-weight:900;font-size:112px;letter-spacing:-.04em}
+.credit{font-size:14px;line-height:1.3;color:var(--ink-suau);text-align:center;max-width:290px;margin-top:6px}
+
+/* Territori: el mapa de la comarca amb cada terme del color de qui hi mana, i
+   Catalunya sencera a dalt a la dreta per dir on cau. Els gruixos van en
+   píxels i no en unitats del llenç, que aquí canvia de mida amb cada comarca. */
+body[data-tipus="territori"] .figura{width:380px;height:340px}
+.mapa-comarca{width:100%;height:100%}
+.mapa-comarca .llenc{position:relative;width:100%;height:100%}
+.mapa-comarca svg.gran{width:100%;height:100%;overflow:hidden}
+.mapa-comarca path{vector-effect:non-scaling-stroke}
+.mapa-comarca .fora path{fill:var(--vora);stroke:var(--paper);stroke-width:1.5px}
+.mapa-comarca .contorn{fill:none;stroke:var(--ink);stroke-width:2.5px}
+.mapa-comarca .dins{fill:var(--c);stroke:var(--ink);stroke-width:2px;stroke-linejoin:round}
+/* «On cau»: Catalunya petita a la cantonada de baix a la dreta del mapa, sobre
+   un disc de paper perquè no es confongui amb els veïns grisos de sota. */
+.mapa-comarca .situacio{position:absolute;right:-6px;bottom:-6px;width:104px;height:104px;
+  background:var(--paper);border:2.5px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.mapa-comarca .situacio span,.mapa-comarca figcaption{display:none}
+.mapa-comarca .on-cau{width:80px;height:80px;overflow:visible}
+.mapa-comarca .on-cau .pais{fill:#fff;stroke:var(--ink);stroke-width:1.5px}
+.mapa-comarca .on-cau .aqui{fill:var(--coral);stroke:none}
+.mapa-comarca .on-cau .anella{fill:none;stroke:var(--ink);stroke-width:1.5px}
+/* Sense mapa de la comarca, Catalunya sencera amb la comarca en coral. */
+.senyal-territori{width:340px;height:340px}
+
+/* Partit: les sigles dins d'una pastilla amb el seu color, i el nom a sota. */
+body[data-tipus="partit"] #nom{width:auto;max-width:100%;background:var(--c);color:var(--t);
+  padding:.06em .3em .1em;border-radius:.28em;border:4px solid var(--ink);box-shadow:9px 9px 0 var(--ink)}
+
+/* Global: la mascota o el senyal, a la dreta. */
+body[data-tipus="global"] .figura{width:300px;height:330px}
+body[data-tipus="global"] .figura svg{width:280px;height:auto}
 
 /* La banda de color: l'única superfície pintada de la imatge, i el que fa que
    dues fitxes diferents es distingeixin d'una ullada. */
@@ -376,23 +597,29 @@ body{background:var(--paper);color:var(--ink);font-family:"Nunito Sans",sans-ser
 /* Ressaltat de retolador en comptes de coral: sobre menta o lavanda el coral no
    té prou contrast, i aquí el que importa és que es llegeixi en un mòbil. */
 #frase b{font-weight:900;box-shadow:inset 0 -.26em 0 rgba(255,255,255,.72)}
+/* Damunt d'un color fosc (el d'un partit) el ressaltat blanc taparia el text. */
+#frase.clara b{box-shadow:inset 0 -.26em 0 rgba(0,0,0,.35)}
 </style></head>
 <body>
-<div class="capcalera"><span class="logo">quivoto</span><span class="pastilla">Observatori municipal</span></div>
-<div class="cos"><p class="comarca" id="comarca"></p><div class="caixa-nom"><h1 id="nom"></h1></div></div>
+<div class="capcalera"><span class="logo">quivoto</span><span class="pastilla" id="pastilla">Observatori municipal</span></div>
+<div class="cos">
+  <div class="text"><p class="sobre" id="sobre"></p><div class="caixa-nom"><h1 id="nom"></h1></div><p class="sota" id="sota"></p></div>
+  <div class="figura" id="figura"></div>
+</div>
 <div class="banda" id="banda"><div class="caixa-frase"><p id="frase"></p></div></div>
 <script>
-const nom = document.getElementById("nom");
-const frase = document.getElementById("frase");
-const comarca = document.getElementById("comarca");
-const banda = document.getElementById("banda");
+const $ = (id) => document.getElementById(id);
+const nom = $("nom"), frase = $("frase"), sobre = $("sobre"), sota = $("sota");
+const figura = $("figura"), banda = $("banda"), pastilla = $("pastilla");
+const escapa = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
  * La mida de lletra més gran que hi cap, per cerca binària. Un nom de 43
  * lletres com «Cruïlles, Monells i Sant Sadurní de l'Heura» i un de 10 com
  * «Castellcir» han de quedar tots dos bé, i cap regla fixa no ho aconsegueix:
  * val més mesurar. Es comprova l'alçada (que no surti de la caixa) i també
- * l'amplada (que una paraula llarga i sense partició no vessi pels costats).
+ * l'amplada (que una paraula llarga i sense partició no vessi pels costats, i
+ * que la pastilla d'un partit no surti del cos).
  */
 function encaixa(el, minim, maxim) {
   const caixa = el.parentElement;
@@ -400,20 +627,47 @@ function encaixa(el, minim, maxim) {
   while (baix <= alt) {
     const mig = (baix + alt) >> 1;
     el.style.fontSize = mig + "px";
-    if (el.scrollHeight <= caixa.clientHeight && el.scrollWidth <= el.clientWidth + 1) {
-      millor = mig; baix = mig + 1;
-    } else { alt = mig - 1; }
+    const hiCap = el.scrollHeight <= caixa.clientHeight
+      && el.scrollWidth <= el.clientWidth + 1
+      && el.getBoundingClientRect().width <= caixa.clientWidth + 1;
+    if (hiCap) { millor = mig; baix = mig + 1; } else { alt = mig - 1; }
   }
   el.style.fontSize = millor + "px";
 }
 
+const PASTILLES = { municipi: "Observatori municipal", persona: "Qui seu al ple", territori: "Qui mana", partit: "Els partits", global: "Observatori municipal" };
+
 window.pinta = async (d) => {
-  comarca.textContent = d.comarca || "Catalunya";
-  nom.textContent = d.nom;
+  document.body.dataset.tipus = d.tipus;
+  pastilla.textContent = d.pastilla || PASTILLES[d.tipus];
+  nom.removeAttribute("style");
+  sota.innerHTML = ""; figura.innerHTML = "";
+  if (d.tipus === "municipi") {
+    sobre.textContent = d.comarca || "Catalunya"; nom.textContent = d.nom; figura.innerHTML = d.figura;
+  } else if (d.tipus === "persona") {
+    sobre.textContent = d.on; nom.textContent = d.nom;
+    sota.innerHTML = "<span>" + escapa(d.carrec) + "</span>" + d.sigla;
+    figura.innerHTML = d.retrat
+      ? '<img class="retrat" src="' + d.retrat + '" alt="">'
+      : '<span class="inicials" style="--c:' + escapa(d.fons) + ';--t:' + escapa(d.tinta) + '">' + escapa(d.inicials) + "</span>";
+    if (d.credit) figura.insertAdjacentHTML("beforeend", '<p class="credit">' + escapa(d.credit) + "</p>");
+  } else if (d.tipus === "territori") {
+    sobre.textContent = d.ambit; nom.textContent = d.nom; sota.textContent = d.xifres; figura.innerHTML = d.figura;
+  } else if (d.tipus === "partit") {
+    sobre.textContent = "Als ajuntaments de Catalunya"; nom.textContent = d.sigles; sota.textContent = d.nom;
+    nom.style.setProperty("--c", d.fons); nom.style.setProperty("--t", d.tinta);
+  } else {
+    sobre.textContent = "Catalunya · quivoto.cat"; nom.textContent = d.titol; sota.textContent = d.sota; figura.innerHTML = d.figura;
+  }
   frase.innerHTML = d.frase;
   banda.style.background = d.banda;
+  banda.style.color = d.tipus === "partit" ? d.tinta : "";
+  frase.classList.toggle("clara", d.tipus === "partit" && d.tinta.toLowerCase() === "#fbf7ee");
   await document.fonts.ready;
-  encaixa(nom, 44, 144);
+  // Els retrats van com a data: però igualment es descodifiquen a part: sense
+  // esperar-los, la captura pot sortir amb el cercle buit.
+  await Promise.all([...document.images].map((img) => img.complete ? null : new Promise((fet) => { img.onload = img.onerror = fet; })));
+  encaixa(nom, 40, 144);
   encaixa(frase, 24, 38);
   // Dos fotogrames: el primer aplica l'estil, el segon garanteix que ja s'ha
   // pintat abans que Chrome faci la captura.
@@ -554,10 +808,125 @@ async function obreChrome(documentUrl: string): Promise<Cdp> {
   };
 }
 
+// ------------------------------------------------------------------ resums
+
+const sha1 = (text: string): string => createHash("sha1").update(text).digest("hex");
+
+/**
+ * El resum del que fa una imatge: la plantilla, el format i les dades ja
+ * resoltes (retrat inclòs). Dues execucions amb el mateix resum dibuixen el
+ * mateix píxel a píxel, i per això n'hi ha prou amb comparar-lo per saber si
+ * cal tornar a dibuixar.
+ */
+export function resumDe(feina: Feina, resumPlantilla: string): string {
+  return sha1(`${resumPlantilla}\n${feina.format}\n${JSON.stringify(feina.dades)}`);
+}
+
+type Hashos = Record<string, string>;
+
+/** On es desen els resums: dins d'`og/`, amb punt perquè el web no el llisti. */
+const FITXER_HASHOS = ".hashos.json";
+
+/**
+ * Els resums de l'última execució, sense els de les imatges que ja no hi són:
+ * si algú esborra un fitxer per forçar-ne la regeneració, el resum vell no
+ * l'ha de salvar.
+ */
+async function llegeixHashos(outDir: string): Promise<Hashos> {
+  let hashos: Hashos = {};
+  try {
+    hashos = JSON.parse(await readFile(join(outDir, FITXER_HASHOS), "utf8")) as Hashos;
+  } catch { /* primera execució, o fitxer trencat: es refà tot */ }
+  for (const fitxer of Object.keys(hashos)) {
+    if (!existsSync(join(outDir, fitxer))) delete hashos[fitxer];
+  }
+  return hashos;
+}
+
+// --------------------------------------------------------------- generació
+
+/**
+ * Dibuixa les feines que han canviat i deixa constància del resum de cada
+ * una. Retorna quantes n'ha escrit, quant ocupen i quantes s'ha estalviat.
+ */
+export async function generaImatges(
+  feines: readonly Feina[],
+  outDir: string,
+): Promise<{ images: number; bytes: number; saltades: number }> {
+  if (feines.length === 0) return { images: 0, bytes: 0, saltades: 0 };
+  await mkdir(outDir, { recursive: true });
+
+  const hashos = await llegeixHashos(outDir);
+  const document = plantilla();
+  const resumPlantilla = sha1(document);
+  const pendents = feines
+    .map((feina) => ({ feina, resum: resumDe(feina, resumPlantilla) }))
+    .filter(({ feina, resum }) => hashos[feina.fitxer] !== resum);
+  const saltades = feines.length - pendents.length;
+  if (pendents.length === 0) return { images: 0, bytes: 0, saltades };
+
+  // El document viu en un directori temporal: no ha d'anar al repositori ni
+  // acabar servit pel web.
+  const treball = await mkdtemp(join(tmpdir(), "quivoto-og-doc-"));
+  const documentPath = join(treball, "og.html");
+  await writeFile(documentPath, document, "utf8");
+
+  const chrome = await obreChrome(`file://${documentPath}`);
+  let bytes = 0;
+  let fetes = 0;
+  try {
+    for (const { feina, resum } of pendents) {
+      await chrome.crida("Runtime.evaluate", {
+        expression: `window.pinta(${JSON.stringify(feina.dades)})`,
+        awaitPromise: true,
+      });
+      const { data } = await chrome.crida(
+        "Page.captureScreenshot",
+        feina.format === "jpeg" ? { format: "jpeg", quality: 85 } : { format: "png" },
+      );
+      const imatge = Buffer.from(data as string, "base64");
+      const desti = join(outDir, feina.fitxer);
+      await mkdir(dirname(desti), { recursive: true });
+      await writeFile(desti, imatge);
+      hashos[feina.fitxer] = resum;
+      bytes += imatge.byteLength;
+      fetes += 1;
+    }
+  } finally {
+    // Els resums es desen encara que Chrome peti a mig camí: el que s'ha
+    // escrit fins llavors és bo i no s'ha de repetir.
+    await writeFile(join(outDir, FITXER_HASHOS), `${JSON.stringify(hashos, null, 0)}\n`, "utf8");
+    await chrome.tanca();
+    await rm(treball, { recursive: true, force: true });
+  }
+
+  return { images: fetes, bytes, saltades };
+}
+
 // ------------------------------------------------------------------- accés
 
-/** Carrega només el que necessita la imatge dels municipis demanats. */
-export async function loadOgMunicipis(db: Db, slugs?: readonly string[]): Promise<OgMunicipi[]> {
+type CarrecSeu = {
+  nom: string; carrec: string; grup: string | null; equipGovern: boolean;
+  foto: string | null; fotoPetita: string | null; fitxa: string | null;
+};
+type Councillor = {
+  municipalityId: number; name: string; role: string | null; groupName: string | null;
+  sigles: string | null; color: string | null; brandId: string | null; orderNum: number | null;
+};
+
+/** El que cal, a més d'`OgMunicipi`, per a les persones i l'escut. */
+export type OgFitxa = Omit<OgMunicipi, "results"> & {
+  ine5: string;
+  results: ResultatsPerEleccio | null;
+  /** La fitxa de càrrecs de la seu electrònica (J11), quan n'hi ha. */
+  carrecs: { carrecs: CarrecSeu[] } | null;
+  /** Qui seu al ple segons el registre d'electes, en l'ordre del registre. */
+  councillors: Councillor[];
+  fotosExalcaldes: FitxaFotosExalcaldes | null;
+};
+
+/** Carrega només el que necessiten les imatges dels municipis demanats. */
+export async function loadOgMunicipis(db: Db, slugs?: readonly string[]): Promise<OgFitxa[]> {
   const files = slugs && slugs.length > 0
     ? await db.select().from(municipalities).where(inArray(municipalities.slug, [...slugs]))
     : await db.select().from(municipalities);
@@ -567,7 +936,9 @@ export async function loadOgMunicipis(db: Db, slugs?: readonly string[]): Promis
   const mesures = await db
     .select()
     .from(municipalityMetrics)
-    .where(inArray(municipalityMetrics.kind, ["government", "mayors", "electoralHistory", "results", "singleList"]));
+    .where(inArray(municipalityMetrics.kind, [
+      "government", "mayors", "electoralHistory", "results", "singleList", "carrecs", "fotosExalcaldes",
+    ]));
 
   const perMunicipi = new Map<number, Record<string, unknown>>();
   const volguts = new Set(ids);
@@ -578,6 +949,32 @@ export async function loadOgMunicipis(db: Db, slugs?: readonly string[]): Promis
     perMunicipi.set(m.municipalityId, bossa);
   }
 
+  // Els mateixos camps i el mateix ordre que `loadRadiografia`: l'adreça de
+  // cada persona surt de la llista en aquest ordre i ha de coincidir.
+  const electes: Councillor[] = await db
+    .select({
+      municipalityId: councillorMandates.municipalityId,
+      name: people.fullName,
+      role: councillorMandates.role,
+      groupName: politicalGroups.name,
+      sigles: candidatures.sigles,
+      color: candidatures.color,
+      brandId: candidatures.brandId,
+      orderNum: councillorMandates.orderNum,
+    })
+    .from(councillorMandates)
+    .innerJoin(people, eq(people.id, councillorMandates.personId))
+    .leftJoin(politicalGroups, eq(politicalGroups.id, councillorMandates.groupId))
+    .leftJoin(candidatures, eq(candidatures.id, politicalGroups.candidatureId))
+    .where(inArray(councillorMandates.municipalityId, ids))
+    .orderBy(asc(councillorMandates.municipalityId), asc(councillorMandates.orderNum));
+  const electesPerMunicipi = new Map<number, Councillor[]>();
+  for (const e of electes) {
+    const llista = electesPerMunicipi.get(e.municipalityId) ?? [];
+    llista.push(e);
+    electesPerMunicipi.set(e.municipalityId, llista);
+  }
+
   return files
     .map((f) => {
       const bossa = perMunicipi.get(f.id) ?? {};
@@ -585,21 +982,294 @@ export async function loadOgMunicipis(db: Db, slugs?: readonly string[]): Promis
         slug: f.slug,
         name: f.name,
         comarca: f.comarca,
+        ine5: f.ine5,
         government: (bossa.government ?? null) as GovernmentMetric | null,
         mayors: (bossa.mayors ?? null) as MayorsMetric | null,
         history: (bossa.electoralHistory ?? null) as ElectoralHistory | null,
-        results: (bossa.results ?? null) as ResultsMetric | null,
+        results: (bossa.results ?? null) as ResultatsPerEleccio | null,
         singleList: "singleList" in bossa,
+        carrecs: (bossa.carrecs ?? null) as OgFitxa["carrecs"],
+        councillors: electesPerMunicipi.get(f.id) ?? [],
+        fotosExalcaldes: (bossa.fotosExalcaldes ?? null) as FitxaFotosExalcaldes | null,
       };
     })
     .sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
+// ------------------------------------------------------------- les feines
+
+/** La imatge d'un municipi: neutra, sense cap cara; el fet del poble i l'escut. */
+export function feinaMunicipi(m: OgMunicipi & { ine5: string }): Feina {
+  const frase = triaFrase(m);
+  return {
+    fitxer: FITXER_OG.municipi(m.slug),
+    format: "png",
+    dades: {
+      tipus: "municipi",
+      comarca: m.comarca,
+      nom: m.name,
+      frase: frase.html,
+      banda: COLORS_BANDA[frase.banda],
+      figura: figuraMunicipi(m.slug, m.ine5),
+    },
+  };
+}
+
+// ------------------------------------------------------------ les persones
+
+const majuscula = (t: string): string => t.charAt(0).toLocaleUpperCase("ca") + t.slice(1);
+
 /**
- * Genera una imatge social per municipi a `<outDir>/<slug>.png`.
+ * El color de la força d'una persona, amb la mateixa regla que la pastilla de
+ * `sigla()`: mana la marca quan la sabem, i el color de la font només quan no.
+ * Les inicials de qui no té foto van d'aquest color, i per això ha de ser el
+ * mateix que el de la pastilla del costat.
+ */
+export function colorForca(sigles: string | null, brandId?: string | null, color?: string | null): string {
+  const id = partitDe(sigles, brandId);
+  const marca = id ? BRANDS_BY_ID.get(id)?.color : null;
+  const oficial = color?.trim();
+  return marca ?? (oficial && /^#[0-9a-f]{6}$/i.test(oficial) ? oficial : "#8b8b8b");
+}
+
+/**
+ * El crèdit d'un retrat de Commons, en una línia de text pla: l'autor si se
+ * sap (si no, el fitxer, que identifica l'obra), la llicència i l'origen. La
+ * imatge social és una còpia més del retrat i la BY de la llicència hi
+ * arriba igual.
+ */
+export function creditPla(r: Retrat): string {
+  const autor = r.autor ?? (r.fitxer ? r.fitxer.replace(/^File:/, "") : "autoria no declarada");
+  return `Foto: ${autor} · ${r.llicencia.nom} · Wikimedia Commons`;
+}
+
+const quantsMandats = (n: number): string => (n === 1 ? "Un mandat" : `${n} mandats`);
+
+/**
+ * Les imatges de les persones d'un municipi: una per fitxa de regidor i una
+ * per alcaldia històrica que té pàgina pròpia.
  *
- * Sense `slugs` les fa totes. Retorna quantes n'ha escrit i quant ocupen, per
- * poder-ho dir al registre de l'execució.
+ * Qui hi ha i a quina adreça ho decideix el mateix codi que escriu les
+ * pàgines —`escriuRegidors` a `publish.ts` i `escriuAlcaldiesHistoriques`—,
+ * i aquí se'n repeteix la tria amb les mateixes funcions (`adrecesRegidors`,
+ * `alcaldiesHistoriques`, `resolAlcaldia`): la seu electrònica quan hi és, el
+ * registre d'electes quan no, i les alcaldies que redirigeixen a una fitxa de
+ * regidor no tenen imatge perquè no tenen pàgina.
+ */
+export function feinesPersones(m: OgFitxa, sexes: ReadonlyMap<string, "H" | "D">): Feina[] {
+  const feines: Feina[] = [];
+  const on = m.comarca ? `${m.name} · ${m.comarca}` : m.name;
+
+  // 1 · Qui seu al ple.
+  const deLaSeu = m.carrecs?.carrecs ?? [];
+  const carrecs: CarrecSeu[] = deLaSeu.length > 0
+    ? deLaSeu
+    : m.councillors.map((c) => ({
+        nom: c.name, carrec: c.role ?? "Regidoria", grup: c.groupName,
+        equipGovern: false, foto: null, fotoPetita: null, fitxa: null,
+      }));
+  const perNom = new Map(m.councillors.map((c) => [normalizePersonName(c.name), c]));
+  const adreces = adrecesRegidors(carrecs);
+  for (const c of carrecs) {
+    const registre = perNom.get(normalizePersonName(c.nom)) ?? null;
+    const sigles = registre?.sigles ?? null;
+    const color = colorForca(sigles, registre?.brandId, registre?.color);
+    const { fons, tinta } = sobreColor(color);
+    const nom = nomLlegible(c.nom);
+    feines.push({
+      fitxer: FITXER_OG.regidor(m.slug, adreces.get(c)!),
+      format: "jpeg",
+      dades: {
+        tipus: "persona",
+        pastilla: "Qui seu al ple",
+        on,
+        nom,
+        carrec: majuscula(carrecAmbMunicipi(c.carrec, m.name)),
+        sigla: c.grup ? sigla(sigles ?? c.grup, { color }) : "",
+        retrat: fitxerPublic(c.foto ?? c.fotoPetita),
+        inicials: inicials(nom),
+        fons,
+        tinta,
+        credit: null,
+        frase: `Què ha votat el seu grup al ple ${escapa(de(m.name))}, què cobra i <b>d'on surt cada dada</b>.`,
+        banda: COLORS_BANDA.menta,
+      },
+    });
+  }
+
+  // 2 · Les alcaldies des del 1979.
+  const historial = m.mayors?.history && m.mayors.changes ? (m.mayors as HistorialAlcaldies) : null;
+  const actual = resolAlcaldia(m.carrecs?.carrecs ?? null, m.government, m.councillors.map((c) => ({ nom: c.name })));
+  const persones = alcaldiesHistoriques(historial, {
+    results: m.results,
+    fotos: m.fotosExalcaldes,
+    actual: { nom: actual.nom, adreca: actual.adreca },
+  });
+  for (const p of persones) {
+    if (p.fitxaRegidor) continue;
+    const genere = genereDe(p.clau, m.carrecs?.carrecs ?? null, sexes);
+    const { fons, tinta } = sobreColor(p.color ?? "#8b8b8b");
+    // J28 no baixa el retrat de l'alcaldia vigent; per a ella val el de la seu.
+    const retratSeu = p.actual ? fitxerPublic(actual.foto) : null;
+    const retratCommons = retratSeu ? null : fitxerPublic(p.retrat?.cami);
+    feines.push({
+      fitxer: FITXER_OG.alcaldia(m.slug, p.slug),
+      format: "jpeg",
+      dades: {
+        tipus: "persona",
+        pastilla: "Alcaldies des del 1979",
+        on,
+        nom: p.nom,
+        carrec: `${majuscula(genere ?? "alcaldia")} ${de(m.name)} · ${anysDeLaPersona(p)}`,
+        sigla: p.sigles ? sigla(p.sigles, { color: p.color }) : "",
+        retrat: retratSeu ?? retratCommons,
+        inicials: inicials(p.nom),
+        fons,
+        tinta,
+        credit: retratCommons && p.retrat ? creditPla(p.retrat) : null,
+        frase: `<b>${quantsMandats(p.mandats.length)}</b> a l'alcaldia ${escapa(de(m.name))}, ${escapa(duradaEscrita(p.durada))}: resultats, relleus i qui hi va haver abans i després.`,
+        banda: COLORS_BANDA.lavanda,
+      },
+    });
+  }
+  return feines;
+}
+
+// ------------------------------------------------ comarques, AMB i partits
+
+const xifra = (n: number): string => n.toLocaleString("ca-ES");
+
+/** El mínim que cal d'una comarca o de l'AMB per fer-ne la imatge. */
+export type TerritoriOg = {
+  slug: string;
+  name: string;
+  municipis: readonly TacaComarca[];
+  habitants: number;
+  /** Les forces per alcaldies, de més a menys, com a la pàgina. */
+  forces: readonly { label: string; color: string; alcaldies: number }[];
+};
+
+/**
+ * Catalunya sencera amb els municipis del territori pintats de qui hi mana:
+ * el que es dibuixa quan `renderMapaComarca` no pot (un ens sense geometria
+ * als límits de l'ICGC). El mateix senyal que la fitxa municipal, però amb
+ * més d'un terme encès.
+ */
+export function senyalTerritori(municipis: readonly TacaComarca[]): string {
+  if (!geometria.contorn) return "";
+  const taques = municipis
+    .filter((m) => geometria.municipis[m.slug])
+    .map((m) => `<path d="${geometria.municipis[m.slug]}" fill="${colorDe(m.mayorBrandId ?? "")}" stroke="var(--ink)" stroke-width="3"/>`)
+    .join("");
+  return `<svg class="senyal-territori" viewBox="${escapa(geometria.viewBox)}" role="img" aria-label="Catalunya">
+  <path d="${geometria.contorn}" fill="var(--vora)" stroke="var(--ink)" stroke-width="6" stroke-linejoin="round"/>${taques}</svg>`;
+}
+
+/** La imatge d'una comarca o de l'AMB: el mapa pintat per força i qui hi té més alcaldies. */
+export function feinaTerritori(t: TerritoriOg, ambit: "comarca" | "amb"): Feina {
+  const quants = t.municipis.length;
+  const [primera, segona] = t.forces;
+  const alcaldies = (n: number): string => (n === 1 ? "1 alcaldia" : `${xifra(n)} alcaldies`);
+  const frase = primera
+    ? `<b>${escapa(primera.label)}</b> té ${alcaldies(primera.alcaldies)} de ${xifra(quants)}${
+        segona ? `; ${escapa(segona.label)}, ${xifra(segona.alcaldies)}.` : "."
+      }`
+    : `Qui mana a cada un dels ${xifra(quants)} municipis, i què en diuen els comptes.`;
+  return {
+    fitxer: ambit === "amb" ? FITXER_OG.amb() : FITXER_OG.comarca(t.slug),
+    format: "png",
+    dades: {
+      tipus: "territori",
+      ambit: ambit === "amb" ? "Àrea metropolitana" : "Comarca",
+      nom: t.name,
+      xifres: `${xifra(quants)} municipis · ${xifra(t.habitants)} habitants`,
+      frase,
+      banda: COLORS_BANDA.presec,
+      figura: renderMapaComarca(t.municipis, "", t.name) || senyalTerritori(t.municipis),
+    },
+  };
+}
+
+/** El mínim que cal d'un partit per fer-ne la imatge: el que porta `PartitData`. */
+export type PartitOg = {
+  id: string; sigles: string; name: string; color: string;
+  alcaldies: number; regidories: number; poblacioGovernada: number;
+};
+
+/** La imatge d'un partit: les sigles amb el seu color i les tres xifres de la pàgina. */
+export function feinaPartit(p: PartitOg): Feina {
+  const color = /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#8b8b8b";
+  const { fons, tinta } = sobreColor(color);
+  return {
+    fitxer: FITXER_OG.partit(p.id),
+    format: "png",
+    dades: {
+      tipus: "partit",
+      sigles: p.sigles,
+      nom: p.name,
+      fons,
+      tinta,
+      frase: `<b>${xifra(p.alcaldies)} ${p.alcaldies === 1 ? "alcaldia" : "alcaldies"}</b> · ${xifra(p.regidories)} regidories · ${xifra(p.poblacioGovernada)} habitants governats`,
+      banda: fons,
+    },
+  };
+}
+
+// ---------------------------------------------------------------- globals
+
+/** Les xifres que les pàgines globals diuen al titular, un cop per publicació. */
+export type XifresGlobals = {
+  municipis: number;
+  comarques: number;
+  partits: number;
+  regidories: number;
+  habitants: number;
+  /** Conjunts de preguntes en esborrany. */
+  preguntes: number;
+};
+
+/**
+ * Les imatges de les pàgines que no són de cap lloc: la portada de
+ * l'Observatori, els 947, el mapa, els rànquings, el comparador, les dades,
+ * les preguntes i la trajectòria. Cadascuna amb el seu títol, la mascota (per
+ * a les eines) o el senyal (per a les del territori) i una xifra.
+ */
+export function feinesGlobals(x: XifresGlobals): Feina[] {
+  const senyal = catalunya(280, "felic", null);
+  const paperetaFelic = papereta(280);
+  const municipis = `<b>${xifra(x.municipis)} municipis</b>`;
+  const globals: { nom: string; titol: string; sota: string; figura: string; frase: string }[] = [
+    { nom: "observatori", titol: "Qui mana al teu poble", sota: "L'Observatori municipal de quivoto", figura: paperetaFelic,
+      frase: `${municipis}, ${xifra(x.comarques)} comarques i ${xifra(x.partits)} partits: resultats, comptes i actes del ple des del 1979.` },
+    { nom: "els947", titol: `Els ${xifra(x.municipis)} municipis, un per un`, sota: "Qui hi mana, els comptes i les actes del ple", figura: senyal,
+      frase: `<b>${xifra(x.regidories)} regidories</b> i ${xifra(x.habitants)} habitants: cada municipi porta a la seva fitxa.` },
+    { nom: "mapa", titol: `El mapa dels ${xifra(x.municipis)}`, sota: "Pintat per qui mana, pels pactes i pels comptes", figura: senyal,
+      frase: `${municipis} amb els seus límits: cada terme porta a la fitxa del seu poble.` },
+    { nom: "ranquings", titol: "Rànquings municipals", sota: "Qui és a dalt i qui a baix de cada indicador", figura: paperetaFelic,
+      frase: `${municipis} ordenats per deute, IBI, residus, habitatge i més, amb l'any i la font de cada xifra.` },
+    { nom: "comparador", titol: "Comparador de municipis", sota: "De dos a quatre, costat a costat", figura: paperetaFelic,
+      frase: `Tria fins a quatre dels ${municipis} i compara'n el govern, el deute, l'IBI i la resta d'indicadors.` },
+    { nom: "dades", titol: "Dades obertes", sota: "CSV i JSON, amb la font de cada camp", figura: paperetaFelic,
+      frase: `Els indicadors dels ${municipis} per baixar i reutilitzar, amb llicència <b>CC BY 4.0</b>.` },
+    { nom: "preguntes", titol: "Preguntes per municipi", sota: "En esborrany, amb l'evidència de cadascuna", figura: papereta(280, "pregunta"),
+      frase: `<b>${xifra(x.preguntes)} municipis</b> amb preguntes que es poden respondre amb les actes del ple.` },
+    { nom: "trajectoria", titol: "Quant duren els que manen", sota: "Mandats, relleus i salts des del 1979", figura: senyal,
+      frase: `Les alcaldies dels ${municipis} des del 1979: quants mandats duren i qui fa el salt a un altre càrrec.` },
+  ];
+  return globals.map((g) => ({
+    fitxer: FITXER_OG.global(g.nom),
+    format: "png",
+    dades: { tipus: "global", titol: g.titol, sota: g.sota, figura: g.figura, frase: g.frase, banda: COLORS_BANDA.menta },
+  }));
+}
+
+/**
+ * Genera les imatges socials a `<outDir>/` seguint `FITXER_OG`.
+ *
+ * Les dels municipis i les de les seves persones es fan per a la tanda
+ * (`slugs`); sense `slugs`, per als 947. Les de les comarques, els partits i
+ * les pàgines globals es fan sempre, perquè canvien amb qualsevol municipi.
+ * Retorna quantes n'ha escrit i quant ocupen, per poder-ho dir al registre.
  */
 export async function writeOgImages(
   db: Db,
@@ -607,42 +1277,36 @@ export async function writeOgImages(
   slugs?: readonly string[],
 ): Promise<{ images: number; bytes: number }> {
   const municipis = await loadOgMunicipis(db, slugs);
-  if (municipis.length === 0) return { images: 0, bytes: 0 };
+  // El sexe del registre de candidatures, per escriure «alcaldessa» quan la
+  // seu no ho diu: una consulta per a totes les alcaldies de la tanda.
+  const sexes = municipis.length > 0 ? await sexesPerNom(db) : new Map<string, "H" | "D">();
+  const feines: Feina[] = [];
+  for (const m of municipis) feines.push(feinaMunicipi(m), ...feinesPersones(m, sexes));
 
-  await mkdir(outDir, { recursive: true });
+  // Les comarques, l'AMB i els partits, amb els mateixos carregadors que les
+  // pàgines: la xifra de la imatge ha de ser la de la pàgina que ensenya.
+  const comarques = await loadComarques(db);
+  for (const c of comarques) feines.push(feinaTerritori(c, "comarca"));
+  const amb = await loadAmb(db, comarques);
+  if (amb) feines.push(feinaTerritori({ ...amb, slug: "amb", name: amb.nom }, "amb"));
+  const partits = await loadPartits(db);
+  for (const p of partits) feines.push(feinaPartit(p));
+  feines.push(...feinesGlobals(await loadXifresGlobals(db, comarques.length, partits.length)));
 
-  // El document viu en un directori temporal: no ha d'anar al repositori ni
-  // acabar servit pel web.
-  const treball = await mkdtemp(join(tmpdir(), "quivoto-og-doc-"));
-  const documentPath = join(treball, "og.html");
-  await writeFile(documentPath, plantilla(), "utf8");
+  const fet = await generaImatges(feines, outDir);
+  return { images: fet.images, bytes: fet.bytes };
+}
 
-  const chrome = await obreChrome(`file://${documentPath}`);
-  let bytes = 0;
-  let fetes = 0;
-  try {
-    for (const municipi of municipis) {
-      const frase = triaFrase(municipi);
-      const dades = {
-        nom: municipi.name,
-        comarca: municipi.comarca,
-        frase: frase.html,
-        banda: COLORS_BANDA[frase.banda],
-      };
-      await chrome.crida("Runtime.evaluate", {
-        expression: `window.pinta(${JSON.stringify(dades)})`,
-        awaitPromise: true,
-      });
-      const { data } = await chrome.crida("Page.captureScreenshot", { format: "png" });
-      const png = Buffer.from(data as string, "base64");
-      await writeFile(join(outDir, `${municipi.slug}.png`), png);
-      bytes += png.byteLength;
-      fetes += 1;
-    }
-  } finally {
-    await chrome.tanca();
-    await rm(treball, { recursive: true, force: true });
-  }
-
-  return { images: fetes, bytes };
+/** Les xifres de les pàgines globals: dues consultes lleugeres i els fitxers de preguntes. */
+async function loadXifresGlobals(db: Db, comarques: number, partits: number): Promise<XifresGlobals> {
+  const files = await db.select({ population: municipalities.population }).from(municipalities);
+  const [regidories] = await db.select({ n: count() }).from(councillorMandates);
+  return {
+    municipis: files.length,
+    comarques,
+    partits,
+    regidories: regidories?.n ?? 0,
+    habitants: files.reduce((suma, f) => suma + (f.population ?? 0), 0),
+    preguntes: carregaPreguntes().length,
+  };
 }

@@ -2,7 +2,7 @@ import { RADIOGRAFIA_CSS } from "./estil";
 import { geometria } from "./mapa";
 import { siglesFamily } from "@quivoto/shared-schemas/brands";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import type { Els947Row } from "./els947";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
@@ -953,6 +953,7 @@ export function renderMapaCatalunya(
     titol: `Mapa dels ${slugs.length} municipis`,
     descripcio: `Els ${slugs.length} municipis de Catalunya pintats per ${llistaBotons}. Cada un porta a la seva fitxa.`,
     url,
+    imatge: imatgeOg(FITXER_OG.global("mapa")),
     jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: `Mapa dels ${slugs.length} municipis`, url }])],
   });
 

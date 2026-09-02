@@ -11,7 +11,7 @@ import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
 import { partitDe, sigla } from "./sigla";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { nomLlegible, slugify } from "../lib/text";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
@@ -1173,6 +1173,7 @@ ${qui}${dades.length > 0 ? `\n<p class="dades">${dades.join("")}</p>` : ""}
     titol: `Els ${xifra(totals.municipis)} municipis, un per un`,
     descripcio: `Els ${xifra(totals.municipis)} municipis de Catalunya en una llista: qui hi mana, els comptes i les actes del ple. A ${xifra(totals.pacte)} governa qui no va guanyar i ${xifra(totals.canvis)} han canviat d'alcaldia.`,
     url,
+    imatge: imatgeOg(FITXER_OG.global("els947")),
     jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: `Els ${xifra(totals.municipis)} municipis`, url }])],
   });
 

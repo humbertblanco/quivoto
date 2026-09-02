@@ -76,7 +76,11 @@ img,svg{max-width:100%}
 }
 @media(max-width:720px){
   .capcalera .etiqueta{display:none}
-  .capcalera .idioma{margin-left:auto}
+  /* L'espai que sobra el pren la ranura del cercador, i l'idioma s'hi
+     arrambla: així el botó «Cerca» queda a la dreta, on és a l'Observatori,
+     i no al mig entre dos marges automàtics. Sense guió la ranura és buida i
+     no fa res, i l'idioma continua a la dreta igualment. */
+  .capcalera .ranura-cerca{margin-left:auto}
 }
 @media(max-width:420px){
   .capcalera .menu a,.capcalera .menu .ara{font-size:.78rem}
@@ -101,6 +105,26 @@ img,svg{max-width:100%}
   padding:10px 20px;font-size:.84rem;font-weight:800;line-height:1.2;white-space:nowrap;
 }
 @media(max-width:520px){.segell{white-space:normal;text-align:center}}
+
+/* La casella gran del hero: obre el cercador compartit (assets/cercador.js,
+   escrit per cercador.ts) amb el que s'hi escriu. Mateix traç que la casella
+   del diàleg —vora de 2,5 px, ombra dura, la lupa a l'esquerra— perquè qui
+   hi escriu i veu obrir-se el diàleg entengui que és la mateixa cosa. El camp
+   de dins no té vora pròpia: el marc és el formulari, i el focus es pinta al
+   marc amb :focus-within perquè no quedin dos anells. L'amplada no passa mai
+   del contenidor: a 360 px la casella és la columna sencera i no sobresurt. */
+/* «max-width» i no «width:min(100%,34rem)»: dins d'una columna de graella, el
+   34rem comptava com a amplada mínima i a 390 px estirava tota la columna del
+   hero més enllà de la pantalla. */
+.cerca-hero{display:flex;align-items:center;gap:12px;max-width:34rem;min-width:0;
+  margin:0 0 var(--e3);padding:0 16px;min-height:60px;background:var(--paper-2);color:var(--ink);
+  border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:4px 4px 0 var(--ink);cursor:text}
+.cerca-hero label{display:inline-flex;flex:none;color:var(--ink);line-height:0}
+.cerca-hero input{flex:1 1 auto;min-width:0;border:0;background:none;font:inherit;font-size:1.05rem;
+  font-weight:700;color:var(--ink);outline:none;padding:15px 0;-webkit-appearance:none;appearance:none}
+.cerca-hero input::placeholder{color:var(--ink-suau);font-weight:600;opacity:1}
+.cerca-hero:focus-within{outline:3px solid var(--coral);outline-offset:3px}
+@media(max-width:420px){.cerca-hero input{font-size:1rem}}
 
 /* formulari ràpid del hero */
 .form-rapid{margin-top:var(--e3);max-width:30rem}
@@ -212,10 +236,12 @@ img,svg{max-width:100%}
 .final-mascota{display:flex;justify-content:center;margin-top:var(--e3)}
 .final-mascota .papereta{transform:rotate(4deg)}
 
-/* ---------- qui som i peu ---------- */
-.qui{max-width:44rem;margin:0 auto;padding:var(--e5) var(--e3) var(--e4)}
-.qui h2{margin-bottom:var(--e2)}
-.qui p{font-size:1.05rem}
+/* ---------- qui som i peu ----------
+   Es deia «.qui» i xocava amb el «.qui» de cada fila del cercador compartit
+   (cercador.css): les files sortien amb el farciment d'una secció sencera. */
+.qui-som{max-width:44rem;margin:0 auto;padding:var(--e5) var(--e3) var(--e4)}
+.qui-som h2{margin-bottom:var(--e2)}
+.qui-som p{font-size:1.05rem}
 .correu{font-weight:800;text-decoration:underline}
 .peu{border-top:2px solid var(--vora);padding:var(--e3);text-align:center;font-size:.85rem;color:var(--ink-suau)}
 .peu nav{margin-top:6px}

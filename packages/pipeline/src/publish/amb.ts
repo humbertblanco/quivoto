@@ -5,7 +5,7 @@ import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../deri
 import { slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { atributsEtiqueta, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
@@ -1180,6 +1180,7 @@ export function renderAmb(data: AmbData, generatedAt: string): string {
     titol: "Àrea Metropolitana de Barcelona: qui mana",
     descripcio: `Els ${number(data.municipis.length)} municipis i ${number(data.habitants)} habitants de l'AMB: qui governa cadascun i què decideix l'Àrea Metropolitana, del transport i l'aigua a platges i habitatge.`,
     url,
+    imatge: imatgeOg(FITXER_OG.amb()),
     jsonLd: [
       filAriadna([...ARREL_OBSERVATORI, { nom: "Àrea Metropolitana de Barcelona", url }]),
       {

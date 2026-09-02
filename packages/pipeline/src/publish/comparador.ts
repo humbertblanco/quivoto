@@ -7,7 +7,7 @@ import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { GRAFICS_JS, textEtiqueta } from "./grafics";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
@@ -1571,6 +1571,7 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
     titol: "Comparador de municipis",
     descripcio: `De dos a quatre dels ${rows.length} municipis de Catalunya, costat a costat: ${xifres.length} indicadors, de qui governa al deute i l'IBI, amb la mediana dels de la seva mida.`,
     url,
+    imatge: imatgeOg(FITXER_OG.global("comparador")),
     jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Comparador de municipis", url }])],
   });
 

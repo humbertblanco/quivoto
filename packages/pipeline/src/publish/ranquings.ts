@@ -33,7 +33,7 @@ import { slugify } from "../lib/text";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { cohortHomogenia, extremsEmpatats } from "./contracte-metriques";
 import { CURIOSITATS_CSS, preparaCuriositats, renderCuriositats, type DadesCuriositats } from "./curiositats";
 import { atributsEtiqueta, GRAFICS_CSS, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
@@ -740,6 +740,7 @@ ${preparats.map((r) => seccio(r, grups)).join("\n")}`
     titol: "Rànquings municipals de Catalunya",
     descripcio: `${preparats.length > 0 ? `${preparats.length} rànquings` : "Els rànquings"} dels ${rows.length} municipis de Catalunya: qui és a dalt i qui a baix de cada indicador, amb l'any, la font i el que la xifra no diu.`,
     url,
+    imatge: imatgeOg(FITXER_OG.global("ranquings")),
     jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Rànquings municipals", url }])],
   });
 

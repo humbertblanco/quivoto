@@ -1,6 +1,6 @@
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna, llocWeb, ORGANITZACIO } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg, llocWeb, ORGANITZACIO } from "./seo";
 import { MASCOTA_CSS, catalunya } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
 import { cara } from "./cara";
@@ -653,6 +653,7 @@ export function renderPortada(comptes: ComptesPortada, generatedAt: string, most
     titol: `Observatori municipal: ${xifra(comptes.municipis)} municipis de Catalunya`,
     descripcio,
     url,
+    imatge: imatgeOg(FITXER_OG.global("observatori")),
     jsonLd: [llocWeb("Observatori municipal de quivoto", url, descripcio), ORGANITZACIO, filAriadna(ARREL_OBSERVATORI)],
   });
 

@@ -5,7 +5,7 @@ import { findChanges } from "../derive/mayor-changes";
 import { GRAFICS_JS, serieTemporal } from "./grafics";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
 import { cara } from "./cara";
@@ -969,6 +969,7 @@ export function renderTrajectoriaElectes(data: TrajectoriaData, generatedAt: str
       salt === null ? "" : ` i els ${nombre(salt.ambSalt)} que han fet el salt`
     }.`,
     url,
+    imatge: imatgeOg(FITXER_OG.global("trajectoria")),
     jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Quant duren els que manen", url }])],
   });
 

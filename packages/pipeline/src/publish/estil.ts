@@ -8,6 +8,65 @@ import { ESCUT_CSS } from "./escut";
  * Va incrustat perquè cada radiografia sigui un fitxer autònom: es pot obrir
  * des de qualsevol lloc, arxivar i enviar sense que se'n trenqui res.
  */
+/**
+ * El full del cercador, a part de la resta perquè té dues sortides.
+ *
+ * Les pàgines de l'Observatori l'incrusten dins de `RADIOGRAFIA_CSS`, com
+ * sempre; la landing, que té el seu propi full a `web/public/assets/styles.css`,
+ * l'enllaça com a `assets/cercador.css`, que escriu `escriuCercadorCompartit()`
+ * a partir d'aquesta mateixa constant. El cercador s'ha de veure igual a la
+ * portada de quivoto que a la fitxa d'un poble, i la manera de garantir-ho no
+ * és copiar-ne les regles a dos llocs sinó que només n'hi hagi un.
+ *
+ * Els tokens que fa servir (`--ink`, `--paper-2`, `--vora`, `--r-m`, `--e2`,
+ * `--presec`, `--display`, `--text`) es diuen igual als dos fulls.
+ */
+export const CERCADOR_CSS = `
+/* --- el cercador --------------------------------------------------------
+   El botó el posa el guió, així que aquí no hi ha res que quedi penjat sense
+   JavaScript. La finestra és un «dialog» de debò: el navegador ja hi fa el
+   focus, l'Esc i el fons, i no cal reinventar-ho.
+
+   La ranura és el lloc de la capçalera on el guió posa el botó: hi és a la
+   capçalera de l'Observatori (capcalera.ts) i a la de la landing
+   (build_landing.py), i per això la regla viatja amb el cercador i no amb la
+   capçalera. */
+.capcalera .ranura-cerca{display:inline-flex;align-items:center}
+.obre-cerca{display:inline-flex;align-items:center;gap:8px;margin-left:auto;margin-right:var(--e2);
+  font-family:var(--text);font-weight:800;font-size:.82rem;color:var(--ink);cursor:pointer;
+  background:var(--paper-2);border:2px solid var(--ink);border-radius:var(--r-max);
+  padding:0 16px;min-height:38px;transition:background .12s ease,color .12s ease}
+.obre-cerca:hover{background:var(--ink);color:var(--paper)}
+@media (prefers-reduced-motion:reduce){.obre-cerca{transition:none}}
+@media (max-width:520px){ .obre-cerca span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)} .obre-cerca{padding:0 11px} }
+
+.cercador{width:min(560px,calc(100vw - 32px));padding:0;border:2.5px solid var(--ink);
+  border-radius:var(--r-m);box-shadow:6px 6px 0 var(--ink);background:var(--paper-2);color:var(--ink);
+  margin-top:12vh}
+.cercador::backdrop{background:rgba(30,27,46,.45)}
+.cerca-cap{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--paper);
+  border-bottom:2.5px solid var(--ink);color:var(--ink)}
+.cerca-cap input{flex:1 1 auto;min-width:0;border:0;background:none;font-family:var(--text);
+  font-size:1rem;font-weight:700;color:var(--ink);outline:none}
+.cerca-cap input::placeholder{color:var(--ink-suau);font-weight:600}
+.cerca-tanca{font-family:var(--text);font-size:.66rem;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-suau);background:none;border:2px solid var(--vora);
+  border-radius:6px;padding:3px 7px;cursor:pointer}
+.cerca-resultats{max-height:min(420px,54vh);overflow-y:auto}
+.cerca-buit{font-size:.9rem;color:var(--ink-suau);margin:0;padding:20px 18px;line-height:1.45}
+.cerca-fila{display:flex;align-items:center;gap:12px;padding:11px 16px;text-decoration:none;
+  color:inherit;border-top:1px solid var(--vora)}
+.cerca-fila:first-child{border-top:0}
+.cerca-fila.tria{background:var(--presec);color:#1E1B2E}
+.cerca-fila .mena{flex:none;font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-suau);width:4.6em}
+.cerca-fila.tria .mena{color:rgba(30,27,46,.66)}
+.cerca-fila .qui{display:flex;flex-direction:column;gap:1px;min-width:0}
+.cerca-fila .qui b{font-family:var(--display);font-weight:900;font-size:1rem;letter-spacing:-.01em}
+.cerca-fila .qui span{font-size:.76rem;color:var(--ink-suau);font-weight:700}
+.cerca-fila.tria .qui span{color:rgba(30,27,46,.7)}
+`;
+
 const FULL = `
 :root{
   --paper:#FBF7EE; --paper-2:#FFFFFF; --ink:#1E1B2E; --ink-suau:#6B6680;
@@ -85,7 +144,6 @@ a{color:inherit;text-underline-offset:3px}
    fila: si tot hi cridés, no s'hi sabria on ets. */
 .capcalera .ara{color:var(--coral-text);text-decoration:underline;
   text-decoration-thickness:2.5px;text-underline-offset:5px}
-.capcalera .ranura-cerca{display:inline-flex;align-items:center}
 /* Amb set entrades el menú ja no cap al costat del logotip a partir de 900px:
    s'hi quedava a mitges i l'etiqueta queia sola a una segona fila. Aquí el menú
    baixa sencer a la seva pròpia fila —com fa la landing— i la fila de dalt es
@@ -116,43 +174,7 @@ a{color:inherit;text-underline-offset:3px}
   display:inline-flex;align-items:center;min-height:44px}
 .etiqueta{background:var(--presec);color:#1E1B2E;border-radius:var(--r-max);padding:5px 12px;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
 
-/* --- el cercador --------------------------------------------------------
-   El botó el posa el guió, així que aquí no hi ha res que quedi penjat sense
-   JavaScript. La finestra és un «dialog» de debò: el navegador ja hi fa el
-   focus, l'Esc i el fons, i no cal reinventar-ho. */
-.obre-cerca{display:inline-flex;align-items:center;gap:8px;margin-left:auto;margin-right:var(--e2);
-  font-family:var(--text);font-weight:800;font-size:.82rem;color:var(--ink);cursor:pointer;
-  background:var(--paper-2);border:2px solid var(--ink);border-radius:var(--r-max);
-  padding:0 16px;min-height:38px;transition:background .12s ease,color .12s ease}
-.obre-cerca:hover{background:var(--ink);color:var(--paper)}
-@media (prefers-reduced-motion:reduce){.obre-cerca{transition:none}}
-@media (max-width:520px){ .obre-cerca span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)} .obre-cerca{padding:0 11px} }
-
-.cercador{width:min(560px,calc(100vw - 32px));padding:0;border:2.5px solid var(--ink);
-  border-radius:var(--r-m);box-shadow:6px 6px 0 var(--ink);background:var(--paper-2);color:var(--ink);
-  margin-top:12vh}
-.cercador::backdrop{background:rgba(30,27,46,.45)}
-.cerca-cap{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--paper);
-  border-bottom:2.5px solid var(--ink);color:var(--ink)}
-.cerca-cap input{flex:1 1 auto;min-width:0;border:0;background:none;font-family:var(--text);
-  font-size:1rem;font-weight:700;color:var(--ink);outline:none}
-.cerca-cap input::placeholder{color:var(--ink-suau);font-weight:600}
-.cerca-tanca{font-family:var(--text);font-size:.66rem;font-weight:800;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--ink-suau);background:none;border:2px solid var(--vora);
-  border-radius:6px;padding:3px 7px;cursor:pointer}
-.cerca-resultats{max-height:min(420px,54vh);overflow-y:auto}
-.cerca-buit{font-size:.9rem;color:var(--ink-suau);margin:0;padding:20px 18px;line-height:1.45}
-.cerca-fila{display:flex;align-items:center;gap:12px;padding:11px 16px;text-decoration:none;
-  color:inherit;border-top:1px solid var(--vora)}
-.cerca-fila:first-child{border-top:0}
-.cerca-fila.tria{background:var(--presec);color:#1E1B2E}
-.cerca-fila .mena{flex:none;font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--ink-suau);width:4.6em}
-.cerca-fila.tria .mena{color:rgba(30,27,46,.66)}
-.cerca-fila .qui{display:flex;flex-direction:column;gap:1px;min-width:0}
-.cerca-fila .qui b{font-family:var(--display);font-weight:900;font-size:1rem;letter-spacing:-.01em}
-.cerca-fila .qui span{font-size:.76rem;color:var(--ink-suau);font-weight:700}
-.cerca-fila.tria .qui span{color:rgba(30,27,46,.7)}
+${CERCADOR_CSS}
 
 main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
 .portada{padding:var(--e3) 0 var(--e4)}

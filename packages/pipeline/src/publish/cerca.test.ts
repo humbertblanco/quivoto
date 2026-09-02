@@ -393,7 +393,10 @@ describe("el guió del navegador", () => {
   });
 
   it("tots els camins surten de «base» i cap no està escrit a mà", () => {
-    expect(html).toContain('var BASE = "/observatori/"');
+    // La base ja no va escrita al guió: la porta el diàleg a «data-base» i el
+    // mateix guió serveix des de la landing, on la base és absoluta.
+    expect(html).toContain('data-base="/observatori/"');
+    expect(html).toContain('var BASE = dialeg.getAttribute("data-base")');
     expect(html).toContain('BASE + "cerca.json"');
     expect(html).toContain('BASE + "cerca-electes.json"');
     expect(html).toContain('BASE + "cerca-alcaldies.json"');

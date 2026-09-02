@@ -9,7 +9,7 @@ import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { esAlcaldia } from "./alcaldia";
-import { ARREL_OBSERVATORI, capSeo, DESCRIPCIO_MAXIMA, filAriadna, MARCA, TITOL_MAXIM } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, DESCRIPCIO_MAXIMA, filAriadna, FITXER_OG, imatgeOg, MARCA, TITOL_MAXIM } from "./seo";
 import type { FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
 import type { FitxaCapsDeLlista } from "../jobs/j27-caps-de-llista";
 
@@ -2001,6 +2001,7 @@ ${capSeo({
   titol: titolRegidor(r, ctx),
   descripcio: descripcioRegidor(r, ctx),
   url,
+  imatge: imatgeOg(FITXER_OG.regidor(ctx.slug, ctx.adreca)),
   tipus: "profile",
   jsonLd: [fil, personaJsonLd(r, ctx, url, partit)],
 })}

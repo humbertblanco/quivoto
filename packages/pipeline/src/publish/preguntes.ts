@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { informe, validaConjunt, type Conjunt, type Veredicte } from "./llindar";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna, type MetaPagina } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg, type MetaPagina } from "./seo";
 import { verifica } from "./verificacio";
 import { verificaCites } from "./cites";
 import { MASCOTA_CSS, papereta } from "./mascota";
@@ -325,6 +325,7 @@ export function renderIndexPreguntes(conjunts: readonly ConjuntAmbSlug[], genera
       titol: "Preguntes per municipi",
       descripcio: `Les preguntes que la brúixola de quivoto faria a ${conjunts.length} municipis de Catalunya, en esborrany i amb l'evidència de cadascuna: ${responibles} ja es poden respondre.`,
       url,
+      imatge: imatgeOg(FITXER_OG.global("preguntes")),
       jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Preguntes per municipi", url }])],
     },
     "../",

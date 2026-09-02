@@ -15,7 +15,7 @@ import { FOTOS_WIKIMEDIA_CSS, creditRetrat, retratsPerNom, type Retrat } from ".
 import { peu } from "./peu";
 import type { RadiografiaData } from "./radiografia";
 import { frasesQueCaben, titolQueCap } from "./regidor";
-import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { partitDe, sigla } from "./sigla";
 
 /**
@@ -898,6 +898,7 @@ ${capSeo({
   titol: titolAlcaldia(p, municipi.nom, ctx.genere),
   descripcio: descripcioAlcaldia(p, municipi.nom, ctx.genere),
   url,
+  imatge: imatgeOg(FITXER_OG.alcaldia(municipi.slug, p.slug)),
   tipus: "profile",
   jsonLd: [fil, personaJsonLd(p, municipi, url, ctx.genere)],
 })}

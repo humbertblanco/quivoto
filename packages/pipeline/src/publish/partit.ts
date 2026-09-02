@@ -8,7 +8,7 @@ import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { buildPeerGroups, medianOf } from "../derive/peers";
 import { nomLlegible, normalizePersonName, slugify } from "../lib/text";
 import { SITE } from "./config";
-import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { tintaSobre as tintaDeContrast } from "./contrast";
 import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
@@ -1792,6 +1792,7 @@ export function renderPartit(data: PartitData, generatedAt: string): string {
     titol: `${data.sigles} als ajuntaments de Catalunya`,
     descripcio: `${resum} On mana i com li ha anat des del 1979.`,
     url,
+    imatge: imatgeOg(FITXER_OG.partit(data.id)),
     tipus: "article",
     jsonLd: [
       filAriadna([...ARREL_OBSERVATORI, { nom: "Els partits", url: `${SITE}/observatori/partit/` }, { nom: data.sigles, url }]),
