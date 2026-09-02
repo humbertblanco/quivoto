@@ -124,8 +124,23 @@ export function consultaAlcaldies(qidsMunicipis: readonly string[]): string {
   return [
     "SELECT ?muni ?persona ?personaLabel ?inici ?fi ?causa ?causaLabel ?rolLabel ?carrecLabel ?partit ?partitLabel ?imatge WHERE {",
     `  VALUES ?muni { ${qidsMunicipis.map((q) => `wd:${q}`).join(" ")} }`,
-    "  ?muni p:P6 ?st .",
-    "  ?st ps:P6 ?persona ; wikibase:rank ?rang .",
+    /*
+     * Dos camins, perquè Wikidata en fa servir dos. A l'element del municipi,
+     * P6 (cap de govern) sol portar només l'alcaldia vigent. La llista sencera
+     * viu a les persones: cada municipi té un element «alcalde de Badalona»
+     * (P1001 = el municipi) i cada alcalde el porta com a càrrec (P39) amb
+     * inici, fi i causa del final («renúncia», «moció de censura»). Badalona
+     * amb el primer camí donava un nom; amb el segon, cent des del 1828.
+     */
+    "  {",
+    "    ?muni p:P6 ?st .",
+    "    ?st ps:P6 ?persona ; wikibase:rank ?rang .",
+    "  } UNION {",
+    "    ?carrec wdt:P1001 ?muni .",
+    "    { ?carrec wdt:P31 wd:Q5663900 } UNION { ?carrec wdt:P279 wd:Q30185 } UNION { ?carrec wdt:P31 wd:Q30185 }",
+    "    ?persona p:P39 ?st .",
+    "    ?st ps:P39 ?carrec ; wikibase:rank ?rang .",
+    "  }",
     "  FILTER(?rang != wikibase:DeprecatedRank)",
     "  OPTIONAL { ?st pq:P580 ?inici }",
     "  OPTIONAL { ?st pq:P582 ?fi }",

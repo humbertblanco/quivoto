@@ -124,6 +124,7 @@ export function fusionaAmbWikidata(
   const terms = [...new Set(generalitat.map((r) => r.term))];
   const resultat: PasAlcaldia[] = generalitat.map((r) => ({ ...r }));
 
+  const ordenatsPerTram = [...terms].sort();
   for (const alcaldia of wikidata) {
     if (alcaldia.inici === null) continue;
     const term = termDe(alcaldia.inici, terms, termStarts);
@@ -131,6 +132,15 @@ export function fusionaAmbWikidata(
     // Si Wikidata diu que va acabar abans que el mandat comencés, la data
     // d'inici és sospitosa; no s'hi afegeix res.
     if (alcaldia.fi !== null && alcaldia.fi < alcaldia.inici) continue;
+    // Si el tram continua al mandat següent, el final i el seu motiu no són
+    // d'aquest mandat: van al tram de després (vegeu més avall).
+    const seguent = ordenatsPerTram[ordenatsPerTram.indexOf(term) + 1];
+    const iniciSeguent = seguent !== undefined ? (termStarts.get(seguent) ?? `${seguent.slice(0, 4)}-06-15`) : null;
+    const acabaEnAquest = alcaldia.fi !== null && (iniciSeguent === null || alcaldia.fi < iniciSeguent);
+    // Si continua, el tram d'aquest mandat s'acaba on comença el següent:
+    // la durada surt bé i el motiu de deixar-ho, que és d'un altre any, no.
+    const fi = acabaEnAquest ? alcaldia.fi : iniciSeguent;
+    const motiuFinal = acabaEnAquest ? alcaldia.motiuFinal : null;
 
     const delMandat = resultat.filter((r) => r.term === term);
     const seves = delMandat.filter((r) => mateixaPersona(r.name, alcaldia.nom));
@@ -140,9 +150,12 @@ export function fusionaAmbWikidata(
       const distancia = (r: PasAlcaldia): number =>
         r.tookOfficeOn === null ? Number.POSITIVE_INFINITY : Math.abs(Date.parse(r.tookOfficeOn) - Date.parse(alcaldia.inici!));
       const fila = [...seves].sort((a, b) => distancia(a) - distancia(b))[0]!;
+      // La Generalitat sovint no dona la data de presa de possessió de qui
+      // arriba a mig mandat (Guijarro, 2021): si Wikidata la té, es completa.
+      if (fila.tookOfficeOn === null) fila.tookOfficeOn = alcaldia.inici;
       if (fila.qid === undefined) fila.qid = alcaldia.qid;
-      if (fila.finsA === undefined || fila.finsA === null) fila.finsA = alcaldia.fi;
-      if (fila.motiuFinal === undefined || fila.motiuFinal === null) fila.motiuFinal = alcaldia.motiuFinal;
+      if (fila.finsA === undefined || fila.finsA === null) fila.finsA = fi;
+      if (fila.motiuFinal === undefined || fila.motiuFinal === null) fila.motiuFinal = motiuFinal;
       if (alcaldia.interina) fila.interina = true;
       if (alcaldia.partit !== null && (fila.partyRaw === null || partitTruncat(fila.partyRaw)) && !fila.partitWikidata) {
         fila.partitWikidata = alcaldia.partit;
@@ -157,11 +170,48 @@ export function fusionaAmbWikidata(
       tookOfficeOn: alcaldia.inici,
       font: "wikidata",
       qid: alcaldia.qid,
-      finsA: alcaldia.fi,
-      motiuFinal: alcaldia.motiuFinal,
+      finsA: fi,
+      motiuFinal,
       interina: alcaldia.interina,
       partitWikidata: alcaldia.partit,
     });
+  }
+
+  /*
+   * Un tram de Wikidata que travessa un ple de constitució és la mateixa
+   * persona a dos mandats: Àlex Pastor va ser alcalde del juny del 2018 a
+   * l'abril del 2020, o sigui el final del 2015-2019 i el començament del
+   * 2019-2023. Sense això el segon mandat començava per qui el va rellevar i
+   * no per qui el va obrir. Als mandats següents la data d'inici és la del
+   * ple de constitució, i el motiu del final només va al darrer tram.
+   */
+  const ordenats = [...terms].sort();
+  for (const alcaldia of wikidata) {
+    if (alcaldia.inici === null) continue;
+    const primer = termDe(alcaldia.inici, ordenats, termStarts);
+    if (primer === null) continue;
+    for (const term of ordenats) {
+      if (term <= primer) continue;
+      const inici = termStarts.get(term) ?? `${term.slice(0, 4)}-06-15`;
+      if (inici < alcaldia.inici) continue;
+      if (alcaldia.fi !== null && alcaldia.fi <= inici) break;
+      if (resultat.some((r) => r.term === term && mateixaPersona(r.name, alcaldia.nom))) continue;
+      const seguent = ordenats[ordenats.indexOf(term) + 1];
+      const finsAlMandat = seguent !== undefined ? (termStarts.get(seguent) ?? `${seguent.slice(0, 4)}-06-15`) : null;
+      const acabaAqui = alcaldia.fi !== null && (finsAlMandat === null || alcaldia.fi < finsAlMandat);
+      resultat.push({
+        term,
+        name: alcaldia.nom,
+        partyRaw: null,
+        tookOfficeOn: inici,
+        font: "wikidata",
+        qid: alcaldia.qid,
+        finsA: acabaAqui ? alcaldia.fi : null,
+        motiuFinal: acabaAqui ? alcaldia.motiuFinal : null,
+        interina: alcaldia.interina,
+        partitWikidata: alcaldia.partit,
+      });
+    }
   }
 
   return resultat.sort((a, b) => a.term.localeCompare(b.term) || compareDates(a.tookOfficeOn, b.tookOfficeOn));
