@@ -224,7 +224,8 @@ export function peu(
     conjunts del portal de la Seu-e en CC0; <a href="${escape(`${base}dades/#fonts`)}">el catàleg complet de fonts</a>
     diu d'on surt cada dada, com es transforma i amb quina llicència. Esborrany intern, encara no indexat.</p>
     <p class="legal"><a href="${escape(`${arrel(base)}avis-legal.html`)}">Avís legal</a> ·
-    <a href="${escape(`${arrel(base)}privadesa.html`)}">Privadesa</a></p>
+    <a href="${escape(`${arrel(base)}privadesa.html`)}">Privadesa</a> ·
+    <a href="${escape(`${arrel(base)}premsa.html`)}">Premsa</a></p>
     <p class="credit">Un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a
     <a href="https://damosenelblanco.com">Damos en el Blanco</a> ·
     <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.</p>

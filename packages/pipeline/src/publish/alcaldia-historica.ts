@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { isNotNull } from "drizzle-orm";
 import { people, type Db } from "@quivoto/db";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
+import { familiaDelPartit, motiuFinalEscrit, type PasAlcaldia } from "../derive/alcaldies";
 import type { FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
 import type { FitxaFotosExalcaldes } from "../jobs/j28-fotos-exalcaldes";
 import { de, elDia, nomLlegible, normalizePersonName, slugify } from "../lib/text";
@@ -84,7 +85,12 @@ import { partitDe, sigla } from "./sigla";
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Una fila de l'historial d'alcaldies, tal com la desa la mètrica `mayors`. */
-export type FilaHistorial = { term: string; name: string; partyRaw: string | null; tookOfficeOn: string | null };
+/**
+ * Una fila de l'historial: de la Generalitat, o afegida de Wikidata (J31) per
+ * `derive/alcaldies.ts`, que llavors porta `font: "wikidata"` i, quan els té,
+ * el final (`finsA`), el motiu (`motiuFinal`) i el partit sencer.
+ */
+export type FilaHistorial = PasAlcaldia;
 
 /**
  * L'historial i els relleus, tal com els desa la mètrica `mayors` de
@@ -149,6 +155,16 @@ export type Mandat = {
   arribaAMigMandat: boolean;
   /** Algú altre el va rellevar abans que s'acabés el mandat. */
   marxaAMigMandat: boolean;
+  /** El pas no és a l'historial de la Generalitat: el diu Wikidata. */
+  font: "generalitat" | "wikidata";
+  /** Quan va acabar, segons Wikidata (P582); `null` si no ho diu o encara hi és. */
+  finsA: string | null;
+  /** Per què va acabar, segons Wikidata (P1534), ja escrit per a la pàgina: «va dimitir». */
+  motiuFinal: string | null;
+  /** Alcaldia interina o en funcions, segons Wikidata. */
+  interina: boolean;
+  /** El nom sencer del partit segons Wikidata, quan la Generalitat el retalla o no en té. */
+  partitWikidata: string | null;
   /** Dins del mateix mandat: qui hi havia just abans i qui va venir just després. */
   abansEnElMandat: VeiAlcaldia | null;
   despresEnElMandat: VeiAlcaldia | null;
@@ -403,6 +419,10 @@ function periodes(cadena: readonly Pas[], avui: string): { inici: string; fi: st
   return cadena.map((p, i) => {
     const seguent = inicis[i + 1];
     const inici = inicis[i]!;
+    // Si Wikidata diu quan va acabar, és la data bona: el pas següent pot
+    // començar dies més tard (una alcaldia accidental entremig que ningú no
+    // ha apuntat) i llavors comptar fins al següent allargaria l'alcaldia.
+    if (p.finsA && p.finsA >= inici.data) return { inici: inici.data, fi: p.finsA, aproximat: inici.aproximat };
     if (seguent) return { inici: inici.data, fi: seguent.data, aproximat: inici.aproximat || seguent.aproximat };
     const mandatObert = p.anyFi > Number(avui.slice(0, 4)) || (p.anyFi === Number(avui.slice(0, 4)) && avui < `${p.anyFi}-06-15`);
     return mandatObert
@@ -447,13 +467,13 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
       primerAny: 0,
       ultimAny: 0,
       sigles: seus[seus.length - 1]!.partyRaw,
-      color: colorDe(seus[seus.length - 1]!.partyRaw),
+      color: colorDe(seus[seus.length - 1]!.partyRaw ?? seus[seus.length - 1]!.partitWikidata ?? null),
       durada: { dies: 0, aproximat: false },
       abans: null,
       despres: null,
       entremig: [],
-      retrat: retrats.get(pas.clau) ?? null,
-      wikidata: wikidataDe(opcions.trajectoria, opcions.fotos, pas.clau),
+      retrat: retratDe(seus, retrats, opcions.fotos),
+      wikidata: clausDe(seus).map((c) => wikidataDe(opcions.trajectoria, opcions.fotos, c)).find((w) => w !== null) ?? null,
     });
   }
   const slugs = new Set<string>();
@@ -478,7 +498,11 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
     const persona = persones.get(pas.clau)!;
     const canvi = historial.changes.find((c) => c.term === pas.term) ?? null;
     const ordre = canvi ? canvi.mayors.map((m) => normalizePersonName(m.name)) : [];
-    const pos = ordre.indexOf(pas.clau);
+    // Pel nom canònic o per la grafia d'aquest pas: després d'`unificaVariants`
+    // la clau pot ser la d'un altre mandat («alejandro pastor lopez») i el
+    // relleu, escrit com el diu Wikidata («Àlex Pastor López»).
+    const propia = normalizePersonName(pas.name);
+    const pos = ordre.findIndex((o) => o === pas.clau || o === propia);
     const arriba = canvi !== null && pos >= 0 && (canvi.onlySuccessorKnown ? pos === 0 : pos > 0);
     const marxa = canvi !== null && !canvi.onlySuccessorKnown && pos >= 0 && pos < ordre.length - 1;
     const anterior = cadena[i - 1];
@@ -491,6 +515,11 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
       tookOfficeOn: pas.tookOfficeOn,
       arribaAMigMandat: arriba,
       marxaAMigMandat: marxa,
+      font: pas.font === "wikidata" ? "wikidata" : "generalitat",
+      finsA: pas.finsA ?? null,
+      motiuFinal: motiuFinalEscrit(pas.motiuFinal),
+      interina: pas.interina === true,
+      partitWikidata: pas.partitWikidata ?? null,
       abansEnElMandat: arriba && anterior && anterior.term === pas.term ? vei(anterior) : null,
       despresEnElMandat: marxa && seguent && seguent.term === pas.term ? vei(seguent) : null,
       resultat: resultatDeLaLlista(opcions.results, pas.term, pas.partyRaw),
@@ -520,6 +549,35 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
   return [...persones.values()];
 }
 
+/**
+ * Totes les claus amb què una persona pot sortir a les altres fonts: la
+ * canònica (la del mandat més recent, després d'`unificaVariants`) i la de
+ * cada grafia que l'historial en té. «ALEJANDRO PASTOR LOPEZ» a la Generalitat
+ * i «Àlex Pastor López» a Wikidata són la mateixa persona amb dues claus, i
+ * el retrat de J28 porta la segona.
+ */
+function clausDe(seus: readonly Pas[]): string[] {
+  return [...new Set([seus[seus.length - 1]!.clau, ...seus.map((s) => normalizePersonName(s.name))])];
+}
+
+/**
+ * El retrat de J28: pel QID quan el pas el porta (el que J31 desa és exacte),
+ * i si no, per qualsevol de les claus de nom de la persona, amb la mateixa
+ * cautela de `retratsPerNom()`: un nom que lliga amb dues cares no en rep cap.
+ */
+function retratDe(seus: readonly Pas[], retrats: ReadonlyMap<string, Retrat>, fotos: FitxaFotosExalcaldes | null | undefined): Retrat | null {
+  const qids = new Set(seus.map((s) => s.qid).filter((q): q is string => typeof q === "string"));
+  if (qids.size > 0) {
+    const perQid = (fotos?.persones ?? []).find((p) => qids.has(p?.qid) && typeof p?.nom === "string" && typeof p?.cami === "string");
+    if (perQid !== undefined) return perQid as unknown as Retrat;
+  }
+  for (const clau of clausDe(seus)) {
+    const retrat = retrats.get(clau);
+    if (retrat !== undefined) return retrat;
+  }
+  return null;
+}
+
 /** L'any en què va començar de debò un mandat: el de la presa de possessió si la sabem. */
 const anyDInici = (m: Mandat): number => (m.tookOfficeOn ? Number(m.tookOfficeOn.slice(0, 4)) : m.anyInici);
 
@@ -529,7 +587,7 @@ const anyDeFi = (m: Mandat): number =>
 
 /** El color de la marca del partit, per a les inicials; `null` si no la sabem. */
 function colorDe(partyRaw: string | null): string | null {
-  const familia = partyRaw ? siglesFamily(partyRaw) : null;
+  const familia = familiaDelPartit(partyRaw);
   return familia && familia !== "local" ? (BRANDS_BY_ID.get(familia)?.color ?? null) : null;
 }
 
@@ -724,7 +782,21 @@ const llistaDe = (sigles: string): string => {
 
 function renderMandats(p: PersonaAlcaldia): string {
   const targetes = p.mandats.map((m) => {
-    const partit = m.partyRaw ? sigla(m.partyRaw, { base: BASE, color: p.color }) : `<span class="secundari">partit no consignat</span>`;
+    // El partit: el de la Generalitat com a sigla; si no n'hi ha, el que diu
+    // Wikidata, dit amb aquestes paraules. I quan la Generalitat el retalla
+    // («BADALONA EN COM»), el nom sencer de Wikidata al costat, no a sobre.
+    const partit = m.partyRaw
+      ? sigla(m.partyRaw, { base: BASE, color: p.color })
+      : m.partitWikidata
+        ? `<span class="partit-wikidata">${escape(m.partitWikidata)} <span class="secundari">segons Wikidata</span></span>`
+        : `<span class="secundari">partit no consignat</span>`;
+    const partitSencer = m.partyRaw && m.partitWikidata
+      ? `<p class="secundari">Nom complet segons Wikidata: ${escape(m.partitWikidata)}.</p>`
+      : "";
+    const marques = [
+      m.font === "wikidata" ? `<span class="marca-canvi">segons Wikidata</span>` : "",
+      m.interina ? `<span class="marca-canvi">alcaldia interina</span>` : "",
+    ].join("");
     const possessio = m.tookOfficeOn
       ? `<p>Va prendre possessió ${elDia(m.tookOfficeOn)}.</p>`
       : `<p class="secundari">La font no en dona la data de presa de possessió.</p>`;
@@ -732,11 +804,16 @@ function renderMandats(p: PersonaAlcaldia): string {
       ? `<p class="relleu">Va arribar a mig mandat${m.abansEnElMandat ? `, rellevant ${enllacVei(m.abansEnElMandat)}` : ""}.
          <span class="marca-canvi">relleu sense urnes</span></p>`
       : "";
-    const marxa = m.marxaAMigMandat
-      ? `<p class="relleu">Va deixar l'alcaldia abans d'acabar el mandat${
-          m.despresEnElMandat ? `: hi va seguir ${enllacVei(m.despresEnElMandat)}` : ""
-        }. La font no en diu el motiu, i nosaltres tampoc.</p>`
-      : "";
+    // El final: la Generalitat no diu mai per què algú plega. Quan Wikidata ho
+    // diu, es diu amb la seva data i amb el seu nom al costat; quan no, la
+    // frase de sempre, que és la veritat.
+    const despres = m.despresEnElMandat ? `: hi va seguir ${enllacVei(m.despresEnElMandat)}` : "";
+    const marxa = m.motiuFinal
+      ? `<p class="relleu">Va deixar l'alcaldia ${m.finsA ? elDia(m.finsA) : "abans d'acabar el mandat"}${despres}.
+         Segons Wikidata, ${perQue(m.motiuFinal)}.</p>`
+      : m.marxaAMigMandat
+        ? `<p class="relleu">Va deixar l'alcaldia abans d'acabar el mandat${despres}. La font no en diu el motiu, i nosaltres tampoc.</p>`
+        : "";
     const r = m.resultat;
     const resultat = r
       ? `<p class="resultat">A les municipals del ${r.any}, la llista ${llistaDe(r.sigles)} va treure
@@ -744,10 +821,16 @@ function renderMandats(p: PersonaAlcaldia): string {
          va ser la ${ordinalForca(r.forca)} força de ${r.forces}.</p>`
       : "";
     return `<li>
-      <div class="mandat-cap"><b class="mandat-anys">${escape(m.term)}</b>${partit}</div>
-      ${possessio}${arribada}${marxa}${resultat}
+      <div class="mandat-cap"><b class="mandat-anys">${escape(m.term)}</b>${partit}${marques}</div>
+      ${partitSencer}${possessio}${arribada}${marxa}${resultat}
     </li>`;
   });
+  const ambWikidata = p.mandats.some((m) => m.font === "wikidata" || m.motiuFinal !== null || m.partitWikidata !== null || m.interina);
+  const notaWikidata = ambWikidata
+    ? ` El que va marcat «segons Wikidata» —passos que a l'historial oficial li falten, la data i el motiu del final,
+    el nom sencer del partit— no és de la Generalitat: ve de Wikidata (dades CC0), que l'escriu qui vol, i aquí s'afegeix
+    sense treure res de la font oficial.`
+    : "";
   return `<section class="bloc" id="mandats">
     <h2>${p.mandats.length === 1 ? "El mandat" : "Els mandats"}</h2>
     <p class="entrada-bloc">${
@@ -757,8 +840,16 @@ function renderMandats(p: PersonaAlcaldia): string {
     <ol class="mandats">${targetes.join("")}</ol>
     <p class="nota">Historial d'alcaldes i alcaldesses 1979-2027 de la Generalitat de Catalunya (Dades Obertes,
     conjunt <code>2v2p-vu4h</code>). Els resultats de cada llista són els de les municipals del mateix any segons
-    el Departament d'Acció Exterior i Govern Obert; només es diuen quan la sigla de l'alcaldia lliga amb una sola llista.</p>
+    el Departament d'Acció Exterior i Govern Obert; només es diuen quan la sigla de l'alcaldia lliga amb una sola llista.${notaWikidata}</p>
   </section>`;
+}
+
+/** «va dimitir», «va ser per una moció de censura»: el motiu del final, dins de la frase. */
+function perQue(motiu: string): string {
+  if (motiu === "moció de censura") return "va ser per una moció de censura";
+  if (motiu === "inhabilitació") return "va ser per inhabilitació";
+  if (motiu.startsWith("va ")) return motiu;
+  return `el motiu consignat és «${escape(motiu)}»`;
 }
 
 function renderVeins(p: PersonaAlcaldia): string {

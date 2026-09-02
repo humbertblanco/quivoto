@@ -24,6 +24,16 @@ describe("peu", () => {
     expect(regidor).toContain('href="../../../../../privadesa.html"');
   });
 
+  /**
+   * La sala de premsa penja del web, com les legals, i la fa el generador de
+   * la landing (tools/build_landing.py): és l'única porta que un periodista té
+   * des d'una fitxa cap a qui som, les xifres i els materials.
+   */
+  it("porta a la sala de premsa al costat de les legals", () => {
+    expect(peu("./", "avui")).toContain('<a href="../premsa.html">Premsa</a>');
+    expect(peu("../../../../", "avui")).toContain('<a href="../../../../../premsa.html">Premsa</a>');
+  });
+
   it("diu quan s'ha generat, que és el que en diu si és fresca", () => {
     expect(peu("./", "30 d'agost del 2026")).toContain("Generat el 30 d'agost del 2026");
   });

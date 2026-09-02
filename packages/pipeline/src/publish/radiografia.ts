@@ -23,6 +23,7 @@ import { adrecesRegidors, carrecCurt, frasesQueCaben, titolQueCap } from "./regi
 import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { esAlcaldia, resolAlcaldia } from "./alcaldia";
 import { adrecesAlcaldies, alcaldiesHistoriques } from "./alcaldia-historica";
+import { familiaDelPartit, motiuFinalEscrit, type PasAlcaldia } from "../derive/alcaldies";
 import { FOTOS_WIKIMEDIA_CSS, creditsRetrats, retratsPerNom, type Retrat } from "./fotos-wikidata";
 import type { FitxaFotosExalcaldes } from "../jobs/j28-fotos-exalcaldes";
 import {
@@ -841,7 +842,8 @@ type CouncilChangesMetric = {
   substitutions: number; switches: number;
 };
 type MayorsMetric = {
-  history: { term: string; name: string; partyRaw: string | null; tookOfficeOn: string | null }[];
+  /** Les files de la Generalitat i, marcades amb `font: "wikidata"`, les que J31 hi afegeix. */
+  history: PasAlcaldia[];
   changes: { term: string; mayors: { name: string; tookOfficeOn: string | null }[]; partyChanged: boolean; onlySuccessorKnown?: boolean; daysIntoTerm?: number }[];
   currentTermChange: { term: string; mayors: { name: string; tookOfficeOn: string | null }[]; onlySuccessorKnown?: boolean; daysIntoTerm?: number } | null;
   distinctPeople: number;
@@ -2301,7 +2303,10 @@ function renderMayors(
     // s'entén malament d'aquesta taula: sense marcar-ho sembla una dada
     // repetida. La cel·la del mandat, doncs, només s'escriu al primer.
     const repeteix = history[i - 1]?.term === m.term;
-    const familia = m.partyRaw ? siglesFamily(m.partyRaw) : null;
+    // El color, de la sigla de la Generalitat o, si no n'hi ha, del nom sencer
+    // que dona Wikidata: un pas de Wikidata sense punt de color semblaria
+    // d'un partit desconegut quan és del PSC o del PP.
+    const familia = familiaDelPartit(m.partyRaw) ?? familiaDelPartit(m.partitWikidata);
     const color = familia ? BRANDS_BY_ID.get(familia)?.color : undefined;
     const marca = color ? `<span class="punt-partit" style="--c:${color}" aria-hidden="true"></span>` : "";
     // El nom porta a la fitxa de la persona, i la cara —de Commons, quan n'hi
@@ -2316,14 +2321,30 @@ function renderMayors(
     const qui = adreca
       ? `<a class="qui-alcaldia" href="${escape(adreca)}">${cara(nomLlegible(m.name), retrat?.cami ?? null, { mida: 28, color })}${escape(nomLlegible(m.name))}</a>`
       : escape(nomLlegible(m.name));
+    // El que ve de Wikidata (J31) es diu amb aquestes paraules: el pas sencer
+    // quan la Generalitat no el té, el motiu del final quan el sap, i el nom
+    // sencer del partit quan la Generalitat el retalla, al costat i no a sobre.
+    const motiu = motiuFinalEscrit(m.motiuFinal);
+    const marques = [
+      late ? ' <span class="marca-canvi">va arribar a mig mandat</span>' : "",
+      m.font === "wikidata" ? ' <span class="marca-canvi">segons Wikidata</span>' : "",
+      m.interina ? ' <span class="marca-canvi">alcaldia interina</span>' : "",
+      motiu ? ` <span class="marca-canvi" title="segons Wikidata">${escape(motiu)}</span>` : "",
+    ].join("");
+    const partit = m.partyRaw
+      ? `${escape(m.partyRaw)}${m.partitWikidata ? ` <span class="secundari" title="nom complet segons Wikidata">(${escape(m.partitWikidata)})</span>` : ""}`
+      : m.partitWikidata
+        ? `${escape(m.partitWikidata)} <span class="secundari">segons Wikidata</span>`
+        : "—";
     return `<tr${repeteix ? ' class="mateix-mandat"' : ""}>
       <th scope="row">${escape(m.term)}</th>
-      <td>${qui}${late ? ' <span class="marca-canvi">va arribar a mig mandat</span>' : ""}</td>
-      <td class="partit">${marca}${escape(m.partyRaw ?? "—")}</td>
+      <td>${qui}${marques}</td>
+      <td class="partit">${marca}${partit}</td>
       <td class="secundari">${m.tookOfficeOn ? formatDate(m.tookOfficeOn) : "<span class=\"buit\" title=\"la font no en dona la data\">—</span>"}</td>
     </tr>`;
   });
   const relleus = history.filter((m, i) => history[i - 1]?.term === m.term).length;
+  const deWikidata = history.filter((m) => m.font === "wikidata" || m.motiuFinal || m.partitWikidata).length;
   // Tres mandats oberts i la resta plegada. Quinze files per arribar al 1979
   // són quinze files de les quals la gent en mira dues: qui mana i qui manava
   // abans. La resta hi és sencera —plegada, no esborrada, com la lletra
@@ -2346,6 +2367,11 @@ function renderMayors(
       ? `<p class="nota oberta">Els mandats que surten ${
           relleus === 1 ? "dues vegades" : "més d'una vegada"
         } no són cap duplicat: hi va haver un relleu a l'alcaldia sense passar per les urnes.</p>`
+      : ""
+  }${
+    deWikidata > 0
+      ? `<p class="nota">El que va marcat «segons Wikidata» no és a l'historial de la Generalitat: són passos, motius de relleu
+        o noms sencers de partit que Wikidata (dades CC0) sí que té, afegits sense treure res de la font oficial.</p>`
       : ""
   }${creditsRetrats(ambRetrat.values())}`;
 }

@@ -27,10 +27,10 @@ export function normalize(text: string): string {
  * Maria. Van amb el punt o amb la ª a posta: una «Ma» o una «M» soltes sense
  * res poden ser un cognom o una inicial de veritat, i no es toquen.
  *
- *   · «Ma.», «Mª», «M.ª», «Mª.» → Maria; també «M.» sola davant d'un altre mot
- *     («Josep M. Puig», «M. Àngels Coll»), que a un nom de pila català o
- *     castellà és Maria gairebé sempre. Quan no ho és —un Joan M. que és Joan
- *     Manuel— tampoc no lligava abans, així que no es perd res.
+ *   · «Ma.», «Mª», «M.ª», «Mª.» → Maria. Una «M.» sola NO es toca: J14 i J30
+ *     tracten les inicials com a ambigües a posta («M. Rosa Font» pot ser la
+ *     Maria o la Marta), i desplegar-la aquí els faria lligar amb certesa el
+ *     que només és probable.
  *   · «Fco.» → Francisco i «Fca.» → Francisca, les úniques altres abreviatures
  *     de nom que surten a les fonts.
  *
@@ -39,7 +39,6 @@ export function normalize(text: string): string {
 const ABREVIATURES_DE_NOM: ReadonlyArray<readonly [RegExp, string]> = [
   [/\bM\.?\s?ª\.?/giu, "Maria "],
   [/\bMa\./gi, "Maria "],
-  [/\bM\.(?=\s|$)/gi, "Maria "],
   [/\bFco\./gi, "Francisco "],
   [/\bFca\./gi, "Francisca "],
 ];

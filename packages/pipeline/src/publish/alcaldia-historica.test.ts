@@ -351,3 +351,119 @@ describe("la redirecció de qui ja té fitxa de regidor", () => {
     expect(esRedireccioAlcaldia(renderAlcaldiaHistorica(roig(), MUNICIPI, { generatedAt: "avui", genere: null, avui: AVUI }))).toBe(false);
   });
 });
+
+/**
+ * Badalona després de la fusió amb Wikidata (`derive/alcaldies.ts`): la
+ * Generalitat només té una alcaldia per mandat, i els passos que hi falten
+ * hi són amb `font: "wikidata"`, amb la data i el motiu del final.
+ */
+const BADALONA: HistorialAlcaldies = {
+  history: [
+    { term: "2023-2027", name: "XAVIER GARCIA ALBIOL", partyRaw: "PP", tookOfficeOn: "2023-06-17", qid: "Q5" },
+    { term: "2019-2023", name: "Rubén Guijarro Casas", partyRaw: null, tookOfficeOn: "2021-11-08", font: "wikidata", qid: "Q6", finsA: "2023-06-17", motiuFinal: null, interina: false, partitWikidata: "Partit dels Socialistes de Catalunya" },
+    { term: "2019-2023", name: "Xavier García Albiol", partyRaw: null, tookOfficeOn: "2020-05-12", font: "wikidata", qid: "Q5", finsA: "2021-11-08", motiuFinal: "moció de censura", interina: false, partitWikidata: "Partit Popular" },
+    { term: "2019-2023", name: "Aïda Llauradó Álvarez", partyRaw: null, tookOfficeOn: "2020-04-29", font: "wikidata", qid: "Q4", finsA: "2020-05-12", motiuFinal: null, interina: true, partitWikidata: "Badalona en Comú Podem" },
+    { term: "2019-2023", name: "ALEJANDRO PASTOR LOPEZ", partyRaw: "PSC-CP", tookOfficeOn: "2019-06-15", qid: "Q3", finsA: "2020-04-29", motiuFinal: "dimissió" },
+    { term: "2015-2019", name: "Àlex Pastor López", partyRaw: null, tookOfficeOn: "2018-06-20", font: "wikidata", qid: "Q3", finsA: "2019-06-15", motiuFinal: null, interina: false, partitWikidata: "Partit dels Socialistes de Catalunya" },
+    { term: "2015-2019", name: "MA. DOLORS SABATER PUIG", partyRaw: "BADALONA EN COM", tookOfficeOn: "2015-06-13", qid: "Q2", finsA: "2018-06-20", motiuFinal: "moció de censura", partitWikidata: "Guanyem Badalona en Comú" },
+  ],
+  changes: [
+    {
+      term: "2019-2023",
+      mayors: [
+        { name: "ALEJANDRO PASTOR LOPEZ", tookOfficeOn: "2019-06-15" }, { name: "Aïda Llauradó Álvarez", tookOfficeOn: "2020-04-29" },
+        { name: "Xavier García Albiol", tookOfficeOn: "2020-05-12" }, { name: "Rubén Guijarro Casas", tookOfficeOn: "2021-11-08" },
+      ],
+      partyChanged: true,
+    },
+    { term: "2015-2019", mayors: [{ name: "MA. DOLORS SABATER PUIG", tookOfficeOn: "2015-06-13" }, { name: "Àlex Pastor López", tookOfficeOn: "2018-06-20" }], partyChanged: true },
+  ],
+};
+
+const BADALONA_MUNICIPI = { nom: "Badalona", slug: "badalona", comarca: "Barcelonès" };
+
+describe("els passos que vénen de Wikidata", () => {
+  const persones = () => alcaldiesHistoriques(BADALONA, { avui: AVUI });
+  const de = (clau: string) => persones().find((p) => p.clau === clau)!;
+
+  it("cada persona hi és un cop, amb les dues grafies unificades, i el mandat sap d'on ve", () => {
+    // «Àlex Pastor López» (Wikidata, 2015-2019) i «ALEJANDRO PASTOR LOPEZ»
+    // (Generalitat, 2019-2023) són una sola persona, i mana el nom del mandat
+    // més recent, que és el de la font oficial.
+    expect(persones().map((p) => p.clau)).toEqual(["maria dolors sabater puig", "alejandro pastor lopez", "aida llaurado alvarez", "xavier garcia albiol", "ruben guijarro casas"]);
+    const pastor = de("alejandro pastor lopez");
+    expect(pastor.nom).toBe("Alejandro Pastor Lopez");
+    expect(pastor.mandats.map((m) => `${m.term} ${m.font}`)).toEqual(["2015-2019 wikidata", "2019-2023 generalitat"]);
+    expect(pastor.mandats[1]).toMatchObject({ finsA: "2020-04-29", motiuFinal: "va dimitir", marxaAMigMandat: true });
+    expect(de("aida llaurado alvarez").mandats[0]).toMatchObject({ interina: true, font: "wikidata", partitWikidata: "Badalona en Comú Podem" });
+  });
+
+  it("abans i després són els veïns reals dins del mandat, no els de la Generalitat sola", () => {
+    const sabater = de("maria dolors sabater puig");
+    expect(sabater.despres?.nom).toBe("Alejandro Pastor Lopez");
+    expect(sabater.mandats[0]!.despresEnElMandat?.nom).toBe("Alejandro Pastor Lopez");
+    const pastor = de("alejandro pastor lopez");
+    // El nom es publica tal com l'escriu la font oficial, amb l'abreviatura i tot.
+    expect(pastor.abans?.nom).toBe("Ma. Dolors Sabater Puig");
+    expect(pastor.mandats[0]!.abansEnElMandat?.nom).toBe("Ma. Dolors Sabater Puig");
+    expect(pastor.despres?.nom).toBe("Aïda Llauradó Álvarez");
+    const llaurado = de("aida llaurado alvarez");
+    expect(llaurado.abans?.nom).toBe("Alejandro Pastor Lopez");
+    expect(llaurado.despres?.nom).toBe("Xavier Garcia Albiol");
+    const albiol = de("xavier garcia albiol");
+    expect(albiol.actual).toBe(true);
+    expect(albiol.entremig.map((v) => v.nom)).toEqual(["Rubén Guijarro Casas"]);
+  });
+
+  it("la durada compta fins a la data de fi de Wikidata, no fins al pas següent", () => {
+    // Sabater: del 13-06-2015 al 20-06-2018, exactes.
+    expect(de("maria dolors sabater puig").durada).toEqual({ dies: 1103, aproximat: false });
+    // Llauradó: tretze dies d'alcaldia accidental.
+    expect(de("aida llaurado alvarez").durada.dies).toBe(13);
+  });
+
+  it("el retrat de J28 s'aparella pel QID o per qualsevol grafia del nom, també amb «Ma.» i la «i» dels cognoms", () => {
+    const foto = (qid: string, nom: string) => ({
+      qid, nom, naixement: null, defuncio: null, cami: `/observatori/fotos/wikimedia/${qid}.jpg`, format: "jpg" as const, amplada: 240, alcada: 300,
+      fitxer: `File:${qid}.jpg`, paginaFitxer: `https://commons.wikimedia.org/wiki/File:${qid}.jpg`, autor: null,
+      llicencia: { codi: "cc0", nom: "CC0 1.0", url: null },
+    });
+    const fotos = {
+      font: "Wikidata", fontImatges: "Commons", llicenciaDades: "CC0 1.0", consultat: "2026-08-30", ine5: "08015",
+      totalPersones: 2, ambFoto: 2, persones: [foto("Q2", "Maria Dolors Sabater i Puig"), foto("Q3", "Àlex Pastor López")], descartades: [],
+    };
+    const amb = alcaldiesHistoriques(BADALONA, { avui: AVUI, fotos });
+    expect(amb.find((p) => p.clau === "maria dolors sabater puig")!.retrat?.cami).toBe("/observatori/fotos/wikimedia/Q2.jpg");
+    // La clau canònica és «alejandro pastor lopez» i la foto diu «Àlex Pastor López»: lliga pel QID i per l'altra grafia.
+    expect(amb.find((p) => p.clau === "alejandro pastor lopez")!.retrat?.cami).toBe("/observatori/fotos/wikimedia/Q3.jpg");
+    const senseQid: HistorialAlcaldies = { ...BADALONA, history: BADALONA.history.map(({ qid: _qid, ...h }) => h) };
+    expect(alcaldiesHistoriques(senseQid, { avui: AVUI, fotos }).find((p) => p.clau === "alejandro pastor lopez")!.retrat?.cami).toBe("/observatori/fotos/wikimedia/Q3.jpg");
+    expect(amb.find((p) => p.clau === "xavier garcia albiol")!.retrat).toBeNull();
+  });
+
+  it("la pàgina diu «segons Wikidata» on toca: el pas, el motiu del final i el nom sencer del partit", () => {
+    const sabater = renderAlcaldiaHistorica(de("maria dolors sabater puig"), BADALONA_MUNICIPI, { generatedAt: "avui", genere: "alcaldessa", avui: AVUI });
+    expect(sabater).toContain("Va deixar l'alcaldia el 20 de juny del 2018: hi va seguir <a href=\"../../alcaldia/alejandro-pastor-lopez/\">Alejandro Pastor Lopez</a>.");
+    expect(sabater).toContain("Segons Wikidata, va ser per una moció de censura.");
+    expect(sabater).toContain("Nom complet segons Wikidata: Guanyem Badalona en Comú.");
+    expect(sabater).not.toContain("La font no en diu el motiu");
+    expect(sabater).toContain("no és de la Generalitat: ve de Wikidata");
+
+    const pastor = renderAlcaldiaHistorica(de("alejandro pastor lopez"), BADALONA_MUNICIPI, { generatedAt: "avui", genere: "alcalde", avui: AVUI });
+    expect(pastor).toContain('<span class="marca-canvi">segons Wikidata</span>');
+    expect(pastor).toContain('Partit dels Socialistes de Catalunya <span class="secundari">segons Wikidata</span>');
+    expect(pastor).toContain("Segons Wikidata, va dimitir.");
+    expect(pastor).toContain("rellevant <a href=\"../../alcaldia/ma-dolors-sabater-puig/\">Ma. Dolors Sabater Puig</a>");
+
+    const llaurado = renderAlcaldiaHistorica(de("aida llaurado alvarez"), BADALONA_MUNICIPI, { generatedAt: "avui", genere: "alcaldessa", avui: AVUI });
+    expect(llaurado).toContain('<span class="marca-canvi">alcaldia interina</span>');
+    expect(llaurado).toContain("<span class=\"etq\">Abans</span><span class=\"qui\"><a href=\"../../alcaldia/alejandro-pastor-lopez/\">Alejandro Pastor Lopez</a>");
+    expect(llaurado).toContain("<span class=\"etq\">Després</span><span class=\"qui\"><a href=\"../../alcaldia/xavier-garcia-albiol/\">Xavier Garcia Albiol</a>");
+  });
+
+  it("sense res de Wikidata, la pàgina no en parla", () => {
+    const html = renderAlcaldiaHistorica(roig(), MUNICIPI, { generatedAt: "avui", genere: null, avui: AVUI });
+    expect(html).not.toContain("segons Wikidata");
+    expect(html).not.toContain("Nom complet segons Wikidata");
+  });
+});

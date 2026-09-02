@@ -113,9 +113,9 @@ describe("normalizePersonName amb les abreviatures del nom de pila", () => {
     expect(normalizePersonName("Mª. Dolors Sabater Puig")).toBe(clau);
   });
 
-  it("«Josep M.» és Josep Maria, i «Fco.» és Francisco", () => {
-    expect(normalizePersonName("Josep M. Puig Roca")).toBe(normalizePersonName("Josep Maria Puig i Roca"));
-    expect(normalizePersonName("JOSEP M. PUIG ROCA")).toBe("josep maria puig roca");
+  it("una «M.» sola es queda com a inicial (J14 i J30 la tracten com a ambigua), i «Fco.» és Francisco", () => {
+    expect(normalizePersonName("Josep M. Puig Roca")).not.toBe(normalizePersonName("Josep Maria Puig i Roca"));
+    expect(normalizePersonName("JOSEP M. PUIG ROCA")).toBe("josep m puig roca");
     expect(normalizePersonName("Fco. Javier Pérez Gil")).toBe(normalizePersonName("Francisco Javier Pérez Gil"));
     expect(normalizePersonName("Fca. Martí Vila")).toBe("francisca marti vila");
   });

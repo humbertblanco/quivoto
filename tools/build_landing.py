@@ -78,6 +78,7 @@ T = {
   'qui':'Un projecte independent fet a Catalunya. Encara som pocs: si ets periodista local, treballes amb dades obertes o vols ajudar amb el teu municipi, escriu-nos.',
   'contacte':'hola@quivoto.cat',
   'peu_legal':'Avís legal','peu_priv':'Privadesa','peu_metod':'Metodologia (aviat)','peu_obs':'Observatori',
+  'peu_premsa':'Premsa','premsa_url':'/premsa.html',
   'peu':'quivoto — brúixola electoral de les municipals 2027.',
   'credit':'Un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
   'gracies_h':'Fet!','gracies_p':'T’avisarem quan obrim el teu municipi. Mentrestant, ja pots tancar aquesta pestanya.','gracies_torna':'Tornar a l’inici',
@@ -147,6 +148,7 @@ T = {
   'qui':'Un proyecto independiente hecho en Cataluña. Todavía somos pocos: si eres periodista local, trabajas con datos abiertos o quieres ayudar con tu municipio, escríbenos.',
   'contacte':'hola@quivoto.cat',
   'peu_legal':'Aviso legal','peu_priv':'Privacidad','peu_metod':'Metodología (pronto)','peu_obs':'Observatorio',
+  'peu_premsa':'Prensa','premsa_url':'/es/prensa.html',
   'peu':'quienvoto — brújula electoral de las municipales 2027.',
   'credit':'Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
   'gracies_h':'¡Hecho!','gracies_p':'Te avisaremos cuando abramos tu municipio. Mientras, ya puedes cerrar esta pestaña.','gracies_torna':'Volver al inicio',
@@ -535,7 +537,7 @@ def footer_complet(t):
         {xifres}</div>
       <nav class="anar" aria-label="{'Más del Observatorio' if es else 'Més de l’Observatori'}">{nav}</nav>
       <p class="lletra">{fonts}</p>
-      <p class="legal"><a href="/avis-legal.html">{noms[9]}</a> · <a href="/privadesa.html">{noms[10]}</a></p>
+      <p class="legal"><a href="/avis-legal.html">{noms[9]}</a> · <a href="/privadesa.html">{noms[10]}</a> · <a href="{t['premsa_url']}">{t['peu_premsa']}</a></p>
       <p class="credit">{t['credit']}</p>
     </div></footer>'''
 
@@ -1246,6 +1248,13 @@ def build_sitemap():
                         ('x-default', f'https://quivoto.cat/{nom}.html'))
         url(f'https://quivoto.cat/{nom}.html', '0.3', alternatives)
         url(f'https://quivoto.cat/es/{nom}.html', '0.3', alternatives)
+    # La sala de premsa: en català es diu premsa.html i en castellà prensa.html,
+    # que és com la buscarà qui la busqui. Val més que les legals: és la pàgina
+    # que un periodista ha de trobar.
+    alternatives = (('ca', 'https://quivoto.cat/premsa.html'), ('es', 'https://quivoto.cat/es/prensa.html'),
+                    ('x-default', 'https://quivoto.cat/premsa.html'))
+    url('https://quivoto.cat/premsa.html', '0.5', alternatives)
+    url('https://quivoto.cat/es/prensa.html', '0.5', alternatives)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n' +
            '\n'.join(urls) + '\n</urlset>\n')
@@ -1284,6 +1293,571 @@ def build_404(lang):
                '<a class="boto" href="/es/">Volver al inicio</a><a class="boto secundari" href="https://quivoto.cat/observatori/">Abrir el Observatorio</a>')
     page = f'''<!doctype html><html lang="{t['lang']}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 · {title} · {t['marca']}</title><meta name="robots" content="noindex, nofollow"><meta name="description" content="{lead}"><link rel="stylesheet" href="/assets/fonts.css"><link rel="stylesheet" href="/assets/styles.css?v={versio('styles.css')}"><link rel="stylesheet" href="/assets/cercador.css?v={versio('cercador.css')}">{GOOGLE_TAG}<style>.error404{{max-width:760px;margin:0 auto;padding:clamp(70px,12vw,150px) var(--e3);text-align:center}}.error404 .codi{{font-family:var(--display);font-weight:900;font-size:clamp(5rem,20vw,11rem);line-height:.75;color:var(--coral);text-shadow:5px 5px 0 var(--ink);-webkit-text-stroke:2px var(--ink)}}.error404 h1{{margin-top:var(--e4)}}.error404 .accions{{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:var(--e3)}}.error404 .secundari{{background:var(--paper);color:var(--ink)}}</style></head><body><a class="salta" href="#contingut">{t['salta']}</a>{capcalera(lang)}{cercador_compartit(lang)}<main id="contingut" class="error404"><div class="codi" aria-hidden="true">404</div><p class="micro">{title}</p><h1>{title}</h1><p class="entrada">{lead}</p><div class="accions">{actions}</div></main>{footer_complet(t)}<script src="/assets/cercador.js?v={versio('cercador.js')}" defer></script></body></html>'''
     open(os.path.join(sub, '404.html'), 'w', encoding='utf-8').write(page)
+
+
+# ---------------------------------------------------------------------------
+# La sala de premsa: web/public/premsa.html i es/prensa.html.
+#
+# És la pàgina que obre un periodista que ha d'escriure sobre quivoto i no
+# vol trucar: què és, qui ho fa, les xifres, com treballem, el logotip i la
+# paleta, com citar-nos i on escriure. Tot el que diu ja és al web —l'avís
+# legal, el peu, l'Observatori— i les xifres es llegeixen dels fitxers que
+# publica el generador, mai s'escriuen a mà: una xifra copiada envelleix sola
+# i aquesta pàgina la copiaran tal qual.
+#
+# No hi ha biografies ni càrrecs: el web diu «un projecte d'Humbert Blanco
+# gràcies a Damos en el Blanco» i el titular legal de l'avís, i és tot el que
+# aquí es repeteix.
+
+PREMSA_T = {
+ 'ca': {
+  'nom':'premsa', 'titol':'Premsa',
+  'desc':'Sala de premsa de quivoto: què és, qui hi ha darrere, les xifres de l’Observatori, com treballem, logotip i paleta, i com citar-nos. Contacte: hola@quivoto.cat.',
+  'lead':'El que necessita un periodista per explicar quivoto sense haver-nos de trucar: què és, qui ho fa, les xifres, com treballem i els materials per publicar. Si hi falta alguna cosa, escriu a <a href="mailto:hola@quivoto.cat">hola@quivoto.cat</a>.',
+  'sumari_aria':'Apartats d’aquesta pàgina',
+  'sumari':[('que-es','Què és'),('redaccio','La redacció'),('xifres','En xifres'),('com-treballem','Com treballem'),
+            ('materials','Materials'),('citar','Com citar-nos'),('contacte','Contacte'),('notes','Notes de premsa')],
+  'que_titol':'Què és quivoto',
+  'que':[
+    'quivoto són dues coses. Una <strong>brúixola electoral</strong> per a les municipals del 23 de maig del 2027: 25 afirmacions sobre el teu municipi i amb quin partit coincideixes. I l’<a href="/observatori/">Observatori municipal</a>, que ja es pot obrir: una fitxa per a cadascun dels {municipis} municipis de Catalunya amb qui hi mana, què s’hi ha votat des del 1979, com estan els comptes i què paga la gent.',
+    'Tot surt de fonts oficials, no hi ha cap model de llenguatge pel mig, els càlculs es poden repetir i les dades derivades són obertes, amb llicència CC BY 4.0.'],
+  'redaccio_titol':'La redacció',
+  'redaccio':[
+    'quivoto és un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com">Damos en el Blanco</a>. El titular legal és <strong>Damos en el Blanco, S.L.</strong>, amb seu a Sant Just Desvern (Barcelona); les dades completes són a l’<a href="/avis-legal.html">avís legal</a>. El codi és a <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.',
+    'No som un mitjà de comunicació i no rebem diners de cap partit, candidatura ni administració. Publiquem dades i expliquem com les hem calculades.'],
+  'xifres_titol':'En xifres',
+  'xifres_lab':{'municipis':'municipis, una fitxa cadascun','electes':'electes al ple','candidatures':'pàgines de candidatura',
+                'comarques':'comarques','partits':'partits amb pàgina','fonts':'fonts oficials','1979':'des de quan hi ha resultats: dotze eleccions'},
+  'xifres_nota':'Xifres de l’Observatori actualitzat el {data}. Les tres primeres les escriu el generador a cada publicació; les altres es compten en fer aquesta pàgina.',
+  'xifres_nota_sense':'Les xifres es compten en fer aquesta pàgina a partir del que hi ha publicat a l’Observatori.',
+  'com_titol':'Com treballem',
+  'com':[
+    'Cada xifra porta la font al costat: el conjunt de dades, l’organisme que el publica i l’any.',
+    'No fem veredictes. Que un ajuntament tingui més deute o un termini de pagament més llarg vol dir exactament això, no que ho faci malament.',
+    'Un buit no és un zero. Si una font no cobreix un municipi, la fitxa ho diu; no estimem res.',
+    'Les preguntes de la brúixola surten de les actes del ple —mocions, ordenances, modificacions de pressupost— i cada afirmació enllaça el punt votat.',
+    'Comparem municipis de mida semblant, i el fitxer de dades sencer es pot baixar per repetir qualsevol càlcul.'],
+  'com_enllacos':[('/observatori/dades/','Les dades i l’esquema, camp a camp'),('/observatori/dades/#fonts','El catàleg de fonts, mètodes i llicències')],
+  'materials_titol':'Materials',
+  'materials_intro':'Fitxers per publicar tal qual. Feu servir el logotip sense deformar-lo ni canviar-li els colors, sobre paper o blanc. El disseny, la mascota i les il·lustracions no entren a la llicència CC BY: es poden reproduir per parlar de quivoto, no per a altres usos.',
+  'fitxers':[
+    ('logo','Logotip','SVG, vectorial. El nom amb la papereta com a «o».','logo.svg'),
+    ('mascota','La papereta','SVG. La mascota: una papereta amb cara.','mascota.svg'),
+    ('favicon','Icona','SVG quadrat, per a llistes i avatars.','favicon.svg'),
+    ('og','Imatge social','PNG de 1200 × 630, la de la portada.','og.png')],
+  'baixa':'Baixa',
+  'paleta_titol':'La paleta',
+  'paleta':[('Paper','FBF7EE'),('Tinta','1E1B2E'),('Coral','E2735A'),('Menta','BFE8D2'),('Lavanda','C9C4F2'),('Préssec','FFD8B8')],
+  'tipus_titol':'Les tipografies',
+  'tipus':[('gabarito','Gabarito','Títols i xifres, en negreta (700 i 900).'),('nunito','Nunito Sans','Text de lectura. Totes dues són a Google Fonts i les servim des del nostre domini.')],
+  'socials_titol':'Les imatges socials',
+  'socials':'Cada pàgina de l’Observatori té la seva imatge de 1200 × 630, la que surt en compartir-la. Serveixen per il·lustrar una peça sobre quivoto, citant-nos. Les de persones porten un retrat amb la seva pròpia llicència, que consta a la fitxa: comproveu-la abans de reutilitzar-les.',
+  'socials_ex':[('/observatori/og/barcelona.png','un municipi: /observatori/og/<i>municipi</i>.png'),
+                ('/observatori/og/c/barcelones.png','una comarca: /observatori/og/c/<i>comarca</i>.png'),
+                ('/observatori/og/partit/erc.png','un partit: /observatori/og/partit/<i>partit</i>.png'),
+                ('/observatori/og/observatori.png','l’Observatori sencer')],
+  'citar_titol':'Com citar-nos',
+  'cita':'quivoto, Observatori municipal, {data}. https://quivoto.cat/observatori/',
+  'citar':[
+    'Per a una dada concreta, enllaceu la fitxa i poseu-hi la data de generació que hi surt.',
+    'Les nostres dades derivades són <a href="https://creativecommons.org/licenses/by/4.0/deed.ca">CC BY 4.0</a>; les originals mantenen la llicència de cada font, i cal citar-la també. No presenteu una xifra nostra com si fos oficial: és el nostre càlcul a partir d’una font oficial.'],
+  'contacte_titol':'Contacte de premsa',
+  'contacte':'hola@quivoto.cat',
+  'contacte_text':'Si és sobre una dada, digueu-nos el municipi i l’enllaç de la fitxa.',
+  'xarxes':[('https://x.com/humbertblanco','Humbert Blanco a X'),('https://github.com/humbertblanco/quivoto','El codi a GitHub'),('https://damosenelblanco.com','Damos en el Blanco')],
+  'notes_titol':'Notes de premsa',
+  'notes':[('2026-09','Setembre del 2026','quivoto obre l’Observatori municipal amb els 947 municipis',
+            'Una fitxa per municipi amb qui hi mana i amb qui, el ple amb nom i cognoms, els resultats de les dotze eleccions des del 1979, els comptes i els impostos. Tot fet amb dades obertes i cap model de llenguatge pel mig, i els 1.894 fitxers de dades es poden baixar en CSV i JSON.')],
+  'notes_avis':'<b>Esborrany intern, encara no indexat.</b> L’Observatori es fa a la vista de tothom i encara no està revisat del tot. Quan s’obri, ho direm aquí.',
+  'tornar':'Tornar a l’inici',
+ },
+ 'es': {
+  'nom':'prensa', 'titol':'Prensa',
+  'desc':'Sala de prensa de quivoto: qué es, quién hay detrás, las cifras del Observatorio, cómo trabajamos, logotipo y paleta, y cómo citarnos. Contacto: hola@quivoto.cat.',
+  'lead':'Lo que necesita un periodista para explicar quivoto sin tener que llamarnos: qué es, quién lo hace, las cifras, cómo trabajamos y los materiales para publicar. Si falta algo, escribe a <a href="mailto:hola@quivoto.cat">hola@quivoto.cat</a>.',
+  'sumari_aria':'Apartados de esta página',
+  'sumari':[('que-es','Qué es'),('redaccio','La redacción'),('xifres','En cifras'),('com-treballem','Cómo trabajamos'),
+            ('materials','Materiales'),('citar','Cómo citarnos'),('contacte','Contacto'),('notes','Notas de prensa')],
+  'que_titol':'Qué es quivoto',
+  'que':[
+    'quivoto son dos cosas. Una <strong>brújula electoral</strong> para las municipales del 23 de mayo de 2027: 25 afirmaciones sobre tu municipio y con qué partido coincides. Y el <a href="https://quivoto.cat/observatori/">Observatorio municipal</a>, que ya se puede abrir: una ficha para cada uno de los {municipis} municipios de Cataluña con quién manda, qué se ha votado desde 1979, cómo están las cuentas y qué paga la gente. En castellano la portada se llama quienvoto; el Observatorio está en catalán, que es la lengua de las fuentes oficiales.',
+    'Todo sale de fuentes oficiales, no hay ningún modelo de lenguaje de por medio, los cálculos se pueden repetir y los datos derivados son abiertos, con licencia CC BY 4.0.'],
+  'redaccio_titol':'La redacción',
+  'redaccio':[
+    'quivoto es un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com">Damos en el Blanco</a>. El titular legal es <strong>Damos en el Blanco, S.L.</strong>, con sede en Sant Just Desvern (Barcelona); los datos completos están en el <a href="/es/avis-legal.html">aviso legal</a>. El código está en <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.',
+    'No somos un medio de comunicación y no recibimos dinero de ningún partido, candidatura ni administración. Publicamos datos y explicamos cómo los hemos calculado.'],
+  'xifres_titol':'En cifras',
+  'xifres_lab':{'municipis':'municipios, una ficha cada uno','electes':'electos en el pleno','candidatures':'páginas de candidatura',
+                'comarques':'comarcas','partits':'partidos con página','fonts':'fuentes oficiales','1979':'desde cuándo hay resultados: doce elecciones'},
+  'xifres_nota':'Cifras del Observatorio actualizado el {data}. Las tres primeras las escribe el generador en cada publicación; las demás se cuentan al hacer esta página.',
+  'xifres_nota_sense':'Las cifras se cuentan al hacer esta página a partir de lo publicado en el Observatorio.',
+  'com_titol':'Cómo trabajamos',
+  'com':[
+    'Cada cifra lleva la fuente al lado: el conjunto de datos, el organismo que lo publica y el año.',
+    'No hacemos veredictos. Que un ayuntamiento tenga más deuda o un plazo de pago más largo significa exactamente eso, no que lo haga mal.',
+    'Un hueco no es un cero. Si una fuente no cubre un municipio, la ficha lo dice; no estimamos nada.',
+    'Las preguntas de la brújula salen de las actas del pleno —mociones, ordenanzas, modificaciones de presupuesto— y cada afirmación enlaza el punto votado.',
+    'Comparamos municipios de tamaño parecido, y el fichero de datos entero se puede descargar para repetir cualquier cálculo.'],
+  'com_enllacos':[('https://quivoto.cat/observatori/dades/','Los datos y el esquema, campo a campo'),('https://quivoto.cat/observatori/dades/#fonts','El catálogo de fuentes, métodos y licencias')],
+  'materials_titol':'Materiales',
+  'materials_intro':'Ficheros para publicar tal cual. Usad el logotipo sin deformarlo ni cambiarle los colores, sobre papel o blanco. El diseño, la mascota y las ilustraciones no entran en la licencia CC BY: se pueden reproducir para hablar de quivoto, no para otros usos.',
+  'fitxers':[
+    ('logo','Logotipo','SVG, vectorial. El nombre con la papeleta como «o».','logo.svg'),
+    ('mascota','La papeleta','SVG. La mascota: una papeleta con cara.','mascota.svg'),
+    ('favicon','Icono','SVG cuadrado, para listas y avatares.','favicon.svg'),
+    ('og','Imagen social','PNG de 1200 × 630, la de la portada.','og.png')],
+  'baixa':'Descarga',
+  'paleta_titol':'La paleta',
+  'paleta':[('Papel','FBF7EE'),('Tinta','1E1B2E'),('Coral','E2735A'),('Menta','BFE8D2'),('Lavanda','C9C4F2'),('Melocotón','FFD8B8')],
+  'tipus_titol':'Las tipografías',
+  'tipus':[('gabarito','Gabarito','Títulos y cifras, en negrita (700 y 900).'),('nunito','Nunito Sans','Texto de lectura. Las dos están en Google Fonts y las servimos desde nuestro dominio.')],
+  'socials_titol':'Las imágenes sociales',
+  'socials':'Cada página del Observatorio tiene su imagen de 1200 × 630, la que sale al compartirla. Sirven para ilustrar una pieza sobre quivoto, citándonos. Las de personas llevan un retrato con su propia licencia, que consta en la ficha: comprobadla antes de reutilizarlas.',
+  'socials_ex':[('https://quivoto.cat/observatori/og/barcelona.png','un municipio: /observatori/og/<i>municipio</i>.png'),
+                ('https://quivoto.cat/observatori/og/c/barcelones.png','una comarca: /observatori/og/c/<i>comarca</i>.png'),
+                ('https://quivoto.cat/observatori/og/partit/erc.png','un partido: /observatori/og/partit/<i>partido</i>.png'),
+                ('https://quivoto.cat/observatori/og/observatori.png','el Observatorio entero')],
+  'citar_titol':'Cómo citarnos',
+  'cita':'quivoto, Observatori municipal, {data}. https://quivoto.cat/observatori/',
+  'citar':[
+    'Para un dato concreto, enlazad la ficha y poned la fecha de generación que aparece en ella.',
+    'Nuestros datos derivados son <a href="https://creativecommons.org/licenses/by/4.0/deed.es">CC BY 4.0</a>; los originales mantienen la licencia de cada fuente, y hay que citarla también. No presentéis una cifra nuestra como si fuera oficial: es nuestro cálculo a partir de una fuente oficial.'],
+  'contacte_titol':'Contacto de prensa',
+  'contacte':'hola@quivoto.cat',
+  'contacte_text':'Si es sobre un dato, decidnos el municipio y el enlace de la ficha.',
+  'xarxes':[('https://x.com/humbertblanco','Humbert Blanco en X'),('https://github.com/humbertblanco/quivoto','El código en GitHub'),('https://damosenelblanco.com','Damos en el Blanco')],
+  'notes_titol':'Notas de prensa',
+  'notes':[('2026-09','Septiembre de 2026','quivoto abre el Observatorio municipal con los 947 municipios',
+            'Una ficha por municipio con quién manda y con quién, el pleno con nombres y apellidos, los resultados de las doce elecciones desde 1979, las cuentas y los impuestos. Todo hecho con datos abiertos y ningún modelo de lenguaje de por medio, y los 1.894 ficheros de datos se pueden descargar en CSV y JSON.')],
+  'notes_avis':'<b>Borrador interno, todavía no indexado.</b> El Observatorio se hace a la vista de todos y todavía no está revisado del todo. Cuando se abra, lo diremos aquí.',
+  'tornar':'Volver al inicio',
+ },
+}
+
+MESOS = {
+  'ca': ['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],
+  'es': ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],
+}
+
+def data_llarga(iso, lang):
+    """«2026-09-02» → «2 de setembre del 2026» / «2 de septiembre de 2026»."""
+    a, m, d = (int(x) for x in iso.split('-'))
+    mes = MESOS[lang][m - 1]
+    if lang == 'ca':
+        return f"{d} {'d’' if mes[0] in 'aeiou' else 'de '}{mes} del {a}"
+    return f'{d} de {mes} de {a}'
+
+
+def xifres_premsa():
+    """Els recomptes de la sala de premsa, tots llegits del que hi ha publicat a
+    web/public/observatori/ i cap escrit a mà.
+
+    Municipis, electes i candidatures venen de xifres.json (els escriu el
+    generador a cada publicació); les comarques i els partits són les carpetes
+    que hi ha a c/ i a partit/; les fonts, `sources` de dades/fonts.json. El que
+    no es pot comptar no surt: val més una pastilla menys que un número vell."""
+    import json
+    obs = os.path.join(OUT, 'observatori')
+    x = xifres_observatori() or {}
+    def carpetes(sub):
+        cami = os.path.join(obs, sub)
+        if not os.path.isdir(cami):
+            return 0
+        return sum(1 for n in os.listdir(cami) if os.path.isdir(os.path.join(cami, n)))
+    try:
+        with open(os.path.join(obs, 'dades', 'fonts.json'), encoding='utf-8') as f:
+            fonts = len(json.load(f)['sources'])
+    except (OSError, ValueError, KeyError, TypeError):
+        fonts = 0
+    return {'municipis': x.get('municipis', 0), 'electes': x.get('electes', 0),
+            'candidatures': x.get('candidatures', 0), 'comarques': carpetes('c'),
+            'partits': carpetes('partit'), 'fonts': fonts, 'generatedAt': x.get('generatedAt')}
+
+
+def font_incrustada(fitxer):
+    """El woff2 en base64 dins del mateix SVG, com fa og.ts amb les imatges
+    socials: un SVG obert com a imatge no pot demanar cap fitxer extern, i sense
+    la lletra incrustada el logotip sortiria en la tipografia de qui l'obre."""
+    import base64
+    with open(os.path.join(OUT, 'assets', 'fonts', fitxer), 'rb') as f:
+        return f"url(data:font/woff2;base64,{base64.b64encode(f.read()).decode('ascii')}) format('woff2')"
+
+# El fitxer llatí de Gabarito (pesos 400-900 en un de sol), el mateix que
+# enllaça assets/fonts.css. El nom és el de Google Fonts.
+GABARITO_LLATI = 'QGYtz_0dZAGKJJ4t3HtoW4XGnfBI.woff2'
+
+
+def sense_parpelles(svg):
+    """Fora les parpelles: les tanca el CSS del web (scaleY 0 i parpelleig), i
+    en un fitxer solt no hi ha CSS. Sense treure-les, la cara sortiria amb dos
+    rectangles blancs damunt dels ulls."""
+    return re.sub(r'<g class="parpelles">.*?</g>', '', svg, flags=re.S)
+
+
+def logo_svg():
+    """El logotip net, a partir del mateix wordmark que fa `wordmark()`: el nom
+    en Gabarito 900 amb la «o» final dibuixada com la papereta.
+
+    Les mides surten de mesurar la marca tal com la pinta Chrome a la imatge
+    social de l'Observatori (observatori/og/observatori.png, 34 px): «quivot»
+    amb el seguiment de -0,05 em avança 2,56 em, i la «o» hi va a 0,03 em, que
+    és el px de separació de la capçalera. `textLength` fixa aquella amplada
+    perquè el resultat no depengui de qui obre el fitxer: si un visor no té la
+    lletra incrustada, reparteix la diferència en l'espaiat i la «o» queda on
+    toca. En vertical es repeteix l'alineació de la capçalera: línia de base a
+    0,82 em i la «o» de la mida del cos, baixada 0,045 em."""
+    S = 100
+    marge = 8
+    ample_text = round(2.56 * S)
+    o_x = marge + ample_text + round(0.03 * S)
+    o_y = marge + round(0.045 * S)
+    W = o_x + S + marge
+    H = o_y + S + marge
+    base = marge + round(0.82 * S)
+    cara = sense_parpelles(L.cara_marca(sclera=L.WHITE))
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-label="quivoto">
+  <title>quivoto</title>
+  <style>@font-face{{font-family:Gabarito;font-weight:900;src:{font_incrustada(GABARITO_LLATI)}}}</style>
+  <text x="{marge}" y="{base}" font-family="Gabarito, sans-serif" font-weight="900" font-size="{S}" fill="{L.INK}" textLength="{ample_text}" lengthAdjust="spacing">quivot</text>
+  <g transform="translate({o_x} {o_y}) scale({S / 48:.4f})">
+    <circle cx="24" cy="24" r="22" fill="{L.WHITE}" stroke="{L.INK}" stroke-width="3"/>
+    <path d="M34 8 l6 6" stroke="{L.PEACH}" stroke-width="6" stroke-linecap="round"/>{cara}
+  </g>
+</svg>
+'''
+
+
+def mascota_svg():
+    """La papereta com a fitxer solt: el mateix dibuix de `papereta()`, amb
+    l'espai de noms que un fitxer necessita i sense les parpelles."""
+    svg = sense_parpelles(L.papereta(240, cls='papereta'))
+    return svg.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ', 1) + '\n'
+
+
+def escriu_materials():
+    """Els dos fitxers que la sala de premsa ofereix i que no existien: el
+    logotip i la mascota. Van a /assets/ amb el favicon i l'og.png, que ja hi
+    eren. S'escriuen a cada generació, que no costa res, i així mai van
+    desfasats del wordmark ni de la mascota."""
+    for nom, cos in (('logo.svg', logo_svg()), ('mascota.svg', mascota_svg())):
+        open(os.path.join(OUT, 'assets', nom), 'w', encoding='utf-8').write(cos)
+
+
+def json_ld_premsa(lang, url, p):
+    """La pàgina sobre l'organització, lligada al mateix @id que la portada i
+    l'Observatori. Del qui som, només el que diu el web: nom legal, seu, correu,
+    el codi i qui la fa; cap dada que no surti a l'avís legal o al peu."""
+    import json
+    org_id = 'https://quivoto.cat/#organitzacio'
+    return json.dumps({
+        '@context': 'https://schema.org',
+        '@graph': [
+            {'@type': 'Organization', '@id': org_id, 'name': 'quivoto', 'url': 'https://quivoto.cat/',
+             'logo': 'https://quivoto.cat/assets/og.png', 'legalName': 'Damos en el Blanco, S.L.',
+             'email': 'hola@quivoto.cat',
+             'address': {'@type': 'PostalAddress', 'addressLocality': 'Sant Just Desvern',
+                         'addressRegion': 'Barcelona', 'addressCountry': 'ES'},
+             'sameAs': ['https://github.com/humbertblanco/quivoto'],
+             'founder': {'@type': 'Person', 'name': 'Humbert Blanco', 'url': 'https://x.com/humbertblanco'}},
+            {'@type': 'AboutPage', '@id': url + '#pagina', 'url': url, 'name': p['titol'],
+             'description': p['desc'], 'inLanguage': lang, 'about': {'@id': org_id},
+             'isPartOf': {'@id': 'https://quivoto.cat/#lloc'}},
+        ],
+    }, ensure_ascii=False)
+
+
+CSS_PREMSA = '''<style>
+/* ---------- la sala de premsa ------------------------------------------
+   Cada apartat és una fila: el número i el títol a l'esquerra, el cos a la
+   dreta, com un índex de redacció. Sota 860px tot va en una columna. */
+.premsa{max-width:var(--ample);margin:0 auto;padding:var(--e4) var(--e3) var(--e5)}
+.premsa h1{font-size:clamp(2.4rem,7vw,4rem);margin-bottom:var(--e2)}
+.premsa .lead{font-size:1.15rem;max-width:56ch;margin-bottom:var(--e3)}
+.pr-sumari{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0 0 var(--e4);padding:0}
+.pr-sumari a{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;
+  border:2px solid var(--vora);border-radius:var(--r-max);background:var(--paper-2);
+  font-size:.88rem;font-weight:700;text-decoration:none}
+.pr-sumari a:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.pr-seccio{display:grid;gap:var(--e2) var(--e5);padding:var(--e4) 0;border-top:2.5px solid var(--ink);scroll-margin-top:var(--e2)}
+@media(min-width:860px){.pr-seccio{grid-template-columns:minmax(0,13rem) minmax(0,1fr)}}
+.pr-seccio h2{font-size:clamp(1.5rem,3vw,2rem)}
+.pr-seccio .micro{margin-bottom:6px}
+.pr-cos{max-width:64ch}
+.pr-cos p:last-child{margin-bottom:0}
+.pr-cos h3{font-size:1.1rem;margin:var(--e3) 0 var(--e2)}
+.pr-cos h3:first-child{margin-top:0}
+
+.pr-xifres{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.pr-xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:3px 3px 0 var(--ink);padding:var(--e2)}
+.pr-xifres b{display:block;font-family:var(--display);font-weight:900;line-height:.95;letter-spacing:-.04em;font-size:clamp(1.8rem,4vw,2.5rem)}
+.pr-xifres span{font-size:.85rem;color:var(--ink-suau)}
+.pr-nota{margin:var(--e2) 0 0;font-size:.85rem;color:var(--ink-suau)}
+
+.pr-llista{list-style:none;margin:0 0 var(--e2);padding:0;display:grid;gap:12px}
+.pr-llista li{padding-left:var(--e3);position:relative}
+.pr-llista li::before{content:"";position:absolute;left:0;top:.45em;width:11px;height:11px;border-radius:50%;background:var(--coral);border:2px solid var(--ink)}
+.pr-enllacos{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.pr-enllacos a,.pr-xarxes a{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;
+  border:2px solid var(--ink);border-radius:var(--r-max);background:var(--menta);font-weight:800;font-size:.9rem;text-decoration:none}
+.pr-enllacos a:hover,.pr-xarxes a:hover{background:var(--ink);color:var(--paper)}
+
+.pr-fitxers{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.pr-fitxers li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:3px 3px 0 var(--ink);padding:var(--e2);display:grid;gap:10px;align-content:start}
+.pr-fitxers .mostra{display:flex;align-items:center;justify-content:center;min-height:130px;background:var(--paper);border-radius:var(--r-s);padding:var(--e2);overflow:hidden}
+.pr-fitxers .mostra img,.pr-fitxers .mostra svg{max-width:100%;height:auto}
+/* wordmark() escriu la mida en línia (és el que vol la capçalera); aquí ha de
+   cabre en una targeta de 200px i per això es mana per damunt. La «o» segueix
+   el cos de lletra, no els 64px del seu atribut. */
+.pr-fitxers .mostra .marca{font-size:clamp(28px,7vw,44px)!important}
+.pr-fitxers .mostra .marca-o{width:1em;height:1em}
+.pr-fitxers b{font-family:var(--display);font-size:1.05rem}
+.pr-fitxers small{display:block;color:var(--ink-suau);font-size:.8rem;line-height:1.4}
+.pr-fitxers .fitxer{font-weight:800;font-size:.9rem}
+
+.pr-paleta{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+.pr-paleta li{border:2.5px solid var(--ink);border-radius:var(--r-m);overflow:hidden;background:var(--paper-2)}
+.pr-paleta i{display:block;height:64px;background:var(--c);border-bottom:2px solid var(--ink)}
+.pr-paleta b{display:block;padding:8px 12px 0;font-family:var(--display)}
+.pr-paleta code{display:block;padding:0 12px 10px;font-size:.82rem;color:var(--ink-suau)}
+
+.pr-tipus{display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin:0 0 var(--e3)}
+.pr-tipus>div{border:2px dashed var(--vora);border-radius:var(--r-m);padding:var(--e2)}
+.pr-tipus .gabarito{font-family:var(--display);font-weight:900;font-size:2rem;letter-spacing:-.03em;line-height:1;margin:0 0 6px}
+.pr-tipus .nunito{font-family:var(--text);font-size:1.25rem;font-weight:700;margin:0 0 6px}
+.pr-tipus small{color:var(--ink-suau);font-size:.82rem;line-height:1.4}
+.pr-socials{margin:0;padding-left:1.1rem;font-size:.92rem}
+.pr-socials li{margin-bottom:6px}
+
+.pr-cita{margin:0 0 var(--e2);padding:var(--e2);background:var(--ink);color:var(--paper);border-radius:var(--r-m);
+  font-size:.95rem;font-family:inherit;white-space:pre-wrap;overflow-wrap:anywhere}
+.pr-contacte{display:inline-block;font-family:var(--display);font-weight:900;font-size:clamp(1.4rem,4vw,2rem);letter-spacing:-.02em;
+  text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:5px;margin-bottom:var(--e2)}
+.pr-xarxes{list-style:none;margin:var(--e2) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+
+.pr-notes{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2)}
+.pr-notes li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:4px 4px 0 var(--lavanda);padding:var(--e3)}
+.pr-notes time{display:inline-block;background:var(--presec);border-radius:var(--r-max);padding:4px 11px;
+  font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;margin-bottom:10px}
+.pr-notes h3{font-size:1.3rem;margin:0 0 8px}
+.pr-notes p{margin:0}
+.pr-avis{margin:var(--e2) 0 0;background:var(--presec);border:2.5px solid var(--ink);border-radius:var(--r-m);padding:11px 15px;font-size:.88rem;line-height:1.45}
+.premsa .tornar{margin-top:var(--e4)}
+</style>'''
+
+
+PREMSA = '''<!doctype html>
+<html lang="{lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{titol} — {marca}</title>
+<meta name="description" content="{desc}">
+<link rel="canonical" href="{url}">
+<link rel="alternate" hreflang="ca" href="https://quivoto.cat/premsa.html">
+<link rel="alternate" hreflang="es" href="https://quivoto.cat/es/prensa.html">
+<link rel="alternate" hreflang="x-default" href="https://quivoto.cat/premsa.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{marca}">
+<meta property="og:title" content="{titol} — {marca}">
+<meta property="og:description" content="{desc}">
+<meta property="og:url" content="{url}">
+<meta property="og:image" content="https://quivoto.cat/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{og_alt}">
+<meta property="og:locale" content="{locale}">
+<meta property="og:locale:alternate" content="{locale_alt}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{titol} — {marca}">
+<meta name="twitter:description" content="{desc}">
+<meta name="twitter:image" content="https://quivoto.cat/assets/og.png">
+<meta name="theme-color" content="#FBF7EE">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/fonts.css">
+<link rel="stylesheet" href="/assets/styles.css?v={css_v}">
+<link rel="stylesheet" href="/assets/cercador.css?v={cercador_css_v}">
+{estil_extra}
+<script type="application/ld+json">
+{json_ld}
+</script>
+{google_tag}
+</head>
+<body>
+<a class="salta" href="#contingut">{salta}</a>
+{capcalera}
+{cercador}
+<main id="contingut" class="premsa">
+<h1>{titol}</h1>
+<p class="lead">{lead}</p>
+<nav aria-label="{sumari_aria}"><ul class="pr-sumari">
+{sumari}
+</ul></nav>
+
+<section class="pr-seccio" id="que-es">
+  <div><p class="micro">01</p><h2>{que_titol}</h2></div>
+  <div class="pr-cos">
+{que}
+  </div>
+</section>
+
+<section class="pr-seccio" id="redaccio">
+  <div><p class="micro">02</p><h2>{redaccio_titol}</h2></div>
+  <div class="pr-cos">
+{redaccio}
+  </div>
+</section>
+
+<section class="pr-seccio" id="xifres">
+  <div><p class="micro">03</p><h2>{xifres_titol}</h2></div>
+  <div>
+    <ul class="pr-xifres">
+{xifres}
+    </ul>
+    <p class="pr-nota">{xifres_nota}</p>
+  </div>
+</section>
+
+<section class="pr-seccio" id="com-treballem">
+  <div><p class="micro">04</p><h2>{com_titol}</h2></div>
+  <div class="pr-cos">
+    <ul class="pr-llista">
+{com}
+    </ul>
+    <ul class="pr-enllacos">
+{com_enllacos}
+    </ul>
+  </div>
+</section>
+
+<section class="pr-seccio" id="materials">
+  <div><p class="micro">05</p><h2>{materials_titol}</h2></div>
+  <div class="pr-cos">
+    <p>{materials_intro}</p>
+    <ul class="pr-fitxers">
+{fitxers}
+    </ul>
+    <h3>{paleta_titol}</h3>
+    <ul class="pr-paleta">
+{paleta}
+    </ul>
+    <h3>{tipus_titol}</h3>
+    <div class="pr-tipus">
+{tipus}
+    </div>
+    <h3>{socials_titol}</h3>
+    <p>{socials}</p>
+    <ul class="pr-socials">
+{socials_ex}
+    </ul>
+  </div>
+</section>
+
+<section class="pr-seccio" id="citar">
+  <div><p class="micro">06</p><h2>{citar_titol}</h2></div>
+  <div class="pr-cos">
+    <pre class="pr-cita">{cita}</pre>
+{citar}
+  </div>
+</section>
+
+<section class="pr-seccio" id="contacte">
+  <div><p class="micro">07</p><h2>{contacte_titol}</h2></div>
+  <div class="pr-cos">
+    <a class="pr-contacte" href="mailto:{contacte}">{contacte}</a>
+    <p>{contacte_text}</p>
+    <ul class="pr-xarxes">
+{xarxes}
+    </ul>
+  </div>
+</section>
+
+<section class="pr-seccio" id="notes">
+  <div><p class="micro">08</p><h2>{notes_titol}</h2></div>
+  <div class="pr-cos">
+    <ul class="pr-notes">
+{notes}
+    </ul>
+    <p class="pr-avis">{notes_avis}</p>
+  </div>
+</section>
+
+<p class="tornar"><a class="boto-secundari" href="{arrel}">{tornar}</a></p>
+</main>
+{footer}
+<script src="/assets/cercador.js?v={cercador_js_v}" defer></script>
+</body>
+</html>
+'''
+
+
+def build_premsa(lang):
+    """Escriu la sala de premsa de l'idioma i, de passada, el logotip i la
+    mascota que hi enllaça."""
+    t = T[lang]
+    p = PREMSA_T[lang]
+    es = lang == 'es'
+    escriu_materials()
+    x = xifres_premsa()
+    municipis = f"{x['municipis']:,}".replace(',', '.') if x['municipis'] else '947'
+    data = data_llarga(x['generatedAt'], lang) if x['generatedAt'] else None
+    paragrafs = lambda ps: '\n'.join(f'    <p>{s.replace("{municipis}", municipis)}</p>' for s in ps)
+
+    # Les pastilles de xifres: només les que s'han pogut comptar, i cada una amb
+    # el seu nom, que és la regla dura de la casa.
+    lab = p['xifres_lab']
+    pastilles = [(x[k], lab[k]) for k in ('municipis', 'electes', 'candidatures', 'comarques', 'partits', 'fonts') if x[k]]
+    pastilles.append(('1979', lab['1979']))
+    xifres = '\n'.join(
+      f'      <li><b>{n if isinstance(n, str) else f"{n:,}".replace(",", ".")}</b><span>{l}</span></li>'
+      for n, l in pastilles)
+
+    # Les mostres dels fitxers: el wordmark i la mascota es pinten amb el CSS
+    # de la pàgina (que és qui anima les parpelles); el favicon i l'og, com a
+    # imatges, que és com són.
+    mostres = {
+      'logo': wordmark(T['ca'], 64),
+      'mascota': L.papereta(96),
+      'favicon': '<img src="/assets/favicon.svg" width="72" height="72" alt="">',
+      'og': '<img src="/assets/og.png" width="240" height="126" alt="" loading="lazy">',
+    }
+    fitxers = '\n'.join(
+      f'      <li><span class="mostra">{mostres[clau]}</span><b>{nom}</b><small>{desc}</small>'
+      f'<a class="fitxer" href="/assets/{fitxer}" download>{p["baixa"]} {fitxer}</a></li>'
+      for clau, nom, desc, fitxer in p['fitxers'])
+    paleta = '\n'.join(
+      f'      <li><i style="--c:#{hexa}"></i><b>{nom}</b><code>#{hexa}</code></li>' for nom, hexa in p['paleta'])
+    tipus = '\n'.join(
+      f'      <div><p class="{cls}">{nom}</p><small>{desc}</small></div>' for cls, nom, desc in p['tipus'])
+    socials_ex = '\n'.join(f'      <li><a href="{u}">{u}</a> — {d}</li>' for u, d in p['socials_ex'])
+    cita = p['cita'].replace('{data}', data or ('AAAA-MM-DD'))
+    notes = '\n'.join(
+      f'      <li><time datetime="{iso}">{quan}</time><h3>{tit}</h3><p>{txt}</p></li>'
+      for iso, quan, tit, txt in p['notes'])
+
+    url = f"https://quivoto.cat/{'es/' if es else ''}{p['nom']}.html"
+    pagina = PREMSA.format(
+      lang=lang, marca=t['marca'], titol=p['titol'], desc=p['desc'], url=url, og_alt=t['og_alt'],
+      locale=t['locale'], locale_alt=t['locale_alt'], css_v=versio('styles.css'),
+      estil_extra=CSS_PREMSA, json_ld=json_ld_premsa(lang, url, p), google_tag=GOOGLE_TAG,
+      salta=t['salta'], capcalera=capcalera(lang), lead=p['lead'], sumari_aria=p['sumari_aria'],
+      sumari='\n'.join(f'  <li><a href="#{i}">{s}</a></li>' for i, s in p['sumari']),
+      que_titol=p['que_titol'], que=paragrafs(p['que']),
+      redaccio_titol=p['redaccio_titol'], redaccio=paragrafs(p['redaccio']),
+      xifres_titol=p['xifres_titol'], xifres=xifres,
+      xifres_nota=p['xifres_nota'].replace('{data}', data) if data else p['xifres_nota_sense'],
+      com_titol=p['com_titol'], com='\n'.join(f'      <li>{s}</li>' for s in p['com']),
+      com_enllacos='\n'.join(f'      <li><a href="{u}">{s}</a></li>' for u, s in p['com_enllacos']),
+      materials_titol=p['materials_titol'], materials_intro=p['materials_intro'], fitxers=fitxers,
+      paleta_titol=p['paleta_titol'], paleta=paleta, tipus_titol=p['tipus_titol'], tipus=tipus,
+      socials_titol=p['socials_titol'], socials=p['socials'], socials_ex=socials_ex,
+      citar_titol=p['citar_titol'], cita=cita, citar=paragrafs(p['citar']),
+      contacte_titol=p['contacte_titol'], contacte=p['contacte'], contacte_text=p['contacte_text'],
+      xarxes='\n'.join(f'      <li><a href="{u}">{s}</a></li>' for u, s in p['xarxes']),
+      notes_titol=p['notes_titol'], notes=notes, notes_avis=p['notes_avis'],
+      arrel='/es/' if es else '/', tornar=p['tornar'], footer=footer_complet(t),
+      **ctx_cercador(lang))
+    sub = os.path.join(OUT, 'es') if es else OUT
+    open(os.path.join(sub, p['nom'] + '.html'), 'w', encoding='utf-8').write(pagina)
 
 
 def dies_restants():
@@ -1347,6 +1921,7 @@ if __name__ == '__main__':
         n = build(lg)
         build_legal(lg)
         build_404(lg)
+        build_premsa(lg)
         print(f'  web/public/{"" if lg=="ca" else "es/"}index.html  ({n//1024} kB)')
     build_sitemap()
     print('Landing generada. Dies fins al 23-05-2027:', dies_restants())

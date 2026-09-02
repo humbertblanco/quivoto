@@ -28,6 +28,7 @@ import { j27CapsDeLlista } from "./jobs/j27-caps-de-llista";
 import { j29Criminalitat } from "./jobs/j29-criminalitat";
 import { j30SousConsells } from "./jobs/j30-sous-consells";
 import { j28FotosExalcaldes } from "./jobs/j28-fotos-exalcaldes";
+import { j31AlcaldiesWikidata } from "./jobs/j31-alcaldies-wikidata";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
 import { deriveFinances } from "./derive/finances";
@@ -70,6 +71,9 @@ const COMMANDS = {
   j30: j30SousConsells,
   // J28 també a mà i després de J21: baixa retrats de Commons d'exalcaldes.
   j28: (db: Parameters<typeof j28FotosExalcaldes>[0]) => j28FotosExalcaldes(db),
+  // J31 també a mà i després de J20: les alcaldies segons Wikidata, que
+  // «alcaldies» fusiona amb l'historial de la Generalitat. No és a `ORDER`.
+  j31: (db: Parameters<typeof j31AlcaldiesWikidata>[0]) => j31AlcaldiesWikidata(db),
   derive: deriveMetrics,
   alcaldies: deriveMayorChanges,
   comptes: deriveFinances,

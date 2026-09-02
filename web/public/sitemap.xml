@@ -40,4 +40,20 @@
     <lastmod>2026-09-02</lastmod>
     <priority>0.3</priority>
   </url>
+  <url>
+    <loc>https://quivoto.cat/premsa.html</loc>
+    <xhtml:link rel="alternate" hreflang="ca" href="https://quivoto.cat/premsa.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://quivoto.cat/es/prensa.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://quivoto.cat/premsa.html"/>
+    <lastmod>2026-09-02</lastmod>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://quivoto.cat/es/prensa.html</loc>
+    <xhtml:link rel="alternate" hreflang="ca" href="https://quivoto.cat/premsa.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://quivoto.cat/es/prensa.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://quivoto.cat/premsa.html"/>
+    <lastmod>2026-09-02</lastmod>
+    <priority>0.5</priority>
+  </url>
 </urlset>

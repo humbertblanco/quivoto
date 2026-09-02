@@ -3283,3 +3283,47 @@ describe("el cap SEO de la fitxa municipal", () => {
     for (let i = 1; i < nivells.length; i++) expect(nivells[i]).toBeLessThanOrEqual(nivells[i - 1]! + 1);
   });
 });
+
+describe("la taula d'alcaldies amb els passos de Wikidata", () => {
+  const mayors: NonNullable<RadiografiaData["mayors"]> = {
+    history: [
+      { term: "2023-2027", name: "XAVIER GARCIA ALBIOL", partyRaw: "PP", tookOfficeOn: "2023-06-17" },
+      { term: "2019-2023", name: "Rubén Guijarro Casas", partyRaw: null, tookOfficeOn: "2021-11-08", font: "wikidata", finsA: "2023-06-17", motiuFinal: null, interina: false, partitWikidata: "Partit dels Socialistes de Catalunya" },
+      { term: "2019-2023", name: "Aïda Llauradó Álvarez", partyRaw: null, tookOfficeOn: "2020-04-29", font: "wikidata", finsA: "2020-05-12", motiuFinal: null, interina: true, partitWikidata: null },
+      { term: "2019-2023", name: "ALEJANDRO PASTOR LOPEZ", partyRaw: "PSC-CP", tookOfficeOn: "2019-06-15", finsA: "2020-04-29", motiuFinal: "dimissió" },
+      { term: "2015-2019", name: "MA. DOLORS SABATER PUIG", partyRaw: "BADALONA EN COM", tookOfficeOn: "2015-06-13", finsA: "2018-06-20", motiuFinal: "moció de censura", partitWikidata: "Guanyem Badalona en Comú" },
+    ],
+    changes: [
+      { term: "2019-2023", mayors: [{ name: "ALEJANDRO PASTOR LOPEZ", tookOfficeOn: "2019-06-15" }, { name: "Aïda Llauradó Álvarez", tookOfficeOn: "2020-04-29" }, { name: "Rubén Guijarro Casas", tookOfficeOn: "2021-11-08" }], partyChanged: true },
+    ],
+    currentTermChange: null, distinctPeople: 4,
+  };
+  const html = renderRadiografia(fitxa({ government: govern(), mayors }));
+  const on = html.indexOf('id="alcaldies"');
+  const taula = html.slice(on, html.indexOf("</section>", on));
+
+  it("marca els passos de Wikidata, l'alcaldia interina i el motiu del final, sense treure res de la Generalitat", () => {
+    expect(taula).toContain("Rubén Guijarro Casas</a> <span class=\"marca-canvi\">segons Wikidata</span>");
+    expect(taula).toContain("<span class=\"marca-canvi\">alcaldia interina</span>");
+    expect(taula).toContain("Alejandro Pastor Lopez</a> <span class=\"marca-canvi\" title=\"segons Wikidata\">va dimitir</span>");
+    expect(taula).toContain("<span class=\"marca-canvi\" title=\"segons Wikidata\">moció de censura</span>");
+    expect(taula).toContain("Xavier Garcia Albiol");
+    expect(taula).toContain("Ma. Dolors Sabater Puig");
+  });
+
+  it("el partit: la sigla de la Generalitat amb el nom sencer al costat, o el de Wikidata dit com a tal", () => {
+    expect(taula).toContain("BADALONA EN COM <span class=\"secundari\" title=\"nom complet segons Wikidata\">(Guanyem Badalona en Comú)</span>");
+    expect(taula).toContain("Partit dels Socialistes de Catalunya <span class=\"secundari\">segons Wikidata</span>");
+    // El PSC-CP de la Generalitat no és cap text retallat: no s'hi posa res al costat.
+    expect(taula).toContain("PSC-CP</td>");
+    // I el pas de Wikidata del PSC porta el punt de color de la família.
+    const guijarro = taula.slice(taula.indexOf("Rubén Guijarro Casas"), taula.indexOf("</tr>", taula.indexOf("Rubén Guijarro Casas")));
+    expect(guijarro).toContain('class="punt-partit"');
+  });
+
+  it("explica al peu què vol dir «segons Wikidata», i només quan hi ha res de Wikidata", () => {
+    expect(taula).toContain("El que va marcat «segons Wikidata» no és a l'historial de la Generalitat");
+    const sense = renderRadiografia(fitxa({ government: govern(), mayors: { ...mayors, history: [mayors.history[0]!], changes: [] } }));
+    expect(sense).not.toContain("segons Wikidata");
+  });
+});
