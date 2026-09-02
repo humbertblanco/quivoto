@@ -162,6 +162,9 @@ const SIGLES_FAMILIES: ReadonlyArray<readonly [RegExp, string]> = [
   // token «junts» no hi surt sol: sense això, l'alcaldia de Junts d'un poble de
   // dinou mil habitants sortia sense marca.
   [/(^|-)(junts|juntsxcat|jxcat|jxc|cm)($|-)/, "junts"],
+  // «JxMontb», «JxLleida», «JxSalt»: el padró escurça «Junts per» a «Jx» i la
+  // resta és el poble. Cap altra força escriu les sigles així.
+  [/^jx[a-z]/, "junts"],
   [/^(erc|esquerra|am$)/, "erc"],
   [/^(pp|ppc|apap|alianzapopular)/, "pp"],
   // «en comú» surt enmig del nom i no al principi: «Barcelona en Comú-C»,

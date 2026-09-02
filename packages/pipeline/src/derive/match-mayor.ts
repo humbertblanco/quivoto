@@ -1,3 +1,4 @@
+import { siglesFamily } from "@quivoto/shared-schemas/brands";
 import { normalize } from "../lib/text";
 
 /**
@@ -43,6 +44,24 @@ function tail(text: string): string {
   const parts = tokens(text);
   return parts.length > 0 ? parts[parts.length - 1]! : "";
 }
+
+/** Distància d'edició entre dues cadenes curtes: «horitzo31» i «horitzo32» són a 1. */
+function distancia(a: string, b: string): number {
+  const fila = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    let anterior = fila[0]!;
+    fila[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const temp = fila[j]!;
+      fila[j] = Math.min(fila[j]! + 1, fila[j - 1]! + 1, anterior + (a[i - 1] === b[j - 1] ? 0 : 1));
+      anterior = temp;
+    }
+  }
+  return fila[b.length]!;
+}
+
+/** La «x» de «per» fora: «IxSC» i «ISC» són la mateixa llista escrita de dues maneres. */
+const senseX = (text: string): string => key(text).replace(/(?<=[a-z])x(?=[a-z])/g, "");
 
 /**
  * Trossos compartits entre dos noms, comptant també els que un té escapçats:
@@ -113,6 +132,55 @@ export function matchMayorParty(
   const contains = withSeats.filter((c) => target.length >= 5 && key(c.sigles).includes(target));
   const byContains = unique(contains, "conté", 0.65);
   if (byContains) return byContains;
+
+  /*
+   * 5b. La mateixa família de marca. «CP» és la Candidatura de Progrés, que a
+   * Vilaller es presenta com a «MÉS X VILALLER-CANDIDATURA DE PROGRÉS»; «PLV/ERC»
+   * és la llista que el registre electoral té sota el codi d'agrupació d'ERC.
+   * Quan el partit de l'alcaldia i una sola llista amb regidories pertanyen a la
+   * mateixa família (per sigles o pel codi d'agrupació), és aquella.
+   */
+  const familia = siglesFamily(mayorPartyRaw);
+  if (familia && familia !== "local") {
+    const deLaFamilia = unique(
+      withSeats.filter((c) => (c.brandId && c.brandId !== "local" ? c.brandId : siglesFamily(c.sigles)) === familia),
+      "família",
+      0.75,
+    );
+    if (deLaFamilia) return deLaFamilia;
+  }
+
+  /*
+   * 5c. La «x» de «per» i les errates d'una lletra. El padró escriu «IxSC» i
+   * el registre «ISC-IdSELVA»; «HORITZÓ31» i «HORITZÓ32» són la mateixa llista
+   * amb un dit que ha relliscat; «AMUNT» i «AMONT» és l'occità de la Vall de
+   * Cardós. Es compara sense la «x» entremig i amb una lletra de marge, només
+   * en trossos prou llargs perquè una lletra no sigui mitja paraula.
+   */
+  const objectiuSenseX = senseX(mayorPartyRaw);
+  // Els trossos del padró també van sense la x i, com que venen escapçats,
+  // es comparen pels cinc primers caràcters: «SumemxS» i «Sumen» són «sumem»
+  // i «sumen», a una lletra.
+  const trossosObjectiu = tokens(mayorPartyRaw).map((t) => senseX(t)).filter((t) => t.length >= 5);
+  const semblants = (a: string, b: string): boolean => {
+    if (a.length < 5 || b.length < 5) return false;
+    if (distancia(a, b) <= 1) return true;
+    const n = Math.min(a.length, b.length, 6);
+    return distancia(a.slice(0, n), b.slice(0, n)) <= 1;
+  };
+  const aproximats = withSeats.filter((c) => {
+    const trossos = [key(c.sigles), ...tokens(c.sigles)].filter((t) => t.length >= 3);
+    return trossos.some(
+      (t) =>
+        t === objectiuSenseX ||
+        senseX(t) === objectiuSenseX ||
+        semblants(t, objectiuSenseX) ||
+        semblants(t, target) ||
+        trossosObjectiu.some((o) => semblants(senseX(t), o)),
+    );
+  });
+  const perAproximacio = unique(aproximats, "aproximat", 0.65);
+  if (perAproximacio) return perAproximacio;
 
   // 6. Últim recurs: qui comparteix més trossos del nom, si en destaca un de sol.
   const mayorTokens = tokens(mayorPartyRaw);

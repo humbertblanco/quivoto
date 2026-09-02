@@ -67,3 +67,35 @@ describe("matchMayorParty", () => {
     expect(match!.confidence).toBeGreaterThan(0.6);
   });
 });
+
+describe("família i errates d'una lletra (els catorze municipis que quedaven en gris el 2-9-2026)", () => {
+  const c = (candidatureId: number, sigles: string, seats: number, brandId: string | null = null): MatchCandidate => ({
+    candidatureId, sigles, agrupacioSigles: null, brandId, seats,
+  });
+  it("«CP» és la Candidatura de Progrés de Vilaller", () => {
+    const m = matchMayorParty("CP", [c(1, "MÉS X VILALLER-CANDIDATURA DE PROGRÉS", 4, "psc"), c(2, "JUNTS PER VILALLER CM", 2, "junts"), c(3, "ERC-AM", 1, "erc")]);
+    expect(m?.candidatureId).toBe(1);
+    expect(m?.method).toBe("família");
+  });
+  it("«PLV/ERC» és la llista de la Vall de Boí amb codi d'agrupació d'ERC", () => {
+    expect(matchMayorParty("PLV/ERC", [c(1, "PER LA VALL-ACORD MUNICIPAL", 5, "erc"), c(2, "JUNTS PER LA VALL DE BOÍ CM", 3, "junts")])?.candidatureId).toBe(1);
+  });
+  it("«IxSC» és «ISC-IdSELVA» sense la x de «per»", () => {
+    expect(matchMayorParty("IxSC", [c(1, "CM", 5), c(2, "CUP-AMUNT", 4), c(3, "ISC-IdSELVA", 4), c(4, "ERC-AM", 3), c(5, "PSC-CP", 1)])?.candidatureId).toBe(3);
+  });
+  it("«HORITZÓ31» és «HORITZÓ32», i «AMUNT» és «AMONT»", () => {
+    expect(matchMayorParty("HORITZÓ31", [c(1, "ERC-AM", 5), c(2, "HORITZÓ32", 5), c(3, "CM", 1)])?.candidatureId).toBe(2);
+    expect(matchMayorParty("AMUNT", [c(1, "VALL DE CARDÓS AMONT", 5), c(2, "NOVA VALL DE CARDÓS-ACORD MUNICIPAL", 2)])?.candidatureId).toBe(1);
+  });
+  it("«SumemxS-PS» és «Sumen per Salou-PSC-CP»", () => {
+    expect(matchMayorParty("SumemxS-PS", [c(1, "Sumen per Salou-PSC-CP", 8, "psc"), c(2, "ERC-AM", 4), c(3, "PP", 3), c(4, "VOX", 3), c(5, "ARA PL", 2), c(6, "USAP", 1)])?.candidatureId).toBe(1);
+  });
+  it("«JxMontb» és Junts, però a Montblanc hi ha dues llistes de la família (CM i JUNTSXMTB): no es tria", () => {
+    expect(matchMayorParty("JxMontb", [c(1, "CM", 5), c(2, "JUNTSXMTB-ARA PL", 3, "junts"), c(3, "EM-AM", 3), c(4, "DP-FIC", 1), c(5, "PSC-CP", 1)])).toBeNull();
+    expect(matchMayorParty("JxMontb", [c(2, "JUNTSXMTB-ARA PL", 3, "junts"), c(3, "EM-AM", 3), c(5, "PSC-CP", 1)])?.candidatureId).toBe(2);
+  });
+  it("un no adscrit no lliga amb ningú, i una lletra de marge no fa lligar sigles curtes", () => {
+    expect(matchMayorParty("No adscrit", [c(1, "iVDV", 6), c(2, "UpVV", 5), c(3, "PSC-CP", 2)])).toBeNull();
+    expect(matchMayorParty("UFP", [c(1, "CM", 4), c(2, "GdF-AM", 2), c(3, "ASG-X TU", 1)])).toBeNull();
+  });
+});
