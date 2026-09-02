@@ -15,6 +15,14 @@ import { normalizePersonName, slugify } from "../lib/text";
 import { carregaMetriques } from "./metriques";
 import { adrecesRegidors } from "./regidor";
 import { assignaSlugs } from "./candidatura";
+import {
+  adrecesAlcaldies,
+  alcaldiesHistoriques,
+  genereDe,
+  periodesDeLaPersona,
+  sexesPerNom,
+  type HistorialAlcaldies,
+} from "./alcaldia-historica";
 import type { Els947Row } from "./els947";
 
 /**
@@ -25,7 +33,7 @@ import type { Els947Row } from "./els947";
  * llista del seu poble. Buscar «Collboni» no trobava res i buscar «ERC» tampoc,
  * quan de totes dues coses n'hi ha pàgina publicada.
  *
- * ## Dos fitxers, i per què
+ * ## Tres fitxers, i per què
  *
  * `cerca.json` són els 947 municipis amb l'alcaldia **plegada dins la fila**
  * —116 kB, 34 kB comprimits— i és el que es baixa quan s'obre la casella.
@@ -33,6 +41,13 @@ import type { Els947Row } from "./els947";
  * 79 kB comprimits, que es baixa tot sol darrere del primer. Partir-ho no és
  * una manieta: la major part de les cerques s'acaben al primer fitxer, i qui
  * escriu «rubi» ha de tenir el resultat abans que arribin els electes.
+ *
+ * `cerca-alcaldies.json` és el tercer: les 4.400 persones que han tingut
+ * l'alcaldia des del 1979 i que avui no seuen al ple, cadascuna amb la seva
+ * fitxa a `m/<municipi>/alcaldia/<persona>/`. Són tantes com els regidors
+ * —uns 200 kB més— per a la pregunta que menys gent fa, i per això no van
+ * dins del segon: es baixen darrere seu, i buscar «roig castell» troba en
+ * Joan Roig Castell, alcalde d'Alcanar del 2003 al 2023, quan arriben.
  *
  * ## El que no es precalcula
  *
@@ -102,6 +117,11 @@ export function clauCerca(text: string): string {
  * escriu quatre lletres busca un lloc molt més sovint que una persona, i entre
  * les persones busca abans qui mana. Els blocs d'aquesta pàgina van al davant
  * de tot perquè són l'únic resultat que no fa marxar d'on s'és.
+ *
+ * Qui va tenir l'alcaldia i ja no seu al ple va l'últim de tot: amb un cognom
+ * escrit a mitges, la gent que hi és avui ha de sortir abans que la de fa
+ * trenta anys. Un exalcalde que **comença** pel que s'ha escrit continua
+ * passant al davant de qualsevol regidor que només ho dugui a dins.
  */
 export const TIPUS = {
   Bloc: 6,
@@ -111,6 +131,7 @@ export const TIPUS = {
   Partit: 3,
   Candidatura: 2,
   Regidor: 1,
+  Exalcaldia: 0,
 } as const;
 
 export type Mena = keyof typeof TIPUS;
@@ -473,4 +494,129 @@ export async function escriuCercaElectes(
   const index = indexDeCercaElectes(files, await carregaElectes(db));
   await writeFile(cami, JSON.stringify(index), "utf8");
   return { regidors: index.reg.length, candidatures: index.cand.length };
+}
+
+// ---------------------------------------------------------------- alcaldies
+
+export type DadesAlcaldies = {
+  municipis: { id: number; slug: string }[];
+  /**
+   * L'historial de cada municipi: **la mètrica `mayors`**, la mateixa que
+   * llegeix `escriuAlcaldiesHistoriques()` per escriure les fitxes. Si l'índex
+   * sortís de la taula crua, la fusió de variants i els relleus a mig mandat
+   * es tornarien a decidir aquí i podrien no dir el mateix que la pàgina.
+   */
+  historials: { municipalityId: number; historial: HistorialAlcaldies }[];
+  /** El sexe del registre de candidatures per nom normalitzat, per dir «alcalde» o «alcaldessa». */
+  sexes: ReadonlyMap<string, "H" | "D">;
+};
+
+/**
+ * El tercer fitxer: qui ha tingut l'alcaldia i avui no seu al ple.
+ *
+ * Com els electes, sense clau ni slug: el navegador deriva la clau amb
+ * `clauCerca()` i l'adreça amb `"alcaldia/" + slugify(nom) + "/"`, i les
+ * poques files on el directori no és aquest van a `exa` amb l'adreça sencera.
+ * El càrrec va com un número i no com a text perquè són 4.400 files.
+ */
+export type IndexAlcaldies = {
+  sig: string[];
+  /**
+   * nom, posició del municipi a `mun`, anys («2003-2023», «1991-1995 i
+   * 2003-2011»), sigles del mandat més recent (−1 si no se'n pot dir cap) i
+   * càrrec: 0 no se sap, 1 alcalde, 2 alcaldessa.
+   */
+  alc: [string, number, string, number, number][];
+  /**
+   * posició del municipi → fitxa d'alcaldia de qui hi té l'alcaldia avui i
+   * **no** té fitxa de regidor. La fila d'alcaldia dels 947 va a `#alcaldies`
+   * quan l'índex d'electes no li sap cap fitxa; amb això va a la seva pàgina.
+   */
+  act: Record<number, string>;
+  /** les poques files on l'adreça no és `alcaldia/<slugify(nom)>/` */
+  exa: Record<number, string>;
+};
+
+export async function carregaAlcaldies(db: Db): Promise<DadesAlcaldies> {
+  const municipis = await db
+    .select({ id: municipalities.id, slug: municipalities.slug })
+    .from(municipalities);
+  const historials = (await carregaMetriques(db, ["mayors"])).map((m) => ({
+    municipalityId: m.municipalityId,
+    historial: m.data as HistorialAlcaldies,
+  }));
+  return { municipis, historials, sexes: await sexesPerNom(db) };
+}
+
+/**
+ * Construeix el tercer índex amb les mateixes persones, i els mateixos
+ * directoris, que escriu `escriuAlcaldiesHistoriques()`.
+ *
+ * No es torna a decidir res: la fusió de «Joan Roig Castell» amb «Joan Roig i
+ * Castell», el sufix `-2` de dos slugs iguals i l'adreça de cadascú els
+ * decideix `alcaldiesHistoriques()` amb la fila dels 947 com a alcaldia vigent
+ * —que és el que la fitxa li passa—, i `adrecesAlcaldies()` els llegeix. La
+ * persona que hi és avui i que ja surt a l'índex —com a fila d'alcaldia del
+ * municipi i, si en té, com a regidor— no s'hi repeteix: la seva pàgina
+ * d'alcaldia és una redirecció, i l'índex no ha d'enviar a redireccions.
+ */
+export function indexDeCercaAlcaldies(
+  files: readonly Els947Row[],
+  dades: DadesAlcaldies,
+): IndexAlcaldies {
+  const mun = indexDeCerca(files).mun;
+  const posPerSlug = new Map(mun.map((m, i) => [m.s, i]));
+  const filaPerSlug = new Map(files.map((f) => [f.s, f]));
+  const slugPerId = new Map(dades.municipis.map((m) => [m.id, m.slug]));
+  const sigles = diccionari();
+
+  const alc: IndexAlcaldies["alc"] = [];
+  const act: Record<number, string> = {};
+  const exa: Record<number, string> = {};
+  for (const { municipalityId, historial } of dades.historials) {
+    const slug = slugPerId.get(municipalityId);
+    if (slug === undefined) continue;
+    const iMun = posPerSlug.get(slug);
+    const fila = filaPerSlug.get(slug);
+    if (iMun === undefined || fila === undefined) continue;
+
+    const persones = alcaldiesHistoriques(historial, {
+      actual: { nom: fila.a, adreca: fila.ad ?? null },
+    });
+    const adreces = adrecesAlcaldies(persones);
+    const clauVigent = fila.a ? normalizePersonName(fila.a) : "";
+    for (const p of persones) {
+      const adreca = adreces.get(p.clau)!;
+      if (p.actual && p.clau === clauVigent) {
+        // Ja hi és per la fila dels 947. Sense fitxa de regidor, aquella fila
+        // no sabria on enviar: que vagi a la pàgina d'alcaldia, que és de debò.
+        if (!p.fitxaRegidor) act[iMun] = adreca;
+        continue;
+      }
+      // El càrrec de la seu no es mira: qui hi és avui ja ha quedat a dalt, i
+      // per a la resta només parla el registre de candidatures.
+      const genere = genereDe(p.clau, null, dades.sexes);
+      const i = alc.length;
+      alc.push([
+        p.nom,
+        iMun,
+        periodesDeLaPersona(p),
+        sigles.id(p.sigles),
+        genere === "alcaldessa" ? 2 : genere === "alcalde" ? 1 : 0,
+      ]);
+      if (adreca !== `alcaldia/${slugify(p.nom)}/`) exa[i] = adreca;
+    }
+  }
+
+  return { sig: sigles.llista, alc, act, exa };
+}
+
+export async function escriuCercaAlcaldies(
+  db: Db,
+  files: readonly Els947Row[],
+  cami: string,
+): Promise<number> {
+  const index = indexDeCercaAlcaldies(files, await carregaAlcaldies(db));
+  await writeFile(cami, JSON.stringify(index), "utf8");
+  return index.alc.length;
 }

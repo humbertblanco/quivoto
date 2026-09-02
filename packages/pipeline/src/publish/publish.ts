@@ -10,7 +10,7 @@ import { carregaMedianes } from "./medianes";
 import { mitjanesPerGrup } from "./criminalitat";
 import { carregaMetriques } from "./metriques";
 import { buildPeerGroups } from "../derive/peers";
-import { escriuCerca, escriuCercaElectes } from "./cerca";
+import { escriuCerca, escriuCercaAlcaldies, escriuCercaElectes } from "./cerca";
 import { carregaSeriesGrup } from "./series-grup";
 import { loadEls947, renderEls947 } from "./els947";
 import { INDEXABLE, SITE } from "./config";
@@ -201,6 +201,14 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
      */
     const electes = await escriuCercaElectes(db, carregats, `${OUT_DIR}../cerca-electes.json`);
     run.say(`índex d'electes amb ${electes.regidors} regidors i ${electes.candidatures} candidatures`);
+    /*
+     * El tercer: qui ha tingut l'alcaldia des del 1979 i avui no seu al ple.
+     * A part del segon perquè són tantes files com regidors per a la pregunta
+     * que menys gent fa; el navegador se'l baixa darrere de l'altre. No compten
+     * al peu: els «electes» del peu són els d'ara.
+     */
+    const exalcaldies = await escriuCercaAlcaldies(db, carregats, `${OUT_DIR}../cerca-alcaldies.json`);
+    run.say(`índex d'alcaldies amb ${exalcaldies} persones que han tingut l'alcaldia i avui no seuen al ple`);
 
     // El peu de cada pàgina ensenya el que s'ha comptat en aquesta publicació i
     // no una xifra escrita a mà que envelleix sola. Va aquí perquè la primera

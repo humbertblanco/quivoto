@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   adrecesAlcaldies, alcaldiesHistoriques, anysDeLaPersona, descripcioAlcaldia, duradaEscrita, esRedireccioAlcaldia,
-  fraseNaixement, genereDe, renderAlcaldiaHistorica, renderRedireccioAlcaldia, resultatDeLaLlista, titolAlcaldia,
+  fraseNaixement, genereDe, periodesDeLaPersona, renderAlcaldiaHistorica, renderRedireccioAlcaldia, resultatDeLaLlista, titolAlcaldia,
   type HistorialAlcaldies, type PersonaAlcaldia, type ResultatsPerEleccio,
 } from "./alcaldia-historica";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
@@ -193,6 +193,15 @@ describe("alcaldiesHistoriques", () => {
     expect(p.wikidata?.carrecs[0]?.nom).toBe("diputat al Parlament de Catalunya");
     // Els altres no en tenen res.
     expect(alcaldiesHistoriques(HISTORIAL, { avui: AVUI, fotos, trajectoria }).find((q) => q.clau === "pere vidal mas")!.wikidata).toBeNull();
+  });
+
+  it("els períodes separen els mandats que no van seguits, i ajunten els que sí", () => {
+    // En Roig: 2003-2007, i després dos mandats seguits del 2015 al 2023.
+    expect(periodesDeLaPersona(roig())).toBe("2003-2007 i 2015-2023");
+    // L'Anna Ferrer va del 2007 fins que en Pere Vidal la releva el 2013: un sol tram.
+    expect(periodesDeLaPersona(persones().find((p) => p.slug === "anna-ferrer-roca")!)).toBe("2007-2013");
+    // Qui encara hi és acaba amb «des del».
+    expect(periodesDeLaPersona(persones().find((p) => p.slug === "maria-puig-soler")!)).toBe("des del 2024");
   });
 
   it("sense historial no hi ha ningú", () => {

@@ -552,6 +552,30 @@ export function anysDeLaPersona(p: PersonaAlcaldia): string {
   return p.primerAny === p.ultimAny ? String(p.primerAny) : `${p.primerAny}-${p.ultimAny}`;
 }
 
+/**
+ * Els mateixos anys, però per períodes: «2003-2023», o «1991-1995 i 2003-2011»
+ * quan hi va haver algú altre entremig. És el que ensenya el cercador al
+ * costat del nom, on «1991-2011» faria pensar en vint anys seguits que no ho
+ * van ser. Dos mandats van junts si el segon comença l'any que acaba el
+ * primer i cap relleu a mig mandat no hi posa una altra persona pel mig; si
+ * encara hi és, l'últim període diu «des del», com `anysDeLaPersona()`.
+ */
+export function periodesDeLaPersona(p: PersonaAlcaldia): string {
+  const trams: { inici: number; fi: number }[] = [];
+  let anterior: Mandat | null = null;
+  for (const m of p.mandats) {
+    const seguit = anterior !== null && m.anyInici === anterior.anyFi && !anterior.marxaAMigMandat && !m.arribaAMigMandat;
+    if (seguit) trams[trams.length - 1]!.fi = anyDeFi(m);
+    else trams.push({ inici: anyDInici(m), fi: anyDeFi(m) });
+    anterior = m;
+  }
+  return llistaAmbI(
+    trams.map((t, i) =>
+      p.actual && i === trams.length - 1 ? `des del ${t.inici}` : t.inici === t.fi ? String(t.inici) : `${t.inici}-${t.fi}`,
+    ),
+  );
+}
+
 /** «un mandat», «dos mandats», «tres mandats»… */
 function quantsMandats(n: number): string {
   const noms = ["cap mandat", "un mandat", "dos mandats", "tres mandats", "quatre mandats", "cinc mandats", "sis mandats", "set mandats", "vuit mandats", "nou mandats", "deu mandats", "onze mandats", "dotze mandats"];

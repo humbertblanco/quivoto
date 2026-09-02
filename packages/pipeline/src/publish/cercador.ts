@@ -1,5 +1,5 @@
 import { clauCerca, classifica, qualitat, TIPUS } from "./cerca";
-import { normalize, slugify } from "../lib/text";
+import { de, normalize, slugify } from "../lib/text";
 
 /**
  * La casella per anar a qualsevol lloc, a totes les pàgines.
@@ -11,12 +11,15 @@ import { normalize, slugify } from "../lib/text";
  * altre poble que no fos tornar enrere fins a la portada. Aquí és un mòdul, i
  * el que abans eren camins escrits a mà ara surten de `base`.
  *
- * ## Sis menes de resultat, no una
+ * ## Set menes de resultat, no una
  *
  * Trobava municipis i prou. L'Observatori publica 947 municipis, 43 comarques,
  * 2.626 candidatures i 4.807 fitxes de persona, i buscar-hi el nom del propi
  * regidor no tornava res: la pàgina existia i no hi havia manera d'arribar-hi
- * si no era pel poble. Ara hi són totes sis, cadascuna amb la seva fila.
+ * si no era pel poble. Ara hi són totes sis, cadascuna amb la seva fila, i la
+ * setena són les 4.400 persones que han tingut l'alcaldia des del 1979 i avui
+ * no seuen al ple: «roig castell» troba en Joan Roig Castell, alcalde
+ * d'Alcanar del 2003 al 2023, amb el càrrec i els anys al costat del nom.
  *
  * ## El rànquing, i per què no n'hi ha prou amb «comença per»
  *
@@ -26,9 +29,11 @@ import { normalize, slugify } from "../lib/text";
  * del nom, que sense el 2 quedarien totes per sota de qualsevol cosa— i 1 si
  * només hi és a dins. El tipus desempata entre
  * coses igual de ben trobades: municipi 5, alcaldia 4, comarca i partit 3,
- * candidatura 2, regidor 1. Multiplicar la qualitat per 8 garanteix que cap
- * tipus no passi mai al davant d'una coincidència millor: qui escriu «sant»
- * vol Sant Cugat abans que un regidor que es digui Sant.
+ * candidatura 2, regidor 1, i qui va tenir l'alcaldia i ja no hi és, 0: amb
+ * un cognom escrit a mitges, la gent d'avui surt abans que la de fa trenta
+ * anys. Multiplicar la qualitat per 8 garanteix que cap tipus no passi mai al
+ * davant d'una coincidència millor: qui escriu «sant» vol Sant Cugat abans que
+ * un regidor que es digui Sant.
  *
  * **El desempat de debò és la població.** «marti» lliga uns 200 regidors amb la
  * mateixa puntuació, i el que decideix quins dotze es veuen és de quin poble
@@ -42,11 +47,13 @@ import { normalize, slugify } from "../lib/text";
  * mateixa raó la finestra és un `dialog` de debò —el navegador ja hi posa el
  * focus, l'Esc i el fons— i no una capa reinventada.
  *
- * **No es baixa l'índex fins que no cal**, i quan cal es baixa en dos trossos.
+ * **No es baixa l'índex fins que no cal**, i quan cal es baixa en tres trossos.
  * Primer `cerca.json` (34 kB comprimits): els 947 municipis amb la seva
  * alcaldia, que és el que respon «i el meu poble?». Els electes —79 kB— vénen
  * darrere sols, quan el primer ja ha arribat, perquè qui escriu «rubi» no ha
- * d'esperar 4.807 regidors i 2.626 candidatures per veure el seu poble.
+ * d'esperar 4.807 regidors i 2.626 candidatures per veure el seu poble. I les
+ * alcaldies d'abans —`cerca-alcaldies.json`, tantes files com regidors— vénen
+ * darrere dels electes, perquè són la pregunta que menys gent fa.
  *
  * ## La normalització i el slug no es copien
  *
@@ -101,13 +108,14 @@ export function cercador(base: string): string {
   else if (capcalera) capcalera.appendChild(boto);
 
   // Les funcions del generador, serialitzades i no copiades: la normalització,
-  // el slug i **el rànquing sencer**, que així es pot provar amb vitest en
-  // comptes de viure dins d'una cadena que no mira ningú. «slugify» crida
-  // «normalize» i «classifica» crida «qualitat» i «TIPUS»: per això tots hi són
-  // amb el seu nom.
+  // el slug, la preposició («d'Alcanar», «del Prat», «de l'Hospitalet») i **el
+  // rànquing sencer**, que així es pot provar amb vitest en comptes de viure
+  // dins d'una cadena que no mira ningú. «slugify» crida «normalize» i
+  // «classifica» crida «qualitat» i «TIPUS»: per això tots hi són amb el seu nom.
   var clau = ${clauCerca.toString()};
   var normalize = ${normalize.toString()};
   var slugify = ${slugify.toString()};
+  var de = ${de.toString()};
   var TIPUS = ${JSON.stringify(TIPUS)};
   var qualitat = ${qualitat.toString()};
   var classifica = ${classifica.toString()};
@@ -118,7 +126,8 @@ export function cercador(base: string): string {
     return { text: t, k: clau(t), on: a.getAttribute("href") };
   });
 
-  var dades = null, electes = null, baixant = false, baixantElectes = false;
+  var dades = null, electes = null, alcaldies = null;
+  var baixant = false, baixantElectes = false, baixantAlcaldies = false;
   var comarques = [], tots = [];
 
   /**
@@ -176,6 +185,12 @@ export function cercador(base: string): string {
                       w: m[electes.reg[i][1]].h, i: i });
         }
       }
+      if (alcaldies) {
+        for (i = 0, n = alcaldies.alc.length; i < n; i++) {
+          tots.push({ m: "Exalcaldia", k: clau(alcaldies.alc[i][0]), t: alcaldies.alc[i][0],
+                      w: m[alcaldies.alc[i][1]].h, i: i });
+        }
+      }
     }
   }
 
@@ -197,7 +212,20 @@ export function cercador(base: string): string {
       // llista sota els dits mentre baixa amb les fletxes seria pitjor que
       // esperar-se a la pulsació següent.
       if (tria <= 0) pinta();
-    }).catch(function(){ /* sense electes la cerca continua fent la seva feina */ });
+      baixaAlcaldies();
+    }).catch(function(){ /* sense electes la cerca continua fent la seva feina */ baixaAlcaldies(); });
+  }
+
+  // El tercer fitxer, darrere del segon: qui ha tingut l'alcaldia i avui no
+  // seu al ple. Va últim perquè és la pregunta que menys gent fa.
+  function baixaAlcaldies(){
+    if (alcaldies || baixantAlcaldies) return;
+    baixantAlcaldies = true;
+    fetch(BASE + "cerca-alcaldies.json").then(function(r){ return r.json(); }).then(function(d){
+      alcaldies = d;
+      refes();
+      if (tria <= 0) pinta();
+    }).catch(function(){ /* sense les alcaldies d'abans, la cerca continua */ });
   }
 
   // Els noms venen de dades obertes i no d'aquí: escapar-los és el que impedeix
@@ -220,12 +248,13 @@ export function cercador(base: string): string {
     if (f.m === "Alcaldia") {
       m = dades.mun[f.i];
       // El camí de la fitxa de la persona el porta l'índex d'electes, decidit
-      // per la mateixa regla que la llista dels 947; mentre no ha arribat, o
-      // quan l'alcaldia no té pàgina, es va a l'apartat d'alcaldies del seu
-      // municipi, que és on hi ha el que en sabem.
-      var propia = electes ? electes.alc[f.i] : null;
+      // per la mateixa regla que la llista dels 947; si no en té cap de
+      // regidor, l'índex d'alcaldies li sap la pàgina d'alcaldia. Mentre no
+      // han arribat, o quan l'alcaldia no té pàgina, es va a l'apartat
+      // d'alcaldies del seu municipi, que és on hi ha el que en sabem.
+      var propia = (electes && electes.alc[f.i]) || (alcaldies && alcaldies.act[f.i]) || null;
       return { mena: "Alcaldia", text: m.a,
-               sub: "alcaldia de " + m.n + (m.g === null ? "" : " · " + dades.sig[m.g]),
+               sub: "alcaldia " + de(m.n) + (m.g === null ? "" : " · " + dades.sig[m.g]),
                on: BASE + "m/" + m.s + "/" + (propia || "#alcaldies") };
     }
     if (f.m === "Comarca") {
@@ -254,6 +283,17 @@ export function cercador(base: string): string {
       return { mena: "Candidatura", text: sigles, sub: m.n,
                on: BASE + "m/" + m.s + "/" + (electes.exc[f.i] || slugify(sigles)) + "/" };
     }
+    if (f.m === "Exalcaldia") {
+      var x = alcaldies.alc[f.i];
+      m = dades.mun[x[1]];
+      // «alcalde», «alcaldessa» o, quan cap font ho diu, «a l'alcaldia»: la
+      // mateixa regla que el títol de la seva fitxa. Els anys i les sigles del
+      // mandat més recent vénen escrits de l'índex.
+      var carrec = x[4] === 2 ? "alcaldessa " : x[4] === 1 ? "alcalde " : "a l'alcaldia ";
+      return { mena: "Alcaldia", text: x[0],
+               sub: carrec + de(m.n) + " · " + x[2] + (x[3] < 0 ? "" : " · " + alcaldies.sig[x[3]]),
+               on: BASE + "m/" + m.s + "/" + (alcaldies.exa[f.i] || "alcaldia/" + slugify(x[0]) + "/") };
+    }
     var r = electes.reg[f.i];
     m = dades.mun[r[1]];
     return { mena: "Regidor", text: r[0],
@@ -268,7 +308,7 @@ export function cercador(base: string): string {
     tria = files.length > 0 ? 0 : -1;
     camp.setAttribute("aria-expanded", files.length > 0 ? "true" : "false");
     if (q.length === 0) {
-      caixa.innerHTML = "<p class=\\"cerca-buit\\">Escriu el nom d'un poble, d'una persona del ple o d'un partit; o una paraula per trobar-la en aquesta pàgina.</p>";
+      caixa.innerHTML = "<p class=\\"cerca-buit\\">Escriu el nom d'un poble, d'una persona del ple, d'un alcalde d'ara o d'abans, o d'un partit; o una paraula per trobar-la en aquesta pàgina.</p>";
       camp.removeAttribute("aria-activedescendant");
       return;
     }

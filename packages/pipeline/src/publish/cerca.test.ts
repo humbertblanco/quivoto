@@ -3,13 +3,17 @@ import {
   clauCerca,
   classifica,
   indexDeCerca,
+  indexDeCercaAlcaldies,
   indexDeCercaElectes,
   qualitat,
   type Candidat,
+  type DadesAlcaldies,
   type DadesElectes,
 } from "./cerca";
 import { cercador } from "./cercador";
+import { adrecesAlcaldies, alcaldiesHistoriques, type HistorialAlcaldies } from "./alcaldia-historica";
 import type { Els947Row } from "./els947";
+import { slugify } from "../lib/text";
 
 /**
  * El cercador ha de trobar el poble escrivint-lo com l'escriu la gent: sense
@@ -268,6 +272,109 @@ describe("indexDeCercaElectes", () => {
   });
 });
 
+describe("indexDeCercaAlcaldies", () => {
+  /** L'historial d'Alcanar de `alcaldia-historica.test.ts`, amb la variant «i» inclosa. */
+  const ALCANAR: HistorialAlcaldies = {
+    history: [
+      { term: "2023-2027", name: "MARIA PUIG SOLER", partyRaw: "ERC-AM", tookOfficeOn: "2024-10-05" },
+      { term: "2019-2023", name: "JOAN ROIG CASTELL", partyRaw: "ERC-AM", tookOfficeOn: "2019-06-15" },
+      { term: "2015-2019", name: "JOAN ROIG I CASTELL", partyRaw: "ERC-AM", tookOfficeOn: "2015-06-13" },
+      { term: "2011-2015", name: "PERE VIDAL MAS", partyRaw: "CiU", tookOfficeOn: "2013-02-01" },
+      { term: "2011-2015", name: "ANNA FERRER ROCA", partyRaw: "CiU", tookOfficeOn: "2011-06-11" },
+      { term: "2007-2011", name: "ANNA FERRER ROCA", partyRaw: "CiU", tookOfficeOn: "2007-06-16" },
+      { term: "2003-2007", name: "JOAN ROIG CASTELL", partyRaw: "ERC", tookOfficeOn: null },
+    ],
+    changes: [
+      { term: "2023-2027", mayors: [{ name: "MARIA PUIG SOLER", tookOfficeOn: "2024-10-05" }], partyChanged: false, onlySuccessorKnown: true },
+      { term: "2011-2015", mayors: [{ name: "ANNA FERRER ROCA", tookOfficeOn: "2011-06-11" }, { name: "PERE VIDAL MAS", tookOfficeOn: "2013-02-01" }], partyChanged: false },
+    ],
+  };
+  const ALINS: HistorialAlcaldies = {
+    history: [
+      { term: "2023-2027", name: "JOAN PONS", partyRaw: "ERC-AM", tookOfficeOn: "2023-06-17" },
+      { term: "2019-2023", name: "JOAN PONS", partyRaw: "ERC-AM", tookOfficeOn: "2019-06-15" },
+    ],
+    changes: [],
+  };
+  const RUBI: HistorialAlcaldies = {
+    history: [{ term: "2023-2027", name: "JOSEP ALTRE VELL", partyRaw: "PSC-CP", tookOfficeOn: "2023-06-17" }],
+    changes: [],
+  };
+  const files = [
+    // L'alcaldia vigent amb fitxa de regidor, com a la majoria de municipis.
+    fila("alcanar", "Alcanar", "Montsià", 9_500, "Maria Puig Soler", "ERC-AM", "regidor/maria-puig-soler/"),
+    // Sense fitxa de regidor: la seva pàgina és la d'alcaldia.
+    fila("alins", "Alins", "Pallars Sobirà", 250, "Joan Pons", "ERC-AM"),
+    // L'historial i la fila dels 947 no diuen la mateixa persona.
+    fila("rubi", "Rubí", "Vallès Occidental", 79_609, "Ana María Martínez", "PSC-CP", "regidor/ana-maria-martinez/"),
+  ];
+  const dades: DadesAlcaldies = {
+    municipis: [{ id: 1, slug: "alcanar" }, { id: 2, slug: "alins" }, { id: 3, slug: "rubi" }],
+    historials: [
+      { municipalityId: 1, historial: ALCANAR },
+      { municipalityId: 2, historial: ALINS },
+      { municipalityId: 3, historial: RUBI },
+    ],
+    sexes: new Map([["joan roig castell", "H"], ["anna ferrer roca", "D"]]),
+  };
+  const index = indexDeCercaAlcaldies(files, dades);
+  const roig = index.alc.find((a) => a[0] === "Joan Roig Castell")!;
+
+  it("una persona per nom fusionat, amb el nom llegible del mandat més recent", () => {
+    // «JOAN ROIG CASTELL» i «JOAN ROIG I CASTELL» són una sola fila, no dues.
+    expect(index.alc.filter((a) => /roig/i.test(a[0]))).toHaveLength(1);
+    expect(index.alc.map((a) => a[0]).sort()).toEqual(["Anna Ferrer Roca", "Joan Roig Castell", "Josep Altre Vell", "Pere Vidal Mas"]);
+  });
+
+  it("apunta al municipi per la seva posició a l'índex ordenat per clau", () => {
+    // «alcanar» 0, «alins» 1, «rubi» 2.
+    expect(roig[1]).toBe(0);
+    expect(index.alc.find((a) => a[0] === "Josep Altre Vell")![1]).toBe(2);
+  });
+
+  it("escriu els anys per períodes, les sigles del mandat més recent i el càrrec segons el registre", () => {
+    expect(roig[2]).toBe("2003-2007 i 2015-2023");
+    expect(index.sig[roig[3]]).toBe("ERC-AM");
+    expect(roig[4]).toBe(1);
+    const ferrer = index.alc.find((a) => a[0] === "Anna Ferrer Roca")!;
+    expect(ferrer[2]).toBe("2007-2013");
+    expect(ferrer[4]).toBe(2);
+    // En Pere Vidal no consta al registre: no se li endevina res.
+    expect(index.alc.find((a) => a[0] === "Pere Vidal Mas")![4]).toBe(0);
+  });
+
+  it("qui hi és avui i ja surt a l'índex —amb fitxa de regidor— no s'hi repeteix", () => {
+    expect(index.alc.some((a) => a[0] === "Maria Puig Soler")).toBe(false);
+    expect(index.act[0]).toBeUndefined();
+  });
+
+  it("qui hi és avui sense fitxa de regidor tampoc, però deixa dit on és la seva pàgina", () => {
+    expect(index.alc.some((a) => a[0] === "Joan Pons")).toBe(false);
+    expect(index.act[1]).toBe("alcaldia/joan-pons/");
+  });
+
+  it("si l'historial diu una persona i la fila dels 947 una altra, la de l'historial hi entra com a vigent", () => {
+    const altre = index.alc.find((a) => a[0] === "Josep Altre Vell")!;
+    expect(altre[2]).toBe("des del 2023");
+  });
+
+  it("l'adreça que el navegador dedueix és la que decideix alcaldia-historica, i les excepcions es calculen", () => {
+    // El guió fa «alcaldia/» + slugify(nom) + «/»; tot el que no sigui això ha
+    // de ser a `exa`, calculat amb `adrecesAlcaldies()` i no escrit a mà.
+    const esperades = new Map<string, string>();
+    for (const { municipalityId, historial } of dades.historials) {
+      const f = files.find((x) => x.s === dades.municipis.find((m) => m.id === municipalityId)!.slug)!;
+      const persones = alcaldiesHistoriques(historial, { actual: { nom: f.a, adreca: f.ad ?? null } });
+      for (const [, adreca] of adrecesAlcaldies(persones)) esperades.set(adreca, adreca);
+    }
+    index.alc.forEach((a, i) => {
+      const deduida = index.exa[i] ?? `alcaldia/${slugify(a[0])}/`;
+      expect(esperades.has(deduida)).toBe(true);
+    });
+    expect(index.exa).toEqual({});
+  });
+});
+
 describe("el guió del navegador", () => {
   const html = cercador("/observatori/");
 
@@ -289,6 +396,7 @@ describe("el guió del navegador", () => {
     expect(html).toContain('var BASE = "/observatori/"');
     expect(html).toContain('BASE + "cerca.json"');
     expect(html).toContain('BASE + "cerca-electes.json"');
+    expect(html).toContain('BASE + "cerca-alcaldies.json"');
     expect(html).not.toContain("../../cerca.json");
   });
 
