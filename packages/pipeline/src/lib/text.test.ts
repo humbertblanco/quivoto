@@ -96,3 +96,34 @@ describe("nomsOficials", () => {
     expect(seu.get(normalizePersonName("Concepción(conxi) Sierra Martín"))).toBe("Concepción Sierra Martín");
   });
 });
+
+/**
+ * L'historial de la Generalitat escriu «Ma. Dolors Sabater Puig» i Wikidata
+ * «Maria Dolors Sabater i Puig»: és la mateixa alcaldessa de Badalona, i si
+ * no lliga, l'historial que completa Wikidata la hi posaria dues vegades.
+ */
+describe("normalizePersonName amb les abreviatures del nom de pila", () => {
+  it("«Ma.», «Mª» i «M.ª» són Maria, també en majúscules", () => {
+    const clau = normalizePersonName("Maria Dolors Sabater i Puig");
+    expect(clau).toBe("maria dolors sabater puig");
+    expect(normalizePersonName("Ma. Dolors Sabater Puig")).toBe(clau);
+    expect(normalizePersonName("MA. DOLORS SABATER PUIG")).toBe(clau);
+    expect(normalizePersonName("Mª Dolors Sabater Puig")).toBe(clau);
+    expect(normalizePersonName("M.ª Dolors Sabater Puig")).toBe(clau);
+    expect(normalizePersonName("Mª. Dolors Sabater Puig")).toBe(clau);
+  });
+
+  it("«Josep M.» és Josep Maria, i «Fco.» és Francisco", () => {
+    expect(normalizePersonName("Josep M. Puig Roca")).toBe(normalizePersonName("Josep Maria Puig i Roca"));
+    expect(normalizePersonName("JOSEP M. PUIG ROCA")).toBe("josep maria puig roca");
+    expect(normalizePersonName("Fco. Javier Pérez Gil")).toBe(normalizePersonName("Francisco Javier Pérez Gil"));
+    expect(normalizePersonName("Fca. Martí Vila")).toBe("francisca marti vila");
+  });
+
+  it("una «M» o una «Ma» sense punt no es toquen: poden ser un cognom o una inicial de debò", () => {
+    expect(normalizePersonName("Joan Ma Serra")).toBe("joan ma serra");
+    expect(normalizePersonName("Marta Fàbregas M")).toBe("marta fabregas m");
+    // Una M. amb punt però enganxada a una altra lletra no és cap abreviatura.
+    expect(normalizePersonName("Anna Comas M.Àngel")).toBe(normalizePersonName("Anna Comas M Àngel"));
+  });
+});

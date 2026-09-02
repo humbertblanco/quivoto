@@ -216,7 +216,10 @@ describe("preparaCuriositats", () => {
   it("les alcaldies per any de naixement només surten amb deu o més i diuen de quantes", () => {
     const fet = fetDe("edat-alcaldies")!;
     const [tard, abans] = fet.llistes;
-    expect(tard!.files.map((f) => f.valor)).toEqual(["any 1998", "any 1995", "any 1985", "any 1980", "any 1975"]);
+    const avui = new Date().getFullYear();
+    expect(tard!.files.map((f) => f.valor)).toEqual(
+      [1998, 1995, 1985, 1980, 1975].map((any) => `uns ${avui - any} anys · any ${any}`),
+    );
     expect(tard!.files[0]!.persona).toEqual({ nom: "Lluc Riu Pau", href: null });
     expect(abans!.files[0]!.persona).toEqual({ nom: "Joan Serra Vila", href: "../m/riubaix/regidor/joan-serra-vila/" });
     // Torrelluna no té fitxa a Wikidata: 11 de 12.

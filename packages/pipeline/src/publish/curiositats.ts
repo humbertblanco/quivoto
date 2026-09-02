@@ -437,24 +437,26 @@ export function preparaCuriositats(files: readonly FilaCuriositat[], dades: Dade
       return f.a && any !== undefined ? [{ fila: f, nom: f.a, any }] : [];
     });
     if (ambAny.length >= 10) {
+      const anyAvui = new Date().getFullYear();
       const filaDe = (x: (typeof ambAny)[number]): FilaCuriosa => ({
         municipi: municipi(x.fila),
         persona: { nom: nomLlegible(x.nom), href: x.fila.ad ? `../m/${x.fila.s}/${x.fila.ad}` : null },
-        // «any 1996» i no «nascut el 1996»: el sexe no es carrega aquí i un
-        // participi mal concordat a la fila d'una alcaldessa és un error visible.
-        valor: `any ${x.any}`,
+        // L'edat és el que es vol llegir, i l'any en petit al costat. Només
+        // amb l'any de naixement, l'edat pot ballar un any: per això va amb
+        // «uns». Sense participis («nascut») perquè el sexe no es carrega aquí.
+        valor: `uns ${anyAvui - x.any} anys · any ${x.any}`,
       });
       const joves = primers(ambAny, (x) => x.any, (x) => x.fila.n, 5, "max");
       const grans = primers(ambAny, (x) => x.any, (x) => x.fila.n, 5, "min");
       fets.push({
         id: "edat-alcaldies",
-        titol: "Les alcaldies que van néixer més tard, i les que van néixer abans",
-        metode: "L'any de naixement de l'alcaldia actual segons la seva fitxa de Wikidata. Només l'any: el dia no té cap relleu per al control d'un ple.",
+        titol: "Les alcaldies més joves, i les més grans",
+        metode: "L'edat de l'alcaldia actual, calculada de l'any de naixement que dona la seva fitxa de Wikidata; només l'any, i per això l'edat és aproximada.",
         periode: "mandat 2023-2027",
         font: "Wikidata (CC0) · aparellat pel nom amb el registre d'electes",
         llistes: [
-          { cap: "Les que van néixer més tard", files: joves.files.map(filaDe), empatats: joves.empatats },
-          { cap: "Les que van néixer abans", files: grans.files.map(filaDe), empatats: grans.empatats },
+          { cap: "Les més joves", files: joves.files.map(filaDe), empatats: joves.empatats },
+          { cap: "Les més grans", files: grans.files.map(filaDe), empatats: grans.empatats },
         ],
         cobertura: `S'han mirat les ${n(ambAny.length)} alcaldies de ${n(total)} que tenen any de naixement a Wikidata; de la resta no se'n sap.`,
         cautela: "Wikidata té fitxa sobretot de qui ha tingut càrrecs més enllà del seu poble: la mostra tira cap a les ciutats grans i no diu res de l'edat de les alcaldies en general.",

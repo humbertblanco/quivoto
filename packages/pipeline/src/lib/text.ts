@@ -17,16 +17,53 @@ export function normalize(text: string): string {
 }
 
 /**
- * Nom de persona per aparellar entre fonts. Dues coses el trenquen si no s'hi fa res:
+ * Les abreviatures de nom de pila que les fonts escriuen i Wikidata no.
+ *
+ * L'historial d'alcaldies de la Generalitat diu «Ma. Dolors Sabater Puig» i
+ * Wikidata «Maria Dolors Sabater i Puig»: la mateixa alcaldessa de Badalona,
+ * que sense això no lliga i sembla que Wikidata en conegui una que la font
+ * oficial no té. Es desfan **abans** de normalitzar, perquè `normalize()` es
+ * menja el punt i la «ª» i llavors ja no es pot saber que aquella «m» era una
+ * Maria. Van amb el punt o amb la ª a posta: una «Ma» o una «M» soltes sense
+ * res poden ser un cognom o una inicial de veritat, i no es toquen.
+ *
+ *   · «Ma.», «Mª», «M.ª», «Mª.» → Maria; també «M.» sola davant d'un altre mot
+ *     («Josep M. Puig», «M. Àngels Coll»), que a un nom de pila català o
+ *     castellà és Maria gairebé sempre. Quan no ho és —un Joan M. que és Joan
+ *     Manuel— tampoc no lligava abans, així que no es perd res.
+ *   · «Fco.» → Francisco i «Fca.» → Francisca, les úniques altres abreviatures
+ *     de nom que surten a les fonts.
+ *
+ * Es fa amb `i` perquè la Generalitat ho escriu tot en majúscules («MA. DOLORS»).
+ */
+const ABREVIATURES_DE_NOM: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\bM\.?\s?ª\.?/giu, "Maria "],
+  [/\bMa\./gi, "Maria "],
+  [/\bM\.(?=\s|$)/gi, "Maria "],
+  [/\bFco\./gi, "Francisco "],
+  [/\bFca\./gi, "Francisca "],
+];
+
+/** «Ma. Dolors Sabater Puig» → «Maria  Dolors Sabater Puig»: el que s'aparella, no el que es publica. */
+export function desfesAbreviaturesDeNom(text: string): string {
+  let nom = text;
+  for (const [patro, sencer] of ABREVIATURES_DE_NOM) nom = nom.replace(patro, sencer);
+  return nom;
+}
+
+/**
+ * Nom de persona per aparellar entre fonts. Tres coses el trenquen si no s'hi fa res:
  *
  *   · El **motiu entre parèntesis** que porten les llistes electorals:
  *     «Concepción(conxi) Sierra Martín» al cens de candidats és la mateixa
  *     persona que «Concepción Sierra Martín» a la composició del ple. Sense
  *     treure'l, aquesta regidora sembla que hagi entrat a mig mandat.
  *   · La **«i» copulativa** dels cognoms catalans, que unes fonts posen i altres no.
+ *   · Les **abreviatures del nom de pila** («Ma.», «Mª», «Fco.»), que la
+ *     Generalitat escriu i Wikidata desplega: vegeu `ABREVIATURES_DE_NOM`.
  */
 export function normalizePersonName(text: string): string {
-  return normalize(text.replace(/\([^)]*\)/g, " "))
+  return normalize(desfesAbreviaturesDeNom(text).replace(/\([^)]*\)/g, " "))
     .replace(/\bi\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
