@@ -2,6 +2,7 @@ import { municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { ckanSql } from "../adapters/aoc";
 import { municipalityName, normalize, uninvertArticle } from "../lib/text";
 import { sameForce, siglesFamily } from "@quivoto/shared-schemas/brands";
+import { familiaDeCadaLlista } from "../derive/families";
 import { withRun } from "../lib/run";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
 
@@ -99,19 +100,23 @@ export async function j7ContextObert(db: Db): Promise<void> {
           const total = list.reduce((a, e) => a + e.votes, 0);
           // Escons per força, no per candidatura: és l'única manera de comparar
           // dotze eleccions en què les sigles canvien cada poques convocatòries.
+          // Una família és un partit i un partit no presenta dues llistes
+          // el mateix any: `familiaDeCadaLlista` desfà els doblets (Badalona
+          // 2015, Guanyem i ICV) abans de sumar.
+          const ambEscons = list.filter((e) => e.seats > 0);
+          const familia = familiaDeCadaLlista(ambEscons);
           const byFamily = new Map<string, number>();
-          for (const entry of list) {
-            if (entry.seats <= 0) continue;
-            const family = siglesFamily(entry.sigles) ?? "local";
+          ambEscons.forEach((entry, i) => {
+            const family = familia[i]!;
             byFamily.set(family, (byFamily.get(family) ?? 0) + entry.seats);
-          }
+          });
 
           return {
             year,
             seats: list.reduce((a, e) => a + e.seats, 0),
             totalVotes: total,
             winner: sorted[0] ? { sigles: sorted[0].sigles, seats: sorted[0].seats, votes: sorted[0].votes } : null,
-            winnerFamily: sorted[0] ? siglesFamily(sorted[0].sigles) ?? "local" : null,
+            winnerFamily: sorted[0] ? familia[ambEscons.indexOf(sorted[0])] ?? siglesFamily(sorted[0].sigles) ?? "local" : null,
             families: Object.fromEntries([...byFamily.entries()].sort((a, b) => b[1] - a[1])),
             candidatures: sorted.length,
           };
