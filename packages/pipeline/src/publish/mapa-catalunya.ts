@@ -9,6 +9,7 @@ import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { de } from "../lib/text";
 import { atributsEtiqueta, GRAFICS_JS, type DadaEtiqueta } from "./grafics";
+import { buildPeerGroups } from "../derive/peers";
 import {
   colorDe, etiquetesPct, graoDe, MARQUES, quintilsDe, rampaDe, siglesDe, type VotsPartit,
 } from "./vots-partit";
@@ -78,6 +79,17 @@ type Capa = {
    * rep la fila sencera. `null` és «sense dada» i es diu com la clau.
    */
   text?: (r: Els947Row, v: number | null) => string | null;
+  /**
+   * De quan és la dada, per dir-ho a l'etiqueta al costat del valor.
+   *
+   * Un text quan és el mateix per a tothom —«2023», «mandat 2023-2027»— i
+   * una funció quan cada fila porta el seu any, que és el que passa amb el
+   * preu de l'aigua i la renda: allà un municipi amb la xifra d'un any vell
+   * no ha de fer semblar que la capa sencera és d'aquell any. Sense res, la
+   * capa no diu any, que és millor que dir-ne un que no és segur: el deute
+   * és de «l'últim exercici liquidat» i aquest no és el mateix a tot arreu.
+   */
+  any?: string | ((r: Els947Row) => number | null);
   /**
    * Colors propis de la capa, un per graó, quan el que separa els municipis no
    * és una escala sinó una categoria. La rampa coral de la resta de capes diu
@@ -180,6 +192,13 @@ function familiaAlcaldia(r: Els947Row): string | null {
   return r.g ? siglesFamily(r.g) : null;
 }
 
+/**
+ * El mandat que el mapa retrata a les capes de govern: qui mana, majories,
+ * pactes, canvis i dones al ple són de la composició d'ara dels plens, no
+ * d'un any concret, i l'etiqueta ho diu així.
+ */
+const MANDAT = "mandat 2023-2027";
+
 const CAPA_PARTIT: Capa = {
   id: "partit",
   titol: "De quina força és cada alcaldia",
@@ -194,6 +213,7 @@ const CAPA_PARTIT: Capa = {
     const i = FAMILIES_MAPA.findIndex(([id]) => id === familia);
     return i === -1 ? null : i;
   },
+  any: MANDAT,
   talls: FAMILIES_MAPA.map((_, i) => i + 0.5).slice(0, -1),
   etiquetes: FAMILIES_MAPA.map(([, nom]) => nom),
   colors: FAMILIES_MAPA.map(([, , color]) => color),
@@ -218,6 +238,7 @@ const CAPES: Capa[] = [
     peu: `Una llista sola amb prou regidories per aprovar el que vulgui sense pactar amb ningú.
       És la diferència entre un mandat on cada punt es negocia i un on no cal.`,
     valor: (r) => r.m,
+    any: MANDAT,
     talls: [0.5],
     etiquetes: ["cap llista sola", "majoria absoluta"],
     format: (v) => (v === 1 ? "amb majoria absoluta" : "sense majoria absoluta"),
@@ -229,6 +250,7 @@ const CAPES: Capa[] = [
     peu: `Guanyar unes municipals no vol dir governar-les: l'alcaldia la vota el ple. Aquí es veu
       on el primer no mana, que és on el pacte va decidir més que els vots.`,
     valor: (r) => (r.w === null ? null : r.w === 1 ? 0 : 1),
+    any: MANDAT,
     talls: [0.5],
     etiquetes: ["governa qui va guanyar", "governa un altre"],
     format: (v) => (v === 1 ? "no governa la llista més votada" : "governa la llista més votada"),
@@ -240,6 +262,7 @@ const CAPES: Capa[] = [
     peu: `Una moció de censura, una dimissió o un relleu pactat. No diu què va passar, però diu
       on va passar alguna cosa.`,
     valor: (r) => r.k,
+    any: MANDAT,
     talls: [0.5],
     etiquetes: ["la mateixa alcaldia", "hi ha canviat"],
     format: (v) => (v === 1 ? "l'alcaldia ha canviat a mig mandat" : "la mateixa alcaldia tot el mandat"),
@@ -251,6 +274,7 @@ const CAPES: Capa[] = [
     peu: `Dotze eleccions. Zero vol dir que la mateixa força les ha guanyat totes; com més alt,
       més s'hi mou el vot. És la millor pista de si el 2027 està decidit o obert.`,
     valor: (r) => r.v,
+    any: "1979-2023",
     talls: [0.5, 1.5, 2.5, 3.5],
     etiquetes: ["cap canvi", "1", "2", "3", "4 o més"],
     format: (v) => (v === 0 ? "sempre la mateixa força" : `${v} canvis de força més votada`),
@@ -263,6 +287,7 @@ const CAPES: Capa[] = [
       Generalitat. Als pobles petits sol ser altíssima i a les ciutats grans, molt més baixa: la
       taca gran, aquí, mesura sobretot la mida del municipi.`,
     valor: (r) => r.pt ?? null,
+    any: "2023",
     format: pct1,
   },
   {
@@ -291,6 +316,7 @@ const CAPES: Capa[] = [
       l'Observatori del preu de l'aigua de l'ACA. És el tram comparable entre municipis: el cànon
       i el clavegueram no els fixa l'ajuntament i no hi entren.`,
     valor: (r) => r.pa ?? null,
+    any: (r) => r.paa ?? null,
     format: (v) => `${coma(v, 2)} €/m³`,
   },
   {
@@ -310,6 +336,7 @@ const CAPES: Capa[] = [
     peu: `Percentatge de regidories ocupades per dones. La llei obliga a llistes paritàries des del
       2007, però qui acaba entrant depèn de l'ordre i dels escons.`,
     valor: (r) => r.f,
+    any: MANDAT,
     format: pct,
   },
   {
@@ -341,6 +368,7 @@ const CAPES: Capa[] = [
       de l'INE. És el que queda a la llar després d'impostos i cotitzacions, repartit entre tots els
       seus membres. No ho decideix cap ajuntament: depèn de qui hi viu i de què hi treballa.`,
     valor: (r) => r.rn ?? null,
+    any: (r) => r.ra ?? null,
     format: (v) => `${milers(v)} €`,
   },
   {
@@ -408,6 +436,7 @@ function capesPartits(vots: VotsPartit): Capa[] {
           n'és un cinquè, i el de dalt no vol dir «molt» sinó «la cinquena part on més pesa». On no
           s'hi va presentar, el municipi va ratllat.`,
         valor: (r) => seus[r.s]?.pct ?? null,
+        any: "2023",
         format: pct1,
         colors: rampa.clar,
         colorsFosc: rampa.fosc,
@@ -418,6 +447,24 @@ function capesPartits(vots: VotsPartit): Capa[] {
         enllac: { href: `../partit/${b.id}/`, text: `La pàgina ${de(sigles)}: alcaldies, regidories i des del 1979` },
       };
     });
+}
+
+/**
+ * El que l'etiqueta d'un municipi diu a totes les capes.
+ *
+ * Els habitants, perquè tot el mapa es llegeix contra la mida —una taca gran
+ * i fosca pot ser un poble de dos-cents habitants—; la comarca, per situar
+ * un nom que no es coneix; i l'alcaldia amb les sigles de la seva llista,
+ * que és el que el lector pregunta primer d'un poble. Un municipi sense
+ * alcaldia coneguda no en diu res, que és millor que dir «—».
+ */
+function extresFixos(r: Els947Row): { etq: string; valor: string }[] {
+  const extres = [
+    { etq: "habitants", valor: milers(r.p) },
+    { etq: "comarca", valor: r.c },
+  ];
+  if (r.a) extres.push({ etq: "alcaldia", valor: r.g ? `${r.a} (${r.g})` : r.a });
+  return extres;
 }
 
 /**
@@ -626,6 +673,23 @@ export function renderMapaCatalunya(
   const perSlug = new Map(files.map((r) => [r.s, r]));
   const slugs = Object.keys(geometria.municipis).sort();
 
+  /*
+   * De quina mida és cada municipi, per poder dir a l'etiqueta «mediana dels
+   * seus»: els seus són els del mateix tram de padró, amb els trams de la
+   * LOREG ajuntats com els ajunta la resta del lloc (`buildPeerGroups`, que és
+   * el que fa servir el comparador i la fitxa). Una cadena d'un caràcter per
+   * municipi, com els graons: el tram no canvia amb la capa i s'escriu una
+   * sola vegada. «x» és un municipi sense padró, que no és de cap tram.
+   */
+  const grups = buildPeerGroups(slugs.map((s, i) => ({ id: i, population: perSlug.get(s)?.p ?? null })));
+  const clausTram = [...new Set([...grups.values()].map((g) => g.key))];
+  const trams = slugs
+    .map((_, i) => {
+      const g = grups.get(i);
+      return g ? clausTram.indexOf(g.key).toString(36) : "x";
+    })
+    .join("");
+
   // Cada capa es desa com una cadena d'un caràcter per municipi: amb 947
   // municipis i onze capes, són onze cadenes de 947 lletres. Canviar de capa és
   // reescriure una classe, no tornar a baixar el mapa. Les dels partits, quinze
@@ -709,6 +773,51 @@ export function renderMapaCatalunya(
         return i.toString(36);
       })
       .join("|");
+    /*
+     * La mediana dels de la seva mida, per tram i formatada com la clau.
+     *
+     * Va a l'etiqueta de cada municipi com a «mediana dels seus», que és el
+     * mateix que diu la sèrie de la fitxa: el peu ja diu el municipi del mig
+     * de tot el país, i contra els 947 un poble de dos-cents habitants no es
+     * pot comparar. Només a les capes de xifres: a «qui mana» o a «majoria»
+     * el valor és una categoria i no té mediana. Un tram on cap municipi té
+     * la dada queda en buit, i el navegador no en diu res.
+     */
+    const medianes = capa.etiquetes
+      ? null
+      : clausTram.map((clau) => {
+          const seus = slugs
+            .map((s, i) => (grups.get(i)?.key === clau ? perSlug.get(s) : undefined))
+            .map((fila) => (fila ? capa.valor(fila) : null))
+            .filter((v): v is number => v !== null);
+          const m = mediana(seus);
+          return m === null ? "" : capa.format(m);
+        });
+    /*
+     * L'any de la dada de cada municipi. Quan és el mateix per a tothom no
+     * cal escriure'l 947 vegades: el navegador el posa a tots els que tenen
+     * dada. Quan cada fila porta el seu, el diccionari i un caràcter per
+     * municipi, com els graons; «x» és un municipi sense any.
+     */
+    const anys: string[] = [];
+    let anyDe: string | null = null;
+    if (typeof capa.any === "string") anys.push(capa.any);
+    else if (capa.any !== undefined) {
+      const anyDeLaFila = capa.any;
+      anyDe = slugs
+        .map((s) => {
+          const fila = perSlug.get(s);
+          const a = fila ? anyDeLaFila(fila) : null;
+          if (a === null) return "x";
+          let i = anys.indexOf(String(a));
+          if (i === -1) {
+            i = anys.length;
+            anys.push(String(a));
+          }
+          return i.toString(36);
+        })
+        .join("");
+    }
     return {
       ...capa,
       graons,
@@ -721,6 +830,9 @@ export function renderMapaCatalunya(
       textos,
       paraules,
       indexs,
+      medianes,
+      anys: capa.any === undefined ? null : anys,
+      anyDe,
     };
   });
 
@@ -737,12 +849,21 @@ export function renderMapaCatalunya(
 
   const primera = capes[0]!;
   /*
-   * Cada municipi porta el nom i la comarca a «data-nom» i, a «data-valor»,
-   * el que hi ha pintat a la primera capa: és el contracte de l'etiqueta
-   * comuna (`atributsEtiqueta`, a grafics.ts), i és el que fa que el mapa
-   * digui alguna cosa en passar-hi per sobre abans que arrenqui el
-   * JavaScript de les capes. Quan una altra capa es pinta, el script
-   * reescriu el «data-valor» dels 947 amb el text d'aquella capa.
+   * Cada municipi porta el nom a «data-nom», a «data-valor» el que hi ha
+   * pintat a la primera capa i, a «data-extres», el que és veritat d'ell a
+   * totes les capes: els habitants, la comarca i l'alcaldia amb les sigles.
+   * És el contracte de l'etiqueta comuna (`atributsEtiqueta`, a grafics.ts),
+   * i és el que fa que el mapa digui alguna cosa en passar-hi per sobre
+   * abans que arrenqui el JavaScript de les capes. Quan una altra capa es
+   * pinta, el script reescriu el «data-valor» dels 947 amb el text d'aquella
+   * capa, i hi afegeix l'any i la mediana dels seus, que sí que canvien; els
+   * extres fixos no els toca.
+   *
+   * Els extres fixos s'escriuen aquí i no al diccionari de les capes perquè
+   * no canvien mai: són uns 70 kB —947 vegades «habitants», «comarca» i
+   * «alcaldia»— que es paguen una sola vegada. L'any de la primera capa no
+   * s'escriu als 947: el posa el script en arrencar, com a totes les altres,
+   * i 947 còpies de «mandat 2023-2027» serien 30 kB per dir el mateix.
    *
    * Els atributs van a l'enllaç i no al camí perquè l'enllaç és el que rep el
    * focus: el tabulador hi arriba i l'etiqueta hi surt. El `<title>` diu
@@ -755,8 +876,9 @@ export function renderMapaCatalunya(
       const nom = fila?.n ?? slug;
       const g = primera.graons[i] === "x" ? "gnd" : `g${primera.graons[i]}`;
       const dada: DadaEtiqueta = {
-        nom: fila?.c ? `${nom} · ${fila.c}` : nom,
+        nom,
         valor: primera.textos[i] ?? primera.senseDada,
+        extres: fila ? extresFixos(fila) : null,
       };
       return `<a href="/observatori/m/${escape(slug)}/"${atributsEtiqueta(dada)}><title>${escape(nom)}</title><path class="${g}" d="${geometria.municipis[slug]}"/></a>`;
     })
@@ -942,8 +1064,16 @@ var CAPES = ${JSON.stringify(
          camins, i el script els llegeix d'allà en arrencar. */
       w: i === 0 ? null : c.paraules,
       k: i === 0 ? null : c.indexs,
+      /* La mediana dels de la seva mida, una per tram, i l'any de la dada:
+         el diccionari d'anys i, si cada municipi té el seu, un caràcter per
+         municipi; sense el caràcter, l'únic any del diccionari és de tots. */
+      d: c.medianes,
+      a: c.anys,
+      y: c.anyDe,
     })),
   )};
+/* El tram de mida de cada municipi, per trobar la seva mediana a cada capa. */
+var TRAMS = ${JSON.stringify(trams)};
 var camins = document.querySelectorAll('.mapa947 a path');
 var enllacos = document.querySelectorAll('.mapa947 a');
 var enllac = document.getElementById('enllac-capa');
@@ -960,6 +1090,15 @@ function pinta(i) {
        de capa és també canviar què diu cada municipi. */
     var text = claus === null ? inicials[n] : claus[n] === '' ? c.x : c.w[parseInt(claus[n], 36)];
     enllacos[n].setAttribute('data-valor', text);
+    /* L'any i la mediana dels seus van amb la capa, no amb el municipi: es
+       reescriuen aquí i els extres fixos —habitants, comarca, alcaldia— es
+       queden com han arribat. Un municipi sense dada no en diu cap dels dos. */
+    var teDada = text !== c.x;
+    var any = !teDada || c.a === null ? null : c.y === null ? c.a[0] : c.y.charAt(n) === 'x' ? null : c.a[parseInt(c.y.charAt(n), 36)];
+    var tram = TRAMS.charAt(n);
+    var mediana = !teDada || c.d === null || tram === 'x' ? '' : c.d[parseInt(tram, 36)];
+    if (any) enllacos[n].setAttribute('data-any', any); else enllacos[n].removeAttribute('data-any');
+    if (mediana) enllacos[n].setAttribute('data-mediana', mediana); else enllacos[n].removeAttribute('data-mediana');
   }
   document.querySelector('.mapa947').setAttribute('data-capa', i);
   document.getElementById('llegenda').setAttribute('data-capa', i);

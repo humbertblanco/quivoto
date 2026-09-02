@@ -600,9 +600,38 @@ describe("l'etiqueta del punt del regle", () => {
     // que és el mateix que diu el peu de la seva casella a la taula.
     expect(regle).toContain('data-nom="Esplugues de Llobregat" data-any="2024" data-valor="8,4 €"');
     expect(regle).toContain('data-nom="Sant Just Desvern" data-any="2023" data-valor="12,7 €"');
-    expect(regle).toContain("<title>Sant Just Desvern: 2023 · 12,7 €</title>");
+    expect(regle).toContain("<title>Sant Just Desvern: 2023 · 12,7 € · ");
     // Un grup de dos no té mediana, i el punt no se n'inventa cap.
     expect(regle).not.toContain("data-mediana");
+  });
+
+  it("les línies de més: el grup sempre, l'any propi només quan no és el de la fila, i la font a la nota", () => {
+    const ambAnys = [
+      { ...ESPLUGUES, anys: { cost_govern: 2024 } },
+      { ...SANT_JUST, anys: { cost_govern: 2023 } },
+      { ...ABELLA, anys: { cost_govern: 2024 } },
+    ];
+    const html = obre(pagina(ambAnys), ["esplugues-de-llobregat", "sant-just-desvern"])["escales-cos"]!.innerHTML;
+    const desDelCost = html.slice(html.indexOf("Cost del govern per habitant"));
+    const regle = desDelCost.slice(0, desDelCost.indexOf("</article>"));
+    // Els extres van en un sol atribut: U+2016 entre línies, U+00A6 entre
+    // l'etiqueta i el valor, els mateixos que llegeix el script de grafics.ts.
+    expect(regle).toContain('data-valor="8,4 €" data-extres="grup\u00a688 municipis de 20.001 a 50.000 habitants" data-nota="font: 8squ-bk4r"');
+    expect(regle).toContain(
+      'data-extres="grup\u00a688 municipis de 20.001 a 50.000 habitants\u2016any\u00a62023, i no el 2024 de la resta de la fila"',
+    );
+    // Sense mediana no hi ha «respecte a la mediana»: no es compara amb res.
+    expect(regle).not.toContain("respecte a la mediana");
+    // El <title> diu el mateix, en fila, per a qui no vegi la caixa flotar.
+    expect(regle).toContain(
+      "<title>Sant Just Desvern: 2023 · 12,7 € · grup: 88 municipis de 20.001 a 50.000 habitants · any: 2023, i no el 2024 de la resta de la fila (font: 8squ-bk4r)</title>",
+    );
+  });
+
+  it("la font de la fila viatja amb XIFRES, que és d'on la nota la treu", () => {
+    const html = pagina([ESPLUGUES, SANT_JUST, ABELLA]);
+    const xifres = html.slice(html.indexOf("const XIFRES = "), html.indexOf("const TEXTOS = "));
+    expect(xifres).toContain('"font":"8squ-bk4r"');
   });
 
   it("l'any i el municipi arriben al navegador només quan difereixen de la fila", () => {

@@ -1682,7 +1682,7 @@ const DADES = ${jsonSegur(dades)};
 const COMARQUES = ${jsonSegur(comarques)};
 const GRUPS = ${jsonSegur(grups)};
 const MIDES = ${jsonSegur(mides.map((m) => m ?? null))};
-const XIFRES = ${jsonSegur(xifres.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), format: i.format, sentit: i.sentit, objectiu: i.objectiu ?? null, percentil: i.percentil, absent: i.absent, extrems: i.extrems ?? null, idescat: i.enllacFont === "idescat", com: textDeLaFila(i, anyComu.get(i.clau)), any: anyComu.get(i.clau) ?? null })))};
+const XIFRES = ${jsonSegur(xifres.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), format: i.format, sentit: i.sentit, objectiu: i.objectiu ?? null, percentil: i.percentil, absent: i.absent, extrems: i.extrems ?? null, idescat: i.enllacFont === "idescat", com: textDeLaFila(i, anyComu.get(i.clau)), any: anyComu.get(i.clau) ?? null, font: i.font })))};
 const TEXTOS = ${jsonSegur(textos.map((i) => ({ clau: i.clau, etiqueta: i.etiqueta, seccio: i.seccio, ordre: indicadors.indexOf(i), absent: i.absent, com: textDelSentit(i) })))};
 const SECCIONS = ${jsonSegur(SECCIONS)};
 const REPARTIMENT = ${jsonSegur(repartiments)};
@@ -2069,12 +2069,38 @@ const minuscula = (frase) => frase.charAt(0).toLowerCase() + frase.slice(1);
 // l'etiqueta flotant, que ve després d'aquest i escolta el document sencer, no
 // distingeix d'on surt un punt i només ajunta el que hi troba. El nom, l'any i
 // el valor ja hi van escrits i escapats; el <title> porta la mateixa frase,
-// composta per la mateixa funció, per a qui no vegi la caixa flotar.
+// composta per la mateixa funció, per a qui no vegi la caixa flotar. Els
+// extres —les línies de més, cadascuna una etiqueta i un valor— van en un
+// sol atribut amb els mateixos separadors que allà: U+2016 entre línies i
+// U+00A6 entre l'etiqueta i el valor, dos caràcters que cap text no porta.
 function atributsEtiqueta(d){
   return (d.nom ? ' data-nom="' + esc(d.nom) + '"' : "") +
     (d.any !== null && d.any !== undefined && d.any !== "" ? ' data-any="' + esc(d.any) + '"' : "") +
     ' data-valor="' + esc(d.valor) + '"' +
-    (d.mediana ? ' data-mediana="' + esc(d.mediana) + '"' : "");
+    (d.mediana ? ' data-mediana="' + esc(d.mediana) + '"' : "") +
+    (d.extres && d.extres.length
+      ? ' data-extres="' + esc(d.extres.map((e) => e.etq + "\u00a6" + e.valor).join("\u2016")) + '"'
+      : "") +
+    (d.nota ? ' data-nota="' + esc(d.nota) + '"' : "");
+}
+
+// La diferència entre una xifra i una referència de la mateixa fila —la
+// mediana dels seus—, escrita amb la unitat de la fila i sempre amb signe:
+// «+42 €», «−1,3 %». Les variacions ja porten el signe de fàbrica, i una
+// diferència que arrodonida no es veu és «igual», no un «+0 €» que fa pensar
+// que hi ha una diferència que no s'acaba de veure.
+function diferencia(def, valor, referencia){
+  const d = valor - referencia;
+  if (def.format.indexOf("variacio") === 0) return formata(def, d);
+  const absolut = formata(def, Math.abs(d));
+  if (absolut === formata(def, 0)) return "igual";
+  return (d > 0 ? "+" : "\u2212") + absolut;
+}
+
+// La lletra petita d'un punt: d'on surt la xifra. És la mateixa font que la
+// taula de fonts del peu, i només hi és si la fila en té.
+function notaFont(def){
+  return def.font ? "font: " + def.font : null;
 }
 
 // Un punt que es pot tocar: el grup és el que rep el ratolí, el dit i el
@@ -2164,7 +2190,14 @@ function blocEscala(def, i, files){
     // La marca de la mediana també es pot tocar, i diu de quants municipis és
     // la mediana: una ratlla discontínua sense dir de què no és res. La banda
     // de tacte és un rectangle de 20 d'ample sobre la ratlla, que és prima.
-    const mediana = { nom: "Mediana dels " + nomDelGrup(grupsAmb[0], repart[3]), any: def.any, valor: medianaEscrita };
+    const mediana = {
+      nom: "Mediana dels " + nomDelGrup(grupsAmb[0], repart[3]),
+      any: def.any,
+      valor: medianaEscrita,
+      // La banda que es dibuixa, escrita: el 80 % central del grup.
+      extres: [{ etq: "el 80 % central", valor: "de " + formata(def, repart[0]) + " a " + formata(def, repart[2]) }],
+      nota: notaFont(def),
+    };
     dibuix += '<g class="punt" tabindex="0"' + atributsEtiqueta(mediana) + "><title>" + esc(textEtiqueta(mediana)) + "</title>" +
       '<rect class="toc" x="' + n1(xm - 10) + '" y="20" width="20" height="40"/>' +
       '<line class="escala-mediana" x1="' + n1(xm) + '" x2="' + n1(xm) + '" y1="24" y2="56"/>' +
@@ -2175,11 +2208,25 @@ function blocEscala(def, i, files){
     const row = files[amb[n]];
     // L'any del punt és el de la fila, tret que aquest municipi vagi d'un
     // altre any: llavors és el seu, que és el que diu el peu de la casella.
+    const anyPropi = (row.a && row.a[def.clau]) || null;
+    // Les línies de més: com de lluny és de la mediana dels seus (si n'hi ha),
+    // de quin grup de mida és i de quants municipis, i l'any propi quan no és
+    // el de la resta de la fila. El grup es diu sempre, també quan no hi ha
+    // mediana: quan els triats són de lligues diferents, és el que explica
+    // per què no n'hi ha.
+    const extres = [];
+    if (repart) extres.push({ etq: "respecte a la mediana", valor: diferencia(def, row.v[i], repart[1]) });
+    extres.push({ etq: "grup", valor: nomDelGrup(row.g, repart ? repart[3] : undefined) });
+    if (anyPropi && def.any && anyPropi !== def.any) {
+      extres.push({ etq: "any", valor: anyPropi + ", i no el " + def.any + " de la resta de la fila" });
+    }
     const dada = {
       nom: row.n,
-      any: (row.a && row.a[def.clau]) || def.any,
+      any: anyPropi || def.any,
       valor: escrits[n],
       mediana: medianaEscrita,
+      extres: extres,
+      nota: notaFont(def),
     };
     // El cèrcol del color del paper és el que separa dos punts que cauen a
     // tocar: sense ell, dos municipis amb 237 € i 280 € es tapen mig número i
@@ -2268,6 +2315,24 @@ function pintaEscales(){
 // sol deixa fora qui no el distingeix.
 
 const SER = { ample: 720, alt: 292, dalt: 16, dreta: 18, baix: 40, esq: 64 };
+// El conjunt de dades obertes d'on surt la sèrie: el mateix que diu el peu.
+const FONT_SERIE = "34db8dc5";
+
+// El canvi del deute entre dos anys, en euros amb signe i en tant per cent
+// del punt de partida: «+42 € (+13,7 %)». Sense tant per cent quan es parteix
+// de zero, que no es pot dividir, i «igual» quan arrodonit no s'ha mogut.
+function canviDeute(valor, referencia){
+  const d = valor - referencia;
+  const arrodonit = Math.round(d);
+  if (arrodonit === 0) return "igual";
+  const signe = d > 0 ? "+" : "\u2212";
+  let text = signe + milers(Math.abs(arrodonit)) + " €";
+  if (referencia > 0) {
+    const percent = Math.abs(d / referencia) * 100;
+    text += " (" + signe + percent.toLocaleString("ca-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " %)";
+  }
+  return text;
+}
 
 function pintaSerie(){
   const files = triats.map((slug) => PER_SLUG.get(slug));
@@ -2345,9 +2410,25 @@ function pintaSerie(){
     for (let p = 0; p < punts.length; p += 1) {
       const punt = punts[p];
       const darrer = p === punts.length - 1;
+      // Cada punt diu com ha canviat: respecte a l'any anterior amb dada
+      // —que es diu pel seu nom quan no és el de just abans, perquè un forat
+      // de la font no es converteixi en un any que no hem mesurat— i, des del
+      // tercer, respecte al primer any de la sèrie d'aquest municipi.
+      const extres = [];
+      if (p > 0) {
+        const anterior = punts[p - 1];
+        extres.push({
+          etq: punt.any - anterior.any === 1 ? "respecte a l'any anterior" : "respecte al " + anterior.any,
+          valor: canviDeute(punt.valor, anterior.valor),
+        });
+      }
+      if (p > 1) {
+        extres.push({ etq: "respecte al primer any (" + punts[0].any + ")", valor: canviDeute(punt.valor, punts[0].valor) });
+      }
+      const dada = { nom: row.n, any: punt.any, valor: euros(punt.valor), extres: extres, nota: "font: " + FONT_SERIE };
       // El número del municipi va només a la punta de la línia, com abans: la
       // resta d'anys són bandes de tacte invisibles damunt de la línia.
-      dibuix += puntTocable({ nom: row.n, any: punt.any, valor: euros(punt.valor) }, punt.cx, punt.cy,
+      dibuix += puntTocable(dada, punt.cx, punt.cy,
         darrer
           ? '<circle class="escala-halo" cx="' + n1(punt.cx) + '" cy="' + n1(punt.cy) + '" r="14"/>' +
             '<circle class="escala-punt q' + (amb[n] + 1) + '" cx="' + n1(punt.cx) +
@@ -2393,7 +2474,7 @@ function pintaSerie(){
   serieCos.innerHTML = '<div class="serie-marc"><svg viewBox="0 0 ' + SER.ample + " " + SER.alt +
     '" role="img" aria-label="' + esc(alt) + '">' + dibuix + "</svg></div>" +
     '<p class="serie-clau">' + clau + "</p>" + avisSense +
-    '<p class="escala-peu">Deute viu a 31 de desembre dividit pel padró de cada any. Conjunt 34db8dc5.</p>' +
+    '<p class="escala-peu">Deute viu a 31 de desembre dividit pel padró de cada any. Conjunt ' + FONT_SERIE + '.</p>' +
     '<div class="nomes-lectors"><table><caption>Deute per habitant, any a any</caption>' +
     '<thead><tr><th scope="col">Any</th>' +
     files.map((row) => '<th scope="col">' + esc(row.n) + "</th>").join("") +

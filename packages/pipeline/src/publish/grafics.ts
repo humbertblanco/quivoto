@@ -56,7 +56,20 @@ export type DadaEtiqueta = {
   mediana?: string | null;
   /** El mateix canvi als seus, escrit. */
   grup?: string | null;
+  /**
+   * Línies de més, en l'ordre en què s'han de llegir: «banda dels seus: de
+   * 312 a 540 €», «respecte a la mediana: +42 €», «respecte al 2020: −3,1 %»,
+   * «mandat: Farrés (PSC)». Cada una és una etiqueta i un valor ja escrits;
+   * el script només els posa en fila.
+   */
+  extres?: readonly { etq: string; valor: string }[] | null;
+  /** La lletra petita del punt: la font i l'any de consulta, o un avís. */
+  nota?: string | null;
 };
+
+/** Separadors dels extres dins d'un sol atribut: cap dels dos surt mai en un text. */
+const SEP_EXTRA = "\u2016";
+const SEP_ETQ = "\u00a6";
 
 /**
  * El text de l'etiqueta, tal com el llegeix qui no té JavaScript.
@@ -69,7 +82,9 @@ export type DadaEtiqueta = {
 export function textEtiqueta(d: DadaEtiqueta): string {
   const dada = `${d.any !== null && d.any !== undefined && d.any !== "" ? `${d.any} · ` : ""}${d.valor}`;
   const seus = d.mediana ? ` · mediana dels seus: ${d.mediana}` : d.grup ? ` · els seus: ${d.grup}` : "";
-  return `${d.nom ? `${d.nom}: ` : ""}${dada}${seus}`;
+  const extres = (d.extres ?? []).map((e) => ` · ${e.etq}: ${e.valor}`).join("");
+  const nota = d.nota ? ` (${d.nota})` : "";
+  return `${d.nom ? `${d.nom}: ` : ""}${dada}${seus}${extres}${nota}`;
 }
 
 /**
@@ -88,6 +103,10 @@ export function atributsEtiqueta(d: DadaEtiqueta): string {
     ` data-valor="${escape(d.valor)}"`,
     d.mediana ? ` data-mediana="${escape(d.mediana)}"` : "",
     d.grup ? ` data-grup="${escape(d.grup)}"` : "",
+    d.extres && d.extres.length
+      ? ` data-extres="${escape(d.extres.map((e) => `${e.etq}${SEP_ETQ}${e.valor}`).join(SEP_EXTRA))}"`
+      : "",
+    d.nota ? ` data-nota="${escape(d.nota)}"` : "",
   ];
   return parts.join("");
 }
@@ -97,6 +116,78 @@ const titolSvg = (d: DadaEtiqueta): string => `<title>${escape(textEtiqueta(d))}
 
 /** El `title=` d'un punt fet d'HTML, amb el mateix text. */
 const titolHtml = (d: DadaEtiqueta): string => ` title="${escape(textEtiqueta(d))}"`;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Les xifres de més de l'etiqueta: diferències, tants per cent i posicions
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Tot el que va als `extres` s'escriu aquí, al servidor, amb la mateixa funció
+// de format que escriu la xifra principal del gràfic: la diferència amb la
+// mediana surt amb els mateixos euros i els mateixos decimals que el valor.
+// Són signes i xifres, mai un veredicte: «+42 €» i no «millor».
+
+/** El signe tipogràfic: el menys de debò, no el guionet. */
+const signe = (n: number): string => (n > 0 ? "+" : n < 0 ? "−" : "");
+
+/**
+ * Un tant per cent net: sencer a partir de 10, un decimal per sota, i el
+ * decimal es treu quan és zero. «+9 %» es llegeix; «+9,0 %» fa creure en una
+ * precisió que no hi és.
+ */
+const tantPerCent = (n: number): string => {
+  const abs = Math.abs(n);
+  return abs >= 10 ? Math.round(abs).toString() : abs.toFixed(1).replace(/\.0$/, "").replace(".", ",");
+};
+
+/**
+ * Una diferència amb el signe al davant, en la unitat del gràfic: «+42 €»,
+ * «−3,1 %», «0 €». El signe es decideix sobre la xifra **escrita**, no sobre
+ * la crua: −0,3 € amb un format sense decimals seria «−0 €».
+ */
+export function ambSigne(format: (valor: number) => string, n: number): string {
+  const text = format(Math.abs(n));
+  return text === format(0) ? text : `${signe(n)}${text}`;
+}
+
+/**
+ * Un canvi en tant per cent respecte d'una base: «+9 %», «−0,4 %».
+ *
+ * Torna `null` quan no té sentit: amb una base a zero no hi ha res de què fer
+ * el tant per cent, i amb una base negativa —un estalvi net que passa de −4 a
+ * 2— el percentatge diu un número que ningú no sap llegir.
+ */
+export function percentRelatiu(canvi: number, base: number): string | null {
+  if (!(base > 0) || !Number.isFinite(canvi)) return null;
+  const pct = (100 * canvi) / base;
+  const text = tantPerCent(pct);
+  return text === "0" ? "0 %" : `${signe(pct)}${text} %`;
+}
+
+/**
+ * Si el format ja escriu tants per cent. Un canvi relatiu d'un percentatge
+ * seria un percentatge d'un percentatge, i d'una sèrie que ja va en «%» es diu
+ * només la diferència en punts.
+ */
+const escriuPercent = (format: (valor: number) => string): boolean => format(1).includes("%");
+
+/**
+ * El canvi entre dues xifres, escrit sencer: «+42 € · +9 %». El tant per cent
+ * només hi va quan té sentit, que és quan la base és positiva i el que es
+ * mesura no és ja un tant per cent.
+ */
+export function canviEscrit(format: (valor: number) => string, abans: number, despres: number): string {
+  const diferencia = ambSigne(format, despres - abans);
+  const pct = escriuPercent(format) ? null : percentRelatiu(despres - abans, abans);
+  return pct ? `${diferencia} · ${pct}` : diferencia;
+}
+
+/**
+ * Ordinals catalans en masculí: 1r, 2n, 3r, 4t i d'aquí en amunt tot és «è».
+ * És el mateix que `criminalitat.ts`, que no es pot importar d'allà perquè
+ * aquell mòdul ja importa aquest.
+ */
+const ordinal = (n: number): string =>
+  n === 1 ? "1r" : n === 2 ? "2n" : n === 3 ? "3r" : n === 4 ? "4t" : `${n}è`;
 
 /** Un punt de la sèrie del municipi. Un any sense dada no hi és, i es nota. */
 export type PuntSerie = { any: number; valor: number };
@@ -157,6 +248,13 @@ export type OpcionsSerie = {
    * convertir una variació petita en un espant.
    */
   desDeZero?: boolean;
+  /**
+   * La lletra petita de cada punt: la font i l'any de consulta («Ministeri
+   * d'Hisenda, consultat el 2026»), o un avís que val per a tota la sèrie. Va
+   * tal qual a l'etiqueta de cada any; qui crida és qui sap d'on ve la dada, i
+   * aquí no s'inventa cap font.
+   */
+  nota?: string | null;
 };
 
 const AMPLE = 720;
@@ -373,6 +471,47 @@ export function serieTemporal(punts: readonly PuntSerie[], opcions: OpcionsSerie
       : ""
   }`;
 
+  // --- el que diu cada punt en passar-hi per sobre
+  // Es calcula un cop per any i no un cop per dibuix: l'ample i l'estret han
+  // de dir exactament el mateix, i el text no depèn de cap mida.
+  //
+  // A més del valor i la mediana, cada any diu on era la meitat central dels
+  // seus, a quina distància de la mediana ha quedat, què ha canviat des del
+  // punt anterior i sota quin mandat cau. Tot són xifres amb signe: que un
+  // deute pugi o baixi no és ni bo ni dolent, i l'etiqueta no ho diu.
+  const mandatDe = (any: number): TramMandat | null =>
+    // L'any en què comença un mandat és del mandat que comença: la ratlla del
+    // tall es dibuixa justament a `desDe`, i el punt d'aquell any queda a la
+    // seva dreta. Amb trams que comparteixen l'any de la vora, mana el que
+    // comença més tard.
+    [...(opcions.mandats ?? [])]
+      .filter((m) => m.etiqueta !== "" && m.desDe <= any && any <= m.finsA)
+      .sort((a, b) => b.desDe - a.desDe)[0] ?? null;
+  const etiquetes = new Map<number, DadaEtiqueta>();
+  serie.forEach((p, i) => {
+    const b = banda.find((q) => q.any === p.any);
+    const anterior = serie[i - 1];
+    const mandat = mandatDe(p.any);
+    const extres: { etq: string; valor: string }[] = [];
+    if (b) {
+      extres.push({ etq: "banda dels seus", valor: `de ${opcions.format(b.p25)} a ${opcions.format(b.p75)}` });
+      extres.push({ etq: "respecte a la mediana", valor: canviEscrit(opcions.format, b.p50, p.valor) });
+    }
+    // «Respecte al 2020» i no «respecte a l'any anterior»: si entremig hi ha
+    // un forat, l'any anterior amb dada no és l'any d'abans, i s'ha de dir quin.
+    if (anterior) extres.push({ etq: `respecte al ${anterior.any}`, valor: canviEscrit(opcions.format, anterior.valor, p.valor) });
+    if (mandat) extres.push({ etq: "mandat", valor: mandat.etiqueta });
+    etiquetes.set(p.any, {
+      nom: opcions.titol,
+      any: p.any,
+      valor: opcions.format(p.valor),
+      mediana: b ? opcions.format(b.p50) : null,
+      extres,
+      nota: opcions.nota ?? null,
+    });
+  });
+  const dadaDe = (p: PuntSerie): DadaEtiqueta => etiquetes.get(p.any)!;
+
   /**
    * Un dibuix sencer, per a una amplada de pantalla.
    *
@@ -492,10 +631,6 @@ export function serieTemporal(punts: readonly PuntSerie[], opcions: OpcionsSerie
       return `<rect class="toc" x="${n2(esquerra)}" y="${d.marge.dalt}" width="${n2(Math.max(1, dreta - esquerra))}" height="${n2(
         terra - d.marge.dalt,
       )}"/>`;
-    };
-    const dadaDe = (p: PuntSerie): DadaEtiqueta => {
-      const b = banda.find((q) => q.any === p.any);
-      return { nom: opcions.titol, any: p.any, valor: opcions.format(p.valor), mediana: b ? opcions.format(b.p50) : null };
     };
     // El punt d'ara —el de coral— es dibuixa dins del grup del seu any, i no
     // després de tots: si anés a sobre, el cercle de coral taparia la banda
@@ -687,6 +822,15 @@ export function pendent(opcions: OpcionsPendent): string {
     <tbody>${fila(opcions.anys.inici, municipi.inici, grup ? grup.inici : null)}
     ${fila(opcions.anys.final, municipi.final, grup ? grup.final : null)}</tbody></table></div>`;
 
+  // El salt sencer, escrit un cop i dit als dos caps: el canvi del municipi
+  // amb el signe i el tant per cent, i el mateix salt als seus. Als dos caps
+  // i no només al d'ara, que qui s'atura al cercle buit també vol saber quant
+  // ha canviat des d'allà.
+  const extres: { etq: string; valor: string }[] = [
+    { etq: `canvi ${opcions.anys.inici}–${opcions.anys.final}`, valor: canviEscrit(format, municipi.inici, municipi.final) },
+    ...(grup ? [{ etq: "canvi dels seus", valor: canviEscrit(format, grup.inici, grup.final) }] : []),
+  ];
+
   // Els dos caps del salt, cadascun amb la seva dada: l'any, la xifra i, si
   // n'hi ha, on era el grup aquell mateix any. El cercle de tacte fa 9 de
   // radi en un dibuix que es veu a mida real, que és el mínim per a un dit.
@@ -696,6 +840,7 @@ export function pendent(opcions: OpcionsPendent): string {
       any,
       valor: format(propi),
       grup: delGrup === null ? null : format(delGrup),
+      extres,
     };
     return `<g class="punt" tabindex="0"${atributsEtiqueta(dada)}>${titolSvg(dada)}<circle class="toc" cx="${n2(cx)}" cy="${CARRIL_MUNICIPI}" r="9"/><circle class="${classe}" cx="${n2(cx)}" cy="${CARRIL_MUNICIPI}" r="${r}"/></g>`;
   };
@@ -762,9 +907,12 @@ export function distribucioGrup(
       const alçada = (quants / alt) * (ALT_D - BAIX - DALT);
       // Cada casella diu quin tram cobreix i quants municipis hi cauen; la
       // del municipi ho diu, que la fletxa de sota no sempre és on es mira.
+      // I quina part del grup és: vuit municipis en un grup de dotze i en un
+      // de dos-cents no són el mateix tros de barra.
       const dada: DadaEtiqueta = {
         nom: `De ${opcions.format(min + i * pas)} a ${opcions.format(min + (i + 1) * pas)}`,
         valor: `${quants} ${quants === 1 ? "municipi" : "municipis"}${i === meva ? ", aquest entre ells" : ""}`,
+        extres: [{ etq: "part del grup", valor: `${tantPerCent((100 * quants) / ordenats.length)} % de ${ordenats.length}` }],
       };
       return `<g class="punt-casella"${atributsEtiqueta(dada)}>${titolSvg(dada)}<rect class="casella${i === meva ? " meva" : ""}" x="${n2(x0 + 0.8)}" y="${n2(ALT_D - BAIX - alçada)}"
         width="${n2(ample - 1.6)}" height="${n2(Math.max(quants > 0 ? 1.5 : 0, alçada))}"/></g>`;
@@ -812,6 +960,14 @@ export type FilaDivergent = {
   grup: number | null;
   /** On porta l'etiqueta, si porta enlloc: l'àncora del bloc que ho explica. */
   enllac?: string;
+  /**
+   * D'on surt el canvi, si surt d'un abans i un després: la xifra del primer
+   * any i la del darrer. Només serveixen a l'etiqueta del punt —«2023: 71
+   * €/hab», «2025: 85 €/hab»—, que un «+13,7» sol no diu si són molts o pocs
+   * diners. Sense això, l'etiqueta diu el canvi i prou.
+   */
+  abans?: number | null;
+  despres?: number | null;
 };
 
 export type OpcionsDivergents = {
@@ -833,10 +989,13 @@ export type OpcionsDivergents = {
    * Sense escala, es pren el valor absolut més gran de la llista, grup inclòs.
    */
   escala?: number;
+  /**
+   * Els dos anys d'on surt el canvi, per posar-los d'etiqueta a l'abans i el
+   * després de cada fila. Sense anys, les dues xifres es diuen «abans» i
+   * «després».
+   */
+  anys?: SaltPendent | null;
 };
-
-/** El signe tipogràfic: el menys de debò, no el guionet. */
-const signe = (n: number): string => (n > 0 ? "+" : n < 0 ? "−" : "");
 
 /**
  * El valor absolut més gran d'una llista de files, grup inclòs.
@@ -908,7 +1067,26 @@ export function barresDivergents(files: readonly FilaDivergent[], opcions: Opcio
       // amb el signe i la unitat, i el mateix canvi als seus. Sense
       // `tabindex`: la llista sencera és `aria-hidden` i el teclat ja té la
       // taula de sota, que es fa visible quan hi arriba.
-      const dada: DadaEtiqueta = { nom: f.etiqueta, valor: xifra(f.valor), grup: f.grup === null ? null : xifra(f.grup) };
+      // Les línies de més: d'on ve i on ha anat a parar, si la fila ho sap, i
+      // quant se separa del canvi dels seus. Una xifra d'abans o de després
+      // és un nivell i no un canvi: no porta «+», i «−» només si és negativa.
+      const nivell = (v: number): string => `${v < 0 ? "−" : ""}${opcions.format(Math.abs(v))}${unitat}`;
+      const teAbans = typeof f.abans === "number" && typeof f.despres === "number";
+      const extres: { etq: string; valor: string }[] = [
+        ...(teAbans
+          ? [
+              { etq: opcions.anys ? String(opcions.anys.inici) : "abans", valor: nivell(f.abans!) },
+              { etq: opcions.anys ? String(opcions.anys.final) : "després", valor: nivell(f.despres!) },
+            ]
+          : []),
+        ...(f.grup === null ? [] : [{ etq: "respecte als seus", valor: xifra(f.valor - f.grup) }]),
+      ];
+      const dada: DadaEtiqueta = {
+        nom: f.etiqueta,
+        valor: xifra(f.valor),
+        grup: f.grup === null ? null : xifra(f.grup),
+        extres,
+      };
       return `<li class="${sentit}">
       <span class="etq">${nom(f, false)}</span>
       <span class="canal"${atributsEtiqueta(dada)}${titolHtml(dada)}><i class="barra" style="--w:${n2(w)}%"></i>${marca}</span>
@@ -1018,7 +1196,18 @@ export function regleDispersio(
       // rep el focus; la marca sense enllaç només el rep si és «aquest»: a la
       // fitxa municipal les altres dues-centes no tenen nom i tabular-les una
       // per una seria un passadís de dues-centes parades que diuen una xifra.
-      const dada: DadaEtiqueta = { nom: v.nom || (v.aquest ? "Aquest municipi" : null), valor: fmt(v.valor) };
+      // La posició es compta del més baix al més alt, que és com va el regle,
+      // i dos municipis amb la mateixa xifra tenen la mateixa posició: el
+      // «12è més baix de 30» no depèn de com s'hagi desfet l'empat.
+      const posicio = 1 + ordenats.filter((q) => q.valor < v.valor).length;
+      const dada: DadaEtiqueta = {
+        nom: v.nom || (v.aquest ? "Aquest municipi" : null),
+        valor: fmt(v.valor),
+        extres: [
+          { etq: "posició", valor: `${ordinal(posicio)} més baix de ${ordenats.length}` },
+          { etq: "respecte a la mediana", valor: canviEscrit(fmt, mig, v.valor) },
+        ],
+      };
       const etiqueta = `${atributsEtiqueta(dada)}${titolHtml(dada)}`;
       return v.slug
         ? `<a class="${classe}" style="--p:${on(v.valor)}%" href="${base}m/${escape(v.slug)}/"${etiqueta}
@@ -1103,6 +1292,11 @@ export const GRAFICS_CSS = `
   letter-spacing:.03em;text-transform:uppercase;opacity:.85}
 .etiqueta-grafic .dada{display:block;font-size:.92rem}
 .etiqueta-grafic .seus{display:block;opacity:.85}
+.etiqueta-grafic .extres{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:6px 0 0;padding:6px 0 0;
+  border-top:1px solid rgba(251,247,238,.25);font-size:.78rem}
+.etiqueta-grafic .extres dt{opacity:.75;font-weight:700}
+.etiqueta-grafic .extres dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}
+.etiqueta-grafic .nota-punt{display:block;margin-top:5px;font-size:.7rem;opacity:.7}
 .grafic .tall-mandat{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:3 4;opacity:.45}
 .grafic .etiqueta-mandat{font-family:var(--display);font-size:11px;font-weight:900;
   fill:var(--ink-suau);letter-spacing:.02em}
@@ -1352,6 +1546,30 @@ export const GRAFICS_JS = `<script id="grafics-etiqueta">
       seus.className = 'seus';
       seus.textContent = mediana ? 'mediana dels seus: ' + mediana : 'els seus: ' + grup;
       c.appendChild(seus);
+    }
+    // Les línies de més: una llista de definicions, etiqueta a l'esquerra i
+    // valor a la dreta, en l'ordre que ha triat qui ha escrit el punt.
+    var extres = punt.getAttribute('data-extres');
+    if (extres) {
+      var dl = document.createElement('dl');
+      dl.className = 'extres';
+      extres.split('\u2016').forEach(function (linia) {
+        var parts = linia.split('\u00a6');
+        var dt = document.createElement('dt');
+        dt.textContent = parts[0];
+        var dd = document.createElement('dd');
+        dd.textContent = parts.slice(1).join('\u00a6');
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      });
+      c.appendChild(dl);
+    }
+    var nota = punt.getAttribute('data-nota');
+    if (nota) {
+      var peu = document.createElement('span');
+      peu.className = 'nota-punt';
+      peu.textContent = nota;
+      c.appendChild(peu);
     }
   }
 

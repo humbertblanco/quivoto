@@ -374,11 +374,19 @@ describe("l'etiqueta als mapes de l'AMB", () => {
       }),
       "2026-08-30",
     );
+    // Cada punt diu la força i, a sota, els habitants, les regidories i la llista; la lletra petita, la font.
     expect(html).toContain(
-      '<a href="../m/a/" data-nom="A" data-valor="PSC (PSC-CP) · alcaldia: Antonio Balmón"><title>A: PSC (PSC-CP) · alcaldia: Antonio Balmón</title>',
+      '<a href="../m/a/" data-nom="A" data-valor="PSC (PSC-CP) · alcaldia: Antonio Balmón"' +
+        ' data-extres="habitants¦92.237‖regidories¦25‖amb quina llista¦PSC-CP" data-nota="Generalitat · composició dels plens">' +
+        "<title>A: PSC (PSC-CP) · alcaldia: Antonio Balmón · habitants: 92.237 · regidories: 25 · amb quina llista: PSC-CP" +
+        " (Generalitat · composició dels plens)</title>",
     );
-    expect(html).toContain('<a href="../m/b/" data-nom="B" data-valor="Sense identificar (AxB) · alcaldia: Antonio Balmón">');
-    expect(html).toContain('data-valor="Els 36 municipis metropolitans"><title>Els 36 municipis metropolitans</title></path>');
+    expect(html).toContain('<a href="../m/b/" data-nom="B" data-valor="Sense identificar (AxB) · alcaldia: Antonio Balmón"');
+    // El segell diu la taca sencera i quanta gent hi viu, que és la xifra de la capçalera.
+    expect(html).toContain(
+      'data-valor="Els 36 municipis metropolitans" data-extres="habitants¦3.468.778">' +
+        "<title>Els 36 municipis metropolitans · habitants: 3.468.778</title></path>",
+    );
     expect(html).toContain('data-valor="La resta de Catalunya · 84 municipis">');
     expect(html.split('<script id="grafics-etiqueta">')).toHaveLength(2);
   });

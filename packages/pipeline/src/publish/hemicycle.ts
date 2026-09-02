@@ -12,8 +12,9 @@
  *
  * La segona meitat del fitxer, `seientsHemicicle()`, escriu els cercles: qui
  * dibuixa la fitxa municipal hi passa els escons d'aquí i els grups del ple, i
- * cada cercle surt amb la seva etiqueta (`data-nom`, `data-valor` i `<title>`),
- * que és el contracte de `GRAFICS_JS` a `grafics.ts`.
+ * cada cercle surt amb la seva etiqueta (`data-nom`, `data-valor`, les línies
+ * de més a `data-extres` i el `<title>`), que és el contracte de `GRAFICS_JS`
+ * a `grafics.ts`.
  */
 
 import { atributsEtiqueta, textEtiqueta, type DadaEtiqueta } from "./grafics";
@@ -157,27 +158,52 @@ export type GrupHemicicle = {
   regidories: number;
   /** El color de dada, ja decidit per qui crida (`colorDeCandidatura` a la fitxa). */
   color: string;
+  /**
+   * Els vots de la candidatura i la part del total que són, si es coneixen.
+   * L'hemicicle diu escons, i dos grups amb els mateixos escons poden tenir
+   * mil vots de diferència: l'etiqueta és l'únic lloc del dibuix on es veu.
+   */
+  vots?: number | null;
+  pctVots?: number | null;
   /** Cert si el grup forma govern: l'etiqueta hi afegeix «al govern». */
   govern?: boolean;
   /**
    * Qui hi seu, per ordre, si es coneix. Pot ser més curt que `regidories`
-   * —els escons que no tenen nom tornen a dir el grup— i avui la fitxa no el
-   * passa, perquè el ple que arriba a l'hemicicle són sigles i recomptes.
+   * —els escons que no tenen nom tornen a dir el grup—; la fitxa el passa
+   * quan té el ple de la seu electrònica o del registre de la Generalitat.
    */
   persones?: readonly (string | null | undefined)[];
 };
 
+/** Els mateixos formats que la fitxa: «35.799» i «46,8 %». */
+const number = (n: number): string => n.toLocaleString("ca-ES");
+const percent = (n: number): string => `${n.toFixed(1).replace(".", ",")} %`;
+
 /**
  * L'etiqueta d'un escó. Quan es coneix la persona, el nom és el seu i el grup
- * passa a la dada («ERC · 5 de 21 regidories»); quan no, el nom és el grup i
- * la dada és només el recompte, que si no el `<title>` deia «ERC: ERC · 5 de
- * 21 regidories». L'ordre dels trossos és el de `textEtiqueta()`.
+ * passa a la dada («Marta Farrés: PSC · al govern»), amb el recompte com a
+ * línia de més; quan no, el nom és el grup i la dada és el recompte, que si
+ * no el `<title>` deia «ERC: ERC · 5 de 21 regidories». Els vots van sempre
+ * com a línia de més («vots: 35.799 · 46,8 %»), perquè són el que l'hemicicle
+ * no ensenya. L'ordre dels trossos és el de `textEtiqueta()`.
  */
 export function etiquetaSeient(grup: GrupHemicicle, total: number, persona?: string | null): DadaEtiqueta {
-  const recompte = `${grup.regidories} de ${total} ${total === 1 ? "regidoria" : "regidories"}`;
+  const recompte = `${grup.regidories} de ${total}`;
+  const govern = grup.govern ? " · al govern" : "";
+  const extres: { etq: string; valor: string }[] = [];
+  if (grup.vots !== null && grup.vots !== undefined && grup.vots > 0) {
+    extres.push({
+      etq: "vots",
+      valor: grup.pctVots !== null && grup.pctVots !== undefined ? `${number(grup.vots)} · ${percent(grup.pctVots)}` : number(grup.vots),
+    });
+  }
+  // Amb persona, el recompte deixa de ser la dada i passa a línia de més; sense
+  // persona ja és la dada, i repetir-lo sota seria dir-ho dues vegades.
+  if (persona) extres.push({ etq: "regidories", valor: recompte });
   return {
     nom: persona || grup.nom,
-    valor: `${persona ? `${grup.nom} · ` : ""}${recompte}${grup.govern ? " · al govern" : ""}`,
+    valor: persona ? `${grup.nom}${govern}` : `${recompte} ${total === 1 ? "regidoria" : "regidories"}${govern}`,
+    extres: extres.length > 0 ? extres : null,
   };
 }
 

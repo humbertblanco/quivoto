@@ -11,7 +11,7 @@ import type { CriminalitatMetric } from "../jobs/j29-criminalitat";
 import type { MedianaGrup, MedianesMunicipi } from "./medianes";
 import {
   atributsEtiqueta, barresDivergents, distribucioGrup, escalaDivergent, GRAFICS_JS, regleDispersio, serieTemporal,
-  textEtiqueta, type FilaDivergent,
+  textEtiqueta, type DadaEtiqueta, type FilaDivergent,
 } from "./grafics";
 import type { SeriesMunicipi } from "./series-grup";
 import type { Continuitat, PuntVolatilitat, VotPerdutElecció } from "../derive/trajectoria";
@@ -951,7 +951,89 @@ const formatDate = dataCurta;
 
 // ---------------------------------------------------------------- fragments
 
-function renderHemicycle(candidatures: readonly CandidatureShare[], totalSeats: number, majority: number): string {
+/**
+ * El que la fitxa sap d'una candidatura més enllà del recompte: si forma govern
+ * i qui seu als seus escons, per ordre. Ho calcula `seientsDelPle()` a partir
+ * del ple que la pàgina ja té («Qui seu al ple»), i l'hemicicle ho posa a
+ * l'etiqueta de cada cercle.
+ */
+type SeientsCandidatura = { govern: boolean; persones: string[] };
+
+/**
+ * Qui seu a cada escó i quins grups formen govern, per sigles de candidatura.
+ *
+ * L'hemicicle rep les candidatures del 2023 i el bloc «Qui seu al ple» rep la
+ * seu electrònica o el registre de la Generalitat: són dues llistes que no
+ * s'escriuen igual («PSC-CP» i «Grup Municipal del PSC»), i fins ara no es
+ * parlaven. Aquí es lliguen amb la mateixa regla que dona el color a cada grup
+ * (`candidaturaDelGrup`), de manera que el cercle i la cara diuen la mateixa
+ * persona. Les fonts són les mateixes que tria el bloc de sota, en el mateix
+ * ordre —la seu si hi és, el registre si no— i l'alcaldia va la primera del
+ * seu grup, com a la graella.
+ *
+ * El govern surt de les banderes de la seu quan es poden creure —la mateixa
+ * regla que `renderPleCompacte`: a Sabadell només marquen l'alcaldessa, i
+ * llavors no diuen qui governa— i, si no, de la força de l'alcaldia, que és
+ * l'única de què la mètrica del govern està segura. Un ple que no lliga amb
+ * cap candidatura (els no adscrits, un grup que no es reconeix) no s'inventa
+ * cap nom: aquells escons tornen a dir el grup.
+ */
+function seientsDelPle(
+  data: RadiografiaData,
+  candidaturaDelGrup: (grup: string | null) => CandidatureShare | null,
+  alcaldia: { carrec: CarrecSeue | null },
+): Map<string, SeientsCandidatura> {
+  const per = new Map<string, SeientsCandidatura>();
+  const entrada = (sigles: string): SeientsCandidatura => {
+    let e = per.get(sigles);
+    if (!e) {
+      e = { govern: false, persones: [] };
+      per.set(sigles, e);
+    }
+    return e;
+  };
+  const government = data.government;
+
+  const seu = data.carrecs?.carrecs ?? [];
+  if (seu.length > 0) {
+    const marcats = seu.filter((c) => c.equipGovern).length;
+    const banderesFiables = government?.mayorSeats === null || government?.mayorSeats === undefined || marcats >= government.mayorSeats;
+    const teLAlcaldia = (c: CarrecSeue): boolean => c === alcaldia.carrec;
+    for (const c of [...seu].sort((a, b) => (teLAlcaldia(b) ? 1 : 0) - (teLAlcaldia(a) ? 1 : 0))) {
+      const candidatura = candidaturaDelGrup(c.grup);
+      if (!candidatura) continue;
+      const e = entrada(candidatura.sigles);
+      e.persones.push(c.nom);
+      if (banderesFiables && c.equipGovern) e.govern = true;
+    }
+  } else if (data.councillors.length > 0) {
+    // La mateixa regla que `renderCouncillors`: el nom oficial mana; el càrrec
+    // «Alcalde» del registre només decideix quan no hi ha cap nom oficial.
+    const nomOficial = government?.mayorName ? normalizePersonName(government.mayorName) : "";
+    const pelNom = nomOficial === "" ? null : (data.councillors.find((c) => normalizePersonName(c.name) === nomOficial) ?? null);
+    const esLAlcaldia = (c: Councillor): boolean => (pelNom ? c === pelNom : nomOficial === "" && esAlcaldia(c.role));
+    const ordenats = [...data.councillors].sort(
+      (a, b) => (esLAlcaldia(b) ? 1 : 0) - (esLAlcaldia(a) ? 1 : 0) || (a.orderNum ?? 99) - (b.orderNum ?? 99),
+    );
+    for (const c of ordenats) {
+      const candidatura = candidaturaDelGrup(c.sigles ?? c.groupName);
+      if (candidatura) entrada(candidatura.sigles).persones.push(nomLlegible(c.name));
+    }
+  }
+
+  if (government?.mayorSigles && ![...per.values()].some((e) => e.govern)) {
+    const candidatura = candidaturaDelGrup(government.mayorSigles);
+    if (candidatura) entrada(candidatura.sigles).govern = true;
+  }
+  return per;
+}
+
+function renderHemicycle(
+  candidatures: readonly CandidatureShare[],
+  totalSeats: number,
+  majority: number,
+  seients: ReadonlyMap<string, SeientsCandidatura> = new Map(),
+): string {
   const { seats, width, height, seatRadius } = hemicycle(totalSeats, { width: 660 });
   const withSeats = candidatures.filter((c) => c.seats > 0);
 
@@ -964,12 +1046,24 @@ function renderHemicycle(candidatures: readonly CandidatureShare[], totalSeats: 
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
   });
 
-  // Els cercles els escriu hemicycle.ts: cada seient porta el grup i «N de M
-  // regidories» en atributs i en un <title>, que és el que fa que en passar-hi
-  // el cursor surti l'etiqueta comuna dels gràfics (GRAFICS_JS).
+  // Els cercles els escriu hemicycle.ts: cada seient porta el grup, «N de M
+  // regidories», els vots amb el tant per cent, «al govern» si escau i qui hi
+  // seu quan se sap, en atributs i en un <title>, que és el que fa que en
+  // passar-hi el cursor surti l'etiqueta comuna dels gràfics (GRAFICS_JS).
   const circles = seientsHemicicle(
     seats,
-    sorted.map((c) => ({ nom: c.sigles, regidories: c.seats, color: colorDeCandidatura(c) })),
+    sorted.map((c) => {
+      const seu = seients.get(c.sigles);
+      return {
+        nom: c.sigles,
+        regidories: c.seats,
+        color: colorDeCandidatura(c),
+        vots: c.votes,
+        pctVots: c.share,
+        govern: seu?.govern,
+        persones: seu?.persones,
+      };
+    }),
     totalSeats,
   );
 
@@ -1340,6 +1434,7 @@ function renderDeuteAnyAAny(finances: FinancesMetric, seriesGrup?: SeriesMunicip
       banda: seriesGrup?.deuteGrup,
       grup: seriesGrup?.grup ?? finances.group?.label ?? null,
       mandats,
+      nota: "font: Consorci AOC, deute viu a 31 de desembre",
     },
   );
   if (grafic === "") return "";
@@ -4186,10 +4281,14 @@ function renderMandat(data: RadiografiaData): string {
     .filter((p): p is ProgramaDespesa & { mandat: Variacio } => p.mandat !== null)
     .filter((p) => !(p.mandat.inici === 0 && p.mandat.final === 0))
     .sort((a, b) => Math.abs(b.mandat.diferencia) - Math.abs(a.mandat.diferencia));
+  // L'abans i el després van només a l'etiqueta del punt: «+13,7 €/hab» sol no
+  // diu si es parteix de 20 o de 200.
   const despesa: FilaDivergent[] = programes.map((p) => ({
     etiqueta: p.nom,
     valor: p.mandat.diferencia,
     grup: p.mandatDelGrup?.diferencia ?? null,
+    abans: p.mandat.inici,
+    despres: p.mandat.final,
   }));
 
   if (files.length === 0 && despesa.length === 0) return "";
@@ -4270,6 +4369,7 @@ function renderMandat(data: RadiografiaData): string {
     unitat: "€/hab",
     nomGrup: data.despesaProgrames?.grup?.etiqueta ?? null,
     escala: escalaDivergent(despesa),
+    anys: primerPrograma ? { inici: primerPrograma.mandat.desDe, final: primerPrograma.mandat.fins } : null,
   };
   const restaProgrames = despesa.slice(VISIBLES);
   const blocDespesa =
@@ -4401,9 +4501,21 @@ function renderUllada(
   type Pastilla = {
     etq: string; xifra: string; peu: string; part: number | null; on: string; tema: string;
     ranquing?: RanquingId;
+    /**
+     * L'etiqueta que surt en passar-hi per sobre (`GRAFICS_JS`): la xifra amb
+     * l'any, la mediana dels de la seva mida i d'on surt. La tessel·la ja diu
+     * la comparació en paraules; l'etiqueta hi posa la xifra exacta i la
+     * font, que al peu no hi caben. La de sigles no en porta: no és una xifra.
+     */
+    etiqueta?: DadaEtiqueta | null;
   };
   const pastilles: Pastilla[] = [];
   const delMig = "el poble del mig de la seva mida";
+  /** «els de la seva mida: mediana 1.050 € (23 municipis)», amb quants quan se sap. */
+  const elsSeus = (mediana: string, quants: number | null | undefined): { etq: string; valor: string } => ({
+    etq: "els de la seva mida",
+    valor: `mediana ${mediana}${quants ? ` (${number(quants)} municipis)` : ""}`,
+  });
 
   // 1. El que gasta per habitant, amb la mediana del grup en euros de diferència.
   const gasta = despesaPerHabitant(data.despesaProgrames, data.spending);
@@ -4423,6 +4535,13 @@ function renderUllada(
             : `${number(Math.abs(dif))} € ${dif > 0 ? "més" : "menys"} que ${delMig}`,
       on: "#diners",
       tema: "fiscalitat",
+      etiqueta: {
+        nom: "Gasta per habitant",
+        any: gasta.any,
+        valor: `${number(Math.round(gasta.perHabitant))} €`,
+        extres: ref ? [elsSeus(`${number(Math.round(ref.mediana))} €`, ref.quants)] : null,
+        nota: `font: AOC, liquidació del ${gasta.any}`,
+      },
     });
   }
 
@@ -4430,7 +4549,8 @@ function renderUllada(
   const comptes = data.finances;
   const deute = comptes?.indicators.find((i) => i.key === "deute-habitant") ?? null;
   if (comptes && deute && deute.value !== null) {
-    const p = comptes.comparison.find((c) => c.key === "deute-habitant")?.percentile ?? null;
+    const comparacio = comptes.comparison.find((c) => c.key === "deute-habitant") ?? null;
+    const p = comparacio?.percentile ?? null;
     pastilles.push({
       etq: "Deu per habitant",
       xifra: formatValue(deute.value, deute.unit),
@@ -4446,6 +4566,16 @@ function renderUllada(
               : `més que ${Math.round(p / 10)} de cada 10 dels de la seva mida`,
       on: "#comptes",
       tema: "fiscalitat",
+      etiqueta: {
+        nom: "Deu per habitant",
+        any: comptes.year,
+        valor: formatValue(deute.value, deute.unit),
+        extres:
+          comparacio?.median !== null && comparacio?.median !== undefined
+            ? [elsSeus(formatValue(comparacio.median, deute.unit), comparacio.groupSize)]
+            : null,
+        nota: `font: AOC, exercici ${comptes.year}`,
+      },
     });
   }
 
@@ -4465,6 +4595,13 @@ function renderUllada(
       on: "#que-paga",
       tema: "fiscalitat",
       ranquing: "ibi",
+      etiqueta: {
+        nom: "Rebut mitjà d'IBI",
+        any: ibi.darrerAny,
+        valor: `${number(Math.round(ibi.rebutMitja))} €`,
+        extres: ibi.comparacio ? [elsSeus(`${number(Math.round(ibi.comparacio.mediana))} €`, ibi.comparacio.grup.ambDada)] : null,
+        nota: `font: Idescat, ${ibi.darrerAny}${ibi.provisional ? " (provisional)" : ""}`,
+      },
     });
   } else if (aigua && aigua.preu.subministrament !== null) {
     pastilles.push({
@@ -4477,6 +4614,15 @@ function renderUllada(
       on: "#que-paga",
       tema: "medi ambient",
       ranquing: "aigua",
+      etiqueta: {
+        nom: "Paga per l'aigua",
+        any: aigua.darrerAny,
+        valor: `${decimal(aigua.preu.subministrament, 2)} €/m³`,
+        extres: aigua.comparacio
+          ? [elsSeus(`${decimal(aigua.comparacio.mediana, 2)} €/m³`, aigua.comparacio.grup.ambDada)]
+          : null,
+        nota: `font: ACA, ${aigua.darrerAny}`,
+      },
     });
   }
 
@@ -4499,6 +4645,13 @@ function renderUllada(
       on: "#participacio",
       tema: "participació",
       ranquing: "participacio",
+      etiqueta: {
+        nom: "Va anar a votar",
+        any: 2023,
+        valor: percent(pct),
+        extres: m ? [elsSeus(percent(m.mediana), m.quants)] : null,
+        nota: "font: Generalitat, municipals del 2023",
+      },
     });
   }
 
@@ -4535,7 +4688,11 @@ function renderUllada(
   return `<section class="ullada cinc" aria-label="El poble en cinc xifres">
   <ul>${pastilles
     .map(
-      (p) => `<li><a href="${p.on}">
+      (p) => `<li><a href="${p.on}"${
+        // La tessel·la sencera rep l'etiqueta flotant, com qualsevol punt amb
+        // `data-valor`; el `title` és la mateixa frase per a qui no té script.
+        p.etiqueta ? `${atributsEtiqueta(p.etiqueta)} title="${escape(textEtiqueta(p.etiqueta))}"` : ""
+      }>
       <span class="dibuix" aria-hidden="true">${icona(p.tema)}</span>
       <span class="etq">${escape(p.etq)}</span>
       <span class="xifra">${p.xifra}</span>
@@ -4604,7 +4761,32 @@ type FilaComparat = {
   quants: number | null;
   /** Context que l'ajuntament no decideix: es diu a la fila, no s'amaga. */
   context?: boolean;
+  /**
+   * El municipi més baix i el més alt del grup, quan la fila els sap. Avui
+   * només els saben les files que reben tots els valors del grup (la
+   * participació i les dones al ple, de `medianes.ts`); les altres porten la
+   * mediana i el percentil i prou, i a l'etiqueta hi va només la posició.
+   */
+  extrems?: { minim: number; maxim: number } | null;
 };
+
+/**
+ * La posició dins del grup, dita del municipi estant: «més alt que el 74 %»
+ * i mai «millor». Als extrems el percentil de rang mitjà pot arrodonir a 0 o a
+ * 100, i «més alt que el 100 %» seria fals: allà es diu que és el més alt.
+ * `dels` és com s'anomena el grup: llarg a la frase de la fila, curt a l'etiqueta.
+ */
+function posicioEntre(percentil: number, dels: string): string {
+  return percentil >= 100
+    ? `el més alt ${dels}`
+    : percentil <= 0
+      ? `el més baix ${dels}`
+      : percentil === 50
+        ? `just al mig ${dels}`
+        : percentil > 50
+          ? `més alt que el ${percentil} % ${dels}`
+          : `més baix que el ${100 - percentil} % ${dels}`;
+}
 
 /**
  * La posició dins del grup, en una frase neutra.
@@ -4616,17 +4798,17 @@ type FilaComparat = {
  */
 function fraseComparat(percentil: number, quants: number | null, mediana: string): string {
   const dels = quants === null ? "dels municipis de la seva mida" : `dels ${number(quants)} municipis de la seva mida`;
-  const posicio =
-    percentil >= 100
-      ? `el més alt ${dels}`
-      : percentil <= 0
-        ? `el més baix ${dels}`
-        : percentil === 50
-          ? `just al mig ${dels}`
-          : percentil > 50
-            ? `més alt que el ${percentil} % ${dels}`
-            : `més baix que el ${100 - percentil} % ${dels}`;
-  return `${posicio} · mediana ${mediana}`;
+  return `${posicioEntre(percentil, dels)} · mediana ${mediana}`;
+}
+
+/** La mateixa posició en curt, per a l'etiqueta del punt: «més baix que el 60 % de 24». */
+const posicioCurta = (percentil: number, quants: number | null): string =>
+  posicioEntre(percentil, quants === null ? "del grup" : `de ${number(quants)}`);
+
+/** El més baix i el més alt d'un grup del qual tenim tots els valors. */
+function extremsDe(grup: MedianaGrup | null): { minim: number; maxim: number } | null {
+  if (!grup || grup.valors.length === 0) return null;
+  return { minim: Math.min(...grup.valors), maxim: Math.max(...grup.valors) };
 }
 
 function filesComparat(data: RadiografiaData, medianes?: MedianesMunicipi): FilaComparat[] {
@@ -4743,6 +4925,7 @@ function filesComparat(data: RadiografiaData, medianes?: MedianesMunicipi): Fila
       percentil: participacio?.percentil ?? null,
       mediana: participacio?.mediana ?? null,
       quants: participacio?.quants ?? null,
+      extrems: extremsDe(participacio),
     },
     {
       etq: "Dones al ple",
@@ -4754,6 +4937,7 @@ function filesComparat(data: RadiografiaData, medianes?: MedianesMunicipi): Fila
       percentil: dones?.percentil ?? null,
       mediana: dones?.mediana ?? null,
       quants: dones?.quants ?? null,
+      extrems: extremsDe(dones),
     },
     {
       etq: "Renda neta per persona",
@@ -4812,7 +4996,24 @@ export function renderComparat(data: RadiografiaData, medianes?: MedianesMunicip
       <span class="frase">sense comparació amb els de la seva mida</span></li>`;
     }
     const mediana = f.format(f.mediana);
-    const dada = { nom: f.etq, any: f.any, valor, mediana };
+    // L'etiqueta del punt diu el que la fila ja diu, però al costat del punt:
+    // la posició en curt, els extrems del grup quan es saben, i d'on surt.
+    const dada: DadaEtiqueta = {
+      nom: f.etq,
+      any: f.any,
+      valor,
+      mediana,
+      extres: [
+        { etq: "posició", valor: posicioCurta(f.percentil, f.quants) },
+        ...(f.extrems
+          ? [
+              { etq: "el més baix del grup", valor: f.format(f.extrems.minim) },
+              { etq: "el més alt del grup", valor: f.format(f.extrems.maxim) },
+            ]
+          : []),
+      ],
+      nota: `font: ${f.font}${f.any === null ? "" : `, ${f.any}`}`,
+    };
     // Del 3 % al 97 % i no de 0 a 100: el punt fa 20 px i als extrems mitja
     // marca sortia de la barra; el 50 es queda al 50, que és on hi ha la mediana.
     const on = (3 + 0.94 * Math.max(0, Math.min(100, f.percentil))).toFixed(1);
@@ -5162,20 +5363,26 @@ export function renderRadiografia(
    * PSC-CP són el mateix. Si no lliga, gris: val més no acolorir que acolorir
    * malament, perquè aquí el color diu de qui és cada cosa.
    */
-  const colorPerGrup = (grup: string | null): string => {
-    if (!grup || /no\s*adscri/i.test(grup)) return "#8b8b8b";
+  const candidaturaDelGrup = (grup: string | null): CandidatureShare | null => {
+    if (!grup || /no\s*adscri/i.test(grup)) return null;
     const llistes = current?.candidatures ?? [];
     const directe = llistes.find((c) => sameForce(c.sigles, grup) || sameForce(c.brandId, grup));
-    if (directe) return colorDeCandidatura(directe);
+    if (directe) return directe;
     // La seu electrònica no escriu sigles, escriu el nom del grup municipal:
     // «Grup municipal del Partit dels Socialistes de Catalunya (PSC)». Comparat
     // amb «PSC-CP» com si fossin dues sigles no lliga mai, i a Rubí cinc dels
     // set grups es quedaven grisos. Dues coses hi lliguen sense endevinar res:
     // el nom sencer del partit escrit a dins, i les sigles del parèntesi.
     const familia = familiaDelNomDeGrup(grup);
-    if (!familia) return "#8b8b8b";
-    const seva = llistes.find((c) => siglesFamily(c.sigles) === familia);
-    return seva ? colorDeCandidatura(seva) : BRANDS_BY_ID.get(familia)?.color ?? "#8b8b8b";
+    return familia ? (llistes.find((c) => siglesFamily(c.sigles) === familia) ?? null) : null;
+  };
+  const colorPerGrup = (grup: string | null): string => {
+    if (!grup || /no\s*adscri/i.test(grup)) return "#8b8b8b";
+    const seva = candidaturaDelGrup(grup);
+    if (seva) return colorDeCandidatura(seva);
+    // Sense candidatura al ple d'avui, el color de la marca si la família es reconeix.
+    const familia = familiaDelNomDeGrup(grup);
+    return familia ? (BRANDS_BY_ID.get(familia)?.color ?? "#8b8b8b") : "#8b8b8b";
   };
 
   /*
@@ -5222,7 +5429,7 @@ export function renderRadiografia(
   // diners, el vot, la gent, i al final què en sabem i el 23-M.
 
   const ple = current
-    ? `${renderHemicycle(current.candidatures, totalSeats, majority)}
+    ? `${renderHemicycle(current.candidatures, totalSeats, majority, seientsDelPle(data, candidaturaDelGrup, alcaldia))}
   ${
     // Els slugs els mana `assignaSlugs()`, que és qui escriu els directoris:
     // amb `slugify()` cru, dues candidatures del mateix ple que en donessin un

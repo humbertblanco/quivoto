@@ -232,19 +232,52 @@ const colorAlcaldia = (brandId: string | null | undefined): string =>
  * que la clau de les cintes també diu. És el contracte de l'etiqueta comuna
  * de tots els gràfics (`atributsEtiqueta`, a grafics.ts): els mateixos
  * `data-*` i el mateix `<title>` per a qui no té script.
+ *
+ * Sota, en línies a part, el que la fila ja sap del municipi: els habitants
+ * i les regidories, que diuen de quina mida és el ple; amb quina llista es
+ * va presentar l'alcaldia; i, només quan hi és, el pacte —governa qui no va
+ * guanyar, i qui va guanyar— o el canvi d'alcaldia a mig mandat. La lletra
+ * petita diu d'on surt tot això, que és la mateixa font per a totes.
  */
 function etiquetaMunicipi(m: {
   name: string;
+  population?: number | null;
+  seats?: number;
   mayorBrandId: string | null;
   mayorSigles: string | null;
   mayorName?: string | null;
+  winnerSigles?: string | null;
+  winnerGoverns?: boolean | null;
+  mayorChanged?: boolean;
+  mayorChangeDate?: string | null;
 }): string {
   const forca = labelOf(m.mayorBrandId ?? SENSE_MARCA);
   const sigles = m.mayorSigles && m.mayorSigles !== forca ? ` (${m.mayorSigles})` : "";
   const alcaldia = m.mayorName ? ` · alcaldia: ${m.mayorName}` : "";
-  const dada: DadaEtiqueta = { nom: m.name, valor: `${forca}${sigles}${alcaldia}` };
+  const extres: { etq: string; valor: string }[] = [];
+  if (m.population !== null && m.population !== undefined) extres.push({ etq: "habitants", valor: number(m.population) });
+  if (m.seats) extres.push({ etq: "regidories", valor: number(m.seats) });
+  if (m.mayorSigles) extres.push({ etq: "amb quina llista", valor: m.mayorSigles });
+  if (m.winnerGoverns === false) {
+    extres.push({ etq: "pacte", valor: m.winnerSigles ? `governa qui no va guanyar (va guanyar ${m.winnerSigles})` : "governa qui no va guanyar" });
+  }
+  if (m.mayorChanged) {
+    extres.push({ etq: "canvi d'alcaldia", valor: m.mayorChangeDate ? `a mig mandat, el ${dataCurta(m.mayorChangeDate)}` : "a mig mandat" });
+  }
+  const dada: DadaEtiqueta = {
+    nom: m.name,
+    valor: `${forca}${sigles}${alcaldia}`,
+    extres,
+    nota: "Generalitat · composició dels plens",
+  };
   return `${atributsEtiqueta(dada)}><title>${escape(textEtiqueta(dada))}</title>`;
 }
+
+/** «2024-06-15» → «15/6/2024»: la data tal com arriba de la base, escrita curta. */
+const dataCurta = (iso: string): string => {
+  const [any, mes, dia] = iso.slice(0, 10).split("-");
+  return any && mes && dia ? `${Number(dia)}/${Number(mes)}/${any}` : iso;
+};
 
 function formatValue(value: number, unit: ComarcaIndicador["unit"]): string {
   return unit === "euros" ? `${number(Math.round(value))} €` : `${decimal(value)} %`;

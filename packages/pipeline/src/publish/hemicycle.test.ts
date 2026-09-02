@@ -100,12 +100,42 @@ describe("seientsHemicicle", () => {
     expect(svg).toContain("<title>ERC: 8 de 21 regidories · al govern</title>");
   });
 
-  it("quan sap qui hi seu, el nom és la persona i el grup passa a la dada", () => {
+  it("quan sap qui hi seu, el nom és la persona, el grup passa a la dada i el recompte a les línies de més", () => {
     const svg = seientsHemicicle(seats, [{ ...grups[1]!, persones: ["Marta Farrés"] }, grups[0]!, grups[2]!], 21);
-    expect(svg).toContain('data-nom="Marta Farrés" data-valor="PSC · 7 de 21 regidories"');
-    expect(svg).toContain("<title>Marta Farrés: PSC · 7 de 21 regidories</title>");
-    // Els sis escons del PSC sense nom continuen dient el grup.
+    expect(svg).toContain('data-nom="Marta Farrés" data-valor="PSC" data-extres="regidories¦7 de 21"');
+    expect(svg).toContain("<title>Marta Farrés: PSC · regidories: 7 de 21</title>");
+    // Els sis escons del PSC sense nom continuen dient el grup, sense repetir el recompte.
     expect(svg.match(/data-nom="PSC" data-valor="7 de 21 regidories"/g)).toHaveLength(6);
+    expect(svg).not.toContain('data-valor="7 de 21 regidories" data-extres="regidories');
+  });
+
+  it("amb vots, cada escó els diu amb el tant per cent, i «al govern» es queda a la dada", () => {
+    const ambVots = [
+      { ...grups[0]!, vots: 35_799, pctVots: 46.8, persones: ["Marta Farrés"] },
+      { ...grups[1]!, vots: 12_004, pctVots: 15.7 },
+    ];
+    const svg = seientsHemicicle(seats, ambVots, 21);
+    // L'escó amb persona: la persona, el grup i el govern a la dada; vots i recompte a sota.
+    expect(svg).toContain(
+      'data-nom="Marta Farrés" data-valor="ERC · al govern" data-extres="vots¦35.799 · 46,8 %‖regidories¦8 de 21"',
+    );
+    expect(svg).toContain("<title>Marta Farrés: ERC · al govern · vots: 35.799 · 46,8 % · regidories: 8 de 21</title>");
+    // Els escons sense persona: el grup, el recompte i els vots.
+    expect(svg.match(/data-nom="PSC" data-valor="7 de 21 regidories" data-extres="vots¦12.004 · 15,7 %"/g)).toHaveLength(7);
+    expect(svg).toContain("<title>PSC: 7 de 21 regidories · vots: 12.004 · 15,7 %</title>");
+  });
+
+  it("sense vots no s'inventa cap línia de vots, i amb vots sense percentatge els diu sols", () => {
+    expect(etiquetaSeient({ nom: "AM", regidories: 3, color: "#000", vots: null }, 5).extres).toBeNull();
+    expect(etiquetaSeient({ nom: "AM", regidories: 3, color: "#000", vots: 0 }, 5).extres).toBeNull();
+    expect(etiquetaSeient({ nom: "AM", regidories: 3, color: "#000", vots: 812 }, 5).extres).toEqual([{ etq: "vots", valor: "812" }]);
+  });
+
+  it("el text sense script no s'allarga més del compte: quatre línies de més com a molt", () => {
+    const dada = etiquetaSeient({ nom: "PSC-CP", regidories: 14, color: "#000", vots: 35_799, pctVots: 46.8, govern: true }, 27, "Marta Farrés Falgueras");
+    expect(dada.extres!.length).toBeLessThanOrEqual(4);
+    const text = `${dada.nom}: ${dada.valor}${dada.extres!.map((e) => ` · ${e.etq}: ${e.valor}`).join("")}`;
+    expect(text.length).toBeLessThan(160);
   });
 
   it("no rep el focus: la llista de sota ja és l'equivalent accessible", () => {

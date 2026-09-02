@@ -226,11 +226,24 @@ export function mapaQuiMana(mostra: PortadaMostra): string {
    * costat, perquè l'etiqueta digui el que es veu. El `<title>` de dins del
    * camí és el mateix text per a qui no té script.
    */
+  const perId = new Map(mostra.partits.map((p) => [p.id, p]));
   const dadaDe = (grup: string, quants: number): DadaEtiqueta => {
     const alcaldies = `${xifra(quants)} ${plural(quants, "alcaldia", "alcaldies")}`;
     if (grup === "cap") return { valor: `Sense identificar · ${xifra(quants)} ${plural(quants, "municipi", "municipis")}` };
     if (grup === "local") return { valor: `Llistes locals o sense marca · ${alcaldies}` };
-    return { valor: `${sigles.get(grup) ?? grup} · ${alcaldies}` };
+    // Sota, les xifres que el bloc dels partits ja diu de la marca sencera:
+    // les alcaldies comptades com les compta la seva pàgina —que poden no ser
+    // les de la taca, si un municipi no té geometria—, les regidories i la
+    // gent que governa. Són les que el lector troba en seguir l'enllaç.
+    const p = perId.get(grup);
+    const extres = p
+      ? [
+          { etq: "alcaldies", valor: xifra(p.alcaldies) },
+          { etq: "regidories", valor: xifra(p.regidories) },
+          { etq: "població governada", valor: `${xifra(p.habitants)} habitants` },
+        ]
+      : null;
+    return { valor: `${sigles.get(grup) ?? grup} · ${alcaldies}`, extres };
   };
   const camins = [...grups]
     .map(([grup, seus]) => {

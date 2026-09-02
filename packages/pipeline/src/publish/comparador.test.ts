@@ -599,6 +599,26 @@ function puntsDe(html: string): { atributs: string; dins: string }[] {
 const atribut = (atributs: string, nom: string): string | null =>
   atributs.match(new RegExp(` ${nom}="([^"]*)"`))?.[1] ?? null;
 
+/** Els extres d'un punt, desfets amb els mateixos separadors que els ajunten. */
+const extresDe = (atributs: string): { etq: string; valor: string }[] =>
+  (atribut(atributs, "data-extres") ?? "")
+    .split("\u2016")
+    .filter(Boolean)
+    .map((linia) => {
+      const [etq, ...valor] = linia.split("\u00a6");
+      return { etq: etq!, valor: valor.join("\u00a6") };
+    });
+
+/** El contracte sencer d'un punt, tal com el llegeix el script de grafics.ts. */
+const dadaDe = (atributs: string) => ({
+  nom: atribut(atributs, "data-nom"),
+  any: atribut(atributs, "data-any"),
+  valor: atribut(atributs, "data-valor")!,
+  mediana: atribut(atributs, "data-mediana"),
+  extres: extresDe(atributs),
+  nota: atribut(atributs, "data-nota"),
+});
+
 describe("l'etiqueta dels punts del regle", () => {
   const html = obre(pagina(), ["esplugues-de-llobregat", "sant-just-desvern"])["escales-cos"]!.innerHTML;
   const bloc = html.slice(html.indexOf("Deute per habitant"));
@@ -652,13 +672,38 @@ describe("l'etiqueta dels punts del regle", () => {
   it("el <title> diu la mateixa frase que compon el servidor per als seus gràfics", () => {
     for (const p of punts) {
       const titol = p.dins.match(/<title>([^<]*)<\/title>/)![1];
-      expect(titol).toBe(textEtiqueta({
-        nom: atribut(p.atributs, "data-nom"),
-        any: atribut(p.atributs, "data-any"),
-        valor: atribut(p.atributs, "data-valor")!,
-        mediana: atribut(p.atributs, "data-mediana"),
-      }));
+      expect(titol).toBe(textEtiqueta(dadaDe(p.atributs)));
     }
+  });
+
+  it("cada punt diu com de lluny és de la mediana, de quin grup és i d'on surt la xifra", () => {
+    const esplugues = punts.find((p) => atribut(p.atributs, "data-nom") === "Esplugues de Llobregat")!;
+    const santJust = punts.find((p) => atribut(p.atributs, "data-nom") === "Sant Just Desvern")!;
+    // La mediana és 505 €: la diferència va amb signe i amb el menys de debò.
+    expect(extresDe(esplugues.atributs)).toEqual([
+      { etq: "respecte a la mediana", valor: "\u2212268 €" },
+      { etq: "grup", valor: "14 municipis de 20.001 a 50.000 habitants" },
+    ]);
+    expect(extresDe(santJust.atributs)[0]).toEqual({ etq: "respecte a la mediana", valor: "\u2212385 €" });
+    // La nota és la font de la fila, la mateixa que la taula de fonts del peu.
+    expect(atribut(esplugues.atributs, "data-nota")).toBe("font: 34db8dc5");
+    // Sense any de la xifra, cap extra d'any: no hi ha res de què diferir.
+    expect(extresDe(esplugues.atributs).some((e) => e.etq === "any")).toBe(false);
+  });
+
+  it("la mediana diu entre quins valors va el 80 % central, que és la banda que es dibuixa", () => {
+    const mediana = punts.find((p) => p.dins.includes('class="escala-mediana"'))!;
+    const banda = regle.match(/va de ([^ ]+ €) a ([^;]+ €);/)!;
+    expect(extresDe(mediana.atributs)).toEqual([{ etq: "el 80 % central", valor: `de ${banda[1]} a ${banda[2]}` }]);
+    expect(atribut(mediana.atributs, "data-nota")).toBe("font: 34db8dc5");
+  });
+
+  it("sense mediana comuna, el punt diu el seu grup però no cap distància", () => {
+    const dues = obre(pagina(), ["esplugues-de-llobregat", "abella-de-la-conca"])["escales-cos"]!.innerHTML;
+    const desDelDeute = dues.slice(dues.indexOf("Deute per habitant"));
+    const senseMediana = desDelDeute.slice(0, desDelDeute.indexOf("</article>"));
+    const abella = puntsDe(senseMediana).find((p) => atribut(p.atributs, "data-nom") === "Abella de la Conca")!;
+    expect(extresDe(abella.atributs)).toEqual([{ etq: "grup", valor: "45 municipis fins a 250 habitants" }]);
   });
 
   it("sense mediana comuna, el punt no en diu cap", () => {
@@ -702,12 +747,26 @@ describe("l'etiqueta dels punts del deute any a any", () => {
   it("el <title> diu la mateixa frase que compon el servidor", () => {
     for (const p of punts) {
       const titol = p.dins.match(/<title>([^<]*)<\/title>/)![1];
-      expect(titol).toBe(textEtiqueta({
-        nom: atribut(p.atributs, "data-nom"),
-        any: atribut(p.atributs, "data-any"),
-        valor: atribut(p.atributs, "data-valor")!,
-      }));
+      expect(titol).toBe(textEtiqueta(dadaDe(p.atributs)));
     }
+  });
+
+  it("cada any diu com ha canviat respecte a l'any anterior amb dada i respecte al primer", () => {
+    const esplugues = punts.filter((p) => atribut(p.atributs, "data-nom") === "Esplugues de Llobregat");
+    // El primer any no ve de cap lloc: cap extra.
+    expect(extresDe(esplugues[0]!.atributs)).toEqual([]);
+    // El 2021 ve del 2019, que no és l'any de just abans: es diu pel seu nom,
+    // amb els euros amb signe i el tant per cent del punt de partida.
+    expect(extresDe(esplugues[1]!.atributs)).toEqual([{ etq: "respecte al 2019", valor: "\u221241 € (\u22129,7 %)" }]);
+    expect(extresDe(esplugues[2]!.atributs)).toEqual([
+      { etq: "respecte al 2021", valor: "\u2212143 € (\u221237,6 %)" },
+      { etq: "respecte al primer any (2019)", valor: "\u2212184 € (\u221243,7 %)" },
+    ]);
+    const santJust = punts.filter((p) => atribut(p.atributs, "data-nom") === "Sant Just Desvern");
+    expect(extresDe(santJust[1]!.atributs)).toEqual([{ etq: "respecte al 2019", valor: "+52 € (+76,5 %)" }]);
+    // La font és el mateix conjunt que diu el peu de la gràfica.
+    for (const p of punts) expect(atribut(p.atributs, "data-nota")).toBe("font: 34db8dc5");
+    expect(html).toContain("Conjunt 34db8dc5.");
   });
 });
 

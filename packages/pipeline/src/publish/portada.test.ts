@@ -66,7 +66,9 @@ const COMARQUES = [
 
 function mostra(canvis: Partial<PortadaMostra> = {}): PortadaMostra {
   return {
-    partits: MARQUES.map(([id, sigles, color, alcaldies, regidories]) => ({ id, sigles, nom: `Nom ${sigles}`, color, alcaldies, regidories })),
+    partits: MARQUES.map(([id, sigles, color, alcaldies, regidories]) => ({
+      id, sigles, nom: `Nom ${sigles}`, color, alcaldies, regidories, habitants: alcaldies * 100_000,
+    })),
     municipis: CIUTATS.map(([slug, nom, habitants, alcalde, sigles, brandId, adreca, foto]) => ({
       slug,
       nom,
@@ -235,8 +237,15 @@ describe("renderPortada amb la mostra", () => {
   it("cada taca del mapa petit diu la força i quantes alcaldies pinta, amb l'etiqueta comuna i el títol per a qui no té script", () => {
     const svg = main.slice(main.indexOf('<svg class="minimapa"'), main.indexOf("</svg>", main.indexOf('<svg class="minimapa"')) + 6);
     // Cinc del PSC: les sis ciutats de la mostra menys l'Hospitalet, que la geometria no té; el recompte és el de la taca.
-    expect(svg).toMatch(/<path fill="#d00c3c" d="M[^"]+" data-valor="PSC · 5 alcaldies"><title>PSC · 5 alcaldies<\/title><\/path>/);
-    expect(svg).toContain('data-valor="ERC · 1 alcaldia"><title>ERC · 1 alcaldia</title></path>');
+    // Sota, les xifres del bloc dels partits: alcaldies, regidories i gent governada, les de la marca sencera.
+    expect(svg).toMatch(
+      /<path fill="#d00c3c" d="M[^"]+" data-valor="PSC · 5 alcaldies" data-extres="alcaldies¦125‖regidories¦1\.512‖població governada¦12\.500\.000 habitants"><title>PSC · 5 alcaldies · alcaldies: 125 · regidories: 1\.512 · població governada: 12\.500\.000 habitants<\/title><\/path>/,
+    );
+    expect(svg).toContain(
+      'data-valor="ERC · 1 alcaldia" data-extres="alcaldies¦330‖regidories¦2.909‖població governada¦33.000.000 habitants"><title>ERC · 1 alcaldia · alcaldies: 330',
+    );
+    // Les llistes locals i el gris no són cap marca amb pàgina: cap xifra de més.
+    expect(svg).not.toMatch(/class="local" d="M[^"]+" data-valor="[^"]+" data-extres/);
     expect(svg).toMatch(/<path class="local" d="M[^"]+" data-valor="Llistes locals o sense marca · 2 alcaldies">/);
     expect(svg).toMatch(/<path class="cap" d="M[^"]+" data-valor="Sense identificar · \d+ municipis">/);
     // El contorn no és cap força i no diu res.

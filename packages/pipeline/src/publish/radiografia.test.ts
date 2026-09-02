@@ -2467,6 +2467,134 @@ describe("l'ullada: cinc xifres en paraules", () => {
     expect(html).not.toContain('class="ullada');
     expect(html).toContain(".ullada.cinc ul{grid-template-columns:repeat(5,minmax(0,1fr))}");
   });
+
+  it("cada tessel·la amb xifra porta l'etiqueta comuna: la mediana dels de la seva mida i la font", () => {
+    const u = ullada(
+      renderRadiografia(
+        fitxa({ finances: finances(), government: govern(), spending: gasta(), participation: participacio, continuitat }),
+        [],
+        new Map(),
+        medianes,
+      ),
+    );
+    // La despesa: la xifra amb l'any, la mediana del grup i la liquidació d'on surt.
+    expect(u).toMatch(
+      /<a href="#diners" data-nom="Gasta per habitant" data-any="\d{4}" data-valor="1\.200 €" data-extres="els de la seva mida¦mediana 1\.050 €[^"]*" data-nota="font: AOC, liquidació del \d{4}" title="Gasta per habitant: \d{4} · 1\.200 € · els de la seva mida: mediana 1\.050 €[^"]*\(font: AOC, liquidació del \d{4}\)">/,
+    );
+    // El deute, amb quants municipis hi ha darrere la mediana.
+    expect(u).toContain(
+      '<a href="#comptes" data-nom="Deu per habitant" data-any="2025" data-valor="450 €" data-extres="els de la seva mida¦mediana 520 € (23 municipis)" data-nota="font: AOC, exercici 2025"',
+    );
+    // L'IBI de l'Idescat, dit provisional quan ho és; la participació amb la mediana en punts.
+    expect(u).toContain(
+      '<a href="#que-paga" data-nom="Rebut mitjà d\'IBI" data-any="2025" data-valor="362 €" data-extres="els de la seva mida¦mediana 348 € (23 municipis)" data-nota="font: Idescat, 2025 (provisional)"',
+    );
+    expect(u).toContain(
+      '<a href="#participacio" data-nom="Va anar a votar" data-any="2023" data-valor="60,0 %" data-extres="els de la seva mida¦mediana 51,5 % (24 municipis)" data-nota="font: Generalitat, municipals del 2023"',
+    );
+    // La de sigles no és una xifra i no porta etiqueta.
+    expect(u).toContain('<a href="#ple">');
+    expect(u).not.toMatch(/<a href="#ple"[^>]*data-valor/);
+  });
+
+  it("sense mediana del grup, la tessel·la porta la xifra i la font i cap línia de més", () => {
+    const f = finances();
+    f.comparison[0]!.median = null;
+    const u = ullada(renderRadiografia(fitxa({ finances: f, government: govern() })));
+    expect(u).toContain('<a href="#comptes" data-nom="Deu per habitant" data-any="2025" data-valor="450 €" data-nota="font: AOC, exercici 2025"');
+    expect(u).not.toMatch(/<a href="#comptes"[^>]*data-extres/);
+  });
+});
+
+/*
+ * L'hemicicle amb el que la fitxa ja sap del ple: els vots de cada
+ * candidatura i, quan té la llista de regidors, qui seu a cada escó i quins
+ * grups formen govern. Res d'això no és una consulta nova: són les mateixes
+ * dades que pinten la llegenda i «Qui seu al ple».
+ */
+describe("l'hemicicle: cada escó diu els vots, qui hi seu i si és al govern", () => {
+  const results: RadiografiaData["results"] = {
+    M20231: {
+      totalVotes: 90_000,
+      seats: 27,
+      candidatures: [
+        { sigles: "PSC-CP", brandId: "psc", color: null, votes: 40_000, seats: 14, share: 44.4 },
+        { sigles: "ERC-AM", brandId: "erc", color: null, votes: 15_000, seats: 6, share: 16.7 },
+        { sigles: "JUNTS", brandId: "junts", color: null, votes: 11_000, seats: 4, share: 12.2 },
+        { sigles: "PP", brandId: "pp", color: null, votes: 8_000, seats: 3, share: 8.9 },
+      ],
+    },
+  };
+  const hemicicle = (html: string): string => {
+    const on = html.indexOf('<figure class="hemicicle">');
+    return on < 0 ? "" : html.slice(on, html.indexOf("</figure>", on));
+  };
+  const regidor = (nom: string, grup: string, carrec = "Regidor", equipGovern = false) => ({
+    nom, carrec, grup, equipGovern, foto: null, fotoPetita: null, fitxa: null,
+  });
+
+  it("sense llista de regidors, cada escó diu el grup, el recompte i els vots, i el govern surt de l'alcaldia", () => {
+    const h = hemicicle(renderRadiografia(fitxa({ results, government: govern() })));
+    expect(h.match(/<circle /g)).toHaveLength(27);
+    expect(h.match(/data-nom="PSC-CP" data-valor="14 de 27 regidories · al govern" data-extres="vots¦40.000 · 44,4 %"/g)).toHaveLength(14);
+    expect(h.match(/data-nom="ERC-AM" data-valor="6 de 27 regidories" data-extres="vots¦15.000 · 16,7 %"/g)).toHaveLength(6);
+    expect(h).toContain("<title>PSC-CP: 14 de 27 regidories · al govern · vots: 40.000 · 44,4 %</title>");
+    expect(h).not.toContain('data-valor="6 de 27 regidories · al govern"');
+  });
+
+  it("amb la seu electrònica, l'escó diu la persona, l'alcaldia la primera del seu grup, i el govern segons les banderes", () => {
+    const carrecs: RadiografiaData["carrecs"] = {
+      font: "seu-e", url: "https://seu-e.cat/ca/web/sabadell/govern", slug: "sabadell",
+      descarregat: "29 d'agost del 2026", totalCarrecs: 27, ambFoto: 0, cobertura: "completa",
+      carrecs: [
+        regidor("Pol Gibert Horcas", "PSC-CP", "Primer tinent d'alcaldia", true),
+        regidor("Marta Farrés Falgueras", "PSC-CP", "Alcaldessa", true),
+        ...Array.from({ length: 12 }, (_, i) => regidor(`Regidora Socialista ${i + 1}`, "PSC-CP", "Regidora", i < 12)),
+        regidor("Gabriel Fernàndez Díaz", "ERC-AM"),
+        ...Array.from({ length: 5 }, (_, i) => regidor(`Regidor Republicà ${i + 1}`, "ERC-AM")),
+        regidor("Lluís Matas Ferrer", "No adscrits"),
+      ],
+    };
+    const h = hemicicle(renderRadiografia(fitxa({ results, government: govern(), carrecs })));
+    // L'alcaldia és el primer escó del seu grup, encara que la seu l'escrigui segona.
+    const primerPsc = h.indexOf('data-nom="Marta Farrés Falgueras"');
+    const gibert = h.indexOf('data-nom="Pol Gibert Horcas"');
+    expect(primerPsc).toBeGreaterThan(0);
+    expect(gibert).toBeGreaterThan(primerPsc);
+    expect(h).toContain(
+      'data-nom="Marta Farrés Falgueras" data-valor="PSC-CP · al govern" data-extres="vots¦40.000 · 44,4 %‖regidories¦14 de 27"',
+    );
+    expect(h).toContain("<title>Marta Farrés Falgueras: PSC-CP · al govern · vots: 40.000 · 44,4 % · regidories: 14 de 27</title>");
+    expect(h).toContain('data-nom="Gabriel Fernàndez Díaz" data-valor="ERC-AM" data-extres="vots¦15.000 · 16,7 %‖regidories¦6 de 27"');
+    // Els escons sense nom (Junts, PP: la seu no els porta) tornen a dir el grup; el no adscrit no seu enlloc.
+    expect(h.match(/data-nom="JUNTS" data-valor="4 de 27 regidories"/g)).toHaveLength(4);
+    expect(h).not.toContain("Lluís Matas Ferrer");
+  });
+
+  it("quan la seu només marca l'alcaldia, el govern surt de la mètrica i no de les banderes", () => {
+    // Sabadell: banderes incompletes (1 < 14). L'alcaldia és del PSC, i el PSC és al govern; ERC, no.
+    const carrecs: RadiografiaData["carrecs"] = {
+      font: "seu-e", url: "https://seu-e.cat/ca/web/sabadell/govern", slug: "sabadell",
+      descarregat: "29 d'agost del 2026", totalCarrecs: 27, ambFoto: 0, cobertura: "completa",
+      carrecs: [regidor("Marta Farrés Falgueras", "PSC-CP", "Alcaldessa", true), regidor("Gabriel Fernàndez Díaz", "ERC-AM")],
+    };
+    const h = hemicicle(renderRadiografia(fitxa({ results, government: govern(), carrecs })));
+    expect(h).toContain('data-nom="Marta Farrés Falgueras" data-valor="PSC-CP · al govern"');
+    expect(h).toContain('data-nom="Gabriel Fernàndez Díaz" data-valor="ERC-AM" data-extres');
+  });
+
+  it("sense seu, el registre de la Generalitat posa els noms, llegibles i amb l'alcaldia la primera", () => {
+    const councillors: RadiografiaData["councillors"] = [
+      { name: "POL GIBERT HORCAS", role: "Regidor", groupName: null, sigles: "PSC-CP", color: null, brandId: "psc", orderNum: 1 },
+      { name: "MARTA FARRES FALGUERAS", role: "Alcaldessa", groupName: null, sigles: "PSC-CP", color: null, brandId: "psc", orderNum: 2 },
+      { name: "GABRIEL FERNANDEZ DIAZ", role: "Regidor", groupName: null, sigles: "ERC-AM", color: null, brandId: "erc", orderNum: 3 },
+    ];
+    const h = hemicicle(renderRadiografia(fitxa({ results, government: govern(), councillors })));
+    expect(h).toContain('data-nom="Marta Farres Falgueras" data-valor="PSC-CP · al govern"');
+    expect(h.indexOf('data-nom="Marta Farres Falgueras"')).toBeLessThan(h.indexOf('data-nom="Pol Gibert Horcas"'));
+    expect(h).toContain('data-nom="Gabriel Fernandez Diaz" data-valor="ERC-AM"');
+    expect(h).not.toContain("GABRIEL");
+  });
 });
 
 describe("les pastilles de context", () => {
@@ -2903,8 +3031,43 @@ describe("on cau entre els seus", () => {
     expect(b).toContain('data-nom="Deute per habitant" data-any="2025" data-valor="450 €" data-mediana="520 €"');
     // El percentil 40 cau al 40,6 % del recorregut (del 3 al 97, amb el 50 al mig).
     expect(b).toContain('style="--p:40.6%"');
-    expect(b).toContain('title="Deute per habitant: 2025 · 450 € · mediana dels seus: 520 €"');
+    expect(b).toContain(
+      'title="Deute per habitant: 2025 · 450 € · mediana dels seus: 520 € · posició: més baix que el 60 % de 23 (font: AOC, 2025)"',
+    );
     expect(b.match(/<i class="mig"><\/i>/g)?.length).toBe(punts.length);
+  });
+
+  it("l'etiqueta de cada punt diu la posició en curt i d'on surt, i els extrems del grup quan els sap", () => {
+    const b = bloc(completa());
+    // La posició, curta: «de 23» i no «dels 23 municipis de la seva mida».
+    expect(b).toContain('data-extres="posició¦més baix que el 60 % de 23" data-nota="font: AOC, 2025"');
+    expect(b).toContain('data-extres="posició¦més alt que el 58 % de 23" data-nota="font: Idescat, 2025"');
+    expect(b).toContain('data-extres="posició¦just al mig de 23" data-nota="font: INE, 2023"');
+    // Sense quants, «del grup»; i mai cap veredicte.
+    expect(b).toContain('data-extres="posició¦més alt que el 70 % del grup" data-nota="font: ARC, 2024"');
+    expect(b.match(/data-extres="[^"]*"/g)!.join(" ")).not.toMatch(/millor|pitjor/);
+    // Les files que reben tots els valors del grup diuen el més baix i el més alt.
+    const ambValors = renderRadiografia(
+      fitxa({ finances: finances(), participation: participacio, parity: paritat }),
+      [],
+      new Map(),
+      {
+        participacio: { M20231: { ...medianes.participacio.M20231, valors: [41.2, 44.9, 55.3, 60.0, 71.4] } },
+        donesAlPle: null,
+      },
+    );
+    expect(bloc(ambValors)).toContain(
+      'data-extres="posició¦més alt que el 88 % de 24‖el més baix del grup¦41,2 %‖el més alt del grup¦71,4 %" data-nota="font: Generalitat, 2023"',
+    );
+    // Cap punt no passa de quatre línies de més.
+    for (const extres of bloc(ambValors).match(/data-extres="([^"]*)"/g) ?? []) {
+      expect(extres.split("‖").length).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it("als extrems l'etiqueta diu «el més alt de 23», com la frase", () => {
+    const b = renderComparat(fitxa({ rebutIbi: ibi({ comparacio: { grup: { clau: "gran", etiqueta: "de més de 50.000 habitants", mida: 23, ambDada: 23 }, percentil: 100, mediana: 348.2 } }) }));
+    expect(b).toContain('data-extres="posició¦el més alt de 23"');
   });
 
   it("sense dada, la fila diu «sense dada» i no s'inventa cap posició", () => {

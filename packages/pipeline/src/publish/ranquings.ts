@@ -260,6 +260,55 @@ export function nomsMarca(noms: readonly string[]): string {
 }
 
 /**
+ * «1r», «2n», «3r», «4t» i, de cinc en amunt, sempre «è»: «5è», «12è», «947è».
+ * El navegador fa el mateix a `ordinal()` del script.
+ */
+export function ordinal(pos: number): string {
+  const cua = pos === 1 ? "r" : pos === 2 ? "n" : pos === 3 ? "r" : pos === 4 ? "t" : "è";
+  return `${n(pos)}${cua}`;
+}
+
+/**
+ * On cau una marca al rànquing: «el 3r de 24» o, quan a la mateixa marca hi
+ * cauen diversos municipis, «del 12è al 15è de 947». La posició és la de la
+ * llista, que va de més a menys valor.
+ */
+export function posicioMarca(posicions: readonly number[], total: number): string {
+  const primer = Math.min(...posicions);
+  const darrer = Math.max(...posicions);
+  return primer === darrer ? `el ${ordinal(primer)} de ${n(total)}` : `del ${ordinal(primer)} al ${ordinal(darrer)} de ${n(total)}`;
+}
+
+/**
+ * Una diferència escrita amb signe i amb la unitat de la mètrica: «+3,20%»,
+ * «−12 €». El menys és el de debò (−), no el guionet. Una diferència que
+ * arrodonida no es veu és «igual», no un «+0,00%» que fa pensar que n'hi ha.
+ */
+export function ambSigne(v: number, fmt: (v: number) => string): string {
+  const absolut = fmt(Math.abs(v));
+  if (absolut === fmt(0)) return "igual";
+  return `${v > 0 ? "+" : "−"}${absolut}`;
+}
+
+/**
+ * Com de lluny és una marca de la mediana. Com a `valorMarca()`, si a la
+ * marca hi cauen valors veïns és «de +2 a +5», que és el que la marca diu.
+ */
+export function respecteMediana(valors: readonly number[], mediana: number, fmt: (v: number) => string): string {
+  const difs = valors.map((v) => v - mediana);
+  const baix = Math.min(...difs);
+  const alt = Math.max(...difs);
+  return baix === alt ? ambSigne(baix, fmt) : `de ${ambSigne(baix, fmt)} a ${ambSigne(alt, fmt)}`;
+}
+
+/** La mediana de tots els valors d'un rànquing: el del mig o, si són parells, la mitjana dels dos del mig. */
+export function medianaDe(valors: readonly number[]): number {
+  const asc = [...valors].sort((a, b) => a - b);
+  const meitat = Math.floor(asc.length / 2);
+  return asc.length % 2 === 0 ? (asc[meitat - 1]! + asc[meitat]!) / 2 : asc[meitat]!;
+}
+
+/**
  * El valor d'una marca. Dues marques a la mateixa dècima de tant per cent
  * són una, i no sempre tenen el mateix valor: a un regle de 947 municipis en
  * 920 posicions possibles hi cauen valors veïns que no són iguals. Si ho són,
@@ -282,8 +331,9 @@ export function valorMarca(valors: readonly number[], fmt: (v: number) => string
  * mateix dibuix quan canvia l'àmbit, amb `regle()` del JavaScript de sota.
  *
  * Cada marca porta l'etiqueta comuna de `grafics.ts` —`data-nom` amb els
- * municipis d'aquella posició, `data-valor` amb la xifra— i el `title=` amb
- * la mateixa frase per a quan no hi ha script. La barra és `aria-hidden` i
+ * municipis d'aquella posició, `data-valor` amb la xifra, i als `data-extres`
+ * la posició al rànquing i la distància a la mediana— i el `title=` amb la
+ * mateixa frase per a quan no hi ha script. La barra és `aria-hidden` i
  * les marques no reben el focus: les tres xifres de sota i el rànquing són
  * l'equivalent que es llegeix; el regle és per al ratolí i el dit.
  */
@@ -294,9 +344,10 @@ function regle(r: RanquingPreparat): string {
   const baix = asc[0]!;
   const alt = asc[asc.length - 1]!;
   if (alt.valor === baix.valor) return "";
-  const meitat = Math.floor(asc.length / 2);
-  const mig = asc.length % 2 === 0 ? (asc[meitat - 1]!.valor + asc[meitat]!.valor) / 2 : asc[meitat]!.valor;
+  const mig = medianaDe(asc.map((f) => f.valor));
   const on = (v: number): string => (4 + (92 * (v - baix.valor)) / (alt.valor - baix.valor)).toFixed(1);
+  // La posició de cada fila és la de la llista, que va de més a menys.
+  const posicio = new Map(r.files.map((f, i) => [f, i + 1]));
   const perPosicio = new Map<string, FilaRanquing[]>();
   for (const f of asc) {
     const p = on(f.valor);
@@ -304,14 +355,30 @@ function regle(r: RanquingPreparat): string {
     if (colla) colla.push(f);
     else perPosicio.set(p, [f]);
   }
-  const etiqueta = (dada: DadaEtiqueta): string => `${atributsEtiqueta(dada)} title="${escape(textEtiqueta(dada))}"`;
   const marques = [...perPosicio]
     .map(([p, colla]) => {
-      const dada = { nom: nomsMarca(colla.map((f) => f.fila.n)), valor: valorMarca(colla.map((f) => f.valor), fmt) };
+      const valors = colla.map((f) => f.valor);
+      const dada: DadaEtiqueta = {
+        nom: nomsMarca(colla.map((f) => f.fila.n)),
+        valor: valorMarca(valors, fmt),
+        extres: [
+          { etq: "posició", valor: posicioMarca(colla.map((f) => posicio.get(f) ?? 0), r.files.length) },
+          { etq: "respecte a la mediana", valor: respecteMediana(valors, mig, fmt) },
+        ],
+      };
       return `<i class="marca" style="--p:${p}%"${etiqueta(dada)}></i>`;
     })
     .join("");
-  const mediana = { nom: "La mediana", valor: fmt(mig) };
+  // La mediana diu de quants municipis és i entre quins extrems: sense
+  // això, «49,50 %» al mig d'una barra no diu res.
+  const mediana: DadaEtiqueta = {
+    nom: "La mediana",
+    valor: fmt(mig),
+    extres: [
+      { etq: "municipis", valor: n(r.files.length) },
+      { etq: "del més baix al més alt", valor: `de ${fmt(baix.valor)} a ${fmt(alt.valor)}` },
+    ],
+  };
   return `<figure class="dispersio">
   <figcaption class="titol">Del més baix al més alt <span class="secundari">${n(r.files.length)} municipis amb dada</span></figcaption>
   <div class="regle-dispersio" aria-hidden="true"><i class="mig" style="--p:${on(mig)}%"${etiqueta(mediana)}></i>${marques}</div>
@@ -323,18 +390,37 @@ function regle(r: RanquingPreparat): string {
 </figure>`;
 }
 
+/** Els `data-*` de l'etiqueta flotant i el `title=` amb la mateixa frase, per a quan no hi ha script. */
+const etiqueta = (dada: DadaEtiqueta): string => `${atributsEtiqueta(dada)} title="${escape(textEtiqueta(dada))}"`;
+
 /** Quantes files escriu el servidor i quantes n'afegeix cada «Mostra'n més». */
 export const PAS = 40;
 
-function filaHtml(f: FilaRanquing, pos: number, fmt: (v: number) => string): string {
-  return `<li><span class="pos">${pos}</span><span class="municipi">${fitxa(f.fila)}<small>${comarca(f.fila)}</small></span><b class="dada">${escape(fmt(f.valor))}</b></li>`;
+/**
+ * Una fila de la llista. El valor ja és visible; l'etiqueta que surt en
+ * passar-hi per sobre hi afegeix el context que la fila no té lloc per dir:
+ * la comarca, la posició de quants i com de lluny és de la mediana. El
+ * navegador escriu la mateixa fila a `pinta()` quan canvia l'àmbit.
+ */
+function filaHtml(f: FilaRanquing, pos: number, total: number, mediana: number, fmt: (v: number) => string): string {
+  const dada: DadaEtiqueta = {
+    nom: f.fila.n,
+    valor: fmt(f.valor),
+    extres: [
+      { etq: "comarca", valor: f.fila.c },
+      { etq: `posició de ${n(total)}`, valor: ordinal(pos) },
+      { etq: "respecte a la mediana", valor: ambSigne(f.valor - mediana, fmt) },
+    ],
+  };
+  return `<li${etiqueta(dada)}><span class="pos">${pos}</span><span class="municipi">${fitxa(f.fila)}<small>${comarca(f.fila)}</small></span><b class="dada">${escape(fmt(f.valor))}</b></li>`;
 }
 
 function seccio(r: RanquingPreparat, grups: readonly PeerGroup[]): string {
   const m = r.metrica;
   const fmt = format(m);
   const opcions = grups.map((g) => `<option value="${escape(g.key)}">${escape(g.label)}</option>`).join("");
-  const files = r.files.slice(0, PAS).map((f, i) => filaHtml(f, i + 1, fmt)).join("\n    ");
+  const mediana = medianaDe(r.files.map((f) => f.valor));
+  const files = r.files.slice(0, PAS).map((f, i) => filaHtml(f, i + 1, r.files.length, mediana, fmt)).join("\n    ");
   const resta = r.files.length - Math.min(PAS, r.files.length);
   return `<section class="bloc ranquing" id="${escape(m.id)}" data-metrica="${escape(m.id)}">
   <p class="micro">${escape(r.periode)} · ${escape(m.font)}</p>
@@ -446,6 +532,43 @@ const JS = `<script>
   };
   const enllac = (m) => '<a href="../m/' + esc(m.s) + '/">' + esc(m.n) + "</a>";
 
+  // Els mateixos data-* que escriu atributsEtiqueta() de grafics.ts, perquè el
+  // script comú de l'etiqueta flotant llegeixi igual una marca escrita pel
+  // servidor i una de refeta aquí: el nom, el valor i, en un sol atribut, les
+  // línies de més amb els mateixos separadors (U+2016 entre línies, U+00A6
+  // entre l'etiqueta i el valor). Sense title=: el script de l'etiqueta
+  // només treu els title= que troba en carregar, i una marca escrita després
+  // en tindria dos rètols.
+  const atributs = (d) => ' data-nom="' + esc(d.nom) + '" data-valor="' + esc(d.valor) + '"' +
+    (d.extres && d.extres.length
+      ? ' data-extres="' + esc(d.extres.map((e) => e.etq + "\u00a6" + e.valor).join("\u2016")) + '"'
+      : "");
+
+  // «1r», «2n», «3r», «4t» i de cinc en amunt «è», com ordinal() al servidor.
+  const ordinal = (pos) => fmt(pos, 0, "") + (pos === 1 ? "r" : pos === 2 ? "n" : pos === 3 ? "r" : pos === 4 ? "t" : "è");
+  // «el 3r de 24» o «del 12è al 15è de 947», com posicioMarca().
+  const posicio = (colla, total) => {
+    const ps = colla.map((f) => f.pos);
+    const primer = Math.min(...ps), darrer = Math.max(...ps);
+    return primer === darrer ? "el " + ordinal(primer) + " de " + fmt(total, 0, "")
+      : "del " + ordinal(primer) + " al " + ordinal(darrer) + " de " + fmt(total, 0, "");
+  };
+  // Amb signe i amb el menys de debò, com ambSigne(); «igual» si no es veu.
+  const ambSigne = (v, d, s) => {
+    const absolut = fmt(Math.abs(v), d, s);
+    return absolut === fmt(0, d, s) ? "igual" : (v > 0 ? "+" : "\u2212") + absolut;
+  };
+  const respecteMediana = (colla, mig, d, s) => {
+    const difs = colla.map((f) => f.valor - mig);
+    const baix = Math.min(...difs), alt = Math.max(...difs);
+    return baix === alt ? ambSigne(baix, d, s) : "de " + ambSigne(baix, d, s) + " a " + ambSigne(alt, d, s);
+  };
+  const mediana = (files) => {
+    const asc = files.map((f) => f.valor).sort((a, b) => a - b);
+    const meitat = Math.floor(asc.length / 2);
+    return asc.length % 2 === 0 ? (asc[meitat - 1] + asc[meitat]) / 2 : asc[meitat];
+  };
+
   // Els noms d'una marca, com els escriu nomsMarca() al servidor: fins a tres
   // i «i N més».
   const noms = (colla) => {
@@ -465,16 +588,14 @@ const JS = `<script>
   };
 
   // El mateix dibuix que fa el servidor: mediana de tots, marques resumides,
-  // i a cada marca els data-* de l'etiqueta flotant. Sense title=: el script
-  // de l'etiqueta només treu els title= que troba en carregar, i una marca
-  // escrita després en tindria dos rètols.
+  // i a cada marca els data-* de l'etiqueta flotant. Les files arriben de més
+  // a menys, i la posició és la d'aquest ordre.
   const regle = (files, d, s) => {
     if (files.length < 4) return "";
-    const asc = files.slice().reverse();
+    const asc = files.map((f, i) => ({ s: f.s, n: f.n, valor: f.valor, pos: i + 1 })).reverse();
     const baix = asc[0], alt = asc[asc.length - 1];
     if (alt.valor === baix.valor) return "";
-    const meitat = Math.floor(asc.length / 2);
-    const mig = asc.length % 2 === 0 ? (asc[meitat - 1].valor + asc[meitat].valor) / 2 : asc[meitat].valor;
+    const mig = mediana(asc);
     const on = (v) => (4 + (92 * (v - baix.valor)) / (alt.valor - baix.valor)).toFixed(1);
     const perPosicio = new Map();
     for (const f of asc) {
@@ -482,9 +603,24 @@ const JS = `<script>
       if (perPosicio.has(p)) perPosicio.get(p).push(f); else perPosicio.set(p, [f]);
     }
     const marques = [...perPosicio].map(([p, colla]) =>
-      '<i class="marca" style="--p:' + p + '%" data-nom="' + esc(noms(colla)) + '" data-valor="' + esc(valor(colla, d, s)) + '"></i>').join("");
+      '<i class="marca" style="--p:' + p + '%"' + atributs({
+        nom: noms(colla),
+        valor: valor(colla, d, s),
+        extres: [
+          { etq: "posició", valor: posicio(colla, files.length) },
+          { etq: "respecte a la mediana", valor: respecteMediana(colla, mig, d, s) },
+        ],
+      }) + "></i>").join("");
+    const laMediana = atributs({
+      nom: "La mediana",
+      valor: fmt(mig, d, s),
+      extres: [
+        { etq: "municipis", valor: fmt(files.length, 0, "") },
+        { etq: "del més baix al més alt", valor: "de " + fmt(baix.valor, d, s) + " a " + fmt(alt.valor, d, s) },
+      ],
+    });
     return '<figcaption class="titol">Del més baix al més alt <span class="secundari">' + fmt(files.length, 0, "") + ' municipis amb dada</span></figcaption>' +
-      '<div class="regle-dispersio" aria-hidden="true"><i class="mig" style="--p:' + on(mig) + '%" data-nom="La mediana" data-valor="' + esc(fmt(mig, d, s)) + '"></i>' +
+      '<div class="regle-dispersio" aria-hidden="true"><i class="mig" style="--p:' + on(mig) + '%"' + laMediana + "></i>" +
       marques + "</div>" +
       '<ul class="extrems"><li><span class="cap">El més baix</span>' + enllac(baix) + "<b>" + esc(fmt(baix.valor, d, s)) + "</b></li>" +
       '<li><span class="cap">La mediana</span><span class="secundari">el municipi del mig</span><b>' + esc(fmt(mig, d, s)) + "</b></li>" +
@@ -514,8 +650,19 @@ const JS = `<script>
       // veure que Matadepera és el primer de Catalunya, no el primer dels que
       // es diuen Vallès.
       const trobats = delAmbit.map((f, i) => ({ ...f, pos: i + 1 })).filter((f) => !terme || f.text.includes(terme));
+      // La mediana és la de l'àmbit, com el regle: la cerca troba, no compara.
+      const mig = delAmbit.length ? mediana(delAmbit) : 0;
+      // Cada fila porta la mateixa etiqueta que escriu filaHtml() al servidor.
       llista.innerHTML = trobats.slice(0, visibles).map((f) =>
-        '<li><span class="pos">' + f.pos + '</span><span class="municipi">' + enllac(f) + '<small><a class="comarca" href="../c/' + esc(f.cs) + '/">' + esc(f.c) + "</a></small></span>" +
+        "<li" + atributs({
+          nom: f.n,
+          valor: fmt(f.valor, m.d, m.s),
+          extres: [
+            { etq: "comarca", valor: f.c },
+            { etq: "posició de " + fmt(delAmbit.length, 0, ""), valor: ordinal(f.pos) },
+            { etq: "respecte a la mediana", valor: ambSigne(f.valor - mig, m.d, m.s) },
+          ],
+        }) + '><span class="pos">' + f.pos + '</span><span class="municipi">' + enllac(f) + '<small><a class="comarca" href="../c/' + esc(f.cs) + '/">' + esc(f.c) + "</a></small></span>" +
         '<b class="dada">' + esc(fmt(f.valor, m.d, m.s)) + "</b></li>").join("");
       const resten = trobats.length - Math.min(visibles, trobats.length);
       mes.hidden = resten <= 0;

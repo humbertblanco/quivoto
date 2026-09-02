@@ -229,9 +229,17 @@ describe("renderMapaTerritori", () => {
 
   it("fa de cada punt un enllaç a la fitxa, no un dibuix mut", () => {
     const html = renderMapaTerritori(punts, "../../", "del Priorat");
-    expect(html).toContain('<a href="../../m/a/" data-nom="A" data-valor="ERC (ERC-AM)"><title>A: ERC (ERC-AM)</title>');
-    // Sense marca ni sigles, el gris del mapa es diu pel seu nom.
-    expect(html).toContain('<a href="../../m/c/" data-nom="C" data-valor="Sense identificar"><title>C: Sense identificar</title>');
+    // El punt diu la força i, a sota, els habitants i la llista; la lletra petita, la font.
+    expect(html).toContain(
+      '<a href="../../m/a/" data-nom="A" data-valor="ERC (ERC-AM)" data-extres="habitants¦1.000‖amb quina llista¦ERC-AM"' +
+        ' data-nota="Generalitat · composició dels plens">' +
+        "<title>A: ERC (ERC-AM) · habitants: 1.000 · amb quina llista: ERC-AM (Generalitat · composició dels plens)</title>",
+    );
+    // Sense marca ni sigles, el gris del mapa es diu pel seu nom, i cap llista.
+    expect(html).toContain(
+      '<a href="../../m/c/" data-nom="C" data-valor="Sense identificar" data-extres="habitants¦300" data-nota="Generalitat · composició dels plens">' +
+        "<title>C: Sense identificar · habitants: 300 (Generalitat · composició dels plens)</title>",
+    );
     expect(html).toContain('href="../../mapa/"');
   });
 
@@ -315,12 +323,33 @@ describe("renderMapaComarca", () => {
   it("pinta cada terme del color de qui hi mana i el fa enllaç a la seva fitxa", () => {
     const html = renderMapaComarca(taques, "../../", "Priorat");
     expect(html).toContain(
-      '<a href="../../m/falset/" data-nom="falset" data-valor="ERC (ERC-AM) · alcaldia: Maria Puig"><title>falset: ERC (ERC-AM) · alcaldia: Maria Puig</title>',
+      '<a href="../../m/falset/" data-nom="falset" data-valor="ERC (ERC-AM) · alcaldia: Maria Puig" data-extres="amb quina llista¦ERC-AM"' +
+        ' data-nota="Generalitat · composició dels plens">' +
+        "<title>falset: ERC (ERC-AM) · alcaldia: Maria Puig · amb quina llista: ERC-AM (Generalitat · composició dels plens)</title>",
     );
     // Sense marca, «Sense identificar», i les sigles i l'alcaldia igualment.
     expect(html).toContain('data-nom="gratallops" data-valor="Sense identificar (ERC-AM) · alcaldia: Maria Puig"');
     // Sense marca, el gris: mai el color de la força del costat.
     expect(html).toContain("--c:#8b8b8b");
+  });
+
+  it("l'etiqueta de cada terme diu els habitants, les regidories, i el pacte o el canvi d'alcaldia només quan hi són", () => {
+    const html = renderMapaComarca(
+      [
+        municipi({ slug: "falset", name: "Falset", population: 2_800, seats: 11, winnerGoverns: false, winnerSigles: "JxCat" }),
+        municipi({ slug: "gratallops", name: "Gratallops", population: 250, seats: 7, mayorChanged: true, mayorChangeDate: "2024-06-15" }),
+        municipi({ slug: "porrera", name: "Porrera", population: 430, seats: 7 }),
+      ],
+      "../../",
+      "Priorat",
+    );
+    expect(html).toContain(
+      'data-extres="habitants¦2.800‖regidories¦11‖amb quina llista¦ERC-AM‖pacte¦governa qui no va guanyar (va guanyar JxCat)"',
+    );
+    expect(html).toContain('data-extres="habitants¦250‖regidories¦7‖amb quina llista¦ERC-AM‖canvi d\'alcaldia¦a mig mandat, el 15/6/2024"');
+    // On no hi ha ni pacte ni canvi no s'hi diu res: un «no» a cada poble seria soroll.
+    expect(html).toContain('data-extres="habitants¦430‖regidories¦7‖amb quina llista¦ERC-AM"');
+    expect(html).not.toContain("pacte¦governa qui va guanyar");
   });
 
   it("enquadra la comarca i no Catalunya sencera", () => {

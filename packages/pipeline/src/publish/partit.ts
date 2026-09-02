@@ -585,7 +585,16 @@ function renderMapa(data: PartitData): string {
           ? `hi té l'alcaldia, amb ${lloc.seats} de ${lloc.totalSeats} ${plural(lloc.totalSeats, "regidoria", "regidories")}`
           : `${lloc.seats} de ${lloc.totalSeats} ${plural(lloc.totalSeats, "regidoria", "regidories")}, sense l'alcaldia`
         : `s'hi va presentar sense treure cap regidoria`;
-      const dada: DadaEtiqueta = { nom, valor: v ? `${que} · ${percent(v.pct)} dels vots` : que };
+      // Sota, en línies a part, el que la pàgina ja sap del municipi: els
+      // habitants, les regidories de la marca sobre el total del ple, el pes
+      // del vot i qui hi té l'alcaldia quan és seva. On només hi va treure
+      // vots no se'n sap el padró ni el ple, i no es diu res que no se sàpiga.
+      const extres: { etq: string; valor: string }[] = [];
+      if (lloc) extres.push({ etq: "habitants", valor: number(lloc.population) });
+      if (lloc) extres.push({ etq: "regidories", valor: `${lloc.seats} de ${lloc.totalSeats}` });
+      if (v) extres.push({ etq: "vots", valor: percent(v.pct) });
+      if (lloc?.alcaldia && lloc.mayorName) extres.push({ etq: "alcaldia", valor: lloc.mayorName });
+      const dada: DadaEtiqueta = { nom, valor: v ? `${que} · ${percent(v.pct)} dels vots` : que, extres };
       const classes = [lloc ? (lloc.alcaldia ? "mana" : "hi-es") : "", v ? `v${graoDe(v.pct, talls)}` : ""]
         .filter(Boolean)
         .join(" ");

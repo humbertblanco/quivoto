@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  ambSigne,
   anysVisibles,
   atributsEtiqueta,
+  canviEscrit,
+  percentRelatiu,
   GRAFICS_CSS,
   GRAFICS_JS,
   textEtiqueta,
@@ -772,8 +775,10 @@ describe("l'etiqueta de cada punt: la dada a l'abast del ratolí, del dit i del 
     const grups = [...dibuix.matchAll(/<g class="punt"[^>]*>/g)].map((m) => m[0]);
     expect(grups).toHaveLength(4);
     expect(dibuix).toContain(
-      '<g class="punt" tabindex="0" data-nom="Deute per habitant" data-any="2021" data-valor="420 €" data-mediana="512 €">' +
-        "<title>Deute per habitant: 2021 · 420 € · mediana dels seus: 512 €</title>",
+      '<g class="punt" tabindex="0" data-nom="Deute per habitant" data-any="2021" data-valor="420 €" data-mediana="512 €"' +
+        ' data-extres="banda dels seus¦de 300 € a 800 €‖respecte a la mediana¦−92 € · −18 %‖respecte al 2020¦−180 € · −30 %">' +
+        "<title>Deute per habitant: 2021 · 420 € · mediana dels seus: 512 € · banda dels seus: de 300 € a 800 €" +
+        " · respecte a la mediana: −92 € · −18 % · respecte al 2020: −180 € · −30 %</title>",
     );
     // La banda de tacte és tan alta com el dibuix i més ampla que el cercle.
     for (const g of grups) expect(g).toContain('tabindex="0"');
@@ -789,7 +794,10 @@ describe("l'etiqueta de cada punt: la dada a l'abast del ratolí, del dit i del 
   it("sense banda no hi ha mediana a l'etiqueta, i l'espurna només etiqueta el punt d'ara", () => {
     const sense = serieTemporal(punts, { titol: "Deute", format: euros });
     expect(sense).not.toContain("data-mediana");
-    expect(sense).toContain("<title>Deute: 2021 · 420 €</title>");
+    expect(sense).not.toContain("banda dels seus");
+    expect(sense).toContain("<title>Deute: 2021 · 420 € · respecte al 2020: −180 € · −30 %</title>");
+    // El primer any no té cap any anterior amb què comparar-se, i no s'inventa.
+    expect(sense).toContain('data-any="2019" data-valor="500 €"><title>Deute: 2019 · 500 €</title>');
     const espurna = serieTemporal(punts, { titol: "Deute", format: euros, mida: "espurna" });
     expect(quants(espurna, /<g class="punt"/g)).toBe(1);
     expect(espurna).toContain('data-any="2022"');
@@ -799,7 +807,8 @@ describe("l'etiqueta de cada punt: la dada a l'abast del ratolí, del dit i del 
     const files: FilaDivergent[] = [{ etiqueta: "Seguretat", valor: 13.7, grup: 8.1 }];
     const html = barresDivergents(files, { titol: "Canvi", format: (v) => v.toFixed(1).replace(".", ","), unitat: "€/hab" });
     expect(html).toContain(
-      '<span class="canal" data-nom="Seguretat" data-valor="+13,7 €/hab" data-grup="+8,1 €/hab" title="Seguretat: +13,7 €/hab · els seus: +8,1 €/hab">',
+      '<span class="canal" data-nom="Seguretat" data-valor="+13,7 €/hab" data-grup="+8,1 €/hab"' +
+        ' data-extres="respecte als seus¦+5,6 €/hab" title="Seguretat: +13,7 €/hab · els seus: +8,1 €/hab · respecte als seus: +5,6 €/hab">',
     );
     expect(html).not.toContain('tabindex="0"');
   });
@@ -812,9 +821,16 @@ describe("l'etiqueta de cada punt: la dada a l'abast del ratolí, del dit i del 
       { valor: 400, nom: "Poble D", slug: "poble-d" },
     ];
     const html = regleDispersio("Deute", valors, { format: euros });
-    expect(html).toContain('href="../../m/poble-a/" data-nom="Poble A" data-valor="100 €" title="Poble A: 100 €"');
+    expect(html).toContain(
+      'href="../../m/poble-a/" data-nom="Poble A" data-valor="100 €"' +
+        ' data-extres="posició¦1r més baix de 4‖respecte a la mediana¦−150 € · −60 %"' +
+        ' title="Poble A: 100 € · posició: 1r més baix de 4 · respecte a la mediana: −150 € · −60 %"',
+    );
     expect(html).toContain('<i class="marca aquest" style="--p:34.67%" tabindex="0" data-nom="Aquest municipi" data-valor="200 €"');
-    expect(html).toContain('<i class="marca" style="--p:65.33%" data-valor="300 €" title="300 €">');
+    expect(html).toContain(
+      '<i class="marca" style="--p:65.33%" data-valor="300 €" data-extres="posició¦3r més baix de 4‖respecte a la mediana¦+50 € · +20 %"' +
+        ' title="300 € · posició: 3r més baix de 4 · respecte a la mediana: +50 € · +20 %">',
+    );
     expect(quants(html, /tabindex="0"/g)).toBe(1);
   });
 
@@ -823,8 +839,13 @@ describe("l'etiqueta de cada punt: la dada a l'abast del ratolí, del dit i del 
       titol: "Deute per habitant", etiqueta: "Sabadell", format: euros,
       anys: { inici: 2019, final: 2023 }, municipi: { inici: 800, final: 1204 }, grup: { inici: 500, final: 520 },
     });
-    expect(html).toContain('data-nom="Sabadell" data-any="2019" data-valor="800 €" data-grup="500 €"');
-    expect(html).toContain("<title>Sabadell: 2023 · 1.204 € · els seus: 520 €</title>");
+    expect(html).toContain(
+      'data-nom="Sabadell" data-any="2019" data-valor="800 €" data-grup="500 €"' +
+        ' data-extres="canvi 2019–2023¦+404 € · +51 %‖canvi dels seus¦+20 € · +4 %"',
+    );
+    expect(html).toContain(
+      "<title>Sabadell: 2023 · 1.204 € · els seus: 520 € · canvi 2019–2023: +404 € · +51 % · canvi dels seus: +20 € · +4 %</title>",
+    );
     expect(quants(html, /<circle class="toc"/g)).toBe(2);
     expect(foraDelQuadre(html)).toEqual([]);
   });
@@ -832,8 +853,11 @@ describe("l'etiqueta de cada punt: la dada a l'abast del ratolí, del dit i del 
   it("la distribució diu de cada casella el tram i quants municipis hi cauen", () => {
     const valors = Array.from({ length: 40 }, (_, i) => 100 + i * 10);
     const html = distribucioGrup(valors, 250, { format: euros, titol: "Deute", grup: "de la seva mida", unitat: "€" });
-    expect(html).toMatch(/<g class="punt-casella" data-nom="De [\d.]+ € a [\d.]+ €" data-valor="\d+ municipis, aquest entre ells">/);
+    expect(html).toMatch(
+      /<g class="punt-casella" data-nom="De [\d.]+ € a [\d.]+ €" data-valor="\d+ municipis, aquest entre ells" data-extres="part del grup¦\d+ % de 40">/,
+    );
     expect(html).toContain("<title>De ");
+    expect(html).toContain("5 municipis · part del grup: 13 % de 40</title>");
   });
 
   it("el CSS i el script van junts: una sola caixa per pàgina, banda de tacte pintada i focus visible", () => {
@@ -847,5 +871,164 @@ describe("l'etiqueta de cada punt: la dada a l'abast del ratolí, del dit i del 
     // Llegible: cap línia minificada, i sense cap llibreria.
     expect(GRAFICS_JS.split("\n").every((l) => l.length < 140)).toBe(true);
     expect(GRAFICS_JS).not.toContain("<script src=");
+  });
+});
+
+describe("el que l'etiqueta diu de més: banda, distàncies, canvis i mandat", () => {
+  /** Els extres d'un punt, llegits de l'atribut tal com els llegiria el script. */
+  const extresDe = (html: string, patro: RegExp): string[][] => {
+    const punt = patro.exec(html)?.[0] ?? "";
+    const atribut = / data-extres="([^"]*)"/.exec(punt)?.[1] ?? "";
+    return atribut === "" ? [] : atribut.split("‖").map((linia) => linia.split("¦"));
+  };
+
+  it("les xifres amb signe i el tant per cent es formaten amb la funció del gràfic", () => {
+    expect(ambSigne(euros, 42)).toBe("+42 €");
+    expect(ambSigne(euros, -3)).toBe("−3 €");
+    // −0,3 € escrit sense decimals és 0 €, i el zero no porta signe.
+    expect(ambSigne(euros, -0.3)).toBe("0 €");
+    expect(percentRelatiu(42, 470)).toBe("+8,9 %");
+    expect(percentRelatiu(-180, 600)).toBe("−30 %");
+    expect(percentRelatiu(0.01, 600)).toBe("0 %");
+    // Sense base positiva no hi ha tant per cent que valgui.
+    expect(percentRelatiu(6, 0)).toBeNull();
+    expect(percentRelatiu(6, -4)).toBeNull();
+    expect(canviEscrit(euros, 800, 1204)).toBe("+404 € · +51 %");
+    // D'una sèrie que ja va en tant per cent només es diu la diferència.
+    expect(canviEscrit((v) => `${v.toFixed(1).replace(".", ",")} %`, 38.5, 40.6)).toBe("+2,1 %");
+  });
+
+  describe("la sèrie temporal", () => {
+    const punts = serie([[2018, 500], [2019, 600], [2021, 420], [2022, 700]]);
+    const banda: BandaGrup[] = punts.map((p) => ({ any: p.any, p25: 300, p50: 512, p75: 800 }));
+    const mandats = [
+      { desDe: 2015, finsA: 2019, etiqueta: "Ramos" },
+      { desDe: 2019, finsA: 2023, etiqueta: "Farrés" },
+    ];
+    const html = serieTemporal(punts, {
+      titol: "Deute per habitant", format: euros, banda, grup: "de més de 50.000 habitants",
+      mandats, anysEsperats: [2018, 2019, 2020, 2021, 2022], nota: "Ministeri d'Hisenda, consultat el 2026",
+    });
+
+    it("diu la banda, la distància a la mediana, el canvi des del punt anterior i el mandat, en aquest ordre", () => {
+      expect(extresDe(ample(html), /<g class="punt"[^>]*data-any="2022"[^>]*>/)).toEqual([
+        ["banda dels seus", "de 300 € a 800 €"],
+        ["respecte a la mediana", "+188 € · +37 %"],
+        ["respecte al 2021", "+280 € · +67 %"],
+        ["mandat", "Farrés"],
+      ]);
+    });
+
+    it("quan entremig hi ha un any sense dada, diu de quin any ve el canvi", () => {
+      // El 2020 no hi és: el canvi del 2021 es diu respecte al 2019, no a «l'any anterior».
+      const del2021 = extresDe(ample(html), /<g class="punt"[^>]*data-any="2021"[^>]*>/);
+      expect(del2021.map((e) => e[0])).toContain("respecte al 2019");
+      expect(del2021.map((e) => e[0])).not.toContain("respecte al 2020");
+    });
+
+    it("l'any que comença un mandat és del mandat que comença, i abans del primer tall no n'hi ha cap", () => {
+      expect(extresDe(ample(html), /<g class="punt"[^>]*data-any="2019"[^>]*>/)).toContainEqual(["mandat", "Farrés"]);
+      expect(extresDe(ample(html), /<g class="punt"[^>]*data-any="2018"[^>]*>/)).toContainEqual(["mandat", "Ramos"]);
+      const abans = serieTemporal(serie([[2010, 100], [2011, 120]]), { titol: "Deute", format: euros, mandats });
+      expect(abans).not.toContain("mandat¦");
+    });
+
+    it("la nota va a cada punt, i el <title> diu la mateixa frase sencera", () => {
+      expect(quants(ample(html), /data-nota="Ministeri d'Hisenda, consultat el 2026"/g)).toBe(4);
+      expect(ample(html)).toContain(
+        "<title>Deute per habitant: 2022 · 700 € · mediana dels seus: 512 € · banda dels seus: de 300 € a 800 €" +
+          " · respecte a la mediana: +188 € · +37 % · respecte al 2021: +280 € · +67 % · mandat: Farrés" +
+          " (Ministeri d'Hisenda, consultat el 2026)</title>",
+      );
+      // Sense nota no s'inventa cap font.
+      expect(serieTemporal(punts, { titol: "Deute", format: euros })).not.toContain("data-nota");
+    });
+
+    it("l'ample i l'estret diuen exactament el mateix de cada any", () => {
+      const de = (svg: string): string[] => [...svg.matchAll(/ data-extres="[^"]*"/g)].map((m) => m[0]);
+      expect(de(estret(html))).toEqual(de(ample(html)));
+    });
+
+    it("d'una sèrie en tant per cent no es fa cap tant per cent del tant per cent", () => {
+      const pct = serieTemporal(serie([[2019, 38.5], [2023, 40.6]]), {
+        titol: "Dones al ple", format: (v) => `${v.toFixed(1).replace(".", ",")} %`,
+      });
+      expect(pct).toContain('data-extres="respecte al 2019¦+2,1 %"');
+    });
+
+    it("escapa els extres: el cognom del mandat ve de la base de dades", () => {
+      const brut = serieTemporal(serie([[2019, 1], [2020, 2]]), {
+        titol: "Deute", format: euros, mandats: [{ desDe: 2019, finsA: 2023, etiqueta: 'A "B" <C>' }],
+      });
+      expect(brut).toContain("mandat¦A &quot;B&quot; &lt;C&gt;");
+      expect(brut).not.toContain('"B" <C>');
+    });
+  });
+
+  describe("el salt entre dos anys", () => {
+    it("els dos caps diuen el canvi sencer i el dels seus; sense grup, només el propi", () => {
+      const html = pendent({
+        titol: "Deute per habitant", format: euros,
+        anys: { inici: 2019, final: 2023 }, municipi: { inici: 800, final: 600 }, grup: { inici: 500, final: 520 },
+      });
+      expect(quants(html, /data-extres="canvi 2019–2023¦−200 € · −25 %‖canvi dels seus¦\+20 € · \+4 %"/g)).toBe(2);
+      const sol = pendent({
+        titol: "Deute per habitant", format: euros,
+        anys: { inici: 2019, final: 2023 }, municipi: { inici: 800, final: 600 },
+      });
+      expect(sol).toContain('data-extres="canvi 2019–2023¦−200 € · −25 %"');
+      expect(sol).not.toContain("canvi dels seus");
+      expect(sol).toContain("<title>Deute per habitant: 2023 · 600 € · canvi 2019–2023: −200 € · −25 %</title>");
+    });
+  });
+
+  describe("les barres divergents", () => {
+    const format = (v: number): string => v.toFixed(1).replace(".", ",");
+
+    it("amb un abans i un després, diu les dues xifres amb el seu any i la distància als seus", () => {
+      const html = barresDivergents(
+        [{ etiqueta: "Escombraries", valor: 13.7, grup: 8.1, abans: 71.3, despres: 85 }],
+        { titol: "Canvi", format, unitat: "€/hab", anys: { inici: 2023, final: 2025 } },
+      );
+      expect(html).toContain('data-extres="2023¦71,3 €/hab‖2025¦85,0 €/hab‖respecte als seus¦+5,6 €/hab"');
+      expect(html).toContain(
+        'title="Escombraries: +13,7 €/hab · els seus: +8,1 €/hab · 2023: 71,3 €/hab · 2025: 85,0 €/hab · respecte als seus: +5,6 €/hab"',
+      );
+    });
+
+    it("sense anys, l'abans i el després es diuen així; sense grup ni abans, no hi ha cap extra", () => {
+      const html = barresDivergents([{ etiqueta: "Habitatge", valor: -2, grup: null, abans: 10, despres: 8 }], {
+        titol: "Canvi", format, unitat: "€/hab",
+      });
+      expect(html).toContain('data-extres="abans¦10,0 €/hab‖després¦8,0 €/hab"');
+      const res = barresDivergents([{ etiqueta: "Habitatge", valor: -2, grup: null }], { titol: "Canvi", format });
+      expect(res).not.toContain("data-extres");
+    });
+  });
+
+  describe("el regle de dispersió", () => {
+    it("dos municipis amb la mateixa xifra tenen la mateixa posició", () => {
+      const html = regleDispersio(
+        "Deute",
+        [
+          { valor: 100, nom: "A" }, { valor: 200, nom: "B" }, { valor: 200, nom: "C" },
+          { valor: 300, nom: "D" }, { valor: 400, nom: "E" },
+        ],
+        { format: euros },
+      );
+      expect(quants(html, /posició¦2n més baix de 5/g)).toBe(2);
+      expect(html).toContain('data-nom="D" data-valor="300 €" data-extres="posició¦4t més baix de 5‖respecte a la mediana¦+100 € · +50 %"');
+      expect(html).toContain('title="E: 400 € · posició: 5è més baix de 5 · respecte a la mediana: +200 € · +100 %"');
+    });
+  });
+
+  describe("la distribució del grup", () => {
+    it("diu quina part del grup cau a cada tram, amb un decimal quan és petita", () => {
+      // Dotze valors, vuit caselles: cap casella no arriba al 10 % amb un sol municipi.
+      const valors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+      const html = distribucioGrup(valors, 5, { format: euros, titol: "Deute", grup: "de la seva mida", unitat: "€" });
+      expect(html).toContain('data-valor="1 municipi" data-extres="part del grup¦8,3 % de 12"');
+      expect(html).toContain("<title>De 2 € a 4 €: 1 municipi · part del grup: 8,3 % de 12</title>");
+    });
   });
 });

@@ -779,7 +779,7 @@ function renderDiners(): string {
  * Els punts són quadrets d'un sol traç i no cercles: 947 elements `circle` són
  * cent quilobytes de pàgina, i aquí n'hi ha prou amb dues formes.
  */
-function renderSituacio(punts: readonly PuntSituacio[]): string {
+function renderSituacio(punts: readonly PuntSituacio[], habitants: number): string {
   // Amb quatre punts no surt cap silueta i el segell no situaria res.
   if (punts.length < 100) return "";
   const amplada = 320;
@@ -804,7 +804,13 @@ function renderSituacio(punts: readonly PuntSituacio[]): string {
   // de l'etiqueta comuna de tots els gràfics (grafics.ts).
   const etiqueta = (dada: DadaEtiqueta): string =>
     `${atributsEtiqueta(dada)}><title>${escape(textEtiqueta(dada))}</title></path>`;
-  const dinsDada: DadaEtiqueta = { valor: `Els ${quants} municipis metropolitans` };
+  // La taca dels 36 diu també quanta gent hi viu: és la xifra que la pàgina
+  // ja té a la capçalera, i és el que fa que una taca petita a la costa es
+  // llegeixi com el que és, gairebé mig país.
+  const dinsDada: DadaEtiqueta = {
+    valor: `Els ${quants} municipis metropolitans`,
+    extres: habitants > 0 ? [{ etq: "habitants", valor: number(habitants) }] : null,
+  };
   const foraDada: DadaEtiqueta = { valor: `La resta de Catalunya · ${punts.length - quants} municipis` };
 
   return `<figure class="situacio">
@@ -1254,7 +1260,7 @@ ${cercador("../")}
   ${renderPoder(data.forces, data.municipis.length, data.habitants, "de l'àrea")}
   <div class="parell-mapes">
     ${renderMapaTerritori(data.municipis, "../", "L'Àrea Metropolitana")}
-    ${renderSituacio(data.situacio)}
+    ${renderSituacio(data.situacio, data.habitants)}
   </div>
   <p class="nota">Una alcaldia no és un vot: a la Palma de Cervelló n'hi ha prou amb unes centenes
   de persones i a Barcelona en calen centenars de milers.

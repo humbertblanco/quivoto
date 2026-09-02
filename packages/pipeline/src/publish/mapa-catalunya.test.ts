@@ -17,9 +17,11 @@ type CapaAlNavegador = {
   u: [string, string] | null;
   /** El diccionari de textos de l'etiqueta i l'índex de cada municipi; la primera capa no els porta. */
   w: string[] | null; k: string | null;
+  /** La mediana per tram de mida, el diccionari d'anys i, si cal, l'any de cada municipi. */
+  d: string[] | null; a: string[] | null; y: string | null;
 };
 const capesDe = (html: string): CapaAlNavegador[] =>
-  JSON.parse(/var CAPES = (\[[\s\S]*?\]);\nvar camins/.exec(html)![1]!) as never;
+  JSON.parse(/var CAPES = (\[.*\]);\n/.exec(html)![1]!) as never;
 
 /** L'enllaç d'un municipi al mapa, amb els atributs de l'etiqueta. */
 const enllacDe = (html: string, slug: string): string =>
@@ -167,14 +169,66 @@ describe("l'etiqueta de cada municipi", () => {
   const tots = (extra: Record<string, Partial<Els947Row>>): Els947Row[] =>
     Object.keys(geometria.municipis).map((s) => fila(s, extra[s] ?? {}));
 
-  it("cada camí porta el nom amb la comarca i el que hi ha pintat a la primera capa, i el títol per a qui no té script", () => {
-    const html = renderMapaCatalunya(tots({ girona: { n: "Girona", c: "Gironès", a: "Lluc Salellas", g: "CUP-AMUNT", b: "cup" } }), "2026-08-29");
-    expect(enllacDe(html, "girona")).toBe(
-      '<a href="/observatori/m/girona/" data-nom="Girona · Gironès" data-valor="CUP (alcaldia: Lluc Salellas)">',
+  it("cada camí porta el nom, el que hi ha pintat a la primera capa i els extres fixos, i el títol per a qui no té script", () => {
+    const html = renderMapaCatalunya(
+      tots({ girona: { n: "Girona", c: "Gironès", p: 104_000, a: "Lluc Salellas", g: "CUP-AMUNT", b: "cup" } }),
+      "2026-08-29",
     );
-    expect(html).toContain('data-valor="CUP (alcaldia: Lluc Salellas)"><title>Girona</title><path class="g');
-    // Tots els 947, i cap sense el que diu.
-    expect(html.match(/<a href="\/observatori\/m\/[^"]+\/" data-nom="[^"]+" data-valor="[^"]+">/g)).toHaveLength(947);
+    // Els habitants, la comarca i l'alcaldia amb les sigles: el que és
+    // veritat del municipi a totes les capes, escrit una sola vegada.
+    expect(enllacDe(html, "girona")).toBe(
+      '<a href="/observatori/m/girona/" data-nom="Girona" data-valor="CUP (alcaldia: Lluc Salellas)"' +
+        ' data-extres="habitants¦104.000‖comarca¦Gironès‖alcaldia¦Lluc Salellas (CUP-AMUNT)">',
+    );
+    expect(html).toContain('(CUP-AMUNT)"><title>Girona</title><path class="g');
+    // Tots els 947, i cap sense el que diu ni sense els extres.
+    expect(
+      html.match(/<a href="\/observatori\/m\/[^"]+\/" data-nom="[^"]+" data-valor="[^"]+" data-extres="habitants¦[^"]+">/g),
+    ).toHaveLength(947);
+    // Sense alcaldia coneguda no es diu cap alcaldia, i no un guió.
+    expect(enllacDe(html, "barcelona")).toContain('data-extres="habitants¦1.000‖comarca¦una comarca">');
+    // L'any de la primera capa no s'escriu 947 vegades: el posa el script en arrencar.
+    expect(html).not.toContain("data-any=");
+  });
+
+  it("l'any i la mediana dels de la seva mida van amb cada capa, i el script els posa a l'enllaç en canviar-la", () => {
+    const html = renderMapaCatalunya(
+      tots({
+        barcelona: { p: 1_600_000, d: 1234, pa: 2.5, paa: 2024 },
+        girona: { p: 104_000, d: 0, pa: 1.5, paa: 2023 },
+        lleida: { p: 140_000, d: 300, pa: null, paa: null },
+      }),
+      "2026-08-29",
+    );
+    const capes = capesDe(html);
+    // Un tram de mida per municipi, com els graons: una lletra cadascun.
+    const trams = /var TRAMS = "([^"]+)"/.exec(html)![1]!;
+    expect(trams).toHaveLength(947);
+    // Les capes de govern diuen el mandat, i és el mateix per a tothom.
+    expect(capes[0]!.a).toEqual(["mandat 2023-2027"]);
+    expect(capes[0]!.y).toBeNull();
+    // Les de categories no tenen mediana.
+    expect(capes[0]!.d).toBeNull();
+    // El deute no diu any, que no és el mateix a tot arreu, però sí la mediana per tram.
+    const deute = capes.find((c) => c.t.includes("deu cada ajuntament"))!;
+    expect(deute.a).toBeNull();
+    expect(deute.d).not.toBeNull();
+    const tramGran = parseInt(trams.charAt(posicio("barcelona")), 36);
+    expect(deute.d![tramGran]).toMatch(/^[\d.]+ €$/);
+    // L'aigua porta l'any de cada fila: un diccionari i una lletra per municipi.
+    const aigua = capes.find((c) => c.t.includes("costa l'aigua"))!;
+    expect(aigua.y).toHaveLength(947);
+    const anyDe = (slug: string): string | null => {
+      const lletra = aigua.y!.charAt(posicio(slug));
+      return lletra === "x" ? null : aigua.a![parseInt(lletra, 36)]!;
+    };
+    expect(anyDe("barcelona")).toBe("2024");
+    expect(anyDe("girona")).toBe("2023");
+    expect(anyDe("lleida")).toBeNull();
+    // I el script els escriu i els treu a cada canvi de capa.
+    expect(html).toContain("enllacos[n].setAttribute('data-any', any)");
+    expect(html).toContain("enllacos[n].setAttribute('data-mediana', mediana)");
+    expect(html).toContain("enllacos[n].removeAttribute('data-any')");
   });
 
   it("un municipi gris no és un municipi sense alcaldia: diu les sigles i qui hi mana", () => {

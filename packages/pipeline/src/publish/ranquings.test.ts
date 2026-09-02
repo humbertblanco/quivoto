@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { extrems, nomsMarca, PAS, preparaRanquings, renderRanquings, valorMarca, type RankingRow } from "./ranquings";
+import {
+  ambSigne, extrems, medianaDe, nomsMarca, ordinal, PAS, posicioMarca, preparaRanquings, renderRanquings, respecteMediana,
+  valorMarca, type RankingRow,
+} from "./ranquings";
 
 /**
  * Cent pobles amb totes les mètriques i el mateix any: el cas net. Les
@@ -101,7 +104,7 @@ describe("renderRanquings", () => {
   it("no repeteix la llista: cap top 10 a part, i el servidor només escriu les primeres files", () => {
     expect(html).not.toContain('class="top"');
     const participacio = html.slice(html.indexOf('id="participacio"'), html.indexOf('id="renda"'));
-    expect(participacio.match(/<li><span class="pos">/g)).toHaveLength(PAS);
+    expect(participacio.match(/<li [^>]*><span class="pos">/g)).toHaveLength(PAS);
     expect(participacio).toContain('<span class="pos">1</span>');
     expect(participacio).toContain("../m/poble-99/");
     expect(participacio).toContain('<a class="comarca" href="../c/comarca/">Comarca</a>');
@@ -132,9 +135,25 @@ describe("renderRanquings", () => {
     const regle = participacio.slice(participacio.indexOf('<div class="regle-dispersio"'), participacio.indexOf("</div>"));
     // Cent valors diferents, cent marques, i cadascuna amb el seu municipi.
     expect(regle.match(/<i class="marca"/g)).toHaveLength(100);
-    expect(regle).toContain('<i class="marca" style="--p:4.0%" data-nom="Poble 000" data-valor="0,00%" title="Poble 000: 0,00%"></i>');
-    expect(regle).toContain('data-nom="Poble 099" data-valor="99,00%"');
-    expect(regle).toContain('<i class="mig" style="--p:50.0%" data-nom="La mediana" data-valor="49,50%" title="La mediana: 49,50%"></i>');
+    // Cada marca diu la posició al rànquing i com de lluny és de la mediana
+    // (49,50 %), als data-extres amb els separadors de grafics.ts (U+2016
+    // entre línies, U+00A6 entre etiqueta i valor) i al title= en fila.
+    expect(regle).toContain(
+      '<i class="marca" style="--p:4.0%" data-nom="Poble 000" data-valor="0,00%" data-extres="posició\u00a6el 100è de 100\u2016respecte a la mediana\u00a6\u221249,50%" title="Poble 000: 0,00% · posició: el 100è de 100 · respecte a la mediana: \u221249,50%"></i>',
+    );
+    expect(regle).toContain('data-nom="Poble 099" data-valor="99,00%" data-extres="posició\u00a6el 1r de 100\u2016respecte a la mediana\u00a6+49,50%"');
+    // La mediana diu de quants és i entre quins extrems.
+    expect(regle).toContain(
+      '<i class="mig" style="--p:50.0%" data-nom="La mediana" data-valor="49,50%" data-extres="municipis\u00a6100\u2016del més baix al més alt\u00a6de 0,00% a 99,00%" title="La mediana: 49,50% · municipis: 100 · del més baix al més alt: de 0,00% a 99,00%"></i>',
+    );
+  });
+
+  it("cada fila de la llista porta l'etiqueta amb la comarca, la posició de quants i la distància a la mediana", () => {
+    const participacio = html.slice(html.indexOf('id="participacio"'), html.indexOf('id="renda"'));
+    expect(participacio).toContain(
+      '<li data-nom="Poble 099" data-valor="99,00%" data-extres="comarca\u00a6Comarca\u2016posició de 100\u00a61r\u2016respecte a la mediana\u00a6+49,50%" title="Poble 099: 99,00% · comarca: Comarca · posició de 100: 1r · respecte a la mediana: +49,50%"><span class="pos">1</span>',
+    );
+    expect(participacio).toContain('data-extres="comarca\u00a6Comarca\u2016posició de 100\u00a640è\u2016respecte a la mediana\u00a6+10,50%"');
   });
 
   it("dues a la mateixa posició són una marca amb tots els noms, fins a tres i «i N més»", () => {
@@ -147,20 +166,52 @@ describe("renderRanquings", () => {
     expect(participacio).toContain('data-nom="Poble 000, Poble 001, Poble 002 i 2 més" data-valor="-1,00%"');
     expect(participacio).toContain('data-nom="Poble 005, Poble 006 i Poble 007" data-valor="7,00%"');
     expect(participacio.match(/<i class="marca"/g)).toHaveLength(94);
+    // Els cinc empatats són els cinc últims: la posició és un tram.
+    expect(participacio).toContain('data-extres="posició\u00a6del 96è al 100è de 100\u2016respecte a la mediana');
+    expect(participacio).toContain('data-extres="posició\u00a6del 93è al 95è de 100\u2016respecte a la mediana');
   });
 
   it("porta el script de l'etiqueta flotant una sola vegada, i el CSS que la pinta", () => {
     expect(html.match(/<script id="grafics-etiqueta">/g)).toHaveLength(1);
     expect(html).toContain(".etiqueta-grafic{");
-    // El navegador refà les marques amb els mateixos data-* quan canvia l'àmbit.
-    expect(html).toContain("data-nom=\"' + esc(noms(colla))");
-    expect(html).toContain("data-nom=\"La mediana\" data-valor=\"' + esc(fmt(mig, d, s))");
+    // El navegador refà les marques, la mediana i les files amb els mateixos
+    // data-* quan canvia l'àmbit, amb els mateixos separadors dels extres.
+    expect(html).toContain('e.etq + "\u00a6" + e.valor).join("\u2016")');
+    expect(html).toContain('{ etq: "posició", valor: posicio(colla, files.length) }');
+    expect(html).toContain('nom: "La mediana"');
+    expect(html).toContain('{ etq: "posició de " + fmt(delAmbit.length, 0, ""), valor: ordinal(f.pos) }');
   });
 
   it("amb massa pocs municipis no publica res i ho diu", () => {
     const buit = renderRanquings(files(10), "avui");
     expect(buit).not.toContain('class="ranquing"');
     expect(buit).toContain("Cap indicador no arriba avui al llindar");
+  });
+});
+
+describe("les peces de l'etiqueta: ordinal, posició, signe i mediana", () => {
+  it("escriu els ordinals com en català: 1r, 2n, 3r, 4t i «è» de cinc en amunt", () => {
+    expect([1, 2, 3, 4, 5, 11, 21, 947].map(ordinal)).toEqual(["1r", "2n", "3r", "4t", "5è", "11è", "21è", "947è"]);
+  });
+
+  it("diu la posició d'una marca: una sola o un tram, sempre de quants", () => {
+    expect(posicioMarca([3], 24)).toBe("el 3r de 24");
+    expect(posicioMarca([15, 12, 13], 947)).toBe("del 12è al 15è de 947");
+    expect(posicioMarca([1000], 1000)).toBe("el 1.000è de 1.000");
+  });
+
+  it("escriu la diferència amb signe, amb el menys de debò, i «igual» quan no es veu", () => {
+    const fmt = (v: number): string => `${v.toLocaleString("ca-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+    expect(ambSigne(3.2, fmt)).toBe("+3,20%");
+    expect(ambSigne(-12, fmt)).toBe("\u221212,00%");
+    expect(ambSigne(0.001, fmt)).toBe("igual");
+    expect(respecteMediana([52], 49.5, fmt)).toBe("+2,50%");
+    expect(respecteMediana([47, 48], 49.5, fmt)).toBe("de \u22122,50% a \u22121,50%");
+  });
+
+  it("la mediana és la del mig, o la mitjana dels dos del mig, vingui en l'ordre que vingui", () => {
+    expect(medianaDe([5, 1, 3])).toBe(3);
+    expect(medianaDe([4, 1, 3, 2])).toBe(2.5);
   });
 });
 

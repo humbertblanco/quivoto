@@ -236,8 +236,12 @@ describe("renderPartit", () => {
     const html = renderPartit(mostra(), "2026-08-30");
     const comenca = html.indexOf('<figure class="partit-mapa"');
     const mapa = html.slice(comenca, html.indexOf("</svg>", comenca));
-    expect(mapa).toMatch(/<a href="[^"]+" data-nom="[^"]+" data-valor="hi té l'alcaldia, amb \d+ de \d+ regidories[^"]*">/);
+    expect(mapa).toMatch(/<a href="[^"]+" data-nom="[^"]+" data-valor="hi té l'alcaldia, amb \d+ de \d+ regidories[^"]*"/);
     expect(mapa).toMatch(/data-valor="\d+ de \d+ regidories, sense l'alcaldia[^"]*"/);
+    // Sota, en línies a part: els habitants, les regidories sobre el total, el pes del vot i l'alcaldia quan és seva.
+    expect(mapa).toContain('data-extres="habitants¦46.500‖regidories¦11 de 21‖vots¦41,2 %‖alcaldia¦Eduard Sanz García"');
+    // Sense l'alcaldia no es diu cap alcaldia.
+    expect(mapa).toContain('data-extres="habitants¦46.100‖regidories¦3 de 21‖vots¦12,3 %"');
     expect((mapa.match(/ data-valor="/g) ?? []).length).toBe((mapa.match(/<a href=/g) ?? []).length);
     expect(html.split('<script id="grafics-etiqueta">')).toHaveLength(2);
   });
@@ -293,8 +297,8 @@ describe("renderPartit", () => {
 
     it("on es va presentar sense treure cap regidoria és clicable i porta al municipi", () => {
       expect(figura).toContain(
-        '<a href="../../m/salt/" data-nom="Salt" data-valor="s\'hi va presentar sense treure cap regidoria · 4,1 % dels vots">' +
-          '<title>Salt: s\'hi va presentar sense treure cap regidoria · 4,1 % dels vots</title><path class="v1"',
+        '<a href="../../m/salt/" data-nom="Salt" data-valor="s\'hi va presentar sense treure cap regidoria · 4,1 % dels vots" data-extres="vots¦4,1 %">' +
+          '<title>Salt: s\'hi va presentar sense treure cap regidoria · 4,1 % dels vots · vots: 4,1 %</title><path class="v1"',
       );
       // I on hi és, el títol diu les dues coses: regidories i pes del vot.
       expect(figura).toContain("Vic: 3 de 21 regidories, sense l'alcaldia · 12,3 % dels vots");
