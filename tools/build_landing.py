@@ -21,8 +21,10 @@ T = {
   'parada_text':'Setze temes que no surten als debats de la tele i que decideixen com és el carrer on vius. A quivoto cadascun té el seu veí, i és ell qui et pregunta.',
   'exemple_titol':'Prova-ho aquí mateix',
   'exemple_text':'Cinc afirmacions de veritat del ple de Badalona. Respon amb la cara que et vagi i et diem amb quin grup del ple coincideixes. Cada afirmació surt d’un punt votat: una moció, unes ordenances, una modificació de pressupost.',
-  'title':'quivoto — A qui votes al teu poble?',
-  'desc':'La brúixola electoral de les municipals del 23 de maig de 2027. Respon 25 afirmacions sobre el teu municipi i descobreix quins partits i candidats pensen com tu.',
+  'title':'quivoto — A qui votes al teu poble? Municipals 2027',
+  'desc':'Brúixola electoral per a les municipals del 23 de maig de 2027 i observatori dels 947 municipis de Catalunya. Respon 25 afirmacions i mira qui pensa com tu.',
+  'og_alt':'quivoto: la papereta mascota i la pregunta «A qui votes al teu poble?»',
+  'locale':'ca_ES','locale_alt':'es_ES',
   'aviat':'Aviat',
   'salta':'Vés al contingut','menu_aria':'Seccions de l’Observatori',
   'h1':'A qui votes<br>al teu poble?',
@@ -87,8 +89,10 @@ T = {
   'parada_text':'Dieciséis temas que no salen en los debates de la tele y que deciden cómo es la calle donde vives. En quienvoto cada uno tiene su vecino, y es él quien te pregunta.',
   'exemple_titol':'Pruébalo aquí mismo',
   'exemple_text':'Cinco afirmaciones de verdad del pleno de Badalona. Responde con la cara que te encaje y te decimos con qué grupo del pleno coincides. Cada afirmación sale de un punto votado: una moción, unas ordenanzas, una modificación de presupuesto.',
-  'title':'quienvoto — ¿A quién votas en tu pueblo?',
-  'desc':'La brújula electoral de las municipales del 23 de mayo de 2027. Responde 25 afirmaciones sobre tu municipio y descubre qué partidos y candidatos piensan como tú.',
+  'title':'quienvoto — ¿A quién votas en tu pueblo? Municipales 2027',
+  'desc':'Brújula electoral para las municipales del 23 de mayo de 2027 y observatorio de los 947 municipios de Cataluña. 25 afirmaciones para ver quién piensa como tú.',
+  'og_alt':'quienvoto: la papeleta mascota y la pregunta «¿A quién votas en tu pueblo?»',
+  'locale':'es_ES','locale_alt':'ca_ES',
   'aviat':'Pronto',
   'salta':'Ir al contenido','menu_aria':'Secciones del Observatorio',
   'h1':'¿A quién votas<br>en tu pueblo?',
@@ -787,19 +791,28 @@ PAGE = '''<!doctype html>
 <link rel="alternate" hreflang="es" href="https://quienvoto.es/">
 <link rel="alternate" hreflang="x-default" href="https://quivoto.cat/">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="{marca}">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="https://{domini}/">
 <meta property="og:image" content="https://{domini}/assets/og.png">
-<meta property="og:locale" content="{lang}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{og_alt}">
+<meta property="og:locale" content="{locale}">
+<meta property="og:locale:alternate" content="{locale_alt}">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{desc}">
+<meta name="twitter:image" content="https://{domini}/assets/og.png">
+<meta name="twitter:image:alt" content="{og_alt}">
 <meta name="theme-color" content="#FBF7EE">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/styles.css?v={css_v}">
 {estil_extra}
 <script type="application/ld+json">
-{{"@context":"https://schema.org","@type":"WebSite","name":"{marca}","url":"https://{domini}/","inLanguage":"{lang}","description":"{desc}","publisher":{{"@type":"Organization","name":"Damos en el Blanco, S.L."}}}}
+{json_ld}
 </script>
 {google_tag}
 </head>
@@ -931,7 +944,7 @@ GRACIES = '''<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{gracies_h} — {marca}</title>
-<meta name="robots" content="noindex">
+<meta name="robots" content="noindex, nofollow">
 <meta name="description" content="{gracies_p}">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
@@ -958,8 +971,21 @@ LEGAL = '''<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{titol} — {marca}</title>
-<meta name="description" content="{titol} de {marca}.">
+<meta name="description" content="{desc}">
 <link rel="canonical" href="https://quivoto.cat/{canonical}">
+<link rel="alternate" hreflang="ca" href="https://quivoto.cat/{nom}.html">
+<link rel="alternate" hreflang="es" href="https://quivoto.cat/es/{nom}.html">
+<link rel="alternate" hreflang="x-default" href="https://quivoto.cat/{nom}.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="{marca}">
+<meta property="og:title" content="{titol} — {marca}">
+<meta property="og:description" content="{desc}">
+<meta property="og:url" content="https://quivoto.cat/{canonical}">
+<meta property="og:image" content="https://quivoto.cat/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="{locale}">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/styles.css?v={css_v}">
@@ -1153,6 +1179,20 @@ AVIS = {
 }
 
 
+# Descripcions de les pàgines legals (≤ 158 caràcters): diuen de què va cada
+# pàgina, no només el títol repetit, perquè és el que surt al resultat de cerca.
+DESC_LEGAL = {
+  'privadesa': {
+    'ca': 'Quines dades recull quivoto (només el correu de qui demana avís), per a què, quant de temps i com donar-se de baixa. I què publiquem dels càrrecs electes.',
+    'es': 'Qué datos recoge quienvoto (solo el correo de quien pide aviso), para qué, cuánto tiempo y cómo darse de baja. Y qué publicamos de los cargos electos.',
+  },
+  'avis-legal': {
+    'ca': 'Qui hi ha darrere de quivoto, d’on surten les dades de l’Observatori, amb quina llicència les publiquem i què no ens podeu demanar.',
+    'es': 'Quién está detrás de quienvoto, de dónde salen los datos del Observatorio, con qué licencia los publicamos y qué no nos podéis pedir.',
+  },
+}
+
+
 def build_legal(lang):
     t = T[lang]
     sub = OUT if lang == 'ca' else os.path.join(OUT, 'es')
@@ -1163,8 +1203,57 @@ def build_legal(lang):
                               footer=footer_complet(t),
                               css_v=versio('styles.css'), google_tag=GOOGLE_TAG,
                               canonical=("" if lang == "ca" else "es/") + nom + ".html",
+                              nom=nom, desc=DESC_LEGAL[nom][lang], locale=t['locale'],
                               cos=cos.replace('{marca}', t['marca']))
         open(os.path.join(sub, nom + '.html'), 'w', encoding='utf-8').write(pagina)
+
+
+def build_sitemap():
+    """El sitemap de la landing: portada i pàgines legals, amb les alternatives
+    d'idioma. Ni «gràcies» ni el 404 hi van (porten noindex i robots.txt els
+    tanca). La versió castellana de la portada viu a quienvoto.es, i un sitemap
+    no pot llistar adreces d'un altre domini: hi va només com a alternativa.
+    L'Observatori té el seu propi sitemap, que genera el pipeline."""
+    import datetime, json
+    avui = datetime.date.today().isoformat()
+    urls = []
+    def url(loc, prioritat, alternatives):
+        urls.append(
+            f'  <url>\n    <loc>{loc}</loc>\n' +
+            ''.join(f'    <xhtml:link rel="alternate" hreflang="{hl}" href="{href}"/>\n' for hl, href in alternatives) +
+            f'    <lastmod>{avui}</lastmod>\n    <priority>{prioritat}</priority>\n  </url>')
+    url('https://quivoto.cat/', '1.0',
+        (('ca', 'https://quivoto.cat/'), ('es', 'https://quienvoto.es/'), ('x-default', 'https://quivoto.cat/')))
+    for nom in ('privadesa', 'avis-legal'):
+        alternatives = (('ca', f'https://quivoto.cat/{nom}.html'), ('es', f'https://quivoto.cat/es/{nom}.html'),
+                        ('x-default', f'https://quivoto.cat/{nom}.html'))
+        url(f'https://quivoto.cat/{nom}.html', '0.3', alternatives)
+        url(f'https://quivoto.cat/es/{nom}.html', '0.3', alternatives)
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n' +
+           '\n'.join(urls) + '\n</urlset>\n')
+    open(os.path.join(OUT, 'sitemap.xml'), 'w', encoding='utf-8').write(xml)
+
+
+def json_ld(t):
+    """El lloc web i qui el publica, en la mateixa forma que fa servir
+    l'Observatori (packages/pipeline/src/publish/seo.ts): un sol @id per a
+    l'organització perquè els cercadors lliguin totes les pàgines al mateix
+    editor. Sense SearchAction: el cercador de l'Observatori no llegeix cap
+    paràmetre `?q=` de l'adreça, i anunciar-ne un seria mentir."""
+    import json
+    org_id = 'https://quivoto.cat/#organitzacio'
+    return json.dumps({
+        '@context': 'https://schema.org',
+        '@graph': [
+            {'@type': 'Organization', '@id': org_id, 'name': 'quivoto', 'url': 'https://quivoto.cat/',
+             'logo': 'https://quivoto.cat/assets/og.png',
+             'legalName': 'Damos en el Blanco, S.L.'},
+            {'@type': 'WebSite', '@id': f"https://{t['domini']}/#lloc", 'name': t['marca'],
+             'url': f"https://{t['domini']}/", 'description': t['desc'], 'inLanguage': t['lang'],
+             'publisher': {'@id': org_id}},
+        ],
+    }, ensure_ascii=False)
 
 
 def build_404(lang):
@@ -1176,7 +1265,7 @@ def build_404(lang):
             'Esta papeleta no está en esta urna. Puede que la dirección haya cambiado o sobre alguna letra.')
     actions = ('<a class="boto" href="/">Torna a l’inici</a><a class="boto secundari" href="/observatori/">Obre l’Observatori</a>' if not es else
                '<a class="boto" href="/es/">Volver al inicio</a><a class="boto secundari" href="https://quivoto.cat/observatori/">Abrir el Observatorio</a>')
-    page = f'''<!doctype html><html lang="{t['lang']}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 · {title} · {t['marca']}</title><meta name="robots" content="noindex"><link rel="stylesheet" href="/assets/fonts.css"><link rel="stylesheet" href="/assets/styles.css?v={versio('styles.css')}">{GOOGLE_TAG}<style>.error404{{max-width:760px;margin:0 auto;padding:clamp(70px,12vw,150px) var(--e3);text-align:center}}.error404 .codi{{font-family:var(--display);font-weight:900;font-size:clamp(5rem,20vw,11rem);line-height:.75;color:var(--coral);text-shadow:5px 5px 0 var(--ink);-webkit-text-stroke:2px var(--ink)}}.error404 h1{{margin-top:var(--e4)}}.error404 .accions{{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:var(--e3)}}.error404 .secundari{{background:var(--paper);color:var(--ink)}}</style></head><body><a class="salta" href="#contingut">{t['salta']}</a>{capcalera(lang)}<main id="contingut" class="error404"><div class="codi" aria-hidden="true">404</div><p class="micro">{title}</p><h1>{title}</h1><p class="entrada">{lead}</p><div class="accions">{actions}</div></main>{footer_complet(t)}</body></html>'''
+    page = f'''<!doctype html><html lang="{t['lang']}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 · {title} · {t['marca']}</title><meta name="robots" content="noindex, nofollow"><meta name="description" content="{lead}"><link rel="stylesheet" href="/assets/fonts.css"><link rel="stylesheet" href="/assets/styles.css?v={versio('styles.css')}">{GOOGLE_TAG}<style>.error404{{max-width:760px;margin:0 auto;padding:clamp(70px,12vw,150px) var(--e3);text-align:center}}.error404 .codi{{font-family:var(--display);font-weight:900;font-size:clamp(5rem,20vw,11rem);line-height:.75;color:var(--coral);text-shadow:5px 5px 0 var(--ink);-webkit-text-stroke:2px var(--ink)}}.error404 h1{{margin-top:var(--e4)}}.error404 .accions{{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:var(--e3)}}.error404 .secundari{{background:var(--paper);color:var(--ink)}}</style></head><body><a class="salta" href="#contingut">{t['salta']}</a>{capcalera(lang)}<main id="contingut" class="error404"><div class="codi" aria-hidden="true">404</div><p class="micro">{title}</p><h1>{title}</h1><p class="entrada">{lead}</p><div class="accions">{actions}</div></main>{footer_complet(t)}</body></html>'''
     open(os.path.join(sub, '404.html'), 'w', encoding='utf-8').write(page)
 
 
@@ -1205,6 +1294,7 @@ def build(lang):
     ctx['estil_extra'] = CSS_EXTRA
     ctx['mascota_petita'] = L.papereta(150)
     ctx['footer'] = footer_complet(t)
+    ctx['json_ld'] = json_ld(t)
     page = PAGE.format(**ctx)
     grac = GRACIES.format(**{**ctx, 'mascota': L.papereta(150)})
     sub = OUT if lang == 'ca' else os.path.join(OUT, 'es')
@@ -1219,4 +1309,5 @@ if __name__ == '__main__':
         build_legal(lg)
         build_404(lg)
         print(f'  web/public/{"" if lg=="ca" else "es/"}index.html  ({n//1024} kB)')
+    build_sitemap()
     print('Landing generada. Dies fins al 23-05-2027:', dies_restants())

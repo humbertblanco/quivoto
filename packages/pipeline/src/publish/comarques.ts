@@ -8,6 +8,8 @@ import { slugify } from "../lib/text";
 import { carregaCarrecsAlcaldia, carregaPleDelRegistre, resolAlcaldia } from "./alcaldia";
 import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { atributsEtiqueta, GRAFICS_JS, regleDispersio, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { icona } from "./icones";
 import { capsaCami, geometria, projecta } from "./mapa";
@@ -1414,8 +1416,29 @@ function saltsComarca(data: ComarcaData): string {
 }
 
 export function renderComarca(data: ComarcaData, generatedAt: string): string {
-  const title = `${data.name} — Observatori municipal de quivoto`;
   const summary = summarySentence(data);
+  // El cap per al cercador: el nom de la comarca i quants municipis, que és
+  // el que algú escriu per arribar aquí, i a la descripció les xifres de la
+  // ullada —habitants, pactes, canvis— sense cap veredicte. La comarca va com
+  // a `AdministrativeArea` dins de Catalunya.
+  const url = `${SITE}/observatori/c/${data.slug}/`;
+  const quants = data.municipis.length;
+  const alsMunicipis = quants === 1 ? "al seu únic municipi" : `als ${number(quants)} municipis`;
+  const cap = capSeo({
+    titol: `${data.name}: qui mana ${alsMunicipis}`,
+    descripcio: `Qui mana a ${data.name}: alcaldies per força ${alsMunicipis} (${number(data.habitants)} habitants), ${number(data.pacte)} ${plural(data.pacte, "governat", "governats")} per qui no va guanyar i ${number(data.canvisAlcaldia)} ${plural(data.canvisAlcaldia, "canvi", "canvis")} d'alcaldia.`,
+    url,
+    jsonLd: [
+      filAriadna([...ARREL_OBSERVATORI, { nom: "Les comarques", url: `${SITE}/observatori/c/` }, { nom: data.name, url }]),
+      {
+        "@type": "AdministrativeArea",
+        "@id": `${url}#comarca`,
+        name: data.name,
+        url,
+        containedInPlace: { "@type": "AdministrativeArea", name: "Catalunya" },
+      },
+    ],
+  });
   // El mapa de taques quan en tenim la geometria, i el núvol de punts quan no:
   // hi ha ens —l'AMB— i municipis nous que encara no són als límits de l'ICGC.
   const mapa =
@@ -1429,9 +1452,7 @@ export function renderComarca(data: ComarcaData, generatedAt: string): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>${escape(title)}</title>
-<meta name="description" content="Qui mana a ${escape(data.name)}: quantes alcaldies té cada força als seus ${data.municipis.length} municipis, on hi va haver pacte, on ha canviat l'alcaldia i com són els seus indicadors comparats amb la resta de Catalunya.">
+${cap}
 ${tipografia("../../")}
 <style>${RADIOGRAFIA_CSS}${COMARCA_CSS}</style>
 </head>

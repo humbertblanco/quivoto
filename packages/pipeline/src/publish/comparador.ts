@@ -6,6 +6,8 @@ import { carregaMetriques } from "./metriques";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { GRAFICS_JS, textEtiqueta } from "./grafics";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
@@ -1562,14 +1564,22 @@ export function renderComparador(rows: readonly ComparadorRow[], generatedAt: st
     })
     .join("");
 
+  // El cap per al cercador. Aquesta pàgina no tenia canònica: era l'única de
+  // l'Observatori que el cercador podia indexar amb dues adreces.
+  const url = `${SITE}/observatori/comparador/`;
+  const cap = capSeo({
+    titol: "Comparador de municipis",
+    descripcio: `De dos a quatre dels ${rows.length} municipis de Catalunya, costat a costat: ${xifres.length} indicadors, de qui governa al deute i l'IBI, amb la mediana dels de la seva mida.`,
+    url,
+    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Comparador de municipis", url }])],
+  });
+
   return `<!doctype html>
 <html lang="ca">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>Comparador de municipis · Observatori de quivoto</title>
-<meta name="description" content="Tria de dos a quatre municipis catalans i mira'ls costat a costat: qui governa, participació, deute i com ha variat durant el mandat, inversions executades, què costa el govern, IBI, aigua, renda, paritat i transparència. Només amb dades obertes i sense cap veredicte.">
+${cap}
 ${tipografia("../")}
 <style>${RADIOGRAFIA_CSS}${CSS}</style>
 </head>

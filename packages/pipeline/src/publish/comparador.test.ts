@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
   anysEscrits,
   escalaDomini,
@@ -876,5 +877,41 @@ describe("l'etiqueta dels gràfics", () => {
     const html = pagina();
     expect(html.match(/<script id="grafics-etiqueta">/g)?.length).toBe(1);
     expect(html.indexOf('<script id="grafics-etiqueta">')).toBeLessThan(html.indexOf("</body>"));
+  });
+});
+
+describe("el cap SEO del comparador", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderComparador(
+    [fila("esplugues-de-llobregat", "Esplugues de Llobregat", { deute: 253 }), fila("sant-just-desvern", "Sant Just Desvern", { deute: 120 })],
+    "2026-08-29",
+  );
+
+  it("té canònica —abans no en tenia— i un títol curt amb la marca", () => {
+    expect(titolDe(html)).toBe("Comparador de municipis · quivoto");
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/comparador/">');
+    expect(descripcioDe(html)).toMatch(/^De dos a quatre dels 2 municipis de Catalunya, costat a costat: \d+ indicadors/);
+    expect(descripcioDe(html)).not.toContain("veredicte");
+  });
+
+  it("porta el fil d'Ariadna fins al comparador", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Comparador de municipis"]);
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

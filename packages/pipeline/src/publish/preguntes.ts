@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { informe, validaConjunt, type Conjunt, type Veredicte } from "./llindar";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, type MetaPagina } from "./seo";
 import { verifica } from "./verificacio";
 import { verificaCites } from "./cites";
 import { MASCOTA_CSS, papereta } from "./mascota";
@@ -102,17 +103,18 @@ export function carregaPreguntes(): ConjuntAmbSlug[] {
  *
  * `base` és el camí fins a `/observatori/` (taula al capçal de `capcalera.ts`):
  * `../` des de `preguntes/` i `../../` des de `preguntes/<slug>/`.
+ *
+ * El cap SEO el fa `capSeo()` amb el que cada pàgina li passa; el conjunt que
+ * està «en revisió» hi va amb `noIndex`, perquè és un esborrany editorial i
+ * no ha d'entrar al cercador ni el dia que l'Observatori s'obri.
  */
-function capsalPreguntes(titol: string, descripcio: string, canonical: string, base: string): string {
+function capsalPreguntes(meta: MetaPagina, base: string): string {
   return `<!doctype html>
 <html lang="ca">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>${escape(titol)}</title>
-<meta name="description" content="${escape(descripcio)}">
-<link rel="canonical" href="${canonical}">
+${capSeo(meta)}
 ${tipografia(base)}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${EXTRA_CSS}</style>
 </head>
@@ -201,10 +203,19 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
     ? [{ text: "Respon les preguntes", on: "prova/" }, fitxa]
     : [fitxa];
 
+  // El títol i la descripció diuen quantes preguntes hi ha de debò i quantes
+  // van lligades a una votació, que és la xifra que fa que el conjunt es pugui
+  // respondre o no. Mentre no es pot —«En revisió» a l'índex— no s'indexa.
+  const url = `${SITE}/observatori/preguntes/${conjunt.slug}/`;
+  const arrelPreguntes = { nom: "Preguntes per municipi", url: `${SITE}/observatori/preguntes/` };
   return `${capsalPreguntes(
-    `Preguntes de prova · ${conjunt.municipi} — quivoto`,
-    `Les 25 preguntes que la brúixola de quivoto faria a ${conjunt.municipi}, en esborrany i amb l'evidència de cadascuna.`,
-    `${SITE}/observatori/preguntes/${conjunt.slug}/`,
+    {
+      titol: `${conjunt.afirmacions.length} preguntes sobre ${conjunt.municipi}`,
+      descripcio: `Les ${conjunt.afirmacions.length} preguntes que la brúixola de quivoto faria a ${conjunt.municipi}, en esborrany i amb l'evidència de cadascuna: ${v.resum.ambVotCitable} lligades a una votació del ple.`,
+      url,
+      noIndex: !disponible,
+      jsonLd: [filAriadna([...ARREL_OBSERVATORI, arrelPreguntes, { nom: conjunt.municipi, url }])],
+    },
     "../../",
   )}
 <main id="contingut">
@@ -305,10 +316,17 @@ export function renderIndexPreguntes(conjunts: readonly ConjuntAmbSlug[], genera
     )
     .join("");
 
+  // Quants conjunts es poden respondre ja: la mateixa condició que posa el
+  // botó «Respon-les» a cada fila, i no una altra.
+  const responibles = conjunts.filter((c) => c.veredicte.avaluable && verifica(c).jugable).length;
+  const url = `${SITE}/observatori/preguntes/`;
   return `${capsalPreguntes(
-    "Preguntes de prova · Observatori de quivoto",
-    "Les preguntes que la brúixola de quivoto faria a cada municipi, en esborrany i amb l'evidència de cadascuna.",
-    `${SITE}/observatori/preguntes/`,
+    {
+      titol: "Preguntes per municipi",
+      descripcio: `Les preguntes que la brúixola de quivoto faria a ${conjunts.length} municipis de Catalunya, en esborrany i amb l'evidència de cadascuna: ${responibles} ja es poden respondre.`,
+      url,
+      jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Preguntes per municipi", url }])],
+    },
     "../",
   )}
 <main id="contingut">

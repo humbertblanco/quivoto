@@ -6,6 +6,7 @@ import { sql } from "drizzle-orm";
 import { getTableConfig, type PgTable } from "drizzle-orm/pg-core";
 import { dataIssues, electionParticipation, municipalities, municipalityMetrics, openDb, type Db } from "@quivoto/db";
 import { CAMPS_CATALUNYA, renderDadesIndex, writeDownloads } from "./dades";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 
 /** Lector de CSV mínim, amb el mateix dialecte que escrivim. */
 const llegeix = (text: string): string[][] => {
@@ -473,6 +474,43 @@ describe("renderDadesIndex", () => {
     // casella de cerca de la capçalera compartida en porta un, i va incrustat
     // com tot el CSS. El que no hi pot haver és res que es baixi de fora.
     expect(html).not.toMatch(/<script[^>]*\ssrc=/i);
-    expect(html).not.toMatch(/https?:\/\/[^"']*\.(?:css|js)/i);
+    // «catalunya.json» del JSON-LD no és un «.js» de fora: el final ha de ser el final.
+    expect(html).not.toMatch(/https?:\/\/[^"'\s]*\.(?:css|js)(?=["'\s>])/i);
+  });
+});
+
+describe("el cap SEO de les dades", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const html = renderDadesIndex("2026-08-29", { municipis: 947, camps: CAMPS_CATALUNYA });
+
+  it("té canònica i robots —abans no en tenia— i compta municipis i camps a la descripció", () => {
+    expect(titolDe(html)).toBe("Dades obertes de l'Observatori · quivoto");
+    expect(descripcioDe(html)).toBe(
+      `Els indicadors dels 947 municipis de Catalunya en CSV i JSON: ${CAMPS_CATALUNYA} camps documentats, la font de cadascun i llicència CC BY 4.0. Fitxers, no una API.`,
+    );
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/dades/">');
+    expect(html).toContain('<meta name="robots" content="noindex,nofollow">');
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+
+  it("declara el Dataset amb la llicència, el creador i els dos fitxers de Catalunya", () => {
+    const dataset = jsonLdDe(html).find((o) => o["@type"] === "Dataset")!;
+    expect(dataset.license).toBe("https://creativecommons.org/licenses/by/4.0/");
+    expect(dataset.creator).toEqual({ "@id": "https://quivoto.cat/#organitzacio" });
+    expect(dataset.url).toBe("https://quivoto.cat/observatori/dades/");
+    expect(dataset.distribution).toEqual([
+      { "@type": "DataDownload", encodingFormat: "text/csv", contentUrl: "https://quivoto.cat/observatori/dades/catalunya.csv" },
+      { "@type": "DataDownload", encodingFormat: "application/json", contentUrl: "https://quivoto.cat/observatori/dades/catalunya.json" },
+    ]);
+    // L'organització que el `creator` cita va al mateix cap, perquè l'`@id` resolgui.
+    expect(jsonLdDe(html).some((o) => o["@type"] === "Organization" && o["@id"] === "https://quivoto.cat/#organitzacio")).toBe(true);
+    const fil = jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string }[];
+    expect(fil.map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Dades obertes"]);
   });
 });

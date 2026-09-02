@@ -19,12 +19,13 @@ import { hemicycle, seientsHemicicle } from "./hemicycle";
 import { icona } from "./icones";
 import { renderMapa, type PuntMapa } from "./mapa";
 import { assignaSlugs } from "./candidatura";
-import { adrecesRegidors } from "./regidor";
+import { adrecesRegidors, carrecCurt, frasesQueCaben, titolQueCap } from "./regidor";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { esAlcaldia, resolAlcaldia } from "./alcaldia";
 import {
   dataCurta, delDia, elDia, nomLlegible, nomPreferit, nomsOficials, normalize, normalizePersonName, slugify,
 } from "../lib/text";
-import { INDEXABLE, SITE } from "./config";
+import { SITE } from "./config";
 import { RADIOGRAFIA_CSS, senseComentaris } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
@@ -5327,6 +5328,113 @@ type Seccio = {
   html: string;
 };
 
+// ------------------------------------------------------------ el cap SEO
+
+/**
+ * «Sabadell: qui mana, comptes i vots». Si no hi cap amb la marca —«Cruïlles,
+ * Monells i Sant Sadurní de l'Heura» ja en gasta 42—, el nom amb la comarca,
+ * que és el que distingeix dos pobles que es diuen igual; i si ni això, el nom.
+ */
+export function titolMunicipi(m: Pick<RadiografiaData["municipality"], "name" | "comarca">): string {
+  return titolQueCap([
+    `${m.name}: qui mana, comptes i vots`,
+    m.comarca ? `${m.name}, ${m.comarca}` : m.name,
+    m.name,
+  ]);
+}
+
+/**
+ * La descripció per al cercador, amb les xifres que la fitxa ja ensenya i
+ * sense cap veredicte: qui governa i amb quina majoria, qui té l'alcaldia,
+ * quanta gent hi viu, el deute per habitant i el rebut mitjà d'IBI. Cada
+ * tros s'escriu només si la dada hi és; el que falta no es diu.
+ *
+ * L'alcaldia arriba resolta de fora (`resolAlcaldia`) perquè és la mateixa
+ * persona i el mateix càrrec que la targeta de la portada: dues frases de la
+ * mateixa pàgina no poden dir dos alcaldes.
+ */
+export function descripcioMunicipi(
+  data: RadiografiaData,
+  alcaldia: { nom: string | null; carrec: string | null },
+): string {
+  const m = data.municipality;
+  const g = data.government;
+  const sigles = g?.mayorSigles ?? g?.winnerSigles ?? null;
+  // La majoria és la de qui governa, no la de qui va guanyar: quan hi ha
+  // pacte són dues llistes diferents. Sense els escons de l'alcaldia, la de
+  // la llista més votada només val si és ella qui governa.
+  const majoria =
+    g && g.mayorSeats !== null
+      ? g.mayorSeats >= g.majority
+      : g && g.winnerGoverns !== false
+        ? g.winnerHasMajority
+        : null;
+  const regidories = g && g.mayorSeats !== null && g.totalSeats > 0 ? ` (${g.mayorSeats} de ${g.totalSeats} regidories)` : "";
+  const quiMana = alcaldia.nom
+    ? alcaldia.carrec && esAlcaldia(alcaldia.carrec)
+      ? `, ${carrecCurt(alcaldia.carrec)} ${nomLlegible(alcaldia.nom)}`
+      : `, alcaldia: ${nomLlegible(alcaldia.nom)}`
+    : "";
+  const govern = sigles
+    ? `Governa ${sigles}${majoria === null ? "" : majoria ? " amb majoria absoluta" : " sense majoria absoluta"}${regidories}${
+        g?.winnerGoverns === false && g.winnerSigles ? `, tot i que la més votada va ser ${g.winnerSigles}` : ""
+      }${quiMana}.`
+    : `Qui mana a ${m.name}, com estan els comptes i com s'ha mogut el vot des del 1979.`;
+
+  const habitants = m.population ? `${number(m.population)} habitants.` : null;
+
+  const deute =
+    data.finances?.indicators.find((i) => i.key === "deute-habitant")?.value ??
+    data.finances?.debtSeries.at(-1)?.perHead ??
+    null;
+  const ibi = data.rebutIbi?.rebutMitja ?? null;
+  const diners = [
+    deute !== null ? `Deute ${number(Math.round(deute))} € per habitant` : null,
+    ibi !== null ? `IBI mitjà ${number(Math.round(ibi))} €` : null,
+  ].filter((t) => t !== null);
+  const comptes = diners.length > 0 ? `${diners.join(", ")}.` : null;
+
+  return frasesQueCaben([govern, habitants, comptes, "Fonts oficials."]);
+}
+
+/**
+ * El municipi en JSON-LD: un `City` amb la comarca que el conté, les
+ * coordenades quan les tenim i la població com a propietat afegida
+ * (schema.org no en defineix cap de pròpia per a un lloc).
+ */
+function municipiJsonLd(
+  m: RadiografiaData["municipality"],
+  url: string,
+  punt: { lat: number; lon: number } | null,
+): Record<string, unknown> {
+  return {
+    "@type": "City",
+    "@id": `${url}#municipi`,
+    name: m.name,
+    url,
+    containedInPlace: m.comarca
+      ? { "@type": "AdministrativeArea", name: m.comarca, url: `${SITE}/observatori/c/${slugify(m.comarca)}/` }
+      : undefined,
+    geo: punt ? { "@type": "GeoCoordinates", latitude: punt.lat, longitude: punt.lon } : undefined,
+    additionalProperty: m.population
+      ? [{ "@type": "PropertyValue", name: "population", value: m.population, unitText: "habitants" }]
+      : undefined,
+  };
+}
+
+/**
+ * Les coordenades del municipi: les de la base, i si no hi són, les del punt
+ * del mapa de Catalunya que la fitxa ja dibuixa. Una que no sigui un nombre
+ * no s'escriu: val més cap `geo` que un de fals.
+ */
+function coordenades(m: RadiografiaData["municipality"], mapa: readonly PuntMapa[]): { lat: number; lon: number } | null {
+  const lat = Number(m.lat);
+  const lon = Number(m.lon);
+  if (m.lat != null && m.lon != null && Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
+  const punt = mapa.find((p) => p.slug === m.slug);
+  return punt && Number.isFinite(punt.lat) && Number.isFinite(punt.lon) ? { lat: punt.lat, lon: punt.lon } : null;
+}
+
 /**
  * @param preguntes  Els municipis que tenen conjunt d'afirmacions, i si es pot
  *   respondre. La fitxa ensenya dades; les preguntes són el pas següent —«i tu
@@ -5412,8 +5520,14 @@ export function renderRadiografia(
         ? `Només tenim indexades ${m.minutesCount} actes des del juny del 2023. És poc per explicar un mandat sencer.`
         : "No hi ha cap acta d'aquest ajuntament al portal de dades obertes de l'AOC.";
 
-  const title = `${m.name} — Observatori municipal de quivoto`;
-  const description = `Qui mana a ${m.name}, què ha fet aquest govern amb els comptes, com s'ha mogut el vot des del 1979 i què s'hi juga el 23 de maig del 2027. Només amb dades obertes.`;
+  // El cap SEO: el títol, la descripció amb les xifres de la fitxa, la imatge
+  // social pròpia de cada municipi i el JSON-LD del lloc i del fil d'Ariadna.
+  const url = `${SITE}/observatori/m/${m.slug}/`;
+  const fil = filAriadna([
+    ...ARREL_OBSERVATORI,
+    ...(m.comarca ? [{ nom: m.comarca, url: `${SITE}/observatori/c/${slugify(m.comarca)}/` }] : []),
+    { nom: m.name, url },
+  ]);
 
   // Les incidències obertes es diuen, no s'amaguen: una fitxa que calla un
   // problema conegut val menys que una que l'admet.
@@ -5789,20 +5903,14 @@ export function renderRadiografia(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
-<title>${escape(title)}</title>
-<meta name="description" content="${escape(description)}">
-<link rel="canonical" href="${SITE}/observatori/m/${escape(m.slug)}/">
-<meta property="og:type" content="article">
-<meta property="og:site_name" content="quivoto">
-<meta property="og:locale" content="ca_ES">
-<meta property="og:title" content="${escape(m.name)} — Observatori municipal">
-<meta property="og:description" content="${escape(summarySentence(data).replace(/<[^>]+>/g, "") || description)}">
-<meta property="og:url" content="${SITE}/observatori/m/${escape(m.slug)}/">
-<meta property="og:image" content="${SITE}/observatori/og/${escape(m.slug)}.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
+${capSeo({
+  titol: titolMunicipi(m),
+  descripcio: descripcioMunicipi(data, { nom: alcaldia.nom, carrec: alcaldia.carrec?.carrec ?? null }),
+  url,
+  imatge: `${SITE}/observatori/og/${m.slug}.png`,
+  tipus: "article",
+  jsonLd: [fil, municipiJsonLd(m, url, coordenades(m, mapa))],
+})}
 ${tipografia(BASE)}
 <style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}</style>
 </head>

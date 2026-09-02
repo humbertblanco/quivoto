@@ -5,11 +5,12 @@ import {
 } from "@quivoto/db";
 import { BRANDS_BY_ID, PARTY_BRANDS, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
-import { INDEXABLE, SITE } from "./config";
+import { SITE } from "./config";
 import { sobreColor, tintaSobre as tintaDeContrast } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { de, nomPreferit, nomsOficials, normalizePersonName, slugify } from "../lib/text";
-import { adrecesRegidors } from "./regidor";
+import { adrecesRegidors, frasesQueCaben, titolQueCap } from "./regidor";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -625,6 +626,47 @@ function mostraSerie(data: CandidaturaData): boolean {
   return data.history.length > 3 && !data.historyMismatch;
 }
 
+// ------------------------------------------------------------ el cap SEO
+
+/**
+ * «PSC-CP a Sabadell, municipals 2023»; si no hi cap, «PSC-CP a Sabadell»;
+ * i si ni això —unes sigles de vint lletres en un poble de cinc paraules—,
+ * les sigles soles. El poble hi va abans que l'any: és el que distingeix
+ * aquesta pàgina de les altres 2.625.
+ */
+export function titolCandidatura(data: Pick<CandidaturaData, "sigles" | "municipality">): string {
+  const m = data.municipality;
+  return titolQueCap([`${data.sigles} a ${m.name}, municipals 2023`, `${data.sigles} a ${m.name}`, data.sigles]);
+}
+
+/**
+ * La descripció per al cercador, amb les xifres de la pàgina i res més: els
+ * vots, el percentatge i les regidories del 2023; qui encapçalava la llista;
+ * si té l'alcaldia i amb quina majoria, o de qui és. El que no se sap no s'hi
+ * escriu, i el que és un veredicte tampoc.
+ */
+export function descripcioCandidatura(data: CandidaturaData, capDeLlista: string | null): string {
+  const m = data.municipality;
+  const regidories =
+    data.seats === 0 ? "cap regidoria" : `${data.seats} de ${data.totalSeats} ${data.seats === 1 ? "regidoria" : "regidories"}`;
+  const resultat = `${data.sigles}: ${number(data.votes)} vots (${percent(data.share)}) i ${regidories} al ple ${de(m.name)} el 2023${
+    data.isWinner ? ", la llista més votada" : ""
+  }.`;
+  // Amb el nom de qui la té si hi cap; si no, només que la té i amb quina majoria.
+  const teLAlcaldia = `Té l'alcaldia ${data.seats >= data.majority ? "amb" : "sense"} majoria absoluta`;
+  const alcaldia = data.hasMayoralty
+    ? [data.mayorName ? `${teLAlcaldia}: ${data.mayorName}.` : `${teLAlcaldia}.`, `${teLAlcaldia}.`]
+    : data.mayorSigles
+      ? `L'alcaldia és ${de(data.mayorSigles)}.`
+      : null;
+  const cap = capDeLlista ? `Cap de llista: ${capDeLlista}.` : null;
+  const desDe =
+    data.firstYear !== null && !data.historyMismatch && data.firstYear < 2023
+      ? `Al ple des del ${data.firstYear}.`
+      : null;
+  return frasesQueCaben([resultat, alcaldia, cap, desDe, "Resultats des del 1979, regidors i fonts oficials."]);
+}
+
 // -------------------------------------------------------------------- pàgina
 
 export function renderCandidatura(data: CandidaturaData, generatedAt: string): string {
@@ -645,8 +687,17 @@ export function renderCandidatura(data: CandidaturaData, generatedAt: string): s
   // Els noms de la seu electrònica, indexats un sol cop per a la taula del ple
   // i la frase de l'alcaldia: un nom que lliga amb dues fitxes no hi entra.
   const oficials = nomsOficials(data.nomsSeu);
-  const title = `${data.sigles} a ${m.name} — Observatori municipal de quivoto`;
-  const description = `Què va treure ${data.sigles} a ${m.name} el 2023, com li ha anat des del 1979, qui la representa al ple i si té l'alcaldia. Només amb dades obertes.`;
+  // El cap SEO. El cap de llista s'escriu com a la taula del ple: amb el nom
+  // de la seu electrònica si el tenim, que és el que la fitxa de la persona
+  // porta al títol.
+  const url = `${SITE}/observatori/m/${m.slug}/${data.slug}/`;
+  const capDeLlista = data.capDeLlista ? nomPreferit(oficials, data.capDeLlista) : null;
+  const fil = filAriadna([
+    ...ARREL_OBSERVATORI,
+    ...(m.comarca ? [{ nom: m.comarca, url: `${SITE}/observatori/c/${slugify(m.comarca)}/` }] : []),
+    { nom: m.name, url: `${SITE}/observatori/m/${m.slug}/` },
+    { nom: `${data.sigles} a ${m.name}`, url },
+  ]);
 
   // Els escons del ple, dibuixats com a caselles: les d'aquesta llista amb el
   // seu color. És la manera més curta de dir «d'aquest ple, aquesta part és seva».
@@ -664,18 +715,13 @@ export function renderCandidatura(data: CandidaturaData, generatedAt: string): s
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
-<title>${escape(title)}</title>
-<meta name="description" content="${escape(description)}">
-<link rel="canonical" href="${SITE}/observatori/m/${escape(m.slug)}/${escape(data.slug)}/">
-<meta property="og:type" content="article">
-<meta property="og:site_name" content="quivoto">
-<meta property="og:locale" content="ca_ES">
-<meta property="og:title" content="${escape(`${data.sigles} a ${m.name}`)}">
-<meta property="og:description" content="${escape(resum)}">
-<meta property="og:url" content="${SITE}/observatori/m/${escape(m.slug)}/${escape(data.slug)}/">
-<meta property="og:image" content="${SITE}/assets/og.png">
-<meta name="twitter:card" content="summary_large_image">
+${capSeo({
+  titol: titolCandidatura(data),
+  descripcio: descripcioCandidatura(data, capDeLlista),
+  url,
+  tipus: "article",
+  jsonLd: [fil],
+})}
 ${tipografia("../../../")}
 <style>${RADIOGRAFIA_CSS}${CANDIDATURA_CSS}</style>
 </head>

@@ -32,7 +32,8 @@ import { buildPeerGroups, type PeerGroup } from "../derive/peers";
 import { slugify } from "../lib/text";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
-import { INDEXABLE, SITE } from "./config";
+import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { cohortHomogenia, extremsEmpatats } from "./contracte-metriques";
 import { atributsEtiqueta, GRAFICS_CSS, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { peu } from "./peu";
@@ -708,15 +709,22 @@ ${preparats.map((r) => seccio(r, grups)).join("\n")}`
     : `<p class="nota">Cap indicador no arriba avui al llindar de publicació: un mateix període per a almenys el
   90 % dels municipis i vint valors.</p>`;
 
+  // El cap per al cercador: quants rànquings s'han publicat de debò —els que
+  // passen el llindar, no les mètriques que existeixen— i de quants municipis.
+  const url = `${SITE}/observatori/ranquings/`;
+  const cap = capSeo({
+    titol: "Rànquings municipals de Catalunya",
+    descripcio: `${preparats.length > 0 ? `${preparats.length} rànquings` : "Els rànquings"} dels ${rows.length} municipis de Catalunya: qui és a dalt i qui a baix de cada indicador, amb l'any, la font i el que la xifra no diu.`,
+    url,
+    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Rànquings municipals", url }])],
+  });
+
   return `<!doctype html>
 <html lang="ca">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Rànquings · Observatori · quivoto</title>
-<meta name="description" content="Qui és a dalt i qui a baix de cada indicador als 947 municipis de Catalunya, amb l'any, la font i el que la xifra no diu.">
-<link rel="canonical" href="${SITE}/observatori/ranquings/">
-${INDEXABLE ? "" : '<meta name="robots" content="noindex,nofollow">'}
+${cap}
 ${tipografia("../")}
 <style>${RADIOGRAFIA_CSS}${CSS}</style>
 </head>

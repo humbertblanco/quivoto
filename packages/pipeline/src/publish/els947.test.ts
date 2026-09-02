@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
   clauCandidatura,
   clauCerca,
@@ -777,5 +778,40 @@ describe("el sou de l'alcaldia, per al mapa", () => {
     const { llegeix } = lectorDe(new Map([["retribucions", { ministeri: { alcaldia: { euros: 1, mena: "sou" } } }]]));
     expect(() => llegeix("retribucions")).not.toThrow();
     expect(souAlcaldia(llegeix("retribucions"))).toBe(1);
+  });
+});
+
+describe("el cap SEO dels 947", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderEls947(conjunt, "2026-08-29", new Set(conjunt.map((f) => f.s)));
+
+  it("compta els municipis al títol i els pactes i canvis a la descripció, sense escriure 947 a mà", () => {
+    expect(titolDe(html)).toBe("Els 100 municipis, un per un · quivoto");
+    expect(descripcioDe(html)).toBe(
+      "Els 100 municipis de Catalunya en una llista: qui hi mana, els comptes i les actes del ple. A 0 governa qui no va guanyar i 0 han canviat d'alcaldia.",
+    );
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/els947.html">');
+  });
+
+  it("porta el fil d'Ariadna fins a la llista", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Els 100 municipis"]);
+    expect(filDe(html)[2]!.item).toBe("https://quivoto.cat/observatori/els947.html");
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

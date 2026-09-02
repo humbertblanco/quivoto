@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import { anellsDe, camiCompacte, mapaQuiMana, renderPortada, type ComptesPortada } from "./portada";
 import type { PortadaMostra } from "./portada-mostra";
 
@@ -430,5 +431,45 @@ describe("la geometria compactada", () => {
     expect(camiCompacte("M0 0h1v1h-1z", 0.25)).toBe("");
     // El punt final repetit del primer no es torna a escriure.
     expect(camiCompacte("M0 0h10v10h-10l0 -10z", 1)).toBe("M0 0h10v10h-10z");
+  });
+});
+
+describe("el cap SEO de la portada", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderPortada(comptes(), "avui", mostra());
+
+  it("es titula amb els 947 i porta la marca, i la descripció diu les xifres de la pàgina", () => {
+    expect(titolDe(html)).toBe("Observatori municipal: 947 municipis de Catalunya · quivoto");
+    expect(descripcioDe(html)).toContain("947 municipis de Catalunya");
+    expect(descripcioDe(html)).toContain("43 comarques, 15 partits, ");
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/">');
+    expect(html).toContain('<meta property="og:title" content="Observatori municipal: 947 municipis de Catalunya · quivoto">');
+    expect(html).not.toContain("Observatori de quivoto</title>");
+  });
+
+  it("és l'arrel: porta el WebSite, l'Organization i el fil d'Ariadna de dos esglaons", () => {
+    const tipus = jsonLdDe(html).map((o) => o["@type"]);
+    expect(tipus).toEqual(["WebSite", "Organization", "BreadcrumbList"]);
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal"]);
+    const lloc = jsonLdDe(html)[0]!;
+    expect(lloc.url).toBe("https://quivoto.cat/observatori/");
+    expect(lloc.publisher).toEqual({ "@id": "https://quivoto.cat/#organitzacio" });
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

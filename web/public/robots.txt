@@ -1,8 +1,13 @@
+# quivoto — què poden rastrejar els cercadors.
+# /observatori/ no es bloqueja aquí: mentre sigui esborrany, cada pàgina porta
+# el seu propi noindex (QUIVOTO_INDEXABLE, vegeu docs/DESPLEGAMENT.md).
 User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /gracies.html
 Disallow: /es/gracies.html
+Disallow: /404.html
+Disallow: /es/404.html
 
 Sitemap: https://quivoto.cat/sitemap.xml
 Sitemap: https://quivoto.cat/observatori/sitemap.xml

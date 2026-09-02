@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   colorDeCandidatura,
+  descripcioMunicipi,
   pastillesContext,
   renderEscombraries,
   renderQuantGasta,
@@ -15,8 +16,10 @@ import {
   renderRadiografia,
   renderSous,
   renderTrajectoria,
+  titolMunicipi,
   type RadiografiaData,
 } from "./radiografia";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import { RADIOGRAFIA_CSS } from "./estil";
 import {
   LLICENCIA_INTERIOR, NOTA_COMPETENCIES, NOTA_FETS_CONEGUTS, NOTA_LLINDAR,
@@ -3112,5 +3115,128 @@ describe("on cau entre els seus", () => {
     for (const regla of regles) expect(regla).not.toContain("nowrap");
     expect(regles.some((r) => r.startsWith(".comparat-barra{") && r.includes("width:100%"))).toBe(true);
     expect(regles.some((r) => r.includes(".comparat-files li{") && r.includes("min-width:0"))).toBe(true);
+  });
+});
+
+// ------------------------------------------------------------- el cap SEO
+
+describe("el cap SEO de la fitxa municipal", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? "";
+  const descripcioDe = (html: string): string =>
+    /<meta name="description" content="([^"]*)">/.exec(html)?.[1] ?? "";
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(
+      (m) => JSON.parse(m[1]!) as Record<string, unknown>,
+    );
+  const seu = (): NonNullable<RadiografiaData["carrecs"]> => ({
+    font: "seu-e", url: "https://seu-e.cat/ca/web/sabadell/govern", slug: "sabadell",
+    descarregat: "29 d'agost del 2026", totalCarrecs: 2, ambFoto: 0, cobertura: "completa",
+    carrecs: [
+      { nom: "Marta Farrés Falgueras", carrec: "Alcaldessa", grup: "Grup Municipal del PSC", equipGovern: true, foto: null, fotoPetita: null, fitxa: null },
+      { nom: "Pol Gibert Horcas", carrec: "Regidor", grup: "Grup Municipal del PSC", equipGovern: false, foto: null, fotoPetita: null, fitxa: null },
+    ],
+  });
+  const completa = (): RadiografiaData => fitxa({ government: govern(), carrecs: seu(), finances: finances() });
+
+  it("el títol: «municipi: qui mana, comptes i vots», amb la marca", () => {
+    expect(titolDe(renderRadiografia(fitxa()))).toBe("Sabadell: qui mana, comptes i vots · quivoto");
+  });
+
+  it("amb els noms llargs no passa de seixanta amb la marca; amb els llarguíssims, el nom i la comarca", () => {
+    for (const name of ["Sant Sadurní d'Osormort", "Vilanova i la Geltrú"]) {
+      const titol = titolMunicipi({ name, comarca: "Osona" });
+      expect(titol).toBe(`${name}: qui mana, comptes i vots`);
+      expect(titol.length + " · quivoto".length).toBeLessThanOrEqual(TITOL_MAXIM);
+    }
+    // A partir de 25 lletres de nom hi cap el títol sencer però no la marca:
+    // `capSeo` la deixa, que és el que diu de fer.
+    const senseMarca = titolMunicipi({ name: "Santa Margarida i els Monjos", comarca: "Alt Penedès" });
+    expect(senseMarca).toBe("Santa Margarida i els Monjos: qui mana, comptes i vots");
+    expect(senseMarca.length).toBeLessThanOrEqual(TITOL_MAXIM);
+    const titol = titolMunicipi({ name: "Cruïlles, Monells i Sant Sadurní de l'Heura", comarca: "Baix Empordà" });
+    expect(titol).toBe("Cruïlles, Monells i Sant Sadurní de l'Heura, Baix Empordà");
+    expect(titol.length).toBeLessThanOrEqual(TITOL_MAXIM);
+  });
+
+  it("els sufixos vells ja no hi són", () => {
+    const html = renderRadiografia(fitxa());
+    expect(html).not.toContain("Observatori municipal de quivoto");
+    expect(html).not.toContain("· Observatori de quivoto");
+    expect(html).not.toContain("— Observatori municipal");
+  });
+
+  it("la descripció: qui governa, amb quina majoria, qui té l'alcaldia, habitants, deute i IBI", () => {
+    const descripcio = descripcioDe(renderRadiografia(completa()));
+    expect(descripcio).toBe(
+      "Governa PSC-CP amb majoria absoluta (14 de 27 regidories), alcaldessa Marta Farrés Falgueras. 224.092 habitants. Deute 450 € per habitant, IBI mitjà 362 €.",
+    );
+    expect(descripcio.length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcio.length).toBeGreaterThanOrEqual(70);
+  });
+
+  it("amb pacte diu qui va ser la més votada, i sense càrrec a la seu diu «alcaldia:»", () => {
+    const descripcio = descripcioMunicipi(
+      fitxa({ government: govern({ mayorSigles: "ERC-AM", mayorSeats: 8, winnerGoverns: false, winnerHasMajority: false }) }),
+      { nom: "Gabriel Fernàndez Díaz", carrec: null },
+    );
+    expect(descripcio).toContain(
+      "Governa ERC-AM sense majoria absoluta (8 de 27 regidories), tot i que la més votada va ser PSC-CP, alcaldia: Gabriel Fernàndez Díaz.",
+    );
+  });
+
+  it("sense govern conegut no inventa cap majoria, i sense xifres no hi ha «null»", () => {
+    const html = renderRadiografia(fitxa({ rebutIbi: null }));
+    const descripcio = descripcioDe(html);
+    expect(descripcio).toBe(
+      "Qui mana a Sabadell, com estan els comptes i com s'ha mogut el vot des del 1979. 224.092 habitants. Fonts oficials.",
+    );
+    expect(descripcio).not.toContain("majoria");
+    expect(html.slice(0, html.indexOf("</head>"))).not.toMatch(/null|undefined/);
+    expect(descripcio.length).toBeGreaterThanOrEqual(70);
+  });
+
+  it("l'Open Graph porta la imatge pròpia del municipi i el canònic", () => {
+    const html = renderRadiografia(fitxa());
+    expect(html).toContain('<meta property="og:image" content="https://quivoto.cat/observatori/og/sabadell.png">');
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/m/sabadell/">');
+    expect(html).toContain('<meta property="og:type" content="article">');
+    expect(html).toContain('<meta property="og:title" content="Sabadell: qui mana, comptes i vots · quivoto">');
+  });
+
+  it("el fil d'Ariadna passa per la comarca, i el City la porta com a contenidor", () => {
+    const [fil, ciutat] = jsonLdDe(renderRadiografia(fitxa()));
+    expect((fil?.itemListElement as { name: string }[]).map((e) => e.name)).toEqual([
+      "quivoto", "Observatori municipal", "Vallès Occidental", "Sabadell",
+    ]);
+    expect(ciutat?.["@type"]).toBe("City");
+    expect(ciutat?.name).toBe("Sabadell");
+    expect(ciutat?.url).toBe("https://quivoto.cat/observatori/m/sabadell/");
+    expect(ciutat?.containedInPlace).toEqual({
+      "@type": "AdministrativeArea", name: "Vallès Occidental", url: "https://quivoto.cat/observatori/c/valles-occidental/",
+    });
+    expect(ciutat?.additionalProperty).toEqual([
+      { "@type": "PropertyValue", name: "population", value: CENS_2025, unitText: "habitants" },
+    ]);
+    // Sense coordenades ni mapa, cap `geo`: no s'inventa cap punt.
+    expect(ciutat).not.toHaveProperty("geo");
+  });
+
+  it("les coordenades: de la base si hi són, i si no del punt del mapa", () => {
+    const ambBase = fitxa();
+    (ambBase.municipality as unknown as { lat: string; lon: string }).lat = "41.5433";
+    (ambBase.municipality as unknown as { lat: string; lon: string }).lon = "2.1094";
+    const [, ciutat] = jsonLdDe(renderRadiografia(ambBase));
+    expect(ciutat?.geo).toEqual({ "@type": "GeoCoordinates", latitude: 41.5433, longitude: 2.1094 });
+
+    const [, delMapa] = jsonLdDe(renderRadiografia(fitxa(), [{ slug: "sabadell", nom: "Sabadell", lat: 41.54, lon: 2.11 }]));
+    expect(delMapa?.geo).toEqual({ "@type": "GeoCoordinates", latitude: 41.54, longitude: 2.11 });
+  });
+
+  it("un sol h1 i cap salt de nivell als encapçalaments", () => {
+    const html = renderRadiografia(completa());
+    const nivells = [...html.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
+    expect(nivells.filter((n) => n === 1)).toHaveLength(1);
+    expect(nivells[0]).toBe(1);
+    for (let i = 1; i < nivells.length; i++) expect(nivells[i]).toBeLessThanOrEqual(nivells[i - 1]! + 1);
   });
 });

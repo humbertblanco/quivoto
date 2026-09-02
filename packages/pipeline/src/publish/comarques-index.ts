@@ -1,6 +1,7 @@
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
-import { INDEXABLE, SITE } from "./config";
+import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { peu } from "./peu";
 import { sigla } from "./sigla";
@@ -180,12 +181,18 @@ export function renderComarquesIndex(
     (a, b) => b.alcaldies - a.alcaldies || a.label.localeCompare(b.label, "ca"),
   );
 
-  const title = "Les comarques — Observatori municipal de quivoto";
-  const description = `Les ${number(ordenades.length)} comarques de Catalunya: quants municipis i quants habitants té cadascuna, quina força hi té més alcaldies, on hi va haver pacte i on ha canviat l'alcaldia a mig mandat. Només amb dades obertes.`;
   const resum =
     ordenades.length > 0
       ? `${number(ordenades.length)} comarques, ${number(total.municipis)} municipis i ${number(total.habitants)} habitants. A cada una, qui té més alcaldies, on governa qui no va guanyar i on ha canviat l'alcaldia des del 2023.`
       : "Encara no hi ha cap comarca publicada.";
+  // El cap per al cercador, amb les mateixes sumes que el peu de la taula.
+  const url = `${SITE}/observatori/c/`;
+  const cap = capSeo({
+    titol: `Les ${number(ordenades.length)} comarques de Catalunya: qui hi mana`,
+    descripcio: `Les ${number(ordenades.length)} comarques: ${number(total.municipis)} municipis i ${number(total.habitants)} habitants. A cada una, qui té més alcaldies, on governa qui no va guanyar i on ha canviat l'alcaldia.`,
+    url,
+    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Les comarques", url }])],
+  });
 
   // La columna del municipi del mig només hi és si alguna fila la porta: una
   // columna de guions no compararia res.
@@ -246,18 +253,7 @@ export function renderComarquesIndex(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
-<title>${escape(title)}</title>
-<meta name="description" content="${escape(description)}">
-<link rel="canonical" href="${SITE}/observatori/c/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="quivoto">
-<meta property="og:locale" content="ca_ES">
-<meta property="og:title" content="Les comarques de Catalunya, ajuntament per ajuntament">
-<meta property="og:description" content="${escape(resum)}">
-<meta property="og:url" content="${SITE}/observatori/c/">
-<meta property="og:image" content="${SITE}/assets/og.png">
-<meta name="twitter:card" content="summary_large_image">
+${cap}
 ${tipografia(base)}
 <style>${RADIOGRAFIA_CSS}${COMARQUES_INDEX_CSS}</style>
 </head>

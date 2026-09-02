@@ -22,7 +22,12 @@ const PEACH = "#FFD8B8";
 const BOQUES: Record<string, string> = {
   felic: `<path class="boca" d="M44 92 q16 14 32 0" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
   neutre: `<path class="boca" d="M46 94 h28" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
-  pregunta: `<path class="boca" d="M50 94 q10 -6 20 0" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+  /*
+   * «pregunta» era una boca cap avall (q10 -6 20 0), que volia dir «estic
+   * pensant» i es llegia com «estic trist» a Els 947, al mapa, a les preguntes
+   * i a l'AMB. Ara és un somriure petit: la mascota pregunta, no es queixa.
+   */
+  pregunta: `<path class="boca" d="M48 94 q12 8 24 0" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
 };
 
 /** La mascota: una papereta de vot amb cara. */
@@ -147,7 +152,7 @@ button[aria-pressed="true"]>.cara-escala{transform:scale(1.06)}
 const BOQUES_CAT: Record<string, string> = {
   felic: `<path class="boca" d="M40 68 q10 9 20 0" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
   neutre: `<path class="boca" d="M42 70 h18" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
-  pregunta: `<path class="boca" d="M44 70 q8 -5 16 0" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+  pregunta: `<path class="boca" d="M43 70 q9 6 18 0" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
 };
 
 /**

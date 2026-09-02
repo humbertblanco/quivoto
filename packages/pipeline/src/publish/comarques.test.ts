@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
   renderComarca, renderMapaComarca, renderMapaTerritori, renderPoder, renderUllada,
   type ComarcaData, type ComarcaMunicipi,
@@ -123,7 +124,7 @@ describe("renderComarca", () => {
   it("porta títol, full d'estil i peu, perquè és una pàgina autònoma", () => {
     const html = renderComarca(comarca(), "2026-08-29");
     expect(html.startsWith("<!doctype html>")).toBe(true);
-    expect(html).toContain("<title>Priorat — Observatori municipal de quivoto</title>");
+    expect(html).toContain("<title>Priorat: qui mana al seu únic municipi · quivoto</title>");
     expect(html).toContain("--paper:#FBF7EE");
     // El peu compartit escriu la data amb les seves paraules; el que ha de ser
     // cert és que la pàgina digui de quin dia és.
@@ -588,5 +589,51 @@ describe("l'etiqueta dels gràfics", () => {
     const html = renderComarca(comarca(), "2026-08-29");
     expect(html.match(/<script id="grafics-etiqueta">/g)?.length).toBe(1);
     expect(html.indexOf('<script id="grafics-etiqueta">')).toBeLessThan(html.indexOf("</body>"));
+  });
+});
+
+describe("el cap SEO de la comarca", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderComarca(comarca({ municipis: [municipi(), municipi({ slug: "b", name: "B", winnerGoverns: false })], pacte: 1 }), "2026-08-29");
+
+  it("es titula amb la comarca i els seus municipis, i descriu les xifres de la ullada", () => {
+    expect(titolDe(html)).toBe("Priorat: qui mana als 2 municipis · quivoto");
+    expect(descripcioDe(html)).toBe(
+      "Qui mana a Priorat: alcaldies per força als 2 municipis (9.376 habitants), 1 governat per qui no va guanyar i 0 canvis d'alcaldia.",
+    );
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/c/priorat/">');
+  });
+
+  it("passa per l'índex de comarques al fil d'Ariadna i es declara AdministrativeArea dins de Catalunya", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Les comarques", "Priorat"]);
+    expect(filDe(html)[2]!.item).toBe("https://quivoto.cat/observatori/c/");
+    const area = jsonLdDe(html).find((o) => o["@type"] === "AdministrativeArea")!;
+    expect(area.name).toBe("Priorat");
+    expect(area.url).toBe("https://quivoto.cat/observatori/c/priorat/");
+  });
+
+  it("escapa el nom també al cap", () => {
+    const dolent = renderComarca(comarca({ name: 'Pla <script>alert("x")</script>' }), "avui");
+    // Al JSON-LD el nom hi va tal qual, que és JSON i no HTML: el que no pot
+    // passar és que un `</script>` de dins tanqui l'etiqueta abans d'hora.
+    expect(dolent).not.toContain('alert("x")</script>');
+    expect(titolDe(dolent)).toContain("&lt;script&gt;");
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

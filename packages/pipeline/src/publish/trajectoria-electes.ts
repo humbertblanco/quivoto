@@ -3,6 +3,8 @@ import { municipalities, municipalityMetrics, mayors, type Db } from "@quivoto/d
 import { dataCurta, normalizePersonName } from "../lib/text";
 import { GRAFICS_JS, serieTemporal } from "./grafics";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
 import { adrecesRegidors } from "./regidor";
@@ -580,8 +582,17 @@ export function llistaDestins(families: TrajectoriaData["families"]): string {
 }
 
 export function renderTrajectoriaElectes(data: TrajectoriaData, generatedAt: string): string {
-  const title = "D'on surten els que manen — Observatori municipal de quivoto";
   const cobertura = `${nombre(data.ambSalt)} de ${nombre(data.totalPersones)}`;
+  const municipisAmbSalt = data.municipis.filter((m) => m.ambSalt > 0).length;
+  // El cap per al cercador, amb el numerador i el denominador de la pàgina:
+  // la xifra sola («284 alcaldes») diria una cosa que la font no diu.
+  const url = `${SITE}/observatori/trajectoria/`;
+  const cap = capSeo({
+    titol: "D'on surten els que manen",
+    descripcio: `${cobertura} alcaldes catalans que Wikidata coneix des del 1979 han fet el salt per sobre de l'ajuntament. Els ${nombre(municipisAmbSalt)} municipis d'on surten i què feien abans.`,
+    url,
+    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "D'on surten els que manen", url }])],
+  });
 
   // La llista es llegeix del salt més antic al més recent i no per cap mesura
   // de rellevància: ordenar-la per «importància» del càrrec seria una opinió
@@ -608,9 +619,7 @@ export function renderTrajectoriaElectes(data: TrajectoriaData, generatedAt: str
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>${escape(title)}</title>
-<meta name="description" content="Quants alcaldes catalans han arribat al Parlament, al Congrés, al Senat, a una diputació o al Govern: ${escape(cobertura)} dels que Wikidata coneix des del 1979, de quins municipis surten i què feien abans de la política.">
+${cap}
 ${tipografia("../")}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${FOTOS_WIKIMEDIA_CSS}${TRAJECTORIA_CSS}</style>
 </head>
@@ -632,7 +641,7 @@ ${cercador("../")}
   ${escape(llistaDestins(data.families))}.</p>
   <p class="resum"><b>${escape(cobertura)}</b> alcaldes catalans que Wikidata coneix des del 1979
   han ocupat després —o abans— un càrrec per sobre del seu ajuntament. Surten de
-  ${nombre(data.municipis.filter((m) => m.ambSalt > 0).length)} municipis dels ${nombre(data.municipisTotal)}.</p>
+  ${nombre(municipisAmbSalt)} municipis dels ${nombre(data.municipisTotal)}.</p>
   ${graellaDeCent(data.ambSalt, data.totalPersones, `De cada 100 alcaldes que Wikidata coneix, ${Math.max(1, Math.round((100 * data.ambSalt) / Math.max(1, data.totalPersones)))} han ocupat un càrrec per sobre del seu ajuntament.`)}
   <p class="nota">Aquí només hi ha <b>el que Wikidata té escrit</b>: es mostren dades quan n'hi ha,
   cada xifra va amb el seu denominador i no hi ha cap rànquing de municipis.

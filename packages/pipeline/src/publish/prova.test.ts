@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
+import { vi } from "vitest";
 import { validaConjunt, type Afirmacio } from "./llindar";
 import type { ConjuntAmbSlug } from "./preguntes";
 import { renderProva } from "./prova";
@@ -61,5 +63,50 @@ describe("renderProva", () => {
     expect(ambGrups).toContain('"nom":"Govern"');
     expect(ambGrups).toContain('"nom":"Oposició sense vot citable"');
     expect(ambGrups).toContain("Sense prou dades");
+  });
+});
+
+describe("el cap SEO de la demostració", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderProva(conjunt(), [], [], "avui");
+
+  it("diu quantes preguntes i de quin poble, i té canònica", () => {
+    expect(titolDe(html)).toBe("Respon 4 preguntes sobre Poble de Prova · quivoto");
+    expect(descripcioDe(html)).toBe(
+      "Respon 4 preguntes sobre Poble de Prova i mira amb quin grup del ple coincideixes més. Cada una porta el ple on es va votar. És una demostració.",
+    );
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/preguntes/poble-de-prova/prova/">');
+  });
+
+  it("no s'indexa mai, ni quan l'Observatori s'obre: és un esborrany editorial", async () => {
+    expect(html).toContain('<meta name="robots" content="noindex,nofollow">');
+    vi.stubEnv("QUIVOTO_INDEXABLE", "1");
+    vi.resetModules();
+    const obert = await import("./prova");
+    expect(obert.renderProva(conjunt(), [], [], "avui")).toContain('<meta name="robots" content="noindex,nofollow">');
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("porta el fil d'Ariadna de quatre esglaons, passant pel conjunt", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Preguntes per municipi", "Poble de Prova", "Respon les preguntes"]);
+    expect(filDe(html)[3]!.item).toBe("https://quivoto.cat/observatori/preguntes/poble-de-prova/");
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

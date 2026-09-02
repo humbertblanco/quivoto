@@ -61,7 +61,7 @@ describe("catalunya", () => {
     expect(petita).toContain('width="40"');
     expect(petita).toContain('height="40"');
     expect(catalunya(180, "neutre")).toContain("M42 70 h18");
-    expect(catalunya(180, "pregunta")).toContain("M44 70 q8 -5 16 0");
+    expect(catalunya(180, "pregunta")).toContain("M43 70 q9 6 18 0");
     // Un humor que no existeix no ha de deixar la mascota sense boca.
     expect(catalunya(180, "inventat")).toContain('class="boca"');
   });

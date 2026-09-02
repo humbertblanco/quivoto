@@ -8,6 +8,8 @@ import { cara } from "./cara";
 import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
+import { esAlcaldia } from "./alcaldia";
+import { ARREL_OBSERVATORI, capSeo, DESCRIPCIO_MAXIMA, filAriadna, MARCA, TITOL_MAXIM } from "./seo";
 import type { FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
 import type { FitxaCapsDeLlista } from "../jobs/j27-caps-de-llista";
 
@@ -1787,6 +1789,178 @@ function mateixGrup(r: Regidor, ctx: ContextRegidor): string {
   </section>`;
 }
 
+// ------------------------------------------------------------ el cap SEO
+//
+// Les tres plantilles de l'Observatori que parlen d'un lloc concret —el
+// municipi, la persona, la candidatura— tenen el mateix problema amb el
+// títol i la descripció: dir-hi el màxim que hi cap i ni una xifra a mitges.
+// Els dos ajudants de sota són els que ho decideixen, i viuen aquí perquè les
+// altres dues plantilles ja importen aquest fitxer (i no a l'inrevés).
+
+/**
+ * El primer títol que cap sencer: cada plantilla passa els seus candidats del
+ * més ric al més pelat, i es tria el primer que no passa dels seixanta.
+ *
+ * La marca no hi entra en el compte: `capSeo` l'afegeix si hi cap, i si no
+ * la deixa. «Eduard Sanz García, alcalde d'Esplugues de Llobregat» fa 52 i
+ * amb « · quivoto» en faria 62; val més el càrrec que la marca, que ja és al
+ * fil d'Ariadna i a l'`og:site_name`. Als títols curts —«Sabadell: qui mana,
+ * comptes i vots», «PSC-CP a Sabadell, municipals 2023»— hi cap tot.
+ */
+export function titolQueCap(candidats: readonly string[]): string {
+  const nets = candidats.map((t) => t.trim().replace(/\s+/g, " ")).filter((t) => t !== "");
+  return nets.find((t) => t.length <= TITOL_MAXIM) ?? nets[nets.length - 1] ?? "";
+}
+
+/** Una frase de la descripció: un text, o les seves variants de la més llarga a la més curta. */
+export type FraseSeo = string | readonly string[] | null | undefined;
+
+/**
+ * Les frases d'una descripció, per ordre d'importància, fins que no n'hi cap
+ * cap més. La primera hi va sempre (si ella sola passa del màxim, `capSeo` la
+ * retalla amb punts suspensius); les altres només si hi caben senceres, i una
+ * de curta pot entrar-hi encara que una de més llarga abans no hi hagi cabut.
+ * Una frase pot venir amb variants —«Té l'alcaldia amb majoria absoluta:
+ * Eduard Sanz García.» i, si no hi cap, «Té l'alcaldia amb majoria
+ * absoluta.»— i s'hi posa la més llarga que hi cap. Una xifra tallada a
+ * mitges és pitjor que cap xifra.
+ */
+export function frasesQueCaben(frases: readonly FraseSeo[], maxim = DESCRIPCIO_MAXIMA): string {
+  const neta = (f: string): string => f.replace(/\s+/g, " ").trim();
+  const variants = frases
+    .map((f) => (typeof f === "string" ? [f] : (f ?? [])).map(neta).filter((v) => v !== ""))
+    .filter((v) => v.length > 0);
+  let text = "";
+  for (const opcions of variants) {
+    const seguent = opcions.map((v) => (text === "" ? v : `${text} ${v}`)).find((t) => t.length <= maxim);
+    if (seguent !== undefined) text = seguent;
+    // La primera frase hi va sempre, en la seva variant més curta si cap no hi cap.
+    else if (text === "") text = opcions[opcions.length - 1]!;
+  }
+  return text;
+}
+
+/**
+ * El càrrec en una paraula, per al títol i la primera frase: «alcaldessa»,
+ * «alcalde», «regidora», «regidor». «Alcalde President» és un alcalde i
+ * «Regidora delegada d'Urbanisme» una regidora. Quan la seu escriu una altra
+ * cosa —«1a Tinent d'Alcalde», «Portaveu», «Regidor/a»— es deixa com ve, que
+ * és el càrrec de debò: el gènere d'una persona no s'endevina a partir de res.
+ */
+export function carrecCurt(carrec: string): string {
+  const tal = carrec.trim().replace(/\s+/g, " ");
+  if (/regidor\s*\/\s*a\b/i.test(tal)) return "regidor/a";
+  const net = normalize(tal);
+  if (esAlcaldia(tal)) return /alcaldessa/.test(net) ? "alcaldessa" : "alcalde";
+  if (/\bregidora\b/.test(net)) return "regidora";
+  if (/\bregidor\b/.test(net)) return "regidor";
+  // «Portaveu» → «portaveu»; «1a Tinent d'Alcalde» i «CUP» es queden com són.
+  return /^\p{Lu}\p{Ll}/u.test(tal) ? `${tal[0]!.toLowerCase()}${tal.slice(1)}` : tal;
+}
+
+/**
+ * «Marta Farrés Falgueras, alcaldessa de Sabadell». Si amb el càrrec no hi cap
+ * —un nom de quatre paraules i un poble de cinc—, el nom i el poble; i si ni
+ * això, el nom sol. El poble val més que el càrrec: és el que qui cerca escriu.
+ */
+export function titolRegidor(r: Pick<Regidor, "nom" | "carrec">, ctx: Pick<ContextRegidor, "municipi">): string {
+  const nom = nomLlegible(r.nom);
+  return titolQueCap([
+    `${nom}, ${carrecAmbMunicipi(carrecCurt(r.carrec), ctx.municipi)}`,
+    `${nom} · ${ctx.municipi}`,
+    nom,
+  ]);
+}
+
+/**
+ * La descripció per al cercador, composta amb el que hi ha de la persona i
+ * sense el que falta: el càrrec i el grup; des de quan és al ple; si va
+ * encapçalar la llista el 2023 i amb quins vots; i si té o ha tingut un
+ * càrrec per sobre de l'ajuntament. Cap veredicte: xifres i dates que la
+ * pàgina mateixa cita amb la seva font.
+ */
+export function descripcioRegidor(r: Regidor, ctx: ContextRegidor): string {
+  const carrec = carrecAmbMunicipi(carrecCurt(r.carrec), ctx.municipi);
+  // Les sigles abans que el nom del grup: «(ERC-AM)» diu el mateix que «del
+  // Grup Municipal Republicà (GMR)» en set lletres, i el que s'estalvia aquí
+  // és lloc per a una xifra. Els noms de grup que ja comencen per «Grup» no
+  // porten «pel grup» davant.
+  const grup = r.sigles
+    ? ` (${r.sigles})`
+    : r.grup
+      ? /^grup\b/i.test(r.grup.trim())
+        ? ` del ${r.grup.trim()}`
+        : ` pel grup ${r.grup.trim()}`
+      : "";
+  // L'alcaldia és govern per definició; a la resta se'ls diu de quin costat
+  // seuen només quan la seu marca algú, que és la mateixa regla de la pàgina.
+  const costat =
+    !esAlcaldia(r.carrec) && ctx.governConegut ? (r.equipGovern ? ", a l'equip de govern" : ", a l'oposició") : "";
+  const primera = `${carrec[0]!.toUpperCase()}${carrec.slice(1)}${grup}${costat}.`;
+
+  // Des de quan: els mandats del registre quan n'hi ha més d'un, i si no el
+  // dia de la presa de possessió o el de la constitució del ple (`casellaDesDe`).
+  const m = ctx.mandats;
+  const desDe = r.desDe ?? (r.entradaTardana ? null : (ctx.mandat?.constitucio ?? null));
+  const alPle =
+    m && m.quants > 1
+      ? m.seguits
+        ? `Al ple des del ${m.primer}: ${m.quants} mandats seguits.`
+        : `${m.quants} mandats al ple, el primer el ${m.primer}.`
+      : desDe
+        ? `Al ple des ${delDia(desDe)}.`
+        : null;
+
+  const c = ctx.capDeLlista;
+  const cap =
+    c && c.es
+      ? `Cap de llista ${de(c.sigles)} el 2023: ${c.vots.toLocaleString("ca-ES")} vots i ${c.regidories} de ${ctx.regidories} regidories.`
+      : null;
+
+  // El càrrec de més amunt segons Wikidata, o el d'un altre ens segons qui el
+  // paga: el primer de cada llista, que és el que la pàgina posa més amunt.
+  const superior = ctx.trajectoria?.carrecs[0] ?? null;
+  const altre = ctx.altresCarrecs[0] ?? null;
+  const anys = superior ? anysDelCarrec(superior.inici, superior.fi) : "";
+  const mesEnlla = superior
+    ? `${superior.fi ? "Ha estat" : "També és"} ${superior.nom}${anys ? ` (${anys})` : ""}.`
+    : altre
+      ? `També és ${carrecCurt(altre.carrec)} (${altre.ens}).`
+      : null;
+
+  return frasesQueCaben([primera, alPle, cap, mesEnlla, "Què ha votat el seu grup, què cobra i d'on surt cada dada."]);
+}
+
+/**
+ * La persona en JSON-LD, només amb el que la pàgina ja diu d'ella: el nom, el
+ * càrrec, l'ajuntament on el té, el partit si en té pàgina i el retrat si en
+ * publica. Cap correu ni telèfon: és un càrrec electe públic, no un contacte.
+ */
+function personaJsonLd(
+  r: Regidor,
+  ctx: ContextRegidor,
+  url: string,
+  partit: { id: string; name: string } | null,
+): Record<string, unknown> {
+  return {
+    "@type": "Person",
+    name: nomLlegible(r.nom),
+    jobTitle: r.carrec.trim(),
+    url,
+    // El retrat pot venir com a adreça relativa a la pàgina («../../../cares/…»)
+    // o absoluta; `URL` resol totes dues contra l'adreça canònica.
+    image: r.foto ? new URL(r.foto, url).href : undefined,
+    worksFor: {
+      "@type": "GovernmentOrganization",
+      name: `Ajuntament ${de(ctx.municipi)}`,
+      url: `${SITE}/observatori/m/${ctx.slug}/`,
+    },
+    memberOf: partit
+      ? { "@type": "Organization", name: partit.name, url: `${SITE}/observatori/partit/${partit.id}/` }
+      : undefined,
+  };
+}
+
 export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: string): string {
   const inicials = r.nom
     .split(/\s+/)
@@ -1807,17 +1981,29 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
   // Les cares del seu grup, escrites una vegada: la navegació només mira si hi són.
   const alMateixGrup = mateixGrup(r, ctx);
 
+  // El cap SEO: l'adreça canònica és la que ha decidit `adrecesRegidors()`
+  // (vegeu `ContextRegidor.adreca`), i el fil d'Ariadna passa per la comarca
+  // quan la sabem, com fa la fitxa del municipi.
+  const url = `${SITE}/observatori/m/${ctx.slug}/regidor/${ctx.adreca}/`;
+  const fil = filAriadna([
+    ...ARREL_OBSERVATORI,
+    ...(ctx.comarca ? [{ nom: ctx.comarca, url: `${SITE}/observatori/c/${slugify(ctx.comarca)}/` }] : []),
+    { nom: ctx.municipi, url: `${SITE}/observatori/m/${ctx.slug}/` },
+    { nom: nomLlegible(r.nom), url },
+  ]);
+
   return `<!doctype html>
 <html lang="ca">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>${escape(nomLlegible(r.nom))} · ${escape(ctx.municipi)} — Observatori municipal de quivoto</title>
-<meta name="description" content="${escape(carrecAmbMunicipi(r.carrec, ctx.municipi))}${
-    r.grup ? ` pel grup ${escape(r.grup)}` : ""
-  }: de quina llista va sortir, si és a l'equip de govern i què ha votat el seu grup al ple.">
-<link rel="canonical" href="${SITE}/observatori/m/${escape(ctx.slug)}/regidor/${escape(ctx.adreca)}/">
+${capSeo({
+  titol: titolRegidor(r, ctx),
+  descripcio: descripcioRegidor(r, ctx),
+  url,
+  tipus: "profile",
+  jsonLd: [fil, personaJsonLd(r, ctx, url, partit)],
+})}
 ${tipografia("../../../../")}
 <style>${RADIOGRAFIA_CSS}${CSS}</style>
 </head>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import { ordena, quiManaMes, renderComarquesIndex, type ComarcaFila } from "./comarques-index";
 
 /**
@@ -180,5 +181,40 @@ describe("renderComarquesIndex", () => {
     const dolent = renderComarquesIndex([comarca({ name: 'Bages <script>alert("ep")</script>' })], "avui");
     expect(dolent).not.toContain("<script>alert");
     expect(dolent).toContain("&lt;script&gt;");
+  });
+});
+
+describe("el cap SEO de l'índex de comarques", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderComarquesIndex(MOSTRA, "avui", { municipis: 36, comarques: 4 });
+
+  it("compta comarques, municipis i habitants sumats, i no escriu 43 a mà", () => {
+    expect(titolDe(html)).toBe("Les 3 comarques de Catalunya: qui hi mana · quivoto");
+    expect(descripcioDe(html)).toBe(
+      "Les 3 comarques: 38 municipis i 2.484.000 habitants. A cada una, qui té més alcaldies, on governa qui no va guanyar i on ha canviat l'alcaldia.",
+    );
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/c/">');
+    expect(html).toContain('<meta property="og:image" content="https://quivoto.cat/assets/og.png">');
+  });
+
+  it("porta el fil d'Ariadna fins a les comarques", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Les comarques"]);
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

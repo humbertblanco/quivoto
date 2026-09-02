@@ -1,5 +1,6 @@
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, llocWeb, ORGANITZACIO } from "./seo";
 import { MASCOTA_CSS, catalunya } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
 import { cara } from "./cara";
@@ -640,15 +641,27 @@ export function renderPortada(comptes: ComptesPortada, generatedAt: string, most
       ].join("\n")
     : seccions(comptes);
 
+  /*
+   * El cap per al cercador. La descripció porta les xifres que la pàgina ja
+   * ensenya —municipis, comarques, partits, rànquings— i cap veredicte. El
+   * `WebSite` i l'`Organization` només van aquí, que és l'arrel de
+   * l'Observatori: les altres pàgines s'hi refereixen per l'`@id`.
+   */
+  const url = `${SITE}/observatori/`;
+  const descripcio = `Qui mana als ${xifra(comptes.municipis)} municipis de Catalunya, què s'hi ha votat des del 1979 i què en diuen els comptes. ${xifra(comptes.comarques)} comarques, ${xifra(comptes.partits)} partits, ${METRIQUES.length} rànquings i dades obertes.`;
+  const cap = capSeo({
+    titol: `Observatori municipal: ${xifra(comptes.municipis)} municipis de Catalunya`,
+    descripcio,
+    url,
+    jsonLd: [llocWeb("Observatori municipal de quivoto", url, descripcio), ORGANITZACIO, filAriadna(ARREL_OBSERVATORI)],
+  });
+
   return `<!doctype html>
 <html lang="ca">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>Observatori municipal · quivoto</title>
-<meta name="description" content="Els ${comptes.municipis} municipis de Catalunya amb dades obertes: qui governa, resultats des del 1979, comptes, impostos, el ple i les actes.">
-<link rel="canonical" href="${SITE}/observatori/">
+${cap}
 ${tipografia("./")}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${CSS}</style>
 </head>

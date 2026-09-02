@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import { ordena, renderPartitsIndex, type PartitFila } from "./partits-index";
 
 /**
@@ -140,5 +141,39 @@ describe("renderPartitsIndex", () => {
     );
     expect(dolent).not.toContain("<script>alert");
     expect(dolent).toContain("&lt;script&gt;");
+  });
+});
+
+describe("el cap SEO de l'índex de partits", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderPartitsIndex(MOSTRA, CATALUNYA, "avui");
+
+  it("descriu el repartiment amb les tres xifres del dibuix", () => {
+    expect(titolDe(html)).toBe("Els partits als ajuntaments de Catalunya · quivoto");
+    expect(descripcioDe(html)).toBe(
+      "4 partits es reparteixen 784 de les 947 alcaldies de Catalunya; les altres 163 són de llistes locals. Alcaldies, regidories i població governada de cadascun.",
+    );
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/partit/">');
+  });
+
+  it("porta el fil d'Ariadna fins als partits", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Els partits"]);
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

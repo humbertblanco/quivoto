@@ -7,7 +7,8 @@ import { siglesFamily } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { buildPeerGroups, medianOf } from "../derive/peers";
 import { nomLlegible, normalizePersonName, slugify } from "../lib/text";
-import { INDEXABLE, SITE } from "./config";
+import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { tintaSobre as tintaDeContrast } from "./contrast";
 import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
@@ -1776,12 +1777,33 @@ export const PARTIT_CSS = `
 
 export function renderPartit(data: PartitData, generatedAt: string): string {
   const color = colorSegur(data.color);
-  const title = `${data.sigles} als ajuntaments — Observatori municipal de quivoto`;
   const resum =
     data.alcaldies > 0
       ? `${data.sigles} té ${number(data.alcaldies)} ${plural(data.alcaldies, "alcaldia", "alcaldies")}, ${number(data.regidories)} ${plural(data.regidories, "regidoria", "regidories")} i governa ${number(data.poblacioGovernada)} habitants de Catalunya.`
       : `${data.sigles} no té cap alcaldia a Catalunya: hi té ${number(data.regidories)} ${plural(data.regidories, "regidoria", "regidories")}, ${plural(data.regidories, "tota", "totes")} a l'oposició.`;
-  const description = `Quantes alcaldies i quantes regidories té ${data.sigles} als 947 municipis de Catalunya, on mana, quanta gent governa i com li ha anat des del 1979. Només amb dades obertes.`;
+  /*
+   * El cap per al cercador. La descripció és el resum d'obertura —que ja
+   * porta les tres xifres— i una frase de què més hi ha. La marca va com a
+   * `Organization` amb el nom sencer i les sigles; sense `url`, perquè la
+   * de la pàgina no és la seva i la seva no la tenim.
+   */
+  const url = `${SITE}/observatori/partit/${data.id}/`;
+  const cap = capSeo({
+    titol: `${data.sigles} als ajuntaments de Catalunya`,
+    descripcio: `${resum} On mana i com li ha anat des del 1979.`,
+    url,
+    tipus: "article",
+    jsonLd: [
+      filAriadna([...ARREL_OBSERVATORI, { nom: "Els partits", url: `${SITE}/observatori/partit/` }, { nom: data.sigles, url }]),
+      {
+        "@type": "Organization",
+        "@id": `${url}#partit`,
+        name: data.name,
+        alternateName: data.sigles,
+        mainEntityOfPage: url,
+      },
+    ],
+  });
   // Els dos blocs que poden no existir es dibuixen un sol cop: l'índex de dalt i
   // la secció han de dir el mateix, i amb dues crides separades podien acabar
   // dient coses diferents si un dia el llindar de dins canviés.
@@ -1804,18 +1826,7 @@ export function renderPartit(data: PartitData, generatedAt: string): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
-<title>${escape(title)}</title>
-<meta name="description" content="${escape(description)}">
-<link rel="canonical" href="${SITE}/observatori/partit/${escape(data.id)}/">
-<meta property="og:type" content="article">
-<meta property="og:site_name" content="quivoto">
-<meta property="og:locale" content="ca_ES">
-<meta property="og:title" content="${escape(`${data.sigles} als ajuntaments de Catalunya`)}">
-<meta property="og:description" content="${escape(resum)}">
-<meta property="og:url" content="${SITE}/observatori/partit/${escape(data.id)}/">
-<meta property="og:image" content="${SITE}/assets/og.png">
-<meta name="twitter:card" content="summary_large_image">
+${cap}
 ${tipografia("../../")}
 <style>${RADIOGRAFIA_CSS}${PARTIT_CSS}${estilRampa}</style>
 </head>

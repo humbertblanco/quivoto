@@ -1,6 +1,7 @@
 import { tintaSobre } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import type { ConjuntAmbSlug } from "./preguntes";
 import { posicions, type Grup } from "./posicions";
 import { puntDe, type PuntActa } from "./enllac-actes";
@@ -241,15 +242,31 @@ export function renderProva(
   const nominals = compta("nominal");
   const deduides = compta("aritmetica") + compta("bloc");
 
+  // La demostració no s'indexa mai: és un esborrany editorial amb afirmacions
+  // que cap persona no ha validat, i el `noIndex` propi fa que continuï fora
+  // del cercador el dia que la resta de l'Observatori s'obri.
+  const url = `${SITE}/observatori/preguntes/${conjunt.slug}/prova/`;
+  const cap = capSeo({
+    titol: `Respon ${dades.length} preguntes sobre ${conjunt.municipi}`,
+    descripcio: `Respon ${dades.length} preguntes sobre ${conjunt.municipi} i mira amb quin grup del ple coincideixes més. Cada una porta el ple on es va votar. És una demostració.`,
+    url,
+    noIndex: true,
+    jsonLd: [
+      filAriadna([
+        ...ARREL_OBSERVATORI,
+        { nom: "Preguntes per municipi", url: `${SITE}/observatori/preguntes/` },
+        { nom: conjunt.municipi, url: `${SITE}/observatori/preguntes/${conjunt.slug}/` },
+        { nom: "Respon les preguntes", url },
+      ]),
+    ],
+  });
+
   return `<!doctype html>
 <html lang="ca">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>Prova el test · ${escape(conjunt.municipi)} — quivoto</title>
-<meta name="description" content="Respon ${dades.length} preguntes sobre ${escape(conjunt.municipi)} i mira amb quin grup del ple coincideixes més.">
-<link rel="canonical" href="${SITE}/observatori/preguntes/${escape(conjunt.slug)}/prova/">
+${cap}
 ${tipografia(BASE)}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${CSS}</style>
 </head>

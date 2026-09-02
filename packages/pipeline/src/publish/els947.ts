@@ -11,6 +11,7 @@ import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
 import { partitDe, sigla } from "./sigla";
 import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { nomLlegible, slugify } from "../lib/text";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
@@ -1164,15 +1165,23 @@ ${qui}${dades.length > 0 ? `\n<p class="dades">${dades.join("")}</p>` : ""}
   </section>`;
   }).join("\n  ");
 
+  // El cap per al cercador, amb els totals que la pàgina ja compta: els
+  // pactes i els canvis d'alcaldia són la xifra que fa que la llista digui
+  // alguna cosa abans d'obrir-la.
+  const url = `${SITE}/observatori/els947.html`;
+  const cap = capSeo({
+    titol: `Els ${xifra(totals.municipis)} municipis, un per un`,
+    descripcio: `Els ${xifra(totals.municipis)} municipis de Catalunya en una llista: qui hi mana, els comptes i les actes del ple. A ${xifra(totals.pacte)} governa qui no va guanyar i ${xifra(totals.canvis)} han canviat d'alcaldia.`,
+    url,
+    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: `Els ${xifra(totals.municipis)} municipis`, url }])],
+  });
+
   return `<!doctype html>
 <html lang="ca">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>Els 947 · Observatori de quivoto</title>
-<meta name="description" content="Els 947 municipis de Catalunya en una llista, amb el que en sabem de cadascun: qui hi mana, si va guanyar, si ha canviat d'alcaldia, com estan els comptes i quantes actes del ple en tenim.">
-<link rel="canonical" href="${SITE}/observatori/els947.html">
+${cap}
 ${tipografia("./")}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${CSS}</style>
 <script>document.documentElement.className += " js";</script>

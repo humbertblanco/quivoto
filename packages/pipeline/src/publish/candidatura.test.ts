@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  assignaSlugs, clau, marcaAmbPagina, renderCandidatura, tintaSobre, type CandidaturaData,
+  assignaSlugs, clau, descripcioCandidatura, marcaAmbPagina, renderCandidatura, tintaSobre, titolCandidatura,
+  type CandidaturaData,
 } from "./candidatura";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import { de } from "../lib/text";
 
 /** Una candidatura de mostra amb prou dades per rendir la pàgina sencera. */
@@ -465,5 +467,113 @@ describe("les sortides de dalt", () => {
     const html = renderCandidatura(mostra(), "2026-08-30");
     expect(html).toContain('<span class="cand-a-on"><a href="../">a Esplugues de Llobregat</a></span>');
     expect(html).toContain('href="../#regidors"');
+  });
+});
+
+// ------------------------------------------------------------- el cap SEO
+
+const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? "";
+const descripcioDe = (html: string): string =>
+  /<meta name="description" content="([^"]*)">/.exec(html)?.[1] ?? "";
+const jsonLdDe = (html: string): Record<string, unknown>[] =>
+  [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(
+    (m) => JSON.parse(m[1]!) as Record<string, unknown>,
+  );
+
+describe("el títol de la candidatura", () => {
+  it("«sigles a municipi, municipals 2023», amb la marca", () => {
+    expect(titolDe(renderCandidatura(mostra(), "2026-08-30"))).toBe(
+      "PSC-CP a Esplugues de Llobregat, municipals 2023 · quivoto",
+    );
+  });
+
+  it("amb pobles llargs no passa de seixanta amb la marca; amb els més llargs, cau la marca i no l'any", () => {
+    for (const name of ["Sant Sadurní d'Osormort", "Vilanova i la Geltrú"]) {
+      const titol = titolCandidatura({ sigles: "ERC-AM", municipality: { ...mostra().municipality, name } });
+      expect(titol).toBe(`ERC-AM a ${name}, municipals 2023`);
+      expect(titol.length + " · quivoto".length).toBeLessThanOrEqual(TITOL_MAXIM);
+    }
+    const llarg = titolCandidatura({ sigles: "ERC-AM", municipality: { ...mostra().municipality, name: "Santa Margarida i els Monjos" } });
+    expect(llarg).toBe("ERC-AM a Santa Margarida i els Monjos, municipals 2023");
+    expect(llarg.length).toBeLessThanOrEqual(TITOL_MAXIM);
+  });
+
+  it("amb unes sigles llargues cau l'any abans que el poble", () => {
+    const titol = titolCandidatura({
+      sigles: "JUNTS PER VILANOVA-JUNTS",
+      municipality: { ...mostra().municipality, name: "Vilanova i la Geltrú" },
+    });
+    expect(titol).toBe("JUNTS PER VILANOVA-JUNTS a Vilanova i la Geltrú");
+    expect(titol.length).toBeLessThanOrEqual(TITOL_MAXIM);
+  });
+
+  it("els sufixos vells ja no hi són", () => {
+    const html = renderCandidatura(mostra(), "2026-08-30");
+    expect(html).not.toContain("Observatori municipal de quivoto");
+    expect(html).not.toContain("· Observatori de quivoto");
+  });
+});
+
+describe("la descripció de la candidatura", () => {
+  it("porta els vots, el percentatge, les regidories i l'alcaldia", () => {
+    const descripcio = descripcioDe(renderCandidatura(mostra(), "2026-08-30"));
+    expect(descripcio).toContain("PSC-CP: 7.794 vots (44,4 %) i 11 de 21 regidories al ple d'Esplugues de Llobregat el 2023, la llista més votada.");
+    expect(descripcio).toContain("Té l'alcaldia amb majoria absoluta");
+    expect(descripcio.length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcio.length).toBeGreaterThanOrEqual(70);
+  });
+
+  it("diu qui encapçalava la llista i de qui és l'alcaldia quan no és seva", () => {
+    const descripcio = descripcioCandidatura(
+      mostra({ hasMayoralty: false, mayorName: null, mayorSigles: "ERC-AM", isWinner: false, capDeLlista: "Eduard Sanz García" }),
+      "Eduard Sanz García",
+    );
+    expect(descripcio).toContain("L'alcaldia és d'ERC-AM.");
+    expect(descripcio).toContain("Cap de llista: Eduard Sanz García.");
+    expect(descripcio).not.toContain("la llista més votada");
+    expect(descripcio.length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+  });
+
+  it("el nom de l'alcaldia hi va quan hi cap, i si no, l'alcaldia sola", () => {
+    const curt = descripcioCandidatura(mostra({ municipality: { ...mostra().municipality, name: "Rubí" } }), null);
+    expect(curt).toContain("Té l'alcaldia amb majoria absoluta: Eduard Sanz García.");
+    const llarg = descripcioCandidatura(mostra(), null);
+    expect(llarg).toContain("Té l'alcaldia amb majoria absoluta.");
+    expect(llarg).not.toContain("Eduard Sanz García");
+  });
+
+  it("cap regidoria, una regidoria, i mai «null»", () => {
+    expect(descripcioCandidatura(mostra({ seats: 0, hasMayoralty: false, mayorSigles: null }), null)).toContain("i cap regidoria al ple");
+    expect(descripcioCandidatura(mostra({ seats: 1 }), null)).toContain("i 1 de 21 regidoria al ple");
+    const html = renderCandidatura(mostra({ hasMayoralty: null, mayorName: null, mayorSigles: null, firstYear: null }), "2026-08-30");
+    expect(html.slice(0, html.indexOf("</head>"))).not.toMatch(/null|undefined/);
+  });
+});
+
+describe("les dades estructurades de la candidatura", () => {
+  const html = renderCandidatura(mostra(), "2026-08-30");
+
+  it("el fil d'Ariadna acaba amb el nom de la candidatura al seu poble", () => {
+    const [fil] = jsonLdDe(html);
+    expect(fil?.["@type"]).toBe("BreadcrumbList");
+    const items = fil?.itemListElement as { name: string; item: string }[];
+    expect(items.map((e) => e.name)).toEqual([
+      "quivoto", "Observatori municipal", "Baix Llobregat", "Esplugues de Llobregat", "PSC-CP a Esplugues de Llobregat",
+    ]);
+    expect(items[4]?.item).toBe("https://quivoto.cat/observatori/m/esplugues-de-llobregat/psc-cp/");
+  });
+
+  it("l'Open Graph amb la imatge de reserva i el canònic", () => {
+    expect(html).toContain('<meta property="og:type" content="article">');
+    expect(html).toContain('<meta property="og:image" content="https://quivoto.cat/assets/og.png">');
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/m/esplugues-de-llobregat/psc-cp/">');
+    expect(html).toContain('<meta property="og:title" content="PSC-CP a Esplugues de Llobregat, municipals 2023 · quivoto">');
+  });
+
+  it("un sol h1 i cap salt de nivell", () => {
+    const nivells = [...html.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
+    expect(nivells.filter((n) => n === 1)).toHaveLength(1);
+    expect(nivells[0]).toBe(1);
+    for (let i = 1; i < nivells.length; i++) expect(nivells[i]).toBeLessThanOrEqual(nivells[i - 1]! + 1);
   });
 });

@@ -1,6 +1,7 @@
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
-import { INDEXABLE, SITE } from "./config";
+import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { tintaSobre } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { peu } from "./peu";
@@ -216,9 +217,15 @@ export function renderPartitsIndex(
   );
   const perSigles = new Map(ordenades.map((p) => [p.sigles, p]));
 
-  const title = "Els partits als ajuntaments — Observatori municipal de quivoto";
-  const description = `Com es reparteixen les ${number(ALCALDIES_CATALUNYA)} alcaldies de Catalunya entre ${number(ordenades.length)} partits: quantes n'hi té cadascuna, quantes regidories i quanta població governa. Només amb dades obertes.`;
   const resum = `${number(ordenades.length)} partits amb pàgina pròpia es reparteixen ${number(sumaAlcaldies)} de les ${number(ALCALDIES_CATALUNYA)} alcaldies de Catalunya. Les altres ${number(resta)} són de llistes locals i de candidatures que no es presenten sota cap partit.`;
+  // El cap per al cercador: el repartiment amb les tres xifres del dibuix.
+  const url = `${SITE}/observatori/partit/`;
+  const cap = capSeo({
+    titol: "Els partits als ajuntaments de Catalunya",
+    descripcio: `${number(ordenades.length)} partits es reparteixen ${number(sumaAlcaldies)} de les ${number(ALCALDIES_CATALUNYA)} alcaldies de Catalunya; les altres ${number(resta)} són de llistes locals. Alcaldies, regidories i població governada de cadascun.`,
+    url,
+    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Els partits", url }])],
+  });
 
   const dibuix =
     caixes.length > 1
@@ -268,18 +275,7 @@ export function renderPartitsIndex(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-${INDEXABLE ? "" : '<meta name="robots" content="noindex, nofollow">'}
-<title>${escape(title)}</title>
-<meta name="description" content="${escape(description)}">
-<link rel="canonical" href="${SITE}/observatori/partit/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="quivoto">
-<meta property="og:locale" content="ca_ES">
-<meta property="og:title" content="Els partits als ajuntaments de Catalunya">
-<meta property="og:description" content="${escape(resum)}">
-<meta property="og:url" content="${SITE}/observatori/partit/">
-<meta property="og:image" content="${SITE}/assets/og.png">
-<meta name="twitter:card" content="summary_large_image">
+${cap}
 ${tipografia("../")}
 <style>${RADIOGRAFIA_CSS}${PARTITS_INDEX_CSS}</style>
 </head>

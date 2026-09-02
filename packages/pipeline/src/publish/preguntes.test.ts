@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
+import { vi } from "vitest";
 import { validaConjunt, type Afirmacio } from "./llindar";
 import { renderIndexPreguntes, renderPreguntes, type ConjuntAmbSlug } from "./preguntes";
 
@@ -105,4 +107,58 @@ describe("renderIndexPreguntes", () => {
     expect(html).toContain(".llista-municipis a.conjunt{");
     expect(html).not.toContain(".llista-municipis a{");
   });
+});
+
+describe("el cap SEO de les preguntes", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const jugable = renderPreguntes(conjunt(true), "avui");
+  const noJugable = renderPreguntes(conjunt(false), "avui");
+  const index = renderIndexPreguntes([conjunt(true), conjunt(false)], "avui");
+
+  it("l'índex compta els municipis i quants es poden respondre", () => {
+    expect(titolDe(index)).toBe("Preguntes per municipi · quivoto");
+    expect(descripcioDe(index)).toBe(
+      "Les preguntes que la brúixola de quivoto faria a 2 municipis de Catalunya, en esborrany i amb l'evidència de cadascuna: 1 ja es poden respondre.",
+    );
+    expect(index).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/preguntes/">');
+    expect(filDe(index).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Preguntes per municipi"]);
+  });
+
+  it("el conjunt d'un municipi diu quantes preguntes i quantes lligades a una votació", () => {
+    expect(titolDe(jugable)).toBe("20 preguntes sobre Poble de Prova · quivoto");
+    expect(descripcioDe(jugable)).toMatch(/^Les 20 preguntes que la brúixola de quivoto faria a Poble de Prova, en esborrany i amb l'evidència de cadascuna: \d+ lligades a una votació del ple\.$/);
+    expect(jugable).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/preguntes/poble-de-prova/">');
+    expect(filDe(jugable).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Preguntes per municipi", "Poble de Prova"]);
+  });
+
+  it("el conjunt «en revisió» porta noindex encara que l'Observatori s'obri; el que es pot respondre, no", async () => {
+    vi.stubEnv("QUIVOTO_INDEXABLE", "1");
+    vi.resetModules();
+    const obert = await import("./preguntes");
+    expect(obert.renderPreguntes(conjunt(false), "avui")).toContain('<meta name="robots" content="noindex,nofollow">');
+    expect(obert.renderPreguntes(conjunt(true), "avui")).toContain('<meta name="robots" content="index,follow,max-image-preview:large">');
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("mentre l'Observatori no s'obri, tots dos porten noindex", () => {
+    expect(jugable).toContain('content="noindex,nofollow"');
+    expect(noJugable).toContain('content="noindex,nofollow"');
+  });
+
+  for (const [nom, html] of [["l'índex", index], ["el conjunt", jugable]] as const) {
+    it(`${nom}: el títol i la descripció caben, i té un sol <h1>`, () => {
+      expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+      expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+      expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+      expect(descripcioDe(html)).not.toMatch(/…$/);
+      expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+    });
+  }
 });

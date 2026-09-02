@@ -2,6 +2,7 @@ import { RADIOGRAFIA_CSS } from "./estil";
 import { geometria } from "./mapa";
 import { siglesFamily } from "@quivoto/shared-schemas/brands";
 import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import type { Els947Row } from "./els947";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
@@ -92,7 +93,8 @@ type Capa = {
   any?: string | ((r: Els947Row) => number | null);
   /**
    * Colors propis de la capa, un per graó, quan el que separa els municipis no
-   * és una escala sinó una categoria. La rampa coral de la resta de capes diu
+   * és una escala sinó una categoria (o, a les capes de xifres, la rampa del
+   * seu tema: vegeu TO_DE_CAPA). Una rampa d'una sola tinta diu
    * «més o menys»; els partits no són més ni menys que els altres, i pintar-los
    * amb una rampa faria que el mapa digués una cosa que no és.
    */
@@ -396,6 +398,36 @@ const CAPES: Capa[] = [
     format: (v) => `${milers(v)} €`,
   },
 ];
+
+/**
+ * El color de cada capa de xifres, pel que mesura.
+ *
+ * Totes les capes d'escala anaven amb la mateixa rampa coral, i el mapa deia
+ * «més o menys» sense dir de què: la mateixa taca fosca era deute a una capa
+ * i participació a la següent. Ara cada tema té el seu to —l'aigua en blaus,
+ * les dones al ple en liles, la renda en verds, els diners en coral— i la
+ * rampa de cinc graons es fa amb `rampaDe()`, la mateixa que pinta els vots
+ * de cada partit, en clar i en fosc. Les capes de categories («qui mana»,
+ * majoria, pactes) ja porten els colors de cada força i no es toquen.
+ */
+const TO_DE_CAPA: Readonly<Record<string, string>> = {
+  aigua: "#2F6FD6",         // blau: l'aigua
+  dones: "#7C5CC4",         // lila: dones al ple
+  renda: "#2E8B57",         // verd: renda
+  participacio: "#1C8C8C",  // verd-blau: participació
+  estrangera: "#C28A1E",    // ocre: població de nacionalitat estrangera
+  transparencia: "#1F9E9E", // turquesa: transparència
+  alternances: "#5B6B8A",   // gris blau: alternança des del 1979
+  deute: "#E2735A",         // coral: els diners, com fins ara
+  "sou-alcaldia": "#C9932A",// daurat: el sou de l'alcaldia
+};
+for (const capa of CAPES) {
+  const to = TO_DE_CAPA[capa.id];
+  if (!to || capa.colors) continue;
+  const rampa = rampaDe(to);
+  capa.colors = rampa.clar;
+  capa.colorsFosc = rampa.fosc;
+}
 
 /**
  * Una capa per partit: on es vota més cadascun.
@@ -903,18 +935,26 @@ export function renderMapaCatalunya(
    * La descripció de la pàgina es fa de les capes que realment es publiquen.
    * Escrita a mà quedava desactualitzada cada cop que se n'afegia una, i
    * prometia al cercador capes que el mapa no acaba ensenyant quan la dada no
-   * hi és —el mapa en treu el botó i la descripció es quedava dient-ho. Les
-   * quinze sigles no s'hi enumeren: es diuen d'un cop.
+   * hi és —el mapa en treu el botó i la descripció es quedava dient-ho. No
+   * s'hi enumeren totes: tretze capes són dues-centes lletres i el cercador
+   * en talla la descripció a 158, de manera que el «on es vota més cada
+   * partit» del final no arribava mai a sortir. Es diuen les tres primeres
+   * i es compten les altres; les quinze sigles es diuen d'un cop.
    */
   const deSempre = capes.filter((c) => !esPartit(c));
+  const primeres = deSempre.slice(0, 3).map((c) => c.boto.toLowerCase());
+  const restants = deSempre.length - primeres.length;
   const llistaBotons =
-    (deSempre.length === 1
-      ? deSempre[0]!.boto.toLowerCase()
-      : deSempre
-          .slice(0, -1)
-          .map((c) => c.boto.toLowerCase())
-          .join(", ") + ` i ${deSempre[deSempre.length - 1]!.boto.toLowerCase()}`) +
+    primeres.join(", ") +
+    (restants > 0 ? ` i ${restants} ${restants === 1 ? "capa" : "capes"} més` : "") +
     (triesPartits ? ", i on es vota més cada partit" : "");
+  const url = `${SITE}/observatori/mapa/`;
+  const cap = capSeo({
+    titol: `Mapa dels ${slugs.length} municipis`,
+    descripcio: `Els ${slugs.length} municipis de Catalunya pintats per ${llistaBotons}. Cada un porta a la seva fitxa.`,
+    url,
+    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: `Mapa dels ${slugs.length} municipis`, url }])],
+  });
 
   const claus = capes
     .map((c, i) =>
@@ -933,10 +973,7 @@ export function renderMapaCatalunya(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>El mapa dels 947 — Observatori municipal de quivoto</title>
-<meta name="description" content="Els 947 municipis de Catalunya pintats per ${escape(llistaBotons)}. Cada municipi porta a la seva fitxa.">
-<link rel="canonical" href="${SITE}/observatori/mapa/">
+${cap}
 ${tipografia("../")}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${css(capes)}</style>
 </head>

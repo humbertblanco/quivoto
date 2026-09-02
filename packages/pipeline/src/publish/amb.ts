@@ -4,6 +4,8 @@ import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
 import { slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { atributsEtiqueta, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
@@ -1168,18 +1170,35 @@ function ulladaAmb(data: AmbData): string {
 }
 
 export function renderAmb(data: AmbData, generatedAt: string): string {
-  const title = "Àrea Metropolitana de Barcelona — Observatori municipal de quivoto";
   const summary = summarySentence(data);
   const gran = data.municipis[0];
+  // El cap per al cercador. La descripció diu les dues xifres que fan l'àrea
+  // —municipis i habitants— i les cinc matèries que la pàgina explica; l'ens
+  // va com a `AdministrativeArea` dins de Catalunya, igual que una comarca.
+  const url = `${SITE}/observatori/amb/`;
+  const cap = capSeo({
+    titol: "Àrea Metropolitana de Barcelona: qui mana",
+    descripcio: `Els ${number(data.municipis.length)} municipis i ${number(data.habitants)} habitants de l'AMB: qui governa cadascun i què decideix l'Àrea Metropolitana, del transport i l'aigua a platges i habitatge.`,
+    url,
+    jsonLd: [
+      filAriadna([...ARREL_OBSERVATORI, { nom: "Àrea Metropolitana de Barcelona", url }]),
+      {
+        "@type": "AdministrativeArea",
+        "@id": `${url}#ens`,
+        name: "Àrea Metropolitana de Barcelona",
+        alternateName: "AMB",
+        url,
+        containedInPlace: { "@type": "AdministrativeArea", name: "Catalunya" },
+      },
+    ],
+  });
 
   return `<!doctype html>
 <html lang="ca">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>${escape(title)}</title>
-<meta name="description" content="Què decideix l'Àrea Metropolitana de Barcelona i què no: el transport, l'aigua, els residus, les platges i l'habitatge dels seus ${data.municipis.length} municipis, amb l'article de la llei al costat, i qui governa cadascun.">
+${cap}
 ${tipografia("../")}
 <style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${AMB_CSS}</style>
 </head>

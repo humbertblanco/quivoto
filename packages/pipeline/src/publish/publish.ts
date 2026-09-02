@@ -505,36 +505,129 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       run.say(`${preguntes.length} conjunts de preguntes de prova`);
     }
 
-    // Sitemap: es genera sempre, però només s'enllaça quan siguin indexables.
-    const lastmod = generatedAt;
-    const urls = [
-      `${SITE}/observatori/`,
-      `${SITE}/observatori/els947.html`,
-      `${SITE}/observatori/mapa/`,
-      `${SITE}/observatori/ranquings/`,
-      `${SITE}/observatori/dades/`,
-      `${SITE}/observatori/preguntes/`,
-      `${SITE}/observatori/comparador/`,
-      `${SITE}/observatori/partit/`,
-      ...partits.map((p) => `${SITE}/observatori/partit/${p.id}/`),
-      ...(amb ? [`${SITE}/observatori/amb/`] : []),
-      `${SITE}/observatori/c/`,
-      ...filesComarques.map((c) => `${SITE}/observatori/c/${c.slug}/`),
-      ...publicades.map((slug) => `${SITE}/observatori/m/${slug}/`),
+    /*
+     * Sitemap: es genera sempre, però només s'enllaça quan siguin indexables.
+     *
+     * Hi va tot el que hi ha publicat A DISC, no només el que s'acaba
+     * d'escriure: una publicació parcial (`--slug`) no pot fer desaparèixer del
+     * sitemap els altres 940 municipis. Per això les fitxes de persona i de
+     * candidatura es llegeixen del directori de cada municipi —el pipeline no
+     * en guarda cap llista— i el `lastmod` de cada adreça és la data del fitxer,
+     * que és l'única que un cercador pot contrastar amb el que li servim.
+     *
+     * Les prioritats diuen què volem que es rastregi primer: la portada i els
+     * municipis, després les seccions i, al final, les 12.000 fitxes de persona
+     * i candidatura. Si algun dia passen del límit del protocol (50.000 adreces
+     * o 50 MB per fitxer), el mateix `sitemap.xml` es converteix en un índex que
+     * apunta a un sitemap per tipus, sense canviar l'adreça que coneix robots.txt.
+     */
+    type AdrecaSitemap = { loc: string; lastmod: string; prioritat: string };
+    const OBS = `${SITE}/observatori`;
+    const dataDe = async (fitxer: string): Promise<string> => {
+      try {
+        return (await stat(fitxer)).mtime.toISOString().slice(0, 10);
+      } catch {
+        return generatedAt;
+      }
+    };
+    const adreca = async (cami: string, prioritat: string, fitxer = `${OUT_DIR}../${cami}index.html`): Promise<AdrecaSitemap> =>
+      ({ loc: `${OBS}/${cami}`, lastmod: await dataDe(fitxer), prioritat });
+    /** Subdirectoris d'un directori que tenen `index.html`, en ordre de nom. */
+    const fillsAmbFitxa = async (dir: string): Promise<string[]> => {
+      let noms: string[];
+      try {
+        noms = (await readdir(dir, { withFileTypes: true })).filter((e) => e.isDirectory()).map((e) => e.name);
+      } catch {
+        return [];
+      }
+      const amb: string[] = [];
+      for (const nom of noms.sort()) {
+        try {
+          if ((await stat(`${dir}/${nom}/index.html`)).isFile()) amb.push(nom);
+        } catch {
+          /* un directori sense fitxa (escuts, fotos…) no és cap pàgina */
+        }
+      }
+      return amb;
+    };
+
+    const seccions: AdrecaSitemap[] = [
+      await adreca("", "1.0"),
+      await adreca("els947.html", "0.9", `${OUT_DIR}../els947.html`),
+      await adreca("mapa/", "0.7"),
+      await adreca("ranquings/", "0.7"),
+      await adreca("dades/", "0.7"),
+      await adreca("comparador/", "0.7"),
+      await adreca("partit/", "0.7"),
+      ...(await Promise.all(partits.map((p) => adreca(`partit/${p.id}/`, "0.6")))),
+      await adreca("c/", "0.7"),
+      ...(await Promise.all(filesComarques.map((c) => adreca(`c/${c.slug}/`, "0.6")))),
+      ...(amb ? [await adreca("amb/", "0.7")] : []),
+      ...(trajectoria ? [await adreca("trajectoria/", "0.7")] : []),
     ];
-    await writeFile(
-      `${OUT_DIR}../sitemap.xml`,
-      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
-        .map(
-          (url, i) =>
-            `  <url><loc>${url}</loc><lastmod>${lastmod}</lastmod><changefreq>monthly</changefreq><priority>${
-              i < 2 ? "0.9" : "0.6"
-            }</priority></url>`,
-        )
-        .join("\n")}\n</urlset>\n`,
-      "utf8",
+    if (preguntes.length > 0) {
+      seccions.push(await adreca("preguntes/", "0.7"));
+      for (const conjunt of preguntes) {
+        seccions.push(await adreca(`preguntes/${conjunt.slug}/`, "0.6"));
+        // La demostració només existeix si el conjunt s'aguanta en actes.
+        try {
+          await stat(`${OUT_DIR}../preguntes/${conjunt.slug}/prova/index.html`);
+          seccions.push(await adreca(`preguntes/${conjunt.slug}/prova/`, "0.5"));
+        } catch {
+          /* sense demostració */
+        }
+      }
+    }
+    const municipis: AdrecaSitemap[] = [];
+    const candidaturesSitemap: AdrecaSitemap[] = [];
+    const persones: AdrecaSitemap[] = [];
+    for (const slug of publicades) {
+      municipis.push(await adreca(`m/${slug}/`, "0.8", `${OUT_DIR}${slug}/index.html`));
+      for (const fill of await fillsAmbFitxa(`${OUT_DIR}${slug}`)) {
+        if (fill === "regidor") continue;
+        candidaturesSitemap.push(await adreca(`m/${slug}/${fill}/`, "0.5", `${OUT_DIR}${slug}/${fill}/index.html`));
+      }
+      for (const persona of await fillsAmbFitxa(`${OUT_DIR}${slug}/regidor`)) {
+        persones.push(await adreca(`m/${slug}/regidor/${persona}/`, "0.5", `${OUT_DIR}${slug}/regidor/${persona}/index.html`));
+      }
+    }
+
+    const escapaXml = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const urlset = (llista: readonly AdrecaSitemap[]) =>
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${llista
+        .map((a) => `  <url><loc>${escapaXml(a.loc)}</loc><lastmod>${a.lastmod}</lastmod><priority>${a.prioritat}</priority></url>`)
+        .join("\n")}\n</urlset>\n`;
+    const grups: readonly [string, readonly AdrecaSitemap[]][] = [
+      ["seccions", seccions],
+      ["municipis", municipis],
+      ["candidatures", candidaturesSitemap],
+      ["persones", persones],
+    ];
+    const totesLesAdreces = grups.flatMap(([, llista]) => llista);
+    const unSolFitxer = urlset(totesLesAdreces);
+    // Límits del protocol: 50.000 adreces i 50 MB (sense comprimir) per fitxer.
+    const capAlLimit = totesLesAdreces.length > 50_000 || Buffer.byteLength(unSolFitxer, "utf8") > 50 * 1024 * 1024;
+    if (!capAlLimit) {
+      await writeFile(`${OUT_DIR}../sitemap.xml`, unSolFitxer, "utf8");
+      // Si abans s'havia hagut de dividir, que no quedin fitxers orfes.
+      for (const [nom] of grups) await rm(`${OUT_DIR}../sitemap-${nom}.xml`, { force: true });
+    } else {
+      for (const [nom, llista] of grups) {
+        await writeFile(`${OUT_DIR}../sitemap-${nom}.xml`, urlset(llista), "utf8");
+      }
+      await writeFile(
+        `${OUT_DIR}../sitemap.xml`,
+        `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${grups
+          .map(([nom]) => `  <sitemap><loc>${OBS}/sitemap-${nom}.xml</loc><lastmod>${generatedAt}</lastmod></sitemap>`)
+          .join("\n")}\n</sitemapindex>\n`,
+        "utf8",
+      );
+    }
+    run.say(
+      `sitemap amb ${totesLesAdreces.length} adreces (${municipis.length} municipis · ${candidaturesSitemap.length} candidatures · ${persones.length} persones)${
+        capAlLimit ? ", dividit en un índex per tipus" : ""
+      } · ${INDEXABLE ? "indexable" : "encara amb noindex"}`,
     );
-    run.say(`sitemap amb ${urls.length} adreces · ${INDEXABLE ? "indexable" : "encara amb noindex"}`);
 
     // La portada de l'Observatori: es genera amb la resta perquè els números que
     // hi surten siguin els que s'acaben de publicar, i la mostra (municipis

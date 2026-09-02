@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
   ambSigne, extrems, medianaDe, nomsMarca, ordinal, PAS, posicioMarca, preparaRanquings, renderRanquings, respecteMediana,
   valorMarca, type RankingRow,
@@ -228,5 +229,43 @@ describe("nomsMarca i valorMarca", () => {
     expect(valorMarca([3], fmt)).toBe("3 €");
     expect(valorMarca([3, 3], fmt)).toBe("3 €");
     expect(valorMarca([3.2, 3, 3.1], fmt)).toBe("de 3 € a 3.2 €");
+  });
+});
+
+describe("el cap SEO dels rànquings", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderRanquings(files(), "2026-09-01");
+
+  it("compta els rànquings publicats de debò, no les mètriques que existeixen", () => {
+    expect(titolDe(html)).toBe("Rànquings municipals de Catalunya · quivoto");
+    expect(descripcioDe(html)).toBe(
+      `${ids(files()).length} rànquings dels 100 municipis de Catalunya: qui és a dalt i qui a baix de cada indicador, amb l'any, la font i el que la xifra no diu.`,
+    );
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/ranquings/">');
+  });
+
+  it("sense cap rànquing publicat no escriu «0 rànquings»", () => {
+    expect(descripcioDe(renderRanquings(files(10), "avui"))).toMatch(/^Els rànquings dels 10 municipis/);
+  });
+
+  it("porta el fil d'Ariadna fins als rànquings", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Rànquings municipals"]);
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import { geometria, renderMapaCatalunya } from "./mapa-catalunya";
 import type { Els947Row } from "./els947";
 import type { VotsPartit } from "./vots-partit";
@@ -559,5 +560,38 @@ describe("on es vota més cada partit", () => {
     const descripcio = /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
     expect(descripcio).toContain("on es vota més cada partit");
     expect(descripcio).not.toContain("ERC");
+  });
+});
+
+describe("el cap SEO del mapa", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderMapaCatalunya(Object.keys(geometria.municipis).map((s) => fila(s)), "2026-08-29");
+
+  it("es titula amb el compte de municipis i descriu tres capes i compta la resta", () => {
+    expect(titolDe(html)).toBe("Mapa dels 947 municipis · quivoto");
+    expect(descripcioDe(html)).toMatch(/^Els 947 municipis de Catalunya pintats per qui mana, majoria absoluta, pactes i \d+ capes més/);
+    expect(descripcioDe(html)).toMatch(/Cada un porta a la seva fitxa\.$/);
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/mapa/">');
+  });
+
+  it("porta el fil d'Ariadna fins al mapa", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Mapa dels 947 municipis"]);
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

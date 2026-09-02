@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
   TRAJECTORIA_CSS,
   llistaDestins,
@@ -440,5 +441,37 @@ describe("renderTrajectoriaElectes", () => {
     // full que escriu aquest fitxer es pot comprovar; a la pàgina sencera no,
     // perquè el cercador hi serialitza funcions que no són d'aquí.
     expect(TRAJECTORIA_CSS).not.toContain("\u0060");
+  });
+});
+
+describe("el cap SEO de la trajectòria", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderTrajectoriaElectes(DADES, "avui");
+
+  it("porta el numerador i el denominador a la descripció, i canònica —abans no en tenia", () => {
+    expect(titolDe(html)).toBe("D'on surten els que manen · quivoto");
+    expect(descripcioDe(html)).toMatch(/^284 de 2\.917 alcaldes catalans que Wikidata coneix des del 1979 han fet el salt per sobre de l'ajuntament\. Els \d+ municipis d'on surten i què feien abans\.$/);
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/trajectoria/">');
+  });
+
+  it("porta el fil d'Ariadna fins a la pàgina", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "D'on surten els que manen"]);
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

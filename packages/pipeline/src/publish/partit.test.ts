@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
   marcaDe, renderPartit, tintaSobre,
   type PartitData, type PartitMunicipi, type PartitRenda, type PartitRetribucions,
@@ -830,5 +831,49 @@ describe("la renda dels pobles que governa", () => {
     const html = renderPartit(mostra({ renda: null }), "2026-08-30");
     expect(html).not.toContain('id="renda"');
     expect(html).not.toContain("La renda dels pobles que governa");
+  });
+});
+
+describe("el cap SEO del partit", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderPartit(mostra(), "2026-08-30");
+
+  it("es titula amb les sigles i descriu amb el resum d'obertura, com a article", () => {
+    expect(titolDe(html)).toBe("PSC als ajuntaments de Catalunya · quivoto");
+    expect(descripcioDe(html)).toBe(
+      "PSC té 2 alcaldies, 1.450 regidories i governa 58.800 habitants de Catalunya. On mana i com li ha anat des del 1979.",
+    );
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/partit/psc/">');
+    expect(html).toContain('<meta property="og:type" content="article">');
+  });
+
+  it("sense cap alcaldia ho diu igual a la descripció", () => {
+    const sense = renderPartit(mostra({ alcaldies: 0, regidories: 40 }), "avui");
+    expect(descripcioDe(sense)).toBe("PSC no té cap alcaldia a Catalunya: hi té 40 regidories, totes a l'oposició. On mana i com li ha anat des del 1979.");
+  });
+
+  it("passa per l'índex de partits al fil d'Ariadna i declara l'Organization amb el nom sencer", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Els partits", "PSC"]);
+    const org = jsonLdDe(html).find((o) => o["@type"] === "Organization")!;
+    expect(org.name).toBe("Partit dels Socialistes de Catalunya");
+    expect(org.alternateName).toBe("PSC");
+    expect(org.url).toBeUndefined();
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });

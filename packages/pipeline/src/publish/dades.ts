@@ -7,6 +7,8 @@ import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { SITE } from "./config";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, ORGANITZACIO } from "./seo";
 import { SOURCES, type SourceKey } from "./source-registry";
 import { FONTS_CSS, renderSourcesList, writeSourceCatalogue, type PublishedField } from "./source-catalogue";
 
@@ -1465,15 +1467,55 @@ ${FONTS_CSS}
 @media(max-width:720px){.llicencies{grid-template-columns:1fr}}
 `;
 
+/**
+ * El `Dataset` de schema.org per al fitxer de Catalunya: és el que fa que un
+ * cercador de dades (Google Dataset Search, per exemple) trobi el CSV sense
+ * haver de llegir la pàgina. Els dos fitxers hi van com a `DataDownload` amb
+ * el seu format; els de municipi, no: són 947 i el que es vol trobar és el
+ * conjunt, no cada tros. La llicència és la de les dades derivades, que és
+ * l'única que podem donar: les d'origen conserven la seva, i la pàgina ho diu.
+ */
+export function datasetCatalunya(url: string, descripcio: string, municipis: number): Record<string, unknown> {
+  return {
+    "@type": "Dataset",
+    "@id": `${url}#dataset`,
+    name: `Observatori municipal de quivoto: indicadors dels ${municipis.toLocaleString("ca-ES")} municipis de Catalunya`,
+    description: descripcio,
+    url,
+    inLanguage: "ca",
+    license: "https://creativecommons.org/licenses/by/4.0/",
+    isAccessibleForFree: true,
+    creator: { "@id": ORGANITZACIO["@id"] },
+    spatialCoverage: "Catalunya",
+    distribution: [
+      { "@type": "DataDownload", encodingFormat: "text/csv", contentUrl: `${url}catalunya.csv` },
+      { "@type": "DataDownload", encodingFormat: "application/json", contentUrl: `${url}catalunya.json` },
+    ],
+  };
+}
+
 export function renderDadesIndex(generatedAt: string, stats: { municipis: number; camps: number }): string {
   const municipis = stats.municipis.toLocaleString("ca-ES");
+  // El cap per al cercador. Aquesta pàgina no tenia ni canònica ni `robots`:
+  // era l'única de l'Observatori que s'indexava sense demanar-ho.
+  const url = `${SITE}/observatori/dades/`;
+  const descripcio = `Els indicadors dels ${municipis} municipis de Catalunya en CSV i JSON: ${stats.camps} camps documentats, la font de cadascun i llicència CC BY 4.0. Fitxers, no una API.`;
+  const cap = capSeo({
+    titol: "Dades obertes de l'Observatori",
+    descripcio,
+    url,
+    jsonLd: [
+      filAriadna([...ARREL_OBSERVATORI, { nom: "Dades obertes", url }]),
+      ORGANITZACIO,
+      datasetCatalunya(url, descripcio, stats.municipis),
+    ],
+  });
   return `<!doctype html>
 <html lang="ca">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Descarrega les dades · Observatori de quivoto</title>
-<meta name="description" content="Els indicadors dels ${municipis} municipis de l'Observatori en CSV i JSON, amb l'esquema documentat i la font de cada camp. Fitxers, no una API.">
+${cap}
 ${tipografia("../")}
 <style>${DADES_CSS}</style>
 </head>

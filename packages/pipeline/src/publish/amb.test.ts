@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
   COMPETENCIES,
   DINERS,
@@ -207,7 +208,7 @@ describe("renderAmb", () => {
   it("porta títol, full d'estil, mascota i peu, perquè és una pàgina autònoma", () => {
     const html = renderAmb(amb(), "2026-08-29");
     expect(html.startsWith("<!doctype html>")).toBe(true);
-    expect(html).toContain("<title>Àrea Metropolitana de Barcelona — Observatori municipal de quivoto</title>");
+    expect(html).toContain("<title>Àrea Metropolitana de Barcelona: qui mana · quivoto</title>");
     expect(html).toContain("--paper:#FBF7EE");
     expect(html).toContain("mascota de quivoto");
     // El peu compartit escriu la data amb les seves paraules; el que ha de ser
@@ -507,5 +508,42 @@ describe("on cau l'àrea i com hi queda cada poble", () => {
     const html = renderAmb(amb(), "2026-08-29");
     expect(html).toContain(".portada .presenta h1{font-size:clamp(");
     expect(html).toContain("vw");
+  });
+});
+
+describe("el cap SEO de l'Àrea Metropolitana", () => {
+  const titolDe = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1]!;
+  const descripcioDe = (html: string): string => /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+  const jsonLdDe = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  const filDe = (html: string): { name: string; item: string }[] =>
+    (jsonLdDe(html).find((o) => o["@type"] === "BreadcrumbList")!.itemListElement as { name: string; item: string }[]);
+
+  const html = renderAmb(amb(), "2026-08-29");
+
+  it("diu municipis i habitants a la descripció i té canònica —abans no en tenia", () => {
+    expect(titolDe(html)).toBe("Àrea Metropolitana de Barcelona: qui mana · quivoto");
+    expect(descripcioDe(html)).toBe(
+      "Els 1 municipis i 3.468.778 habitants de l'AMB: qui governa cadascun i què decideix l'Àrea Metropolitana, del transport i l'aigua a platges i habitatge.",
+    );
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/amb/">');
+  });
+
+  it("és un ens dins de Catalunya, amb el fil d'Ariadna al costat", () => {
+    expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Àrea Metropolitana de Barcelona"]);
+    const ens = jsonLdDe(html).find((o) => o["@type"] === "AdministrativeArea")!;
+    expect(ens.name).toBe("Àrea Metropolitana de Barcelona");
+    expect(ens.containedInPlace).toEqual({ "@type": "AdministrativeArea", name: "Catalunya" });
+  });
+
+  it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
+    expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
+    expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);
+    expect(descripcioDe(html)).not.toMatch(/…$/);
+  });
+
+  it("té un sol <h1>", () => {
+    expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });
