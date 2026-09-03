@@ -16,6 +16,8 @@ import {
 import type { SeriesMunicipi } from "./series-grup";
 import type { Continuitat, PuntVolatilitat, VotPerdutElecció } from "../derive/trajectoria";
 import { hemicycle, seientsHemicicle } from "./hemicycle";
+import { renderTerritori } from "./territori-fitxa";
+import type { TerritoriMetric } from "../jobs/j32-territori";
 import { icona } from "./icones";
 import { renderMapa, type PuntMapa } from "./mapa";
 import { assignaSlugs } from "./candidatura";
@@ -2450,6 +2452,8 @@ export type RadiografiaData = {
    * una papereta. Dir-ho a la fitxa és tan important com dir qui hi governa.
    */
   amb: { member: boolean; municipis: number; materies: string[] } | null;
+  /** Superfície, altitud, densitat i gentilici (J32, kind «territori»). */
+  territori?: TerritoriMetric | null;
   participation: (typeof electionParticipation.$inferSelect)[];
   /** Incidències obertes que afecten aquest municipi, si n'hi ha. */
   issues: { kind: string; severity: string; entity: string | null; detail: unknown }[];
@@ -6052,7 +6056,7 @@ ${cercador(BASE)}
     `<div class="titol-amb-escut">${escutMunicipi(data.imatges, { municipi: m.name })}<h1>${escape(m.name)}</h1></div>`
   }
   <p class="entrada">
-    ${number(m.population ?? 0)} habitants · ${totalSeats} regidories al ple ·
+    ${renderTerritori({ habitants: m.population, superficie: data.territori?.superficie?.valor ?? null, altitud: data.territori?.altitud?.valor ?? null, densitat: data.territori?.densitat?.valor ?? null, gentilici: data.territori?.gentilici ?? null }) || `${number(m.population ?? 0)} habitants`} · ${totalSeats} regidories al ple ·
     ${m.electoralSystem === "llistes tancades" ? "llistes tancades" : escape(m.electoralSystem)}
   </p>
   ${resum ? `<p class="resum">${resum}</p>` : ""}
@@ -6181,6 +6185,7 @@ export async function loadRadiografia(db: Db, slug: string, generatedAt: string)
     cartipas: (byKind.get("cartipas") ?? null) as CartipasMetric | null,
     organismes: (byKind.get("organismes") ?? null) as OrganismesMetric | null,
     amb: (byKind.get("amb") ?? null) as RadiografiaData["amb"],
+    territori: (byKind.get("territori") ?? null) as TerritoriMetric | null,
     councillors: await db
       .select({
         name: people.fullName,

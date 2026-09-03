@@ -13,6 +13,7 @@ import { partitDe, sigla } from "./sigla";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { nomLlegible, slugify } from "../lib/text";
+import type { TerritoriMetric } from "../jobs/j32-territori";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -150,6 +151,8 @@ export type Els947Row = {
    * dada». És la mateixa regla que aplica la pàgina de comarca.
    */
   sa?: number | null;
+  /** territori (J32): km², metres del nucli de l'ajuntament, gentilici masculí plural, hab./km² */
+  sup?: number | null; alt?: number | null; gen?: string | null; dens?: number | null;
 };
 
 /**
@@ -204,6 +207,7 @@ const KINDS_ELS947: string[] = [
   // persona; d'aquí només en surt una xifra —`ministeri.alcaldia.euros`, i
   // només si és un sou— i la resta es llegeix i es llença.
   "retribucions",
+  "territori",
 ];
 
 /**
@@ -422,6 +426,7 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         | undefined;
       const renda =
         riquesa?.indicadors?.find((i) => i.clau === "rendaNetaPersona")?.valor ?? null;
+      const territori = llegeix("territori") as TerritoriMetric | undefined;
       const rendaMediana =
         riquesa?.indicadors?.find((i) => i.clau === "medianaUnitatConsum")?.valor ?? null;
 
@@ -465,6 +470,10 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         rm: rendaMediana,
         rma: rendaMediana === null ? null : riquesa?.any ?? null,
         sa: souAlcaldia(llegeix("retribucions")),
+        sup: territori?.superficie?.valor ?? null,
+        alt: territori?.altitud?.valor ?? null,
+        gen: territori?.gentilici ?? null,
+        dens: territori?.densitat?.valor ?? null,
       };
     })
     .sort((a, b) => b.p - a.p);

@@ -35,6 +35,7 @@ import { cercador } from "./cercador";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { cohortHomogenia, extremsEmpatats } from "./contracte-metriques";
+import { curiositatsTerritori } from "./territori-fitxa";
 import { CURIOSITATS_CSS, preparaCuriositats, renderCuriositats, type DadesCuriositats } from "./curiositats";
 import { atributsEtiqueta, GRAFICS_CSS, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { peu } from "./peu";
@@ -719,7 +720,7 @@ export function renderRanquings(
   const preparats = preparaRanquings(rows);
   const grups = grupsOrdenats(rows, buildPeerGroups(rows.map((r, id) => ({ id, population: r.p }))));
   const targetes = preparats.map(targetaExtrems).join("\n");
-  const fets = curiositats ? preparaCuriositats(rows, curiositats) : [];
+  const fets = curiositats ? [...preparaCuriositats(rows, curiositats), ...curiositatsTerritori(rows, { consultat: generatedAt })] : [];
   const cos = preparats.length
     ? `<section class="bloc" id="destaquen">
   <h2>Destaquen</h2>
