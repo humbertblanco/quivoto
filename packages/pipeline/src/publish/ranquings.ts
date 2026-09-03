@@ -36,6 +36,8 @@ import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { cohortHomogenia, extremsEmpatats } from "./contracte-metriques";
 import { curiositatsTerritori } from "./territori-fitxa";
+import { curiositatsWikidata } from "./wikidata-fitxa";
+import { curiositatsVehicles } from "./vehicles-fitxa";
 import { CURIOSITATS_CSS, preparaCuriositats, renderCuriositats, type DadesCuriositats } from "./curiositats";
 import { atributsEtiqueta, GRAFICS_CSS, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { peu } from "./peu";
@@ -66,6 +68,8 @@ export type RankingRow = {
   ibi?: number | null; ibia?: number | null;
   /** canvis de la força més votada des del 1979, i quantes eleccions tenen dada */
   v?: number | null; q?: number | null;
+  /** vehicles per 1.000 habitants i any de la dada (Idescat, a partir de la DGT) */
+  veh?: number | null; veha?: number | null;
   /*
    * Els camps que segueixen no fan cap rànquing: els llegeixen les curiositats
    * (`curiositats.ts`), que comparteixen la fila per no tornar a carregar els
@@ -154,6 +158,14 @@ export const METRIQUES: readonly Metrica[] = [
     font: "Idescat · impost sobre béns immobles urbans",
     metode: "Quota íntegra urbana dividida pel nombre de rebuts de l'exercici.",
     cautela: "Depèn alhora del tipus que fixa l'ajuntament i dels valors cadastrals dels immobles, que no els fixa ell.",
+  },
+  {
+    id: "vehicles", titol: "Vehicles per 1.000 habitants",
+    valor: (r) => r.veh, periode: (r) => r.veha,
+    decimals: 0, sufix: " per 1.000 hab.",
+    font: "Idescat, a partir de la DGT · parc de vehicles",
+    metode: "Vehicles amb permís de circulació domiciliats al municipi, per cada 1.000 habitants del padró de l'any de la dada.",
+    cautela: "Compta els vehicles domiciliats, no els que hi circulen: una empresa de lloguer o una flota d'autocars poden posar-hi més vehicles que veïns, i als pobles petits cent vehicles mouen molt la taxa. Depèn del transport públic i de la dispersió, no del govern municipal.",
   },
   {
     id: "alternances", titol: "Canvis de força més votada",
@@ -720,7 +732,7 @@ export function renderRanquings(
   const preparats = preparaRanquings(rows);
   const grups = grupsOrdenats(rows, buildPeerGroups(rows.map((r, id) => ({ id, population: r.p }))));
   const targetes = preparats.map(targetaExtrems).join("\n");
-  const fets = curiositats ? [...preparaCuriositats(rows, curiositats), ...curiositatsTerritori(rows, { consultat: generatedAt })] : [];
+  const fets = curiositats ? [...preparaCuriositats(rows, curiositats), ...curiositatsTerritori(rows, { consultat: generatedAt }), ...curiositatsWikidata(rows), ...curiositatsVehicles(rows)] : [];
   const cos = preparats.length
     ? `<section class="bloc" id="destaquen">
   <h2>Destaquen</h2>

@@ -17,6 +17,10 @@ import type { SeriesMunicipi } from "./series-grup";
 import type { Continuitat, PuntVolatilitat, VotPerdutElecció } from "../derive/trajectoria";
 import { hemicycle, seientsHemicicle } from "./hemicycle";
 import { renderTerritori } from "./territori-fitxa";
+import { WIKIDATA_FITXA_CSS, renderAgermanaments, renderNascuts } from "./wikidata-fitxa";
+import type { FitxaCuriositatsWikidata } from "../jobs/j33-municipi-wikidata";
+import { renderVehiclesBloc } from "./vehicles-fitxa";
+import type { VehiclesMetric } from "../jobs/j34-vehicles";
 import type { TerritoriMetric } from "../jobs/j32-territori";
 import { icona } from "./icones";
 import { renderMapa, type PuntMapa } from "./mapa";
@@ -2454,6 +2458,10 @@ export type RadiografiaData = {
   amb: { member: boolean; municipis: number; materies: string[] } | null;
   /** Superfície, altitud, densitat i gentilici (J32, kind «territori»). */
   territori?: TerritoriMetric | null;
+  /** Agermanaments i persones nascudes al municipi segons Wikidata (J33). */
+  curiositatsWikidata?: FitxaCuriositatsWikidata | null;
+  /** Parc de vehicles per mil habitants (J34, Idescat a partir de la DGT). */
+  vehicles?: VehiclesMetric | null;
   participation: (typeof electionParticipation.$inferSelect)[];
   /** Incidències obertes que afecten aquest municipi, si n'hi ha. */
   issues: { kind: string; severity: string; entity: string | null; detail: unknown }[];
@@ -5813,6 +5821,16 @@ export function renderRadiografia(
   const participacio = renderTurnout(data.participation, medianes);
   const quiHiViu = data.poblacio ? renderQuiHiViu(data.poblacio, data.riquesa) : "";
   const donesIHomes = data.parity ? renderParitat(data.parity, medianes) : "";
+  /*
+   * Els dos blocs de Wikidata vénen amb la seva pròpia <section> i el seu h2
+   * (wikidata-fitxa.ts els fa autònoms per a qualsevol pàgina); aquí el
+   * registre de seccions ja posa l'embolcall i el títol, així que se'ls treu
+   * el seu per no tenir una secció dins d'una secció.
+   */
+  const cosDeSeccio = (html: string): string =>
+    html.replace(/^\s*<section[^>]*>\s*<h2>[^<]*<\/h2>/, "").replace(/<\/section>\s*$/, "");
+  const agermanaments = cosDeSeccio(renderAgermanaments(data.curiositatsWikidata));
+  const nascuts = cosDeSeccio(renderNascuts(data.curiositatsWikidata));
 
   const papers = renderPapers(data.cartipas, data.ordenances, data.organismes);
   const detall = data.transparency?.detail ?? [];
@@ -5929,6 +5947,7 @@ export function renderRadiografia(
           coberts: seguretat?.coberts ?? null,
         }),
       },
+      { id: "vehicles", titol: "Quants vehicles hi ha", curt: "Vehicles", html: renderVehiclesBloc(data.vehicles ?? null) },
       {
         id: "diners",
         titol: ambDiners ? "Els diners: quants són, d'on surten i on van" : "D'on surten i on van els diners",
@@ -5979,6 +5998,8 @@ export function renderRadiografia(
       { id: "participacio", titol: "Qui hi va anar a votar", curt: "Participació", icona: "participació", html: participacio },
       { id: "qui-hi-viu", titol: "Qui hi viu", icona: "serveis socials", html: quiHiViu },
       { id: "dones-i-homes", titol: "Dones i homes", html: donesIHomes },
+      { id: "agermanaments", titol: "Agermanaments", html: agermanaments },
+      { id: "nascuts", titol: "Nascuts aquí, segons Wikidata", curt: "Nascuts aquí", html: nascuts },
       {
         id: "dades",
         titol: "Què en sabem i què no",
@@ -6029,7 +6050,7 @@ ${capSeo({
   jsonLd: [fil, municipiJsonLd(m, url, coordenades(m, mapa))],
 })}
 ${tipografia(BASE)}
-<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}</style>
+<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}${WIKIDATA_FITXA_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -6186,6 +6207,8 @@ export async function loadRadiografia(db: Db, slug: string, generatedAt: string)
     organismes: (byKind.get("organismes") ?? null) as OrganismesMetric | null,
     amb: (byKind.get("amb") ?? null) as RadiografiaData["amb"],
     territori: (byKind.get("territori") ?? null) as TerritoriMetric | null,
+    curiositatsWikidata: (byKind.get("curiositatsWikidata") ?? null) as FitxaCuriositatsWikidata | null,
+    vehicles: (byKind.get("vehicles") ?? null) as VehiclesMetric | null,
     councillors: await db
       .select({
         name: people.fullName,

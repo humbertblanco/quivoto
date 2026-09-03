@@ -1,0 +1,112 @@
+{
+ "fitxes": {
+  "p": "i=f19,f325,f272,f326,f163;tipus=mun",
+  "indicadors": {
+   "i": [
+    {
+     "r": "2024",
+     "c": "Turismes",
+     "s": "Idescat, a partir de la DGT.",
+     "t": {
+      "id": "t18",
+      "content": "Parc de vehicles"
+     },
+     "u": "",
+     "v": "168,7410,487185,46124,95235,628",
+     "id": "f19",
+     "updated": "2025-11-10T11:00:00+00:00"
+    },
+    {
+     "r": "2024",
+     "c": "Motocicletes",
+     "s": "Idescat, a partir de la DGT.",
+     "t": {
+      "id": "t18",
+      "content": "Parc de vehicles"
+     },
+     "u": "",
+     "v": "16,1520,265348,12436,18663,162",
+     "id": "f325",
+     "updated": "2025-11-10T11:00:00+00:00"
+    },
+    {
+     "r": "2024",
+     "c": "Vehicles industrials",
+     "s": "Idescat, a partir de la DGT.",
+     "t": {
+      "id": "t18",
+      "content": "Parc de vehicles"
+     },
+     "u": "",
+     "v": "202,1219,92730,9815,16867,240",
+     "id": "f272",
+     "updated": "2025-11-10T11:00:00+00:00"
+    },
+    {
+     "r": "2024",
+     "c": "Altres vehicles",
+     "s": "Idescat, a partir de la DGT.",
+     "t": {
+      "id": "t18",
+      "content": "Parc de vehicles"
+     },
+     "u": "",
+     "v": "130,912,18901,1922,3715,33",
+     "id": "f326",
+     "updated": "2025-11-10T11:00:00+00:00"
+    },
+    {
+     "r": "2024",
+     "c": "Parc de vehicles",
+     "s": "Idescat, a partir de la DGT.",
+     "t": {
+      "id": "t18",
+      "content": "Parc de vehicles"
+     },
+     "u": "",
+     "v": "516,11061,864164,70297,134480,1063",
+     "id": "f163",
+     "updated": "2025-11-10T11:00:00+00:00"
+    }
+   ]
+  },
+  "lang": "ca",
+  "version": "1.00",
+  "cols": {
+   "col": [
+    {
+     "scheme": "mun",
+     "id": "250019",
+     "content": "Abella de la Conca"
+    },
+    {
+     "scheme": "mun",
+     "id": "080018",
+     "content": "Abrera"
+    },
+    {
+     "scheme": "mun",
+     "id": "080193",
+     "content": "Barcelona"
+    },
+    {
+     "scheme": "mun",
+     "id": "170792",
+     "content": "Girona"
+    },
+    {
+     "scheme": "mun",
+     "id": "081878",
+     "content": "Sabadell"
+    },
+    {
+     "scheme": "mun",
+     "id": "430521",
+     "content": "Xerta"
+    }
+   ]
+  },
+  "n": "5",
+  "o": "dades"
+ }
+}

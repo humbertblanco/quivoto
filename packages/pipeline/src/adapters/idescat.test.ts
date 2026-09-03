@@ -6,7 +6,9 @@ import {
   PALMEROLA,
   filtresNoAplicats,
   parseEmexFitxa,
+  parseEmexMassiu,
   parseJsonStat,
+  urlEmexMassiu,
   type CelaJsonStat,
 } from "./idescat";
 
@@ -238,5 +240,54 @@ describe("parseEmexFitxa", () => {
   it("es planta amb una resposta d'error de l'EMEX", () => {
     expect(() => parseEmexFitxa({ fitxes: { p: "id=", error: "404" } })).toThrow(/404/);
     expect(() => parseEmexFitxa({})).toThrow(/fitxes/);
+  });
+});
+
+describe("parseEmexMassiu", () => {
+  /**
+   * Resposta real de `dades.json?tipus=mun&i=f19,f325,f272,f326,f163` del
+   * 3 de setembre del 2026, retallada a sis municipis i intacta en tot la
+   * resta: els vectors `v` porten els valors en l'ordre de `cols`.
+   */
+  const massiu = parseEmexMassiu(fixture("idescat-emex-vehicles-mun.json"));
+
+  it("aparella cada valor amb el municipi de la seva posició, per codi", () => {
+    expect(massiu.municipis.map((m) => m.idescat6)).toEqual(["250019", "080018", "080193", "170792", "081878", "430521"]);
+    const turismes = massiu.indicadors.find((i) => i.id === "f19")!;
+    expect(turismes.valors.get("170792")).toBe(46124);
+    expect(turismes.valors.get("250019")).toBe(168);
+    expect(massiu.indicadors.find((i) => i.id === "f163")!.valors.get("080193")).toBe(864164);
+  });
+
+  it("porta l'any, la taula, la font i la data que declara l'API, sense tocar-los", () => {
+    const total = massiu.indicadors.find((i) => i.id === "f163")!;
+    expect(total.any).toBe(2024);
+    expect(total.taula).toEqual({ id: "t18", nom: "Parc de vehicles" });
+    expect(total.font).toBe("Idescat, a partir de la DGT.");
+    expect(total.updated).toBe("2025-11-10T11:00:00+00:00");
+  });
+
+  it("es planta si un vector no té tants valors com municipis", () => {
+    const brut = JSON.parse(JSON.stringify(fixture("idescat-emex-vehicles-mun.json"))) as {
+      fitxes: { indicadors: { i: { v: string }[] } };
+    };
+    brut.fitxes.indicadors.i[0]!.v = "1,2,3";
+    expect(() => parseEmexMassiu(brut)).toThrow(/no es pot aparellar/);
+  });
+
+  it("una cel·la que no és un número és absència, no zero", () => {
+    const brut = JSON.parse(JSON.stringify(fixture("idescat-emex-vehicles-mun.json"))) as {
+      fitxes: { indicadors: { i: { v: string }[] } };
+    };
+    brut.fitxes.indicadors.i[0]!.v = "168,..,487185,46124,,628";
+    const parsejat = parseEmexMassiu(brut);
+    const valors = parsejat.indicadors[0]!.valors;
+    expect(valors.get("080018")).toBeNull();
+    expect(valors.get("081878")).toBeNull();
+    expect(valors.get("430521")).toBe(628);
+  });
+
+  it("l'URL del mode massiu porta els indicadors i el tipus", () => {
+    expect(urlEmexMassiu(["f19", "f163"])).toBe("https://api.idescat.cat/emex/v1/dades.json?tipus=mun&i=f19%2Cf163&lang=ca");
   });
 });

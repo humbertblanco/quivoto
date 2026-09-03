@@ -439,3 +439,113 @@ export async function emexFitxa(idescat6: string, delayMs = 250): Promise<FitxaE
   const resposta = await fetchJson<unknown>(url.toString(), { delayMs, timeoutMs: 60_000 });
   return parseEmexFitxa(resposta);
 }
+
+// ─── Fitxa municipal (EMEX), mode massiu: un indicador per als 947 alhora ────
+
+/**
+ * Un indicador de l'EMEX demanat en mode massiu: la mateixa xifra per a tots
+ * els municipis d'una tirada, amb l'any i la font que declara l'API.
+ */
+export type IndicadorMassiu = {
+  /** Identificador de l'indicador: `f19`, `f163`… */
+  id: string;
+  /** Nom de l'indicador, tal com el dona l'API («Turismes»). */
+  nom: string;
+  /** La taula de la fitxa d'on surt: `t18` «Parc de vehicles». */
+  taula: { id: string; nom: string };
+  /** Any de referència que declara l'API, o `null` si no és un any. */
+  any: number | null;
+  /** Atribució de la font, literal («Idescat, a partir de la DGT.»). */
+  font: string;
+  unitat: string;
+  /** Data d'actualització que declara l'Idescat. */
+  updated: string | null;
+  /** Valor per municipi, per codi Idescat de sis xifres. `null` és «no hi ha dada». */
+  valors: Map<string, number | null>;
+};
+
+export type EmexMassiu = {
+  /** Els municipis, en l'ordre de l'API, amb el nom tal com l'escriu l'Idescat. */
+  municipis: { idescat6: string; nom: string }[];
+  indicadors: IndicadorMassiu[];
+};
+
+/**
+ * Llegeix la resposta de `dades.json?tipus=mun&i=…`.
+ *
+ * En mode massiu l'API no torna una fitxa per municipi sinó un vector `v` per
+ * indicador: els valors dels 947 municipis separats per comes, **en l'ordre de
+ * `cols`**. L'aparellament és per posició, i per això aquí es converteix de
+ * seguida en un mapa per codi: qui llegeixi el vector per posició en un altre
+ * lloc confondria municipis el dia que l'Idescat canviï l'ordre. Un vector més
+ * curt o més llarg que la llista de municipis és un error i no una dada.
+ *
+ * Els valors que no són un número (una cel·la buida o un `..`) queden com a
+ * `null`: no hi ha dada, i no és cap zero.
+ */
+export function parseEmexMassiu(brut: unknown): EmexMassiu {
+  const fitxes = (brut as { fitxes?: Record<string, unknown> })?.fitxes;
+  if (!fitxes) throw new Error("resposta de l'EMEX sense el bloc `fitxes`");
+  if (fitxes.error) throw new Error(`l'EMEX ha respost un error ${String(fitxes.error)}`);
+
+  const cols = llista((fitxes.cols as { col?: unknown } | undefined)?.col as NodeEmex | NodeEmex[]);
+  const municipis = cols
+    .filter((c) => (c as { scheme?: string }).scheme === "mun" && c.id)
+    .map((c) => ({ idescat6: String(c.id), nom: String((c as { content?: string }).content ?? "") }));
+  if (municipis.length === 0) throw new Error("resposta massiva de l'EMEX sense cap municipi a `cols`");
+
+  type NodeIndicador = {
+    id?: string; c?: string; r?: string; s?: string; u?: string; v?: string; updated?: string;
+    t?: { id?: string; content?: string };
+  };
+  const nodes = llista((fitxes.indicadors as { i?: NodeIndicador | NodeIndicador[] } | undefined)?.i);
+  const indicadors: IndicadorMassiu[] = [];
+  for (const node of nodes) {
+    if (!node.id) continue;
+    const trossos = String(node.v ?? "").split(",");
+    if (trossos.length !== municipis.length) {
+      throw new Error(
+        `l'indicador ${node.id} porta ${trossos.length} valors i hi ha ${municipis.length} municipis: no es pot aparellar`,
+      );
+    }
+    const valors = new Map<string, number | null>();
+    trossos.forEach((text, i) => {
+      const net = text.trim();
+      valors.set(municipis[i]!.idescat6, /^-?\d+(\.\d+)?$/.test(net) ? Number(net) : null);
+    });
+    const any = /^\d{4}$/.test(String(node.r ?? "")) ? Number(node.r) : null;
+    indicadors.push({
+      id: node.id,
+      nom: node.c ?? "",
+      taula: { id: node.t?.id ?? "", nom: node.t?.content ?? "" },
+      any,
+      font: node.s ?? "",
+      unitat: node.u ?? "",
+      updated: node.updated ?? null,
+      valors,
+    });
+  }
+  return { municipis, indicadors };
+}
+
+/** L'URL del mode massiu, que es desa a la mètrica com a crida feta. */
+export function urlEmexMassiu(indicadors: readonly string[]): string {
+  const url = new URL(`${BASE_EMEX}/dades.json`);
+  url.searchParams.set("tipus", "mun");
+  url.searchParams.set("i", indicadors.join(","));
+  url.searchParams.set("lang", "ca");
+  return url.toString();
+}
+
+/**
+ * Uns quants indicadors per a tots els municipis en **una** crida.
+ *
+ * És el mode que no dona l'enllaç per municipi (`l`): l'enllaç que la
+ * llicència obliga a ensenyar és el que J18 ja ha desat de cada fitxa, i el
+ * job que faci servir això l'ha d'anar a buscar allà.
+ */
+export async function emexMassiu(indicadors: readonly string[]): Promise<{ url: string; dades: EmexMassiu }> {
+  const url = urlEmexMassiu(indicadors);
+  const resposta = await fetchJson<unknown>(url, { timeoutMs: 120_000 });
+  return { url, dades: parseEmexMassiu(resposta) };
+}

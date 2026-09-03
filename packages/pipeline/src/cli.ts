@@ -29,6 +29,8 @@ import { j29Criminalitat } from "./jobs/j29-criminalitat";
 import { j30SousConsells } from "./jobs/j30-sous-consells";
 import { j28FotosExalcaldes } from "./jobs/j28-fotos-exalcaldes";
 import { j31AlcaldiesWikidata } from "./jobs/j31-alcaldies-wikidata";
+import { j34Vehicles } from "./jobs/j34-vehicles";
+import { j33MunicipiWikidata } from "./jobs/j33-municipi-wikidata";
 import { j32Territori } from "./jobs/j32-territori";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
@@ -75,6 +77,10 @@ const COMMANDS = {
   // J31 també a mà i després de J20: les alcaldies segons Wikidata, que
   // «alcaldies» fusiona amb l'historial de la Generalitat. No és a `ORDER`.
   j31: (db: Parameters<typeof j31AlcaldiesWikidata>[0]) => j31AlcaldiesWikidata(db),
+  j34: j34Vehicles,
+  // J33 també a mà i després de J20: agermanaments i persones nascudes al
+  // municipi segons Wikidata, per a la fitxa i les curiositats. No és a `ORDER`.
+  j33: (db: Parameters<typeof j33MunicipiWikidata>[0]) => j33MunicipiWikidata(db),
   // J32: superfície, altitud i gentilici, del mateix conjunt que J1. Una sola
   // consulta per als 947; va just després de J1 perquè en llegeix el padró.
   j32: j32Territori,
@@ -144,7 +150,7 @@ type Command = keyof typeof COMMANDS;
  */
 const ORDER: Command[] = [
   "j1", "j32", "j5", "j2", "j3", "j4", "j6", "j7", "j8", "j9", "j15", "j10", "j16", "j17", "j18", "j23", "j20", "j21",
-  "j22", "j24", "j29",
+  "j22", "j24", "j29", "j34",
   "derive", "alcaldies", "comptes", "ple", "trajectoria", "report", "publica",
 ];
 

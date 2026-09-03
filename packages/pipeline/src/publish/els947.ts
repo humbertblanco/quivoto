@@ -14,6 +14,7 @@ import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { nomLlegible, slugify } from "../lib/text";
 import type { TerritoriMetric } from "../jobs/j32-territori";
+import type { VehiclesMetric } from "../jobs/j34-vehicles";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -153,6 +154,10 @@ export type Els947Row = {
   sa?: number | null;
   /** territori (J32): km², metres del nucli de l'ajuntament, gentilici masculí plural, hab./km² */
   sup?: number | null; alt?: number | null; gen?: string | null; dens?: number | null;
+  /** agermanaments a Wikidata, i persones que Wikidata situa nascudes al municipi (el total) */
+  ag?: number | null; nas?: number | null;
+  /** vehicles per 1.000 habitants i any de la dada (Idescat, a partir de la DGT) */
+  veh?: number | null; veha?: number | null;
 };
 
 /**
@@ -208,6 +213,8 @@ const KINDS_ELS947: string[] = [
   // només si és un sou— i la resta es llegeix i es llença.
   "retribucions",
   "territori",
+  "curiositatsWikidata",
+  "vehicles",
 ];
 
 /**
@@ -427,6 +434,8 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
       const renda =
         riquesa?.indicadors?.find((i) => i.clau === "rendaNetaPersona")?.valor ?? null;
       const territori = llegeix("territori") as TerritoriMetric | undefined;
+      const vehicles = llegeix("vehicles") as VehiclesMetric | undefined;
+      const wd = llegeix("curiositatsWikidata") as { agermanaments?: unknown[]; nascuts?: { total?: number } } | undefined;
       const rendaMediana =
         riquesa?.indicadors?.find((i) => i.clau === "medianaUnitatConsum")?.valor ?? null;
 
@@ -474,6 +483,10 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         alt: territori?.altitud?.valor ?? null,
         gen: territori?.gentilici ?? null,
         dens: territori?.densitat?.valor ?? null,
+        ag: wd ? (wd.agermanaments?.length ?? 0) : null,
+        nas: wd ? (wd.nascuts?.total ?? 0) : null,
+        veh: vehicles?.perMil?.total ?? null,
+        veha: vehicles?.perMil?.total == null ? null : (vehicles.any ?? null),
       };
     })
     .sort((a, b) => b.p - a.p);
