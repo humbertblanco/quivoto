@@ -7,12 +7,22 @@
  */
 
 /**
- * Mentre valgui `false`, cada fitxa surt amb `noindex` i el sitemap existeix
- * però no s'enllaça: les pàgines es poden obrir amb l'adreça, però no s'indexen.
- * Es posa a `true` amb `QUIVOTO_INDEXABLE=1`, i només després d'haver revisat a
- * mà una mostra de fitxes de mides diferents.
+ * Si les pàgines de l'Observatori s'indexen. Val `true` per defecte: cada
+ * pàgina surt amb `index,follow`, el sitemap és a `robots.txt` i les dades
+ * enriquides (JSON-LD) hi són perquè els cercadors les llegeixin.
+ *
+ * L'interruptor serveix per TANCAR, no per obrir: `QUIVOTO_NOINDEX=1` fa que
+ * cada pàgina surti amb `noindex,nofollow`. És per a una publicació que no es
+ * vol al cercador —un servidor de proves, una tanda amb dades a mig
+ * revisar— i mai per al que es puja a quivoto.cat. Abans era al revés
+ * (`QUIVOTO_INDEXABLE=1` obria), i el risc era publicar de debò amb la
+ * variable oblidada: 17.000 pàgines tancades sense que ningú se n'adonés
+ * fins que Search Console ho digués una setmana després.
+ *
+ * Una pàgina concreta —una demostració, un esborrany— es tanca a part, amb
+ * `noIndex: true` a `capSeo()`, i el sitemap la deixa fora (`publish.ts`).
  */
-export const INDEXABLE = process.env.QUIVOTO_INDEXABLE === "1";
+export const INDEXABLE = process.env.QUIVOTO_NOINDEX !== "1";
 
 /** Arrel pública, per als enllaços canònics i el sitemap. */
 export const SITE = "https://quivoto.cat";

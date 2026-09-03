@@ -10,6 +10,7 @@ import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { esAlcaldia } from "./alcaldia";
 import { ARREL_OBSERVATORI, capSeo, DESCRIPCIO_MAXIMA, filAriadna, FITXER_OG, imatgeOg, MARCA, TITOL_MAXIM } from "./seo";
+import { mateixQue } from "./seo-ld";
 import type { FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
 import type { FitxaCapsDeLlista } from "../jobs/j27-caps-de-llista";
 
@@ -1935,6 +1936,12 @@ export function descripcioRegidor(r: Regidor, ctx: ContextRegidor): string {
  * La persona en JSON-LD, només amb el que la pàgina ja diu d'ella: el nom, el
  * càrrec, l'ajuntament on el té, el partit si en té pàgina i el retrat si en
  * publica. Cap correu ni telèfon: és un càrrec electe públic, no un contacte.
+ *
+ * Del que Wikidata en sap (`ctx.trajectoria`), només el que el bloc «Més
+ * enllà de l'ajuntament» o «Qui és» escriu: l'element i els articles com a
+ * `sameAs`, i l'any de naixement —només l'any, que és el que la fitxa dels
+ * caps de llista ensenya— com a `birthDate`. L'article en castellà només
+ * surt al bloc dels caps de llista, i per això només hi va en aquest cas.
  */
 function personaJsonLd(
   r: Regidor,
@@ -1958,6 +1965,15 @@ function personaJsonLd(
     memberOf: partit
       ? { "@type": "Organization", name: partit.name, url: `${SITE}/observatori/partit/${partit.id}/` }
       : undefined,
+    sameAs: ctx.trajectoria
+      ? mateixQue(
+          ctx.trajectoria.url,
+          ctx.trajectoria.viquipedia,
+          ctx.trajectoria.origen === "caps-de-llista" ? ctx.trajectoria.wikipediaEs : null,
+        )
+      : undefined,
+    birthDate:
+      ctx.trajectoria?.origen === "caps-de-llista" && ctx.trajectoria.naixement != null ? String(ctx.trajectoria.naixement) : undefined,
   };
 }
 

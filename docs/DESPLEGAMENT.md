@@ -210,44 +210,74 @@ find /var/www/vhosts/quivoto.cat/private/data -name 'copia-*.sqlite' -mtime +30 
       (comprovats lliures el 26-08-2026).
 - [ ] Provar-ho en un mòbil de veritat.
 
-## 11. Obrir l'Observatori als cercadors
+## 11. L'Observatori als cercadors
 
-Avui l'Observatori és en línia però **cap pàgina no s'indexa**: mentre
-`QUIVOTO_INDEXABLE` no valgui `1`, cada pàgina surt amb `noindex,nofollow`
-(`packages/pipeline/src/publish/config.ts` i `seo.ts`). El sitemap
-(`/observatori/sitemap.xml`) es genera igualment a cada publicació i ja és a
-`robots.txt`, però un cercador no indexa res que porti `noindex`. `robots.txt`
-no bloqueja `/observatori/` expressament: si ho fes, el rastrejador no podria
-llegir el `noindex` i les adreces podrien sortir igualment, sense títol.
+L'Observatori **s'indexa per defecte**: cada pàgina surt amb
+`index,follow,max-image-preview:large`, el `<head>` porta títol, descripció,
+canònica, Open Graph i dades enriquides (JSON-LD de schema.org: `City` i
+`GovernmentOrganization` a la fitxa de municipi, `Person` a les de regidor i
+d'alcaldia, `AdministrativeArea` amb els municipis a comarques i AMB,
+`ItemList` als 947 i als rànquings, `Dataset` a les dades, `WebSite` amb
+`SearchAction` a la portada, i `BreadcrumbList` a tot arreu), i
+`/observatori/sitemap.xml` és a `robots.txt`.
 
-El dia que s'obri, en aquest ordre:
+### Tancar-ho, si cal
 
-1. Revisar a mà una mostra de fitxes de mides diferents (un poble de 200
-   habitants, una capital de comarca, Barcelona) i alguna fitxa de persona.
-2. Publicar-ho **tot** amb l'interruptor posat:
-   ```bash
-   QUIVOTO_INDEXABLE=1 corepack pnpm --filter @quivoto/pipeline start publica tots
-   ```
-   La sortida ha de dir «sitemap amb N adreces (… municipis · … candidatures ·
-   … persones) · indexable». Pujar `web/public/observatori/` sencer.
-3. Comprovar al servidor:
-   ```bash
-   curl -s https://quivoto.cat/observatori/m/sabadell/ | grep -io '<meta name="robots"[^>]*>'   # no hi ha de ser, o sense noindex
-   curl -s https://quivoto.cat/robots.txt                                                          # Disallow només /api/, gràcies i 404
-   curl -s https://quivoto.cat/sitemap.xml | head -5                                               # landing: portada i legals
-   curl -s https://quivoto.cat/observatori/sitemap.xml | grep -c '<loc>'                           # Observatori: milers d'adreces
-   ```
-   Si el sitemap de l'Observatori ha passat del límit del protocol (50.000
-   adreces o 50 MB), `sitemap.xml` és un índex que apunta a
-   `sitemap-seccions.xml`, `sitemap-municipis.xml`, `sitemap-candidatures.xml` i
-   `sitemap-persones.xml`: comprovar que els quatre responen 200.
-4. A Google Search Console (propietat de domini `quivoto.cat`): enviar
-   `https://quivoto.cat/sitemap.xml` i `https://quivoto.cat/observatori/sitemap.xml`,
-   i demanar la indexació de la portada de l'Observatori des de «Inspecció
-   d'URL». A Bing Webmaster Tools, el mateix.
-5. Al cap d'una setmana, mirar a Search Console «Pàgines › Per què no s'han
-   indexat»: si hi surt «Exclosa per l'etiqueta noindex», és que ha quedat
-   alguna publicació feta sense l'interruptor.
+L'interruptor serveix per tancar, no per obrir (`packages/pipeline/src/publish/config.ts`):
+
+```bash
+QUIVOTO_NOINDEX=1 corepack pnpm --filter @quivoto/pipeline start publica tots
+```
+
+Amb això cada pàgina surt amb `noindex,nofollow` i la sortida diu
+«· TANCAT amb noindex (QUIVOTO_NOINDEX=1)». És per a un servidor de proves o
+per a una tanda amb dades a mig revisar; **mai** per al que es puja a
+quivoto.cat, i per a això s'ha girat el sentit de la variable: publicar amb
+l'entorn net és publicar obert. Per tornar a obrir, publicar sense la variable.
+
+`robots.txt` no bloqueja `/observatori/` mai: si ho fes, el rastrejador no
+podria llegir el `noindex` i les adreces podrien sortir igualment, sense títol.
+
+### El que no s'indexa encara que tot sigui obert
+
+- Les demostracions de les preguntes (`/observatori/preguntes/<municipi>/prova/`)
+  i els conjunts «en revisió»: porten `noIndex` propi a la plantilla i el
+  sitemap els deixa fora (ho llegeix del HTML de disc).
+- Les redireccions d'alcaldia (`/m/<municipi>/alcaldia/<persona>/` de qui avui
+  seu al ple): `noindex,follow` amb canònica a la fitxa de regidor.
+- A la landing: `gracies.html`, `404.html` i `/api/` (a `robots.txt`).
+
+### Sitemaps
+
+- `https://quivoto.cat/sitemap.xml`: landing i legals, amb `hreflang`
+  (`tools/build_landing.py`, `build_sitemap()`).
+- `https://quivoto.cat/observatori/sitemap.xml`: el genera `publish.ts` a
+  cada publicació amb tot el que hi ha a disc (seccions, municipis,
+  candidatures, persones i alcaldies històriques; ~18.000 adreces, ~2,7 MB) i
+  el `lastmod` de cada fitxer. Si passa del límit del protocol (50.000 adreces
+  o 50 MB), el mateix `sitemap.xml` passa a ser un índex que apunta a
+  `sitemap-seccions.xml`, `sitemap-municipis.xml`, `sitemap-candidatures.xml`
+  i `sitemap-persones.xml`, sense canviar l'adreça que coneix `robots.txt`.
+
+### Comprovació després de cada desplegament
+
+```bash
+curl -s https://quivoto.cat/observatori/m/sabadell/ | grep -o '<meta name="robots"[^>]*>'   # index,follow,max-image-preview:large
+curl -s https://quivoto.cat/observatori/m/sabadell/ | grep -c 'application/ld+json'        # 3: fil d'Ariadna, City, GovernmentOrganization
+curl -s https://quivoto.cat/observatori/preguntes/badalona/prova/ | grep -o 'content="noindex[^"]*"'  # noindex,nofollow
+curl -s https://quivoto.cat/robots.txt                                                      # Disallow només /api/, gràcies i 404; dos Sitemap:
+curl -s https://quivoto.cat/sitemap.xml | grep -c '<loc>'                                   # landing: 7
+curl -s https://quivoto.cat/observatori/sitemap.xml | grep -c '<loc>'                       # Observatori: milers; si és un índex, 4 i cal provar cada part
+curl -s https://quivoto.cat/observatori/sitemap.xml | grep -c 'prova/'                      # 0
+```
+
+Després, a Google Search Console (propietat de domini `quivoto.cat`) i a Bing
+Webmaster Tools: enviar els dos sitemaps, i validar una fitxa de municipi, una
+de persona i la de dades amb «Prova de resultats enriquits»
+(https://search.google.com/test/rich-results) i el validador de schema.org
+(https://validator.schema.org/). Al cap d'una setmana, a «Pàgines › Per què no
+s'han indexat»: si hi surt «Exclosa per l'etiqueta noindex» en pàgines que no
+són demostracions, és que alguna publicació s'ha fet amb `QUIVOTO_NOINDEX=1`.
 
 Pendent de decidir per a `quienvoto.es`: si es serveix com a vhost propi, li
 cal el seu `robots.txt` i un `sitemap.xml` amb només la portada castellana

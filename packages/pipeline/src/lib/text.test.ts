@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  municipalityName, nomPreferit, nomsOficials, normalize, normalizePersonName, slugifyMunicipality,
+  municipalityName, nomLlegible, nomPreferit, nomsOficials, normalize, normalizePersonName, slugifyMunicipality,
   uninvertArticle,
 } from "./text";
 
@@ -125,5 +125,21 @@ describe("normalizePersonName amb les abreviatures del nom de pila", () => {
     expect(normalizePersonName("Marta Fàbregas M")).toBe("marta fabregas m");
     // Una M. amb punt però enganxada a una altra lletra no és cap abreviatura.
     expect(normalizePersonName("Anna Comas M.Àngel")).toBe(normalizePersonName("Anna Comas M Àngel"));
+  });
+});
+
+describe("nomLlegible amb les cometes d'un CSV mal escapat", () => {
+  it("col·lapsa les cometes doblades, treu les que tanquen el nom i posa majúscula al nom i al sobrenom", () => {
+    expect(nomLlegible('"ramon ""ramonet"" Golart Ávila"')).toBe('Ramon "Ramonet" Golart Ávila');
+    expect(nomLlegible('"francisca """"paquita"""" Jaen Torres"""')).toBe('Francisca "Paquita" Jaen Torres');
+    expect(nomLlegible('"josep Grau i Pallarés """"pasky"""" (ind.)"""')).toBe('Josep Grau i Pallarés "Pasky" (ind.)');
+  });
+  it("si en queden un nombre senar, no són cap sobrenom: fora totes", () => {
+    expect(nomLlegible('Mariona Seguranyes Bolaños""')).toBe("Mariona Seguranyes Bolaños");
+    expect(nomLlegible('Eulàlia """laia"" Pla i Coto"')).toBe("Eulàlia laia Pla i Coto");
+  });
+  it("no toca un nom sense cometes ni un que ja està ben escrit", () => {
+    expect(nomLlegible("Marta Alarcón i Puerto")).toBe("Marta Alarcón i Puerto");
+    expect(nomLlegible("ARIÀ PÉREZ ISIDRO (Ind.)")).toBe("Arià Pérez Isidro (ind.)");
   });
 });

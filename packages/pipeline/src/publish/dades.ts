@@ -9,6 +9,7 @@ import { peu } from "./peu";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg, ORGANITZACIO } from "./seo";
+import { catalegDeDades, conjuntDeDades } from "./seo-ld";
 import { SOURCES, type SourceKey } from "./source-registry";
 import { FONTS_CSS, renderSourcesList, writeSourceCatalogue, type PublishedField } from "./source-catalogue";
 
@@ -1468,30 +1469,68 @@ ${FONTS_CSS}
 `;
 
 /**
- * El `Dataset` de schema.org per al fitxer de Catalunya: és el que fa que un
- * cercador de dades (Google Dataset Search, per exemple) trobi el CSV sense
- * haver de llegir la pàgina. Els dos fitxers hi van com a `DataDownload` amb
- * el seu format; els de municipi, no: són 947 i el que es vol trobar és el
- * conjunt, no cada tros. La llicència és la de les dades derivades, que és
- * l'única que podem donar: les d'origen conserven la seva, i la pàgina ho diu.
+ * Les dades enriquides de la pàgina de dades: el que fa que un cercador de
+ * dades (Google Dataset Search, per exemple) trobi els fitxers sense haver de
+ * llegir la pàgina. Són tres objectes lligats per l'`@id`:
+ *
+ *   · el `DataCatalog` «Dades obertes de l'Observatori», que és la pàgina;
+ *   · el `Dataset` de Catalunya, amb `catalunya.csv` i `.json` com a
+ *     `DataDownload`. Els fitxers de municipi no hi van: són 947 parells i el
+ *     que es vol trobar és el conjunt, no cada tros; la pàgina explica com
+ *     s'adrecen;
+ *   · el `Dataset` del registre de fonts i camps (`fonts.json`, `camps.json`,
+ *     `manifest.json` i l'esquema), que és el que permet reutilitzar l'altre.
+ *
+ * `isBasedOn` són les adreces de les fonts del registre, les mateixes que la
+ * pàgina llista a «D'on surt». La llicència és la de les dades derivades, que
+ * és l'única que podem donar: les d'origen conserven la seva, i la pàgina ho
+ * diu. `dateModified` és la data de la publicació que ha escrit els fitxers.
  */
-export function datasetCatalunya(url: string, descripcio: string, municipis: number): Record<string, unknown> {
-  return {
-    "@type": "Dataset",
-    "@id": `${url}#dataset`,
-    name: `Observatori municipal de quivoto: indicadors dels ${municipis.toLocaleString("ca-ES")} municipis de Catalunya`,
-    description: descripcio,
+export function datasetCatalunya(url: string, descripcio: string, municipis: number, generatedAt?: string): Record<string, unknown>[] {
+  const quants = municipis.toLocaleString("ca-ES");
+  const fonts = Object.values(FONTS).map((f) => f.url);
+  const cataleg = `${url}#cataleg`;
+  const dataModificacio = generatedAt?.slice(0, 10) ?? null;
+  const catalunya = conjuntDeDades({
     url,
-    inLanguage: "ca",
-    license: "https://creativecommons.org/licenses/by/4.0/",
-    isAccessibleForFree: true,
-    creator: { "@id": ORGANITZACIO["@id"] },
-    spatialCoverage: "Catalunya",
-    distribution: [
-      { "@type": "DataDownload", encodingFormat: "text/csv", contentUrl: `${url}catalunya.csv` },
-      { "@type": "DataDownload", encodingFormat: "application/json", contentUrl: `${url}catalunya.json` },
+    id: "dataset",
+    nom: `Observatori municipal de quivoto: indicadors dels ${quants} municipis de Catalunya`,
+    descripcio,
+    fitxers: [
+      { url: `${url}catalunya.csv`, format: "text/csv" },
+      { url: `${url}catalunya.json`, format: "application/json" },
     ],
-  };
+    llicencia: "https://creativecommons.org/licenses/by/4.0/",
+    fonts,
+    dataModificacio,
+    cataleg,
+    paraulesClau: ["municipis", "Catalunya", "eleccions municipals", "ajuntaments", "pressupostos municipals", "dades obertes"],
+  });
+  const registre = conjuntDeDades({
+    url: `${url}#fonts`,
+    id: "registre",
+    nom: "Observatori municipal de quivoto: registre de fonts i esquema dels camps",
+    descripcio: `Qui publica cada dada dels ${quants} municipis, de quin període és, com la tractem i quins límits té; i cada camp dels fitxers, amb les unitats i l'any.`,
+    fitxers: [
+      { url: `${url}fonts.json`, format: "application/json" },
+      { url: `${url}camps.json`, format: "application/json" },
+      { url: `${url}manifest.json`, format: "application/json" },
+      { url: `${url}ESQUEMA.md`, format: "text/markdown" },
+    ],
+    llicencia: "https://creativecommons.org/licenses/by/4.0/",
+    dataModificacio,
+    cataleg,
+  });
+  return [
+    catalegDeDades(
+      url,
+      "Dades obertes de l'Observatori municipal de quivoto",
+      `Els indicadors dels ${quants} municipis de Catalunya en CSV i JSON, amb l'esquema i el registre de fonts.`,
+      [catalunya["@id"] as string, registre["@id"] as string],
+    ),
+    catalunya,
+    registre,
+  ];
 }
 
 export function renderDadesIndex(generatedAt: string, stats: { municipis: number; camps: number }): string {
@@ -1508,7 +1547,7 @@ export function renderDadesIndex(generatedAt: string, stats: { municipis: number
     jsonLd: [
       filAriadna([...ARREL_OBSERVATORI, { nom: "Dades obertes", url }]),
       ORGANITZACIO,
-      datasetCatalunya(url, descripcio, stats.municipis),
+      ...datasetCatalunya(url, descripcio, stats.municipis, generatedAt),
     ],
   });
   return `<!doctype html>

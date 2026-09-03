@@ -17,6 +17,7 @@ import { peu } from "./peu";
 import type { RadiografiaData } from "./radiografia";
 import { frasesQueCaben, titolQueCap } from "./regidor";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
+import { mateixQue } from "./seo-ld";
 import { partitDe, sigla } from "./sigla";
 
 /**
@@ -682,10 +683,17 @@ function carrecEscrit(genere: Genere | null, municipi: string): string {
 /** El títol: «Joan Roig Castell, alcalde d'Alcanar (2015-2023)», o el que hi càpiga. */
 export function titolAlcaldia(p: PersonaAlcaldia, municipi: string, genere: Genere | null): string {
   const carrec = carrecEscrit(genere, municipi);
+  const anys = anysDeLaPersona(p);
+  // Els anys es conserven abans que el càrrec sencer: sense anys, «Xavier
+  // Revuelta Esteve, alcalde de Castellet i la Gornal» és, lletra per lletra,
+  // el títol de la seva fitxa de regidor quan avui seu al ple, i dues pàgines
+  // amb el mateix títol el cercador les pren per la mateixa. Els anys són el
+  // que fa d'aquesta la pàgina de l'alcaldia i no de la persona.
   return titolQueCap([
-    `${p.nom}, ${carrec} (${anysDeLaPersona(p)})`,
+    `${p.nom}, ${carrec} (${anys})`,
+    `${p.nom}, a l'alcaldia (${anys})`,
+    `${p.nom} (${anys})`,
     `${p.nom}, ${carrec}`,
-    `${p.nom} (${anysDeLaPersona(p)})`,
     p.nom,
   ]);
 }
@@ -971,7 +979,10 @@ function personaJsonLd(p: PersonaAlcaldia, municipi: MunicipiAlcaldia, url: stri
     jobTitle: carrec,
     url,
     image: p.retrat ? new URL(p.retrat.cami, url).href : undefined,
+    // La data de naixement i els enllaços són els del bloc «Més enllà de
+    // l'ajuntament», que només s'escriu quan Wikidata en sap alguna cosa.
     birthDate: p.wikidata?.naixement ?? undefined,
+    sameAs: p.wikidata ? mateixQue(p.wikidata.url, p.wikidata.viquipedia) : undefined,
     worksFor: {
       "@type": "GovernmentOrganization",
       name: `Ajuntament ${de(municipi.nom)}`,

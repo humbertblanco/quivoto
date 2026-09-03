@@ -1517,11 +1517,26 @@ describe("les dades estructurades de la persona", () => {
     expect(sola).not.toHaveProperty("memberOf");
   });
 
+  it("sense Wikidata, cap sameAs ni birthDate; amb la fitxa d'alcaldies, l'element i la Viquipèdia", () => {
+    expect(persona).not.toHaveProperty("sameAs");
+    expect(persona).not.toHaveProperty("birthDate");
+    const [, amb] = jsonLdDe(renderRegidor(REGIDORA, { ...CONTEXT, trajectoria: trajectoriaDePersona(FITXA_J21, REGIDORA.nom) }, "2026-08-30"));
+    expect(amb?.sameAs).toEqual(["https://www.wikidata.org/wiki/Q11907", "https://ca.wikipedia.org/wiki/Marta_Alarc%C3%B3n"]);
+    // La fitxa d'alcaldies no ensenya la data de naixement: tampoc no va al JSON-LD.
+    expect(amb).not.toHaveProperty("birthDate");
+  });
+
+  it("amb la fitxa de caps de llista, l'any de naixement que el bloc «Qui és» escriu, i només l'any", () => {
+    const [, cap] = jsonLdDe(renderRegidor(REGIDORA, { ...CONTEXT, trajectoria: quiEsDeWikidata(FITXA_J27, "Marta Alarcon Puerto") }, "2026-08-30"));
+    expect(cap?.birthDate).toBe("1985");
+    expect(cap?.sameAs).toEqual(["https://www.wikidata.org/wiki/Q42", "https://ca.wikipedia.org/wiki/Marta_Alarc%C3%B3n"]);
+  });
+
   it("l'Open Graph és de perfil, amb la imatge de reserva i l'adreça canònica", () => {
     expect(html).toContain('<meta property="og:type" content="profile">');
     expect(html).toContain('<meta property="og:image" content="https://quivoto.cat/assets/og.png">');
     expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/m/esplugues-de-llobregat/regidor/marta-alarcon-pujol/">');
-    expect(html).toContain('<meta name="robots" content="noindex,nofollow">');
+    expect(html).toContain('<meta name="robots" content="index,follow,max-image-preview:large">');
   });
 });
 

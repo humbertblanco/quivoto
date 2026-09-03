@@ -2225,6 +2225,17 @@ describe("qui seu al ple: el recompte del govern", () => {
     const ple = html.slice(on, html.indexOf('id="alcaldies"', on) > 0 ? html.indexOf('id="alcaldies"', on) : html.indexOf("<section", on));
     expect(ple.match(/<span class="carrec">/g)?.length).toBe(1);
     expect(ple).toContain('<span class="carrec">Alcaldessa</span>');
+    // I al JSON-LD de l'ajuntament, la mateixa persona amb el càrrec de la
+    // seu i la seva fitxa: la portada i les dades enriquides no poden dir dos alcaldes.
+    const ajuntament = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)]
+      .map((m) => JSON.parse(m[1]!) as Record<string, unknown>)
+      .find((o) => o["@type"] === "GovernmentOrganization")!;
+    expect(ajuntament.employee).toEqual({
+      "@type": "Person",
+      name: "Marta Farrés Falgueras",
+      jobTitle: "Alcaldessa de Sabadell",
+      url: "https://quivoto.cat/observatori/m/sabadell/regidor/marta-farres-falgueras/",
+    });
   });
 
   it("sense majoria, ho diu", () => {
@@ -3264,6 +3275,22 @@ describe("el cap SEO de la fitxa municipal", () => {
     expect(ciutat).not.toHaveProperty("geo");
   });
 
+  it("el City porta la imatge social, i l'ajuntament va com a GovernmentOrganization amb qui té l'alcaldia", () => {
+    const [, ciutat, ajuntament] = jsonLdDe(renderRadiografia(fitxa({ government: govern() })));
+    expect(ciutat?.image).toBe("https://quivoto.cat/observatori/og/sabadell.png");
+    // La fitxa de prova no té cap bloc de Wikidata: cap `sameAs` inventat.
+    expect(ciutat).not.toHaveProperty("sameAs");
+    expect(ajuntament?.["@type"]).toBe("GovernmentOrganization");
+    expect(ajuntament?.name).toBe("Ajuntament de Sabadell");
+    expect(ajuntament?.url).toBe("https://quivoto.cat/observatori/m/sabadell/");
+    expect(ajuntament?.areaServed).toEqual({ "@id": "https://quivoto.cat/observatori/m/sabadell/#municipi" });
+    // Només el nom del registre, sense fitxa de la persona: el càrrec és «alcaldia» i no hi ha `url`.
+    expect(ajuntament?.employee).toEqual({ "@type": "Person", name: "Marta Farrés Falgueras", jobTitle: "Alcaldia de Sabadell" });
+    // Sense govern conegut, cap persona: no s'inventa cap alcaldia.
+    const [, , sense] = jsonLdDe(renderRadiografia(fitxa()));
+    expect(sense).not.toHaveProperty("employee");
+  });
+
   it("les coordenades: de la base si hi són, i si no del punt del mapa", () => {
     const ambBase = fitxa();
     (ambBase.municipality as unknown as { lat: string; lon: string }).lat = "41.5433";
@@ -3362,5 +3389,32 @@ describe("la taula d'alcaldies amb el que ve del Ministeri", () => {
     const nomes = { term: "2011-2015", name: "XAVIER GARCIA ALBIOL", partyRaw: "PP", tookOfficeOn: "2011-06-11" };
     const sense = renderRadiografia(fitxa({ government: govern(), mayors: { ...mayors, history: [nomes], changes: [] } }));
     expect(sense).not.toContain("segons el Ministeri");
+  });
+});
+
+describe("aquí es vota persones (J37)", () => {
+  const llistesObertes = {
+    font: { nom: "fitxers 11 i 12", organisme: "Ministeri de l'Interior", url: "https://infoelectoral.interior.gob.es/", llicencia: "Llei 37/2007", fitxers: [], consultat: "2026-09-03" },
+    ine5: "08216",
+    eleccions: [{
+      any: 2023, data: "2023-05-28", regidors: 3, nomsPerPapereta: 2, electors: 26, votants: 21, blancs: 0, nuls: 0,
+      candidats: [
+        { nom: "Nil Anselmo Serres", clau: "nil anselmo serres", sexe: "H" as const, candidatura: { codi: "1", sigles: "CxSJF-CP", nom: "Compromís" }, vots: 12, elegit: true, suplent: false },
+        { nom: "Jordi Codina Ventura", clau: "jordi codina ventura", sexe: "H" as const, candidatura: { codi: "2", sigles: "SJA-AM", nom: "Sant Jaume Avança" }, vots: 4, elegit: false, suplent: false },
+      ],
+    }],
+  };
+
+  it("només surt als municipis amb dada, i el nom de qui és al ple enllaça la seva fitxa", () => {
+    const sense = renderRadiografia(fitxa());
+    expect(sense).not.toContain('id="llistes-obertes"');
+    const dades = fitxa({ llistesObertes, carrecs: null });
+    dades.councillors = [{ name: "Nil Anselmo Serres", role: "Alcalde", groupName: null, sigles: null, color: null, brandId: null, orderNum: 1 }];
+    const amb = renderRadiografia(dades);
+    expect(amb).toContain('<section class="bloc" id="llistes-obertes"');
+    expect(amb).toContain("Aquí es vota persones");
+    expect(amb).toContain('<a href="regidor/nil-anselmo-serres/">Nil Anselmo Serres</a>');
+    expect(amb).toContain("Jordi Codina Ventura");
+    expect(amb).toContain(".llo-taula");
   });
 });

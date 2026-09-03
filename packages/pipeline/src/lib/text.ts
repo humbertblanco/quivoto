@@ -163,6 +163,29 @@ const PARTICULES = new Set([
 ]);
 
 /**
+ * Les cometes dobles que arrossega un CSV mal escapat. El registre d'electes
+ * escriu el sobrenom entre cometes —«Ramon "Ramonet" Golart Ávila»— i, en
+ * passar per un CSV que dobla les cometes i les torna a doblar, arriba com a
+ * «"ramon ""ramonet"" Golart Ávila"» o pitjor («"""" paquita """"»). Es
+ * col·lapsen les runes, es treuen les que tanquen tot el nom i, si en queden
+ * un nombre senar —ja no són cap parella al voltant d'un sobrenom—, fora
+ * totes. El sobrenom entre cometes es conserva: és part de com la persona es
+ * presenta, i és el que la font diu.
+ */
+function senseCometesDeCsv(nom: string): string {
+  if (!nom.includes('"')) return nom;
+  let net = nom.replace(/"{2,}/g, '"').trim();
+  if (net.length > 1 && net.startsWith('"') && net.endsWith('"')) net = net.slice(1, -1).trim();
+  if ((net.match(/"/g) ?? []).length % 2 === 1) net = net.replace(/"/g, "");
+  return net.replace(/\s+/g, " ").replace(/"\s+/g, '" ').replace(/\s+"/g, ' "').trim();
+}
+
+/** La primera lletra del nom en majúscula, i la de cada sobrenom entre cometes. */
+function majusculaInicial(nom: string): string {
+  return nom.replace(/(^|")(\p{Ll})/gu, (_, abans: string, lletra: string) => `${abans}${lletra.toLocaleUpperCase("ca")}`);
+}
+
+/**
  * La conjunció «i» dels cognoms catalans, escrita en majúscula per la font.
  *
  * «Jan Santaló I Lloret» i «Josep Sánchez I Camps» és com surten a la
@@ -173,13 +196,16 @@ const PARTICULES = new Set([
 const conjuncioCatalana = (nom: string): string => nom.replace(/(\S)\s+I\s+(\S)/g, "$1 i $2");
 
 export function nomLlegible(text: string): string {
-  const nom = text.trim().replace(/\s+/g, " ");
+  const nom = senseCometesDeCsv(text.trim().replace(/\s+/g, " "));
   // El sufix entre parèntesis no compta per decidir si el nom ja està ben
   // escrit: «ARIÀ PÉREZ ISIDRO (Ind.)» porta minúscules només a l'abreviatura
   // d'«independent», i amb elles el nom es publicava tot en majúscules.
   if (!nom) return nom;
-  // Un nom que ja porta minúscules no s'ha de tocar... llevat de la conjunció.
-  if (/\p{Ll}/u.test(nom.replace(/\([^)]*\)/g, ""))) return conjuncioCatalana(nom);
+  // Un nom que ja porta minúscules no s'ha de tocar... llevat de la conjunció,
+  // i de la primera lletra: «ramon "Ramonet" Golart Ávila» ve així de la font
+  // (el sobrenom hi és entre cometes i el nom de pila en minúscula), i un nom
+  // de persona que comença en minúscula al títol d'una pàgina és una errata.
+  if (/\p{Ll}/u.test(nom.replace(/\([^)]*\)/g, ""))) return conjuncioCatalana(majusculaInicial(nom));
   const capitalitza = (mot: string): string =>
     mot.charAt(0).toLocaleUpperCase("ca") + mot.slice(1).toLocaleLowerCase("ca");
   return nom

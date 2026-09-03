@@ -1,6 +1,7 @@
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg, llocWeb, ORGANITZACIO } from "./seo";
+import { accioDeCerca } from "./seo-ld";
 import { MASCOTA_CSS, catalunya } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
 import { cara } from "./cara";
@@ -645,7 +646,9 @@ export function renderPortada(comptes: ComptesPortada, generatedAt: string, most
    * El cap per al cercador. La descripció porta les xifres que la pàgina ja
    * ensenya —municipis, comarques, partits, rànquings— i cap veredicte. El
    * `WebSite` i l'`Organization` només van aquí, que és l'arrel de
-   * l'Observatori: les altres pàgines s'hi refereixen per l'`@id`.
+   * l'Observatori: les altres pàgines s'hi refereixen per l'`@id`. L'acció de
+   * cerca s'hi pot anunciar perquè el guió del cercador (`cercador.ts`)
+   * llegeix `?q=` de l'adreça i obre el diàleg amb el que hi ha escrit.
    */
   const url = `${SITE}/observatori/`;
   const descripcio = `Qui mana als ${xifra(comptes.municipis)} municipis de Catalunya, què s'hi ha votat des del 1979 i què en diuen els comptes. ${xifra(comptes.comarques)} comarques, ${xifra(comptes.partits)} partits, ${METRIQUES.length} rànquings i dades obertes.`;
@@ -654,7 +657,7 @@ export function renderPortada(comptes: ComptesPortada, generatedAt: string, most
     descripcio,
     url,
     imatge: imatgeOg(FITXER_OG.global("observatori")),
-    jsonLd: [llocWeb("Observatori municipal de quivoto", url, descripcio), ORGANITZACIO, filAriadna(ARREL_OBSERVATORI)],
+    jsonLd: [llocWeb("Observatori municipal de quivoto", url, descripcio, accioDeCerca(url)), ORGANITZACIO, filAriadna(ARREL_OBSERVATORI)],
   });
 
   return `<!doctype html>

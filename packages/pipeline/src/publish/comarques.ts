@@ -10,6 +10,7 @@ import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
+import { llocsContinguts } from "./seo-ld";
 import { atributsEtiqueta, GRAFICS_JS, regleDispersio, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { icona } from "./icones";
 import { capsaCami, geometria, projecta } from "./mapa";
@@ -1420,7 +1421,9 @@ export function renderComarca(data: ComarcaData, generatedAt: string): string {
   // El cap per al cercador: el nom de la comarca i quants municipis, que és
   // el que algú escriu per arribar aquí, i a la descripció les xifres de la
   // ullada —habitants, pactes, canvis— sense cap veredicte. La comarca va com
-  // a `AdministrativeArea` dins de Catalunya.
+  // a `AdministrativeArea` dins de Catalunya, amb els seus municipis com a
+  // `containsPlace`: la mateixa llista que la pàgina pinta, cadascun amb la
+  // seva fitxa, perquè el cercador lligui la comarca amb els pobles.
   const url = `${SITE}/observatori/c/${data.slug}/`;
   const quants = data.municipis.length;
   const alsMunicipis = quants === 1 ? "al seu únic municipi" : `als ${number(quants)} municipis`;
@@ -1437,6 +1440,7 @@ export function renderComarca(data: ComarcaData, generatedAt: string): string {
         name: data.name,
         url,
         containedInPlace: { "@type": "AdministrativeArea", name: "Catalunya" },
+        containsPlace: llocsContinguts(data.municipis.map((m) => ({ nom: m.name, url: `${SITE}/observatori/m/${m.slug}/` }))),
       },
     ],
   });

@@ -12,9 +12,13 @@ import { icona } from "./icones";
 import { partitDe, sigla } from "./sigla";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
+import { llistaOrdenada } from "./seo-ld";
 import { nomLlegible, slugify } from "../lib/text";
 import type { TerritoriMetric } from "../jobs/j32-territori";
 import type { VehiclesMetric } from "../jobs/j34-vehicles";
+import type { LlistesObertesMetric } from "../jobs/j37-llistes-obertes";
+import { adrecesDelPle, resumLlistesObertes, type ResumLlistesObertes } from "./llistes-obertes-fitxa";
+import type { CensElectoralMetric } from "../jobs/j36-cens-electoral";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -158,6 +162,18 @@ export type Els947Row = {
   ag?: number | null; nas?: number | null;
   /** vehicles per 1.000 habitants i any de la dada (Idescat, a partir de la DGT) */
   veh?: number | null; veha?: number | null;
+  /** la darrera elecció en llista oberta o consell obert (J37); `null` als municipis que mai n'han tingut */
+  lo?: ResumLlistesObertes | null;
+  /**
+   * El cens electoral (J36): el del 1979, el de la darrera elecció amb dada,
+   * el creixement entre la primera elecció amb dada i la darrera (en
+   * percentatge) i l'any d'aquella primera; i la participació màxima i
+   * mínima de les dotze municipals amb el seu any. `cens79` és `null` als
+   * municipis que el 1979 encara no existien, i el rànquing només compara
+   * els que el tenen.
+   */
+  cens79?: number | null; censUlt?: number | null; creixCens?: number | null; censDes?: number | null;
+  partMax?: number | null; partMaxA?: number | null; partMin?: number | null; partMinA?: number | null;
 };
 
 /**
@@ -215,6 +231,12 @@ const KINDS_ELS947: string[] = [
   "territori",
   "curiositatsWikidata",
   "vehicles",
+  // Només la tenen els municipis que han votat en llista oberta (uns 190):
+  // d'aquí en surt el resum de la darrera elecció per a les curiositats.
+  "llistesObertes",
+  // El cens des del 1979: dotze eleccions per municipi, curtes. D'aquí en
+  // surten vuit xifres per al rànquing i les curiositats.
+  "censElectoral",
 ];
 
 /**
@@ -435,6 +457,13 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         riquesa?.indicadors?.find((i) => i.clau === "rendaNetaPersona")?.valor ?? null;
       const territori = llegeix("territori") as TerritoriMetric | undefined;
       const vehicles = llegeix("vehicles") as VehiclesMetric | undefined;
+      // Els noms de la darrera elecció oberta enllacen la fitxa de regidor si
+      // són avui al ple: la mateixa llista i el mateix ordre que el generador
+      // de pàgines (la seu si hi és, si no el registre), com fa la fitxa.
+      const llistesObertes = llegeix("llistesObertes") as LlistesObertesMetric | undefined;
+      const pleDeLesPagines = carrecsSeu.get(m.id)?.length ? carrecsSeu.get(m.id)! : (pleRegistre.get(m.id) ?? []);
+      const lo = llistesObertes ? resumLlistesObertes(llistesObertes, adrecesDelPle(pleDeLesPagines)) : null;
+      const cens = (llegeix("censElectoral") as CensElectoralMetric | undefined)?.resum ?? null;
       const wd = llegeix("curiositatsWikidata") as { agermanaments?: unknown[]; nascuts?: { total?: number } } | undefined;
       const rendaMediana =
         riquesa?.indicadors?.find((i) => i.clau === "medianaUnitatConsum")?.valor ?? null;
@@ -485,8 +514,17 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         dens: territori?.densitat?.valor ?? null,
         ag: wd ? (wd.agermanaments?.length ?? 0) : null,
         nas: wd ? (wd.nascuts?.total ?? 0) : null,
+        lo,
         veh: vehicles?.perMil?.total ?? null,
         veha: vehicles?.perMil?.total == null ? null : (vehicles.any ?? null),
+        cens79: cens?.primera.any === 1979 ? cens.primera.cens : null,
+        censUlt: cens?.darrera.cens ?? null,
+        creixCens: cens?.creixementCens ?? null,
+        censDes: cens?.primera.any ?? null,
+        partMax: cens?.participacioMaxima.participacio ?? null,
+        partMaxA: cens?.participacioMaxima.any ?? null,
+        partMin: cens?.participacioMinima.participacio ?? null,
+        partMinA: cens?.participacioMinima.any ?? null,
       };
     })
     .sort((a, b) => b.p - a.p);
@@ -1189,14 +1227,21 @@ ${qui}${dades.length > 0 ? `\n<p class="dades">${dades.join("")}</p>` : ""}
 
   // El cap per al cercador, amb els totals que la pàgina ja compta: els
   // pactes i els canvis d'alcaldia són la xifra que fa que la llista digui
-  // alguna cosa abans d'obrir-la.
+  // alguna cosa abans d'obrir-la. La llista sencera hi va com a `ItemList`
+  // amb la fitxa de cada municipi que en té: és el que fa que el cercador
+  // entengui que aquesta pàgina és l'índex de les 947 i no una més.
   const url = `${SITE}/observatori/els947.html`;
+  const llistaLd = llistaOrdenada(
+    `Els ${xifra(totals.municipis)} municipis de Catalunya`,
+    files.filter((f) => f.x === 1).map((f) => ({ nom: f.n, url: `${SITE}/observatori/m/${f.s}/` })),
+    { url, total: files.length },
+  );
   const cap = capSeo({
     titol: `Els ${xifra(totals.municipis)} municipis, un per un`,
     descripcio: `Els ${xifra(totals.municipis)} municipis de Catalunya en una llista: qui hi mana, els comptes i les actes del ple. A ${xifra(totals.pacte)} governa qui no va guanyar i ${xifra(totals.canvis)} han canviat d'alcaldia.`,
     url,
     imatge: imatgeOg(FITXER_OG.global("els947")),
-    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: `Els ${xifra(totals.municipis)} municipis`, url }])],
+    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: `Els ${xifra(totals.municipis)} municipis`, url }]), llistaLd],
   });
 
   return `<!doctype html>

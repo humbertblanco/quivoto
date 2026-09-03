@@ -536,6 +536,14 @@ describe("el cap SEO de l'Àrea Metropolitana", () => {
     expect(ens.containedInPlace).toEqual({ "@type": "AdministrativeArea", name: "Catalunya" });
   });
 
+  it("porta els municipis com a containsPlace, cadascun amb la seva fitxa", () => {
+    const ens = jsonLdDe(html).find((o) => o["@type"] === "AdministrativeArea")!;
+    const dins = ens.containsPlace as { "@type": string; name: string; url: string }[];
+    expect(dins.length).toBeGreaterThan(0);
+    expect(dins.every((m) => m["@type"] === "City" && m.url.startsWith("https://quivoto.cat/observatori/m/") && m.url.endsWith("/"))).toBe(true);
+    expect(dins.some((m) => m.name === "Cornellà de Llobregat" && m.url === "https://quivoto.cat/observatori/m/cornella-de-llobregat/")).toBe(true);
+  });
+
   it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
     expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
     expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);

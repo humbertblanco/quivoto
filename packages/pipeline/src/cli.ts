@@ -31,6 +31,8 @@ import { j28FotosExalcaldes } from "./jobs/j28-fotos-exalcaldes";
 import { j31AlcaldiesWikidata } from "./jobs/j31-alcaldies-wikidata";
 import { j34Vehicles } from "./jobs/j34-vehicles";
 import { j35AlcaldesMinisteri } from "./jobs/j35-alcaldes-ministeri";
+import { j37LlistesObertes } from "./jobs/j37-llistes-obertes";
+import { j36CensElectoral } from "./jobs/j36-cens-electoral";
 import { j33MunicipiWikidata } from "./jobs/j33-municipi-wikidata";
 import { j32Territori } from "./jobs/j32-territori";
 import { deriveMetrics } from "./derive/metrics";
@@ -83,6 +85,14 @@ const COMMANDS = {
   // Ministeri (SIL), amb la data de baixa, que «alcaldies» fusiona darrere de
   // Wikidata. Onze XLSX; necessita `python3` amb `openpyxl`. No és a `ORDER`.
   j35: (db: Parameters<typeof j35AlcaldesMinisteri>[0]) => j35AlcaldesMinisteri(db),
+  // J37 també a mà i després de J1: el vot per persona a les llistes obertes,
+  // dels zips del Ministeri de l'Interior (1979-2023), desats a
+  // `packages/db/.data/infoelectoral/`. Necessita `python3`. No és a `ORDER`.
+  j37: (db: Parameters<typeof j37LlistesObertes>[0]) => j37LlistesObertes(db),
+  // J36: el cens i la participació de les dotze municipals des del 1979, del
+  // mateix conjunt que J5 però sencer. Una sola crida paginada; només llegeix
+  // la taula de municipis. Va a mà, després de J1. No és a `ORDER`.
+  j36: j36CensElectoral,
   // J33 també a mà i després de J20: agermanaments i persones nascudes al
   // municipi segons Wikidata, per a la fitxa i les curiositats. No és a `ORDER`.
   j33: (db: Parameters<typeof j33MunicipiWikidata>[0]) => j33MunicipiWikidata(db),

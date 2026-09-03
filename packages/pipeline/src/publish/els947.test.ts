@@ -804,6 +804,17 @@ describe("el cap SEO dels 947", () => {
     expect(filDe(html)[2]!.item).toBe("https://quivoto.cat/observatori/els947.html");
   });
 
+  it("és un ItemList amb tots els municipis que tenen fitxa, numerats i amb l'adreça de cadascun", () => {
+    const llista = jsonLdDe(html).find((o) => o["@type"] === "ItemList")!;
+    expect(llista.numberOfItems).toBe(100);
+    const elements = llista.itemListElement as { position: number; name: string; url: string }[];
+    expect(elements).toHaveLength(100);
+    expect(elements[0]).toEqual({ "@type": "ListItem", position: 1, name: conjunt[0]!.n, url: `https://quivoto.cat/observatori/m/${conjunt[0]!.s}/` });
+    // Sense fitxa, fora de la llista: el cercador no ha d'anar a una pàgina que no existeix.
+    const menys = renderEls947(conjunt, "2026-08-29", new Set(conjunt.slice(1).map((f) => f.s)));
+    expect((jsonLdDe(menys).find((o) => o["@type"] === "ItemList")!.itemListElement as unknown[]).length).toBe(99);
+  });
+
   it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
     expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
     expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);

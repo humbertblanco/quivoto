@@ -229,6 +229,11 @@ describe("el títol i la descripció", () => {
     expect(titolAlcaldia(roig(), "Alcanar", "alcalde")).toBe("Joan Roig Castell, alcalde d'Alcanar (2003-2023)");
     expect(titolAlcaldia(roig(), "Alcanar", null)).toBe("Joan Roig Castell, a l'alcaldia d'Alcanar (2003-2023)");
     expect(titolAlcaldia(persones().find((p) => p.actual)!, "Alcanar", "alcaldessa")).toBe("Maria Puig Soler, alcaldessa d'Alcanar (des del 2024)");
+    // Quan el càrrec amb el municipi no hi cap, es conserven els anys i no el
+    // càrrec: sense anys el títol seria el mateix que el de la fitxa de regidor.
+    const unic = titolAlcaldia({ ...roig(), nom: "Xavier Revuelta Esteve" }, "Castellet i la Gornal", "alcalde");
+    expect(unic).toBe("Xavier Revuelta Esteve, a l'alcaldia (2003-2023)");
+    expect(unic.length + " · quivoto".length).toBeLessThanOrEqual(TITOL_MAXIM);
   });
   it("cap dins dels límits del cercador, també amb un nom i un municipi llargs", () => {
     const llarg: PersonaAlcaldia = { ...roig(), nom: "Maria Immaculada Concepció Bofarull i Castellví de Montcada" };
@@ -268,6 +273,20 @@ describe("renderAlcaldiaHistorica", () => {
     expect(html).toContain('"@type":"GovernmentOrganization","name":"Ajuntament d\'Alcanar"');
     expect(html).toContain('"@type":"BreadcrumbList"');
     expect(html).toContain('"name":"Montsià"');
+  });
+
+  it("el Person porta l'element de Wikidata com a sameAs només quan la pàgina l'ensenya", () => {
+    const jsonLd = (h: string) => [...h.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!) as Record<string, unknown>);
+    const sense = jsonLd(html).find((o) => o["@type"] === "Person")!;
+    expect(sense).not.toHaveProperty("sameAs");
+    const wikidata = {
+      qid: "Q1", url: "https://www.wikidata.org/wiki/Q1", viquipedia: "https://ca.wikipedia.org/wiki/Joan_Roig", ocupacions: [], carrecs: [],
+      aparellat: true, naixement: "1960-03-12", defuncio: null, font: "Wikidata", llicencia: "CC0 1.0", consultat: "2026-08-30",
+    };
+    const ambHtml = renderAlcaldiaHistorica({ ...roig(), wikidata }, MUNICIPI, { generatedAt: "avui", genere: "alcalde", avui: AVUI });
+    const amb = jsonLd(ambHtml).find((o) => o["@type"] === "Person")!;
+    expect(amb.sameAs).toEqual(["https://www.wikidata.org/wiki/Q1", "https://ca.wikipedia.org/wiki/Joan_Roig"]);
+    expect(amb.birthDate).toBe("1960-03-12");
   });
 
   it("amb gènere conegut el càrrec va amb totes les lletres", () => {

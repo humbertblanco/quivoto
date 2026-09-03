@@ -618,6 +618,14 @@ describe("el cap SEO de la comarca", () => {
     expect(area.url).toBe("https://quivoto.cat/observatori/c/priorat/");
   });
 
+  it("porta els municipis com a containsPlace, cadascun amb la seva fitxa", () => {
+    const area = jsonLdDe(html).find((o) => o["@type"] === "AdministrativeArea")!;
+    const dins = area.containsPlace as { "@type": string; name: string; url: string }[];
+    expect(dins).toHaveLength(2);
+    expect(dins[1]).toEqual({ "@type": "City", name: "B", url: "https://quivoto.cat/observatori/m/b/" });
+    expect(dins.every((m) => m["@type"] === "City")).toBe(true);
+  });
+
   it("escapa el nom també al cap", () => {
     const dolent = renderComarca(comarca({ name: 'Pla <script>alert("x")</script>' }), "avui");
     // Al JSON-LD el nom hi va tal qual, que és JSON i no HTML: el que no pot

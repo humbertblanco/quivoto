@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { capSeo, descripcioNeta, filAriadna, scriptJsonLd, titolAmbMarca, DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
+import { capSeo, descripcioNeta, filAriadna, portaNoIndex, scriptJsonLd, titolAmbMarca, DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 
 describe("el títol", () => {
   it("porta la marca al darrere quan hi cap", () => {
@@ -39,11 +39,19 @@ describe("el cap SEO", () => {
     jsonLd: [filAriadna([{ nom: "quivoto", url: "https://quivoto.cat/" }, { nom: "Sabadell", url: "https://quivoto.cat/observatori/m/sabadell/" }])],
   });
 
-  it("escriu títol, descripció, canònica i noindex mentre no s'obri", () => {
+  it("escriu títol, descripció, canònica i, per defecte, deixa indexar", () => {
     expect(cap).toContain("<title>Sabadell · quivoto</title>");
     expect(cap).toContain('<meta name="description" content="Qui mana a Sabadell, què s\'hi ha votat i com estan els comptes.">');
     expect(cap).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/m/sabadell/">');
-    expect(cap).toContain('<meta name="robots" content="noindex,nofollow">');
+    expect(cap).toContain('<meta name="robots" content="index,follow,max-image-preview:large">');
+    expect(cap).not.toContain("noindex");
+  });
+
+  it("tanca una pàgina sola amb `noIndex: true`, i `portaNoIndex()` ho llegeix del HTML", () => {
+    const tancada = capSeo({ titol: "Demostració", descripcio: "x", url: "https://quivoto.cat/observatori/preguntes/x/prova/", noIndex: true });
+    expect(tancada).toContain('<meta name="robots" content="noindex,nofollow">');
+    expect(portaNoIndex(tancada)).toBe(true);
+    expect(portaNoIndex(cap)).toBe(false);
   });
 
   it("escriu l'Open Graph i la targeta de Twitter amb la imatge pròpia", () => {

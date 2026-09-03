@@ -34,10 +34,13 @@ import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
+import { llistaOrdenada } from "./seo-ld";
 import { cohortHomogenia, extremsEmpatats } from "./contracte-metriques";
 import { curiositatsTerritori } from "./territori-fitxa";
 import { curiositatsWikidata } from "./wikidata-fitxa";
 import { curiositatsVehicles, esFlota } from "./vehicles-fitxa";
+import { curiositatsCens } from "./cens-fitxa";
+import { curiositatsLlistesObertes, type ResumLlistesObertes } from "./llistes-obertes-fitxa";
 import { CURIOSITATS_CSS, preparaCuriositats, renderCuriositats, type DadesCuriositats } from "./curiositats";
 import { atributsEtiqueta, GRAFICS_CSS, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { peu } from "./peu";
@@ -70,6 +73,10 @@ export type RankingRow = {
   v?: number | null; q?: number | null;
   /** vehicles per 1.000 habitants i any de la dada (Idescat, a partir de la DGT) */
   veh?: number | null; veha?: number | null;
+  /** cens electoral del 1979 i de la darrera elecció, creixement entre la primera dada i la darrera (%) i any de la primera */
+  cens79?: number | null; censUlt?: number | null; creixCens?: number | null; censDes?: number | null;
+  /** participació màxima i mínima de les dotze municipals, amb l'any (només curiositats) */
+  partMax?: number | null; partMaxA?: number | null; partMin?: number | null; partMinA?: number | null;
   /*
    * Els camps que segueixen no fan cap rànquing: els llegeixen les curiositats
    * (`curiositats.ts`), que comparteixen la fila per no tornar a carregar els
@@ -83,6 +90,8 @@ export type RankingRow = {
   f?: number | null;
   /** sou anual de l'alcaldia, només quan és un sou */
   sa?: number | null;
+  /** la darrera elecció en llista oberta o consell obert (J37), només als municipis que n'han tingut */
+  lo?: ResumLlistesObertes | null;
 };
 
 /**
@@ -169,6 +178,18 @@ export const METRIQUES: readonly Metrica[] = [
     metode: "Vehicles amb permís de circulació domiciliats al municipi, per cada 1.000 habitants del padró de l'any de la dada. " +
       "Els municipis amb més de dos vehicles per habitant queden fora: són flotes d'empreses de rènting domiciliades, no els vehicles dels veïns, i surten a les curiositats.",
     cautela: "Compta els vehicles domiciliats, no els que hi circulen: una empresa de lloguer o una flota d'autocars poden posar-hi més vehicles que veïns, i als pobles petits cent vehicles mouen molt la taxa. Depèn del transport públic i de la dispersió, no del govern municipal.",
+  },
+  {
+    id: "cens", titol: "Creixement del cens des del 1979",
+    // Només els que tenen dada del 1979: un municipi segregat el 1994 no es
+    // pot comparar amb els altres en el mateix tram de temps, i el període
+    // ha de ser el mateix per a tothom perquè el rànquing digui una cosa.
+    valor: (r) => (finit(r.creixCens) && r.censDes === 1979 ? r.creixCens : null),
+    periode: (r) => (r.censDes === 1979 ? "1979-2023" : null),
+    decimals: 1, sufix: " %",
+    font: "Generalitat de Catalunya · processos electorals, participació",
+    metode: "El cens electoral de les municipals del 2023 respecte del de les del 1979, en percentatge. Els municipis que el 1979 encara no existien queden fora i surten a les curiositats.",
+    cautela: "El cens creix amb la gent que arriba i fa divuit anys, i minva amb la que marxa o mor: és demografia, no gestió, i als pobles petits pocs centenars d'electors mouen molt el percentatge.",
   },
   {
     id: "alternances", titol: "Canvis de força més votada",
@@ -735,7 +756,7 @@ export function renderRanquings(
   const preparats = preparaRanquings(rows);
   const grups = grupsOrdenats(rows, buildPeerGroups(rows.map((r, id) => ({ id, population: r.p }))));
   const targetes = preparats.map(targetaExtrems).join("\n");
-  const fets = curiositats ? [...preparaCuriositats(rows, curiositats), ...curiositatsTerritori(rows, { consultat: generatedAt }), ...curiositatsWikidata(rows), ...curiositatsVehicles(rows)] : [];
+  const fets = curiositats ? [...preparaCuriositats(rows, curiositats), ...curiositatsTerritori(rows, { consultat: generatedAt }), ...curiositatsWikidata(rows), ...curiositatsVehicles(rows), ...curiositatsCens(rows), ...curiositatsLlistesObertes(rows)] : [];
   const cos = preparats.length
     ? `<section class="bloc" id="destaquen">
   <h2>Destaquen</h2>
@@ -751,13 +772,23 @@ ${preparats.map((r) => seccio(r, grups)).join("\n")}`
 
   // El cap per al cercador: quants rànquings s'han publicat de debò —els que
   // passen el llindar, no les mètriques que existeixen— i de quants municipis.
+  // Cada rànquing hi va com a `ItemList` amb els mateixos `PAS` primers que la
+  // pàgina pinta sense guió (la resta la posa el client), en l'ordre de la
+  // llista i amb la fitxa de cada municipi; `numberOfItems` diu quants n'hi ha.
   const url = `${SITE}/observatori/ranquings/`;
+  const llistes = preparats.map((r) =>
+    llistaOrdenada(
+      r.metrica.titol,
+      r.files.slice(0, PAS).map((f) => ({ nom: f.fila.n, url: `${SITE}/observatori/m/${f.fila.s}/` })),
+      { url: `${url}#${r.metrica.id}`, total: r.files.length, descripcio: `${r.periode} · ${r.metrica.font}` },
+    ),
+  );
   const cap = capSeo({
     titol: "Rànquings municipals de Catalunya",
     descripcio: `${preparats.length > 0 ? `${preparats.length} rànquings` : "Els rànquings"} dels ${rows.length} municipis de Catalunya: qui és a dalt i qui a baix de cada indicador, amb l'any, la font i el que la xifra no diu.`,
     url,
     imatge: imatgeOg(FITXER_OG.global("ranquings")),
-    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Rànquings municipals", url }])],
+    jsonLd: [filAriadna([...ARREL_OBSERVATORI, { nom: "Rànquings municipals", url }]), ...llistes],
   });
 
   return `<!doctype html>

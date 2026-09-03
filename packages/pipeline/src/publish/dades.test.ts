@@ -492,7 +492,7 @@ describe("el cap SEO de les dades", () => {
       `Els indicadors dels 947 municipis de Catalunya en CSV i JSON: ${CAMPS_CATALUNYA} camps documentats, la font de cadascun i llicència CC BY 4.0. Fitxers, no una API.`,
     );
     expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/dades/">');
-    expect(html).toContain('<meta name="robots" content="noindex,nofollow">');
+    expect(html).toContain('<meta name="robots" content="index,follow,max-image-preview:large">');
     expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
     expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
     expect(descripcioDe(html).length).toBeGreaterThanOrEqual(70);

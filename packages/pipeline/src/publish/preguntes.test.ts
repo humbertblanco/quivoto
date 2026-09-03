@@ -137,19 +137,19 @@ describe("el cap SEO de les preguntes", () => {
     expect(filDe(jugable).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Preguntes per municipi", "Poble de Prova"]);
   });
 
-  it("el conjunt «en revisió» porta noindex encara que l'Observatori s'obri; el que es pot respondre, no", async () => {
-    vi.stubEnv("QUIVOTO_INDEXABLE", "1");
-    vi.resetModules();
-    const obert = await import("./preguntes");
-    expect(obert.renderPreguntes(conjunt(false), "avui")).toContain('<meta name="robots" content="noindex,nofollow">');
-    expect(obert.renderPreguntes(conjunt(true), "avui")).toContain('<meta name="robots" content="index,follow,max-image-preview:large">');
-    vi.unstubAllEnvs();
-    vi.resetModules();
+  it("el conjunt «en revisió» porta noindex; el que es pot respondre, no", () => {
+    expect(noJugable).toContain('<meta name="robots" content="noindex,nofollow">');
+    expect(jugable).toContain('<meta name="robots" content="index,follow,max-image-preview:large">');
   });
 
-  it("mentre l'Observatori no s'obri, tots dos porten noindex", () => {
-    expect(jugable).toContain('content="noindex,nofollow"');
-    expect(noJugable).toContain('content="noindex,nofollow"');
+  it("amb QUIVOTO_NOINDEX=1 es tanca tot, també el que es pot respondre", async () => {
+    vi.stubEnv("QUIVOTO_NOINDEX", "1");
+    vi.resetModules();
+    const tancat = await import("./preguntes");
+    expect(tancat.renderPreguntes(conjunt(true), "avui")).toContain('content="noindex,nofollow"');
+    expect(tancat.renderPreguntes(conjunt(false), "avui")).toContain('content="noindex,nofollow"');
+    vi.unstubAllEnvs();
+    vi.resetModules();
   });
 
   for (const [nom, html] of [["l'índex", index], ["el conjunt", jugable]] as const) {

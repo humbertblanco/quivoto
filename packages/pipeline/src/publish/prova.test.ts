@@ -84,12 +84,13 @@ describe("el cap SEO de la demostració", () => {
     expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/preguntes/poble-de-prova/prova/">');
   });
 
-  it("no s'indexa mai, ni quan l'Observatori s'obre: és un esborrany editorial", async () => {
+  it("no s'indexa mai, ni amb l'Observatori obert (que és el que passa per defecte): és un esborrany editorial", async () => {
     expect(html).toContain('<meta name="robots" content="noindex,nofollow">');
-    vi.stubEnv("QUIVOTO_INDEXABLE", "1");
+    // I tampoc quan tot es tanca amb l'interruptor: el resultat és el mateix.
+    vi.stubEnv("QUIVOTO_NOINDEX", "1");
     vi.resetModules();
-    const obert = await import("./prova");
-    expect(obert.renderProva(conjunt(), [], [], "avui")).toContain('<meta name="robots" content="noindex,nofollow">');
+    const tancat = await import("./prova");
+    expect(tancat.renderProva(conjunt(), [], [], "avui")).toContain('<meta name="robots" content="noindex,nofollow">');
     vi.unstubAllEnvs();
     vi.resetModules();
   });

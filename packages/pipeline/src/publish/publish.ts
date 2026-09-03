@@ -15,6 +15,7 @@ import { escriuCercadorCompartit } from "./cercador";
 import { carregaSeriesGrup } from "./series-grup";
 import { loadEls947, renderEls947 } from "./els947";
 import { INDEXABLE, SITE } from "./config";
+import { portaNoIndex } from "./seo";
 import { loadComarques, renderComarca } from "./comarques";
 import { renderComarquesIndex, type ComarcaFila } from "./comarques-index";
 import { loadAmb, renderAmb } from "./amb";
@@ -534,7 +535,14 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     }
 
     /*
-     * Sitemap: es genera sempre, però només s'enllaça quan siguin indexables.
+     * Sitemap: es genera sempre i `robots.txt` l'enllaça sempre. Amb
+     * `QUIVOTO_NOINDEX=1` les pàgines porten `noindex` i el cercador les deixa
+     * estar encara que hi siguin; el sitemap es fa igual perquè la publicació
+     * que torni a obrir no hagi de tocar res més. El que sí que en queda fora
+     * és el que porta `noindex` de pàgina —les demostracions de les preguntes i
+     * els conjunts «en revisió»—: un sitemap que apunta a pàgines tancades és
+     * un avís a Search Console, i es llegeix del HTML de disc perquè la
+     * decisió és de cada plantilla i el fitxer és l'única font que la guarda.
      *
      * Hi va tot el que hi ha publicat A DISC, no només el que s'acaba
      * d'escriure: una publicació parcial (`--slug`) no pot fer desaparèixer del
@@ -596,14 +604,13 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     if (preguntes.length > 0) {
       seccions.push(await adreca("preguntes/", "0.7"));
       for (const conjunt of preguntes) {
-        seccions.push(await adreca(`preguntes/${conjunt.slug}/`, "0.6"));
-        // La demostració només existeix si el conjunt s'aguanta en actes.
-        try {
-          await stat(`${OUT_DIR}../preguntes/${conjunt.slug}/prova/index.html`);
-          seccions.push(await adreca(`preguntes/${conjunt.slug}/prova/`, "0.5"));
-        } catch {
-          /* sense demostració */
-        }
+        // El conjunt «en revisió» porta `noIndex` propi (vegeu `preguntes.ts`)
+        // i no hi va; es mira al fitxer, no es torna a calcular aquí. Només
+        // quan l'Observatori és obert: tancat, totes el porten i el sitemap
+        // ha de continuar sencer. La demostració (`prova/`) no s'indexa mai.
+        const fitxer = `${OUT_DIR}../preguntes/${conjunt.slug}/index.html`;
+        if (INDEXABLE && portaNoIndex(await readFile(fitxer, "utf8"))) continue;
+        seccions.push(await adreca(`preguntes/${conjunt.slug}/`, "0.6", fitxer));
       }
     }
     const municipis: AdrecaSitemap[] = [];
@@ -662,7 +669,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     run.say(
       `sitemap amb ${totesLesAdreces.length} adreces (${municipis.length} municipis · ${candidaturesSitemap.length} candidatures · ${persones.length} persones)${
         capAlLimit ? ", dividit en un índex per tipus" : ""
-      } · ${INDEXABLE ? "indexable" : "encara amb noindex"}`,
+      } · ${INDEXABLE ? "indexable" : "TANCAT amb noindex (QUIVOTO_NOINDEX=1)"}`,
     );
 
     // La portada de l'Observatori: es genera amb la resta perquè els números que

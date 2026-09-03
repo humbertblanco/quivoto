@@ -20,10 +20,13 @@
  *
  * ## `noindex`
  *
- * Mentre `INDEXABLE` sigui fals, cada pàgina porta `noindex,nofollow`, i el
- * sitemap es genera igualment (a `publish.ts`) perquè el dia que s'obri no
- * calgui tocar res més que la variable d'entorn. Tot el que s'escriu aquí és
- * per a aquell dia: les xarxes sí que llegeixen l'Open Graph avui mateix.
+ * Per defecte cada pàgina porta `index,follow,max-image-preview:large`: el
+ * `max-image-preview` deixa que el cercador ensenyi la imatge social sencera
+ * al resultat. Amb `QUIVOTO_NOINDEX=1` (`config.ts`) totes surten amb
+ * `noindex,nofollow`, i una pàgina sola es tanca amb `noIndex: true`: és el
+ * cas de les demostracions de les preguntes, que són esborranys editorials.
+ * El sitemap (a `publish.ts`) deixa fora el que porta `noindex` de pàgina,
+ * perquè un sitemap que apunta a pàgines tancades és un error a Search Console.
  */
 
 import { existsSync } from "node:fs";
@@ -83,6 +86,16 @@ export const FITXER_OG = {
 /** La imatge social d'un fitxer de `FITXER_OG`, si ja és a disc; si no, la de reserva. */
 export function imatgeOg(fitxer: string): string {
   return imatgeSocial(`/observatori/og/${fitxer}`);
+}
+
+/**
+ * Si una pàgina ja escrita porta `noindex`. El sitemap ho mira sobre el HTML
+ * de disc perquè el pipeline no guarda cap llista de què s'ha tancat: la
+ * decisió és de cada plantilla (`noIndex: true`) i el fitxer és l'única
+ * font que la conserva.
+ */
+export function portaNoIndex(html: string): boolean {
+  return /<meta name="robots" content="noindex[^"]*">/.test(html);
 }
 
 export const TITOL_MAXIM = 60;
@@ -153,8 +166,12 @@ export const ORGANITZACIO: Record<string, unknown> = {
   logo: `${SITE}/assets/og.png`,
 };
 
-/** El lloc web, per a la portada de l'Observatori i la landing. */
-export function llocWeb(nom: string, url: string, descripcio: string): Record<string, unknown> {
+/**
+ * El lloc web, per a la portada de l'Observatori i la landing. `cerca` és
+ * l'acció de cerca (`seo-ld.ts`, `accioDeCerca()`), i només s'hi passa des de
+ * la pàgina que de debò llegeix `?q=` de l'adreça.
+ */
+export function llocWeb(nom: string, url: string, descripcio: string, cerca?: Record<string, unknown>): Record<string, unknown> {
   return {
     "@type": "WebSite",
     "@id": `${url}#lloc`,
@@ -163,6 +180,7 @@ export function llocWeb(nom: string, url: string, descripcio: string): Record<st
     description: descripcio,
     inLanguage: "ca",
     publisher: { "@id": ORGANITZACIO["@id"] },
+    potentialAction: cerca,
   };
 }
 

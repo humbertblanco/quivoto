@@ -36,6 +36,11 @@
 .premsa{max-width:var(--ample);margin:0 auto;padding:var(--e4) var(--e3) var(--e5)}
 .premsa h1{font-size:clamp(2.4rem,7vw,4rem);margin-bottom:var(--e2)}
 .premsa .lead{font-size:1.15rem;max-width:56ch;margin-bottom:var(--e3)}
+.pr-nota-generica{margin:var(--e2) 0 var(--e4);padding:var(--e3);background:#fff;border:2px solid var(--ink);border-radius:14px;box-shadow:5px 5px 0 var(--ink)}
+.pr-nota-generica h4{font-family:var(--display);font-weight:900;font-size:1.35rem;line-height:1.2;margin:0 0 .5rem}
+.pr-nota-generica h5{font-family:var(--display);font-weight:700;margin:var(--e2) 0 .3rem}
+.pr-nota-generica .pr-nota-sub{font-weight:700;margin:0 0 var(--e2)}
+.pr-nota-generica .pr-nota-contacte{margin:var(--e2) 0 0;font-size:.95rem;color:var(--ink-2,#5a5670)}
 .pr-sumari{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0 0 var(--e4);padding:0}
 .pr-sumari a{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;
   border:2px solid var(--vora);border-radius:var(--r-max);background:var(--paper-2);
@@ -107,7 +112,7 @@
 .premsa .tornar{margin-top:var(--e4)}
 </style>
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@graph": [{"@type": "Organization", "@id": "https://quivoto.cat/#organitzacio", "name": "quivoto", "url": "https://quivoto.cat/", "logo": "https://quivoto.cat/assets/og.png", "legalName": "Damos en el Blanco, S.L.", "email": "hola@quivoto.cat", "address": {"@type": "PostalAddress", "addressLocality": "Sant Just Desvern", "addressRegion": "Barcelona", "addressCountry": "ES"}, "sameAs": ["https://github.com/humbertblanco/quivoto"], "founder": {"@type": "Person", "name": "Humbert Blanco", "url": "https://x.com/humbertblanco"}}, {"@type": "AboutPage", "@id": "https://quivoto.cat/premsa.html#pagina", "url": "https://quivoto.cat/premsa.html", "name": "Premsa", "description": "Sala de premsa de quivoto: què és, qui hi ha darrere, les xifres de l’Observatori, com treballem, logotip i paleta, i com citar-nos. Contacte: hola@quivoto.cat.", "inLanguage": "ca", "about": {"@id": "https://quivoto.cat/#organitzacio"}, "isPartOf": {"@id": "https://quivoto.cat/#lloc"}}]}
+{"@context": "https://schema.org", "@graph": [{"@type": "Organization", "@id": "https://quivoto.cat/#organitzacio", "name": "quivoto", "url": "https://quivoto.cat/", "logo": "https://quivoto.cat/assets/og.png", "legalName": "Damos en el Blanco, S.L.", "email": "hola@quivoto.cat", "address": {"@type": "PostalAddress", "addressLocality": "Sant Just Desvern", "addressRegion": "Barcelona", "addressCountry": "ES"}, "sameAs": ["https://github.com/humbertblanco/quivoto"], "contactPoint": {"@type": "ContactPoint", "contactType": "press", "email": "hola@quivoto.cat", "availableLanguage": ["ca", "es"]}, "founder": {"@type": "Person", "name": "Humbert Blanco", "url": "https://x.com/humbertblanco"}}, {"@type": "AboutPage", "@id": "https://quivoto.cat/premsa.html#pagina", "url": "https://quivoto.cat/premsa.html", "name": "Premsa", "description": "Sala de premsa de quivoto: què és, qui hi ha darrere, les xifres de l’Observatori, com treballem, logotip i paleta, i com citar-nos. Contacte: hola@quivoto.cat.", "inLanguage": "ca", "about": {"@id": "https://quivoto.cat/#organitzacio"}, "isPartOf": {"@id": "https://quivoto.cat/#lloc"}}]}
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-9ZB1XZ3LHT"></script>
@@ -157,16 +162,20 @@
 <section class="pr-seccio" id="que-es">
   <div><p class="micro">01</p><h2>Què és quivoto</h2></div>
   <div class="pr-cos">
-    <p>quivoto són dues coses. Una <strong>brúixola electoral</strong> per a les municipals del 23 de maig del 2027: 25 afirmacions sobre el teu municipi i amb quin partit coincideixes. I l’<a href="/observatori/">Observatori municipal</a>, que ja es pot obrir: una fitxa per a cadascun dels 947 municipis de Catalunya amb qui hi mana, què s’hi ha votat des del 1979, com estan els comptes i què paga la gent.</p>
-    <p>Tot surt de fonts oficials, no hi ha cap model de llenguatge pel mig, els càlculs es poden repetir i les dades derivades són obertes, amb llicència CC BY 4.0.</p>
+    <p>quivoto és un <strong>portal sense ànim de lucre</strong> que reuneix en un sol lloc el que passa als ajuntaments de Catalunya: qui governa cada municipi i amb qui, què s’hi ha votat des del 1979, com estan els comptes i què paga la gent. És l’<a href="/observatori/">Observatori municipal</a>, amb una fitxa per a cadascun dels 947 municipis, i, de cara a les municipals del 23 de maig del 2027, una <strong>brúixola electoral</strong>: 25 afirmacions sobre el teu municipi i amb quin partit coincideixes.</p>
+    <p>Tot surt de fonts oficials i obertes, no hi ha cap model de llenguatge pel mig, cada xifra porta la font al costat i els càlculs es poden repetir. Les dades derivades són obertes, amb llicència CC BY 4.0, i el codi és públic.</p>
   </div>
 </section>
 
 <section class="pr-seccio" id="redaccio">
-  <div><p class="micro">02</p><h2>La redacció</h2></div>
+  <div><p class="micro">02</p><h2>Qui hi ha darrere</h2></div>
   <div class="pr-cos">
-    <p>quivoto és un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a>. El titular legal és <strong>Damos en el Blanco, S.L.</strong>, amb seu a Sant Just Desvern (Barcelona); les dades completes són a l’<a href="/avis-legal.html">avís legal</a>. El codi és a <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.</p>
-    <p>No som un mitjà de comunicació i no rebem diners de cap partit, candidatura ni administració. Publiquem dades i expliquem com les hem calculades.</p>
+    <p>Darrere de quivoto hi ha una persona: <a href="https://x.com/humbertblanco">Humbert Blanco</a>, un jove emprenedor català que va començar el projecte pel seu compte i el manté sense ànim de lucre. No hi ha cap redacció, cap partit ni cap administració al darrere: quivoto no rep diners de cap candidatura, no fa campanya per ningú i no pertany a cap mitjà.</p>
+    <p>L’empara legal la dona <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a>, l’estudi des d’on treballa, que hi posa els servidors i les hores. El titular legal és <strong>Damos en el Blanco, S.L.</strong>, amb seu a Sant Just Desvern (Barcelona); les dades completes són a l’<a href="/avis-legal.html">avís legal</a>. El codi és a <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.</p>
+    <h3>Per què existeix, en paraules seves</h3>
+    <p>«Tot va començar amb una pregunta que no sabia respondre: qui mana al meu poble, i què ha fet des que hi mana? La resposta existia, però estava escampada en vint llocs diferents: l’Idescat, el portal de transparència, el BOE, el butlletí de la Generalitat, actes de ple en PDF. Cap lloc no ho ajuntava tot. Si jo, que m’hi dedico, no ho trobava, la majoria de gent directament no ho miraria.»</p>
+    <p>«quivoto és el lloc que m’hauria agradat trobar. L’he fet als vespres i als caps de setmana, amb dades obertes que ja eren de tothom però que ningú no havia posat juntes. No hi ha cap partit al darrere, i no en vull cap: la gràcia és justament que tothom pugui mirar les mateixes dades i treure’n les seves pròpies conclusions.»</p>
+    <p>«No és una eina per dir a ningú a qui ha de votar. És una eina perquè, abans de votar, puguis mirar què s’ha fet al teu municipi amb el mateix rigor amb què mires un rebut.»</p>
   </div>
 </section>
 
@@ -283,10 +292,24 @@
 <section class="pr-seccio" id="notes">
   <div><p class="micro">08</p><h2>Notes de premsa</h2></div>
   <div class="pr-cos">
+    <h3>Nota genèrica, per publicar tal qual</h3>
+    <p>Un text llest per adaptar-lo a qualsevol peça sobre quivoto. Es pot retallar, però les xifres es llegeixen de l’Observatori publicat i valen per a la data que hi consta.</p>
+    <article class="pr-nota-generica">
+      <h4>Neix quivoto, el portal sense ànim de lucre que reuneix en un sol lloc les dades de tots els ajuntaments de Catalunya</h4>
+      <p class="pr-nota-sub">L’Observatori municipal publica una fitxa per a cadascun dels 947 municipis amb qui hi governa, els resultats de les dotze eleccions des del 1979, els comptes i els impostos, tot a partir de fonts oficials i obertes</p>
+    <p>quivoto (quivoto.cat) és un portal independent i sense ànim de lucre que fa una cosa que fins ara no existia: posar en un sol lloc, i en el mateix format per a tothom, el que passa a cada ajuntament de Catalunya. Qui hi governa i amb quins pactes, qui seu al ple amb nom i cognoms, què s’hi ha votat a totes les eleccions municipals des del 1979, com estan els comptes, què paguen els veïns d’IBI o d’aigua, i com es compara tot això amb els municipis de mida semblant.</p>
+    <p>L’Observatori municipal cobreix els 947 municipis, amb 4.807 electes al ple, 2.626 pàgines de candidatura i 39 fonts oficials citades una a una. Cada xifra porta la font, l’organisme i l’any al costat; no hi ha veredictes ni estimacions, i quan una dada no existeix la fitxa ho diu en lloc de posar-hi un zero. No hi intervé cap model de llenguatge: tot són càlculs que es poden repetir, i les dades derivades es poden baixar en CSV i JSON amb llicència CC BY 4.0.</p>
+    <p>De cara a les eleccions municipals del 23 de maig del 2027, quivoto hi afegeix una brúixola electoral: 25 afirmacions sobre el municipi de cadascú, tretes de les actes del ple i dels programes, per veure amb quin partit es coincideix més. Cada afirmació enllaça el punt votat.</p>
+    <p>El projecte és obra d’Humbert Blanco, un jove emprenedor català que el va començar pel seu compte i el manté sense finançament de cap partit, candidatura ni administració. «Volia poder respondre una pregunta senzilla, qui mana al meu poble i què ha fet, sense haver de visitar vint webs. Com que el lloc no existia, el vaig fer», explica. «No és una eina per dir a ningú a qui ha de votar: és perquè tothom pugui mirar les mateixes dades i treure’n les seves conclusions.»</p>
+      <h5>Sobre quivoto</h5>
+      <p>quivoto és un portal sense ànim de lucre d’informació municipal de Catalunya, creat per Humbert Blanco. Reuneix dades obertes de fonts oficials sobre els 947 municipis (govern, ple, eleccions des del 1979, comptes i impostos) i les publica amb la font al costat, sense veredictes i sense cap model de llenguatge pel mig. El codi és públic i les dades derivades són CC BY 4.0. Més informació i materials a quivoto.cat/premsa.html.</p>
+      <p class="pr-nota-contacte">Contacte de premsa: hola@quivoto.cat</p>
+    </article>
+    <h3>Notes de premsa</h3>
     <ul class="pr-notes">
-      <li><time datetime="2026-09">Setembre del 2026</time><h3>quivoto obre l’Observatori municipal amb els 947 municipis</h3><p>Una fitxa per municipi amb qui hi mana i amb qui, el ple amb nom i cognoms, els resultats de les dotze eleccions des del 1979, els comptes i els impostos. Tot fet amb dades obertes i cap model de llenguatge pel mig, i els 1.894 fitxers de dades es poden baixar en CSV i JSON.</p></li>
+      <li><time datetime="2026-09">Setembre del 2026</time><h3>quivoto obre l’Observatori municipal amb els 947 municipis</h3><p>Una fitxa per municipi amb qui hi mana i amb qui, el ple amb nom i cognoms, els resultats de les dotze eleccions des del 1979, els comptes i els impostos. Tot fet amb dades obertes i cap model de llenguatge pel mig, i els fitxers de dades es poden baixar en CSV i JSON.</p></li>
     </ul>
-    <p class="pr-avis"><b>Esborrany intern, encara no indexat.</b> L’Observatori es fa a la vista de tothom i encara no està revisat del tot. Quan s’obri, ho direm aquí.</p>
+    <p class="pr-avis">L’Observatori és obert i s’actualitza a la vista de tothom: si hi trobeu una dada que no quadra, escriviu-nos amb l’enllaç de la fitxa i la revisarem.</p>
   </div>
 </section>
 

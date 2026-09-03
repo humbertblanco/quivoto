@@ -462,6 +462,15 @@ describe("el cap SEO de la portada", () => {
     expect(lloc.publisher).toEqual({ "@id": "https://quivoto.cat/#organitzacio" });
   });
 
+  it("anuncia l'acció de cerca amb ?q=, que és el que el guió del cercador llegeix", () => {
+    const lloc = jsonLdDe(html)[0]!;
+    expect(lloc.potentialAction).toEqual({
+      "@type": "SearchAction",
+      target: { "@type": "EntryPoint", urlTemplate: "https://quivoto.cat/observatori/?q={cerca}" },
+      "query-input": "required name=cerca",
+    });
+  });
+
   it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
     expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
     expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);

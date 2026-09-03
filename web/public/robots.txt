@@ -1,6 +1,9 @@
 # quivoto — què poden rastrejar els cercadors.
-# /observatori/ no es bloqueja aquí: mentre sigui esborrany, cada pàgina porta
-# el seu propi noindex (QUIVOTO_INDEXABLE, vegeu docs/DESPLEGAMENT.md).
+# /observatori/ s'indexa: cada pàgina porta «index,follow» i les dades
+# enriquides al <head>. Per tancar-lo sencer es publica amb QUIVOTO_NOINDEX=1
+# (cada pàgina surt amb noindex; vegeu docs/DESPLEGAMENT.md §11), mai des
+# d'aquí: un Disallow impediria llegir el noindex i les adreces sortirien igual.
+# Les demostracions de les preguntes porten noindex propi i no són al sitemap.
 User-agent: *
 Allow: /
 Disallow: /api/

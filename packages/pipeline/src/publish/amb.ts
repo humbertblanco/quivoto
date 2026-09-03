@@ -6,6 +6,7 @@ import { slugify } from "../lib/text";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
+import { llocsContinguts } from "./seo-ld";
 import { atributsEtiqueta, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
@@ -1174,7 +1175,8 @@ export function renderAmb(data: AmbData, generatedAt: string): string {
   const gran = data.municipis[0];
   // El cap per al cercador. La descripció diu les dues xifres que fan l'àrea
   // —municipis i habitants— i les cinc matèries que la pàgina explica; l'ens
-  // va com a `AdministrativeArea` dins de Catalunya, igual que una comarca.
+  // va com a `AdministrativeArea` dins de Catalunya, igual que una comarca,
+  // i amb els 36 municipis com a `containsPlace`, cadascun amb la seva fitxa.
   const url = `${SITE}/observatori/amb/`;
   const cap = capSeo({
     titol: "Àrea Metropolitana de Barcelona: qui mana",
@@ -1190,6 +1192,7 @@ export function renderAmb(data: AmbData, generatedAt: string): string {
         alternateName: "AMB",
         url,
         containedInPlace: { "@type": "AdministrativeArea", name: "Catalunya" },
+        containsPlace: llocsContinguts(data.municipis.map((m) => ({ nom: m.name, url: `${SITE}/observatori/m/${m.slug}/` }))),
       },
     ],
   });

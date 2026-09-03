@@ -21,12 +21,17 @@ import { WIKIDATA_FITXA_CSS, renderAgermanaments, renderNascuts } from "./wikida
 import type { FitxaCuriositatsWikidata } from "../jobs/j33-municipi-wikidata";
 import { renderVehiclesBloc } from "./vehicles-fitxa";
 import type { VehiclesMetric } from "../jobs/j34-vehicles";
+import { LLISTES_OBERTES_CSS, adrecesDelPle, renderLlistesObertesBloc } from "./llistes-obertes-fitxa";
+import type { LlistesObertesMetric } from "../jobs/j37-llistes-obertes";
+import { CENS_FITXA_CSS, renderCensBloc } from "./cens-fitxa";
+import type { CensElectoralMetric } from "../jobs/j36-cens-electoral";
 import type { TerritoriMetric } from "../jobs/j32-territori";
 import { icona } from "./icones";
 import { renderMapa, type PuntMapa } from "./mapa";
 import { assignaSlugs } from "./candidatura";
 import { adrecesRegidors, carrecCurt, frasesQueCaben, titolQueCap } from "./regidor";
 import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
+import { ajuntament, mateixQue } from "./seo-ld";
 import { esAlcaldia, resolAlcaldia } from "./alcaldia";
 import { adrecesAlcaldies, alcaldiesHistoriques } from "./alcaldia-historica";
 import { familiaDelPartit, motiuFinalEscrit, type PasAlcaldia } from "../derive/alcaldies";
@@ -2481,6 +2486,10 @@ export type RadiografiaData = {
   curiositatsWikidata?: FitxaCuriositatsWikidata | null;
   /** Parc de vehicles per mil habitants (J34, Idescat a partir de la DGT). */
   vehicles?: VehiclesMetric | null;
+  /** El vot per persona a les llistes obertes, només als municipis que n'han tingut (J37). */
+  llistesObertes?: LlistesObertesMetric | null;
+  /** El cens i la participació de les dotze municipals des del 1979 (J36). */
+  censElectoral?: CensElectoralMetric | null;
   participation: (typeof electionParticipation.$inferSelect)[];
   /** Incidències obertes que afecten aquest municipi, si n'hi ha. */
   issues: { kind: string; severity: string; entity: string | null; detail: unknown }[];
@@ -5544,12 +5553,20 @@ function municipiJsonLd(
   m: RadiografiaData["municipality"],
   url: string,
   punt: { lat: number; lon: number } | null,
+  /**
+   * La imatge social de la fitxa i l'element de Wikidata del municipi, quan
+   * la fitxa l'ensenya (el peu «segons Wikidata» dels agermanaments o dels
+   * nascuts hi enllaça); sense cap bloc que el citi, no hi va.
+   */
+  extres: { imatge?: string | null; wikidata?: string | null } = {},
 ): Record<string, unknown> {
   return {
     "@type": "City",
     "@id": `${url}#municipi`,
     name: m.name,
     url,
+    image: extres.imatge ?? undefined,
+    sameAs: mateixQue(extres.wikidata),
     containedInPlace: m.comarca
       ? { "@type": "AdministrativeArea", name: m.comarca, url: `${SITE}/observatori/c/${slugify(m.comarca)}/` }
       : undefined,
@@ -6014,7 +6031,23 @@ export function renderRadiografia(
         html: escombraries,
       },
       { id: "historia", titol: "El ple, elecció a elecció", curt: "Elecció a elecció", html: historia },
+      {
+        // Només als municipis que han votat en llista oberta o consell obert
+        // alguna vegada: el bloc torna buit a la resta i el registre no el
+        // publica. Els noms enllacen la fitxa de regidor calculada sobre la
+        // mateixa llista que el generador de pàgines (la seu si hi és, si no
+        // el registre), perquè l'enllaç existeixi.
+        id: "llistes-obertes",
+        titol: "Aquí es vota persones",
+        curt: "Es vota persones",
+        html: renderLlistesObertesBloc(
+          data.llistesObertes ?? null,
+          adrecesDelPle(data.carrecs?.carrecs?.length ? data.carrecs.carrecs : data.councillors.map((c) => ({ nom: c.name }))),
+        ),
+      },
       { id: "participacio", titol: "Qui hi va anar a votar", curt: "Participació", icona: "participació", html: participacio },
+      // Mai buit: sense J36 executat diu que no hi ha dada, que no és un zero.
+      { id: "cens", titol: "El cens i la participació des del 1979", curt: "Cens des del 1979", html: renderCensBloc(data.censElectoral ?? null) },
       { id: "qui-hi-viu", titol: "Qui hi viu", icona: "serveis socials", html: quiHiViu },
       { id: "dones-i-homes", titol: "Dones i homes", html: donesIHomes },
       { id: "agermanaments", titol: "Agermanaments", html: agermanaments },
@@ -6066,10 +6099,30 @@ ${capSeo({
   url,
   imatge: `${SITE}/observatori/og/${m.slug}.png`,
   tipus: "article",
-  jsonLd: [fil, municipiJsonLd(m, url, coordenades(m, mapa))],
+  jsonLd: [
+    fil,
+    municipiJsonLd(m, url, coordenades(m, mapa), {
+      imatge: `${SITE}/observatori/og/${m.slug}.png`,
+      wikidata: agermanaments !== "" || nascuts !== "" ? (data.curiositatsWikidata?.url ?? null) : null,
+    }),
+    // L'ajuntament, amb la mateixa alcaldia que la portada i la descripció:
+    // el càrrec curt («alcalde», «alcaldessa») quan la seu el diu, i
+    // «alcaldia» a seques quan només tenim el nom del registre.
+    ajuntament(
+      m.name,
+      url,
+      alcaldia.nom
+        ? {
+            nom: nomLlegible(alcaldia.nom),
+            carrec: alcaldia.carrec && esAlcaldia(alcaldia.carrec.carrec) ? carrecCurt(alcaldia.carrec.carrec) : "alcaldia",
+            url: alcaldia.adreca ? `${url}${alcaldia.adreca}` : null,
+          }
+        : null,
+    ),
+  ],
 })}
 ${tipografia(BASE)}
-<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}${WIKIDATA_FITXA_CSS}</style>
+<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}${WIKIDATA_FITXA_CSS}${CENS_FITXA_CSS}${LLISTES_OBERTES_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -6228,6 +6281,8 @@ export async function loadRadiografia(db: Db, slug: string, generatedAt: string)
     territori: (byKind.get("territori") ?? null) as TerritoriMetric | null,
     curiositatsWikidata: (byKind.get("curiositatsWikidata") ?? null) as FitxaCuriositatsWikidata | null,
     vehicles: (byKind.get("vehicles") ?? null) as VehiclesMetric | null,
+    llistesObertes: (byKind.get("llistesObertes") ?? null) as LlistesObertesMetric | null,
+    censElectoral: (byKind.get("censElectoral") ?? null) as CensElectoralMetric | null,
     councillors: await db
       .select({
         name: people.fullName,

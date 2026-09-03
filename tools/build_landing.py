@@ -1265,19 +1265,25 @@ def json_ld(t):
     """El lloc web i qui el publica, en la mateixa forma que fa servir
     l'Observatori (packages/pipeline/src/publish/seo.ts): un sol @id per a
     l'organització perquè els cercadors lliguin totes les pàgines al mateix
-    editor. Sense SearchAction: el cercador de l'Observatori no llegeix cap
-    paràmetre `?q=` de l'adreça, i anunciar-ne un seria mentir."""
+    editor. Amb SearchAction només en català: el cercador de l'Observatori
+    (`cercador.ts`) llegeix el paràmetre `?q=` de l'adreça i omple el camp,
+    i és el que un cercador necessita per oferir la caixa de cerca del lloc."""
     import json
     org_id = 'https://quivoto.cat/#organitzacio'
+    lloc = {'@type': 'WebSite', '@id': f"https://{t['domini']}/#lloc", 'name': t['marca'],
+            'url': f"https://{t['domini']}/", 'description': t['desc'], 'inLanguage': t['lang'],
+            'publisher': {'@id': org_id}}
+    if t['lang'] == 'ca':
+        lloc['potentialAction'] = {'@type': 'SearchAction',
+                                   'target': {'@type': 'EntryPoint', 'urlTemplate': 'https://quivoto.cat/observatori/?q={cerca}'},
+                                   'query-input': 'required name=cerca'}
     return json.dumps({
         '@context': 'https://schema.org',
         '@graph': [
             {'@type': 'Organization', '@id': org_id, 'name': 'quivoto', 'url': 'https://quivoto.cat/',
              'logo': 'https://quivoto.cat/assets/og.png',
              'legalName': 'Damos en el Blanco, S.L.'},
-            {'@type': 'WebSite', '@id': f"https://{t['domini']}/#lloc", 'name': t['marca'],
-             'url': f"https://{t['domini']}/", 'description': t['desc'], 'inLanguage': t['lang'],
-             'publisher': {'@id': org_id}},
+            lloc,
         ],
     }, ensure_ascii=False)
 
@@ -1319,12 +1325,17 @@ PREMSA_T = {
             ('materials','Materials'),('citar','Com citar-nos'),('contacte','Contacte'),('notes','Notes de premsa')],
   'que_titol':'Què és quivoto',
   'que':[
-    'quivoto són dues coses. Una <strong>brúixola electoral</strong> per a les municipals del 23 de maig del 2027: 25 afirmacions sobre el teu municipi i amb quin partit coincideixes. I l’<a href="/observatori/">Observatori municipal</a>, que ja es pot obrir: una fitxa per a cadascun dels {municipis} municipis de Catalunya amb qui hi mana, què s’hi ha votat des del 1979, com estan els comptes i què paga la gent.',
-    'Tot surt de fonts oficials, no hi ha cap model de llenguatge pel mig, els càlculs es poden repetir i les dades derivades són obertes, amb llicència CC BY 4.0.'],
-  'redaccio_titol':'La redacció',
+    'quivoto és un <strong>portal sense ànim de lucre</strong> que reuneix en un sol lloc el que passa als ajuntaments de Catalunya: qui governa cada municipi i amb qui, què s’hi ha votat des del 1979, com estan els comptes i què paga la gent. És l’<a href="/observatori/">Observatori municipal</a>, amb una fitxa per a cadascun dels {municipis} municipis, i, de cara a les municipals del 23 de maig del 2027, una <strong>brúixola electoral</strong>: 25 afirmacions sobre el teu municipi i amb quin partit coincideixes.',
+    'Tot surt de fonts oficials i obertes, no hi ha cap model de llenguatge pel mig, cada xifra porta la font al costat i els càlculs es poden repetir. Les dades derivades són obertes, amb llicència CC BY 4.0, i el codi és públic.'],
+  'redaccio_titol':'Qui hi ha darrere',
   'redaccio':[
-    'quivoto és un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a>. El titular legal és <strong>Damos en el Blanco, S.L.</strong>, amb seu a Sant Just Desvern (Barcelona); les dades completes són a l’<a href="/avis-legal.html">avís legal</a>. El codi és a <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.',
-    'No som un mitjà de comunicació i no rebem diners de cap partit, candidatura ni administració. Publiquem dades i expliquem com les hem calculades.'],
+    'Darrere de quivoto hi ha una persona: <a href="https://x.com/humbertblanco">Humbert Blanco</a>, un jove emprenedor català que va començar el projecte pel seu compte i el manté sense ànim de lucre. No hi ha cap redacció, cap partit ni cap administració al darrere: quivoto no rep diners de cap candidatura, no fa campanya per ningú i no pertany a cap mitjà.',
+    'L’empara legal la dona <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a>, l’estudi des d’on treballa, que hi posa els servidors i les hores. El titular legal és <strong>Damos en el Blanco, S.L.</strong>, amb seu a Sant Just Desvern (Barcelona); les dades completes són a l’<a href="/avis-legal.html">avís legal</a>. El codi és a <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.'],
+  'historia_titol':'Per què existeix, en paraules seves',
+  'historia':[
+    '«Tot va començar amb una pregunta que no sabia respondre: qui mana al meu poble, i què ha fet des que hi mana? La resposta existia, però estava escampada en vint llocs diferents: l’Idescat, el portal de transparència, el BOE, el butlletí de la Generalitat, actes de ple en PDF. Cap lloc no ho ajuntava tot. Si jo, que m’hi dedico, no ho trobava, la majoria de gent directament no ho miraria.»',
+    '«quivoto és el lloc que m’hauria agradat trobar. L’he fet als vespres i als caps de setmana, amb dades obertes que ja eren de tothom però que ningú no havia posat juntes. No hi ha cap partit al darrere, i no en vull cap: la gràcia és justament que tothom pugui mirar les mateixes dades i treure’n les seves pròpies conclusions.»',
+    '«No és una eina per dir a ningú a qui ha de votar. És una eina perquè, abans de votar, puguis mirar què s’ha fet al teu municipi amb el mateix rigor amb què mires un rebut.»'],
   'xifres_titol':'En xifres',
   'xifres_lab':{'municipis':'municipis, una fitxa cadascun','electes':'electes al ple','candidatures':'pàgines de candidatura',
                 'comarques':'comarques','partits':'partits amb pàgina','fonts':'fonts oficials','1979':'des de quan hi ha resultats: dotze eleccions'},
@@ -1366,9 +1377,23 @@ PREMSA_T = {
   'contacte_text':'Si és sobre una dada, digueu-nos el municipi i l’enllaç de la fitxa.',
   'xarxes':[('https://x.com/humbertblanco','Humbert Blanco a X'),('https://github.com/humbertblanco/quivoto','El codi a GitHub'),('https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits','Damos en el Blanco')],
   'notes_titol':'Notes de premsa',
+  'nota_generica_titol':'Nota genèrica, per publicar tal qual',
+  'nota_generica_intro':'Un text llest per adaptar-lo a qualsevol peça sobre quivoto. Es pot retallar, però les xifres es llegeixen de l’Observatori publicat i valen per a la data que hi consta.',
+  'nota_generica':{
+    'titol':'Neix quivoto, el portal sense ànim de lucre que reuneix en un sol lloc les dades de tots els ajuntaments de Catalunya',
+    'sub':'L’Observatori municipal publica una fitxa per a cadascun dels {municipis} municipis amb qui hi governa, els resultats de les dotze eleccions des del 1979, els comptes i els impostos, tot a partir de fonts oficials i obertes',
+    'cos':[
+      'quivoto (quivoto.cat) és un portal independent i sense ànim de lucre que fa una cosa que fins ara no existia: posar en un sol lloc, i en el mateix format per a tothom, el que passa a cada ajuntament de Catalunya. Qui hi governa i amb quins pactes, qui seu al ple amb nom i cognoms, què s’hi ha votat a totes les eleccions municipals des del 1979, com estan els comptes, què paguen els veïns d’IBI o d’aigua, i com es compara tot això amb els municipis de mida semblant.',
+      'L’Observatori municipal cobreix els {municipis} municipis, amb {electes} electes al ple, {candidatures} pàgines de candidatura i {fonts} fonts oficials citades una a una. Cada xifra porta la font, l’organisme i l’any al costat; no hi ha veredictes ni estimacions, i quan una dada no existeix la fitxa ho diu en lloc de posar-hi un zero. No hi intervé cap model de llenguatge: tot són càlculs que es poden repetir, i les dades derivades es poden baixar en CSV i JSON amb llicència CC BY 4.0.',
+      'De cara a les eleccions municipals del 23 de maig del 2027, quivoto hi afegeix una brúixola electoral: 25 afirmacions sobre el municipi de cadascú, tretes de les actes del ple i dels programes, per veure amb quin partit es coincideix més. Cada afirmació enllaça el punt votat.',
+      'El projecte és obra d’Humbert Blanco, un jove emprenedor català que el va començar pel seu compte i el manté sense finançament de cap partit, candidatura ni administració. «Volia poder respondre una pregunta senzilla, qui mana al meu poble i què ha fet, sense haver de visitar vint webs. Com que el lloc no existia, el vaig fer», explica. «No és una eina per dir a ningú a qui ha de votar: és perquè tothom pugui mirar les mateixes dades i treure’n les seves conclusions.»'],
+    'sobre_titol':'Sobre quivoto',
+    'sobre':'quivoto és un portal sense ànim de lucre d’informació municipal de Catalunya, creat per Humbert Blanco. Reuneix dades obertes de fonts oficials sobre els {municipis} municipis (govern, ple, eleccions des del 1979, comptes i impostos) i les publica amb la font al costat, sense veredictes i sense cap model de llenguatge pel mig. El codi és públic i les dades derivades són CC BY 4.0. Més informació i materials a quivoto.cat/premsa.html.',
+    'contacte':'Contacte de premsa: hola@quivoto.cat',
+  },
   'notes':[('2026-09','Setembre del 2026','quivoto obre l’Observatori municipal amb els 947 municipis',
-            'Una fitxa per municipi amb qui hi mana i amb qui, el ple amb nom i cognoms, els resultats de les dotze eleccions des del 1979, els comptes i els impostos. Tot fet amb dades obertes i cap model de llenguatge pel mig, i els 1.894 fitxers de dades es poden baixar en CSV i JSON.')],
-  'notes_avis':'<b>Esborrany intern, encara no indexat.</b> L’Observatori es fa a la vista de tothom i encara no està revisat del tot. Quan s’obri, ho direm aquí.',
+            'Una fitxa per municipi amb qui hi mana i amb qui, el ple amb nom i cognoms, els resultats de les dotze eleccions des del 1979, els comptes i els impostos. Tot fet amb dades obertes i cap model de llenguatge pel mig, i els fitxers de dades es poden baixar en CSV i JSON.')],
+  'notes_avis':'L’Observatori és obert i s’actualitza a la vista de tothom: si hi trobeu una dada que no quadra, escriviu-nos amb l’enllaç de la fitxa i la revisarem.',
   'tornar':'Tornar a l’inici',
  },
  'es': {
@@ -1380,12 +1405,17 @@ PREMSA_T = {
             ('materials','Materiales'),('citar','Cómo citarnos'),('contacte','Contacto'),('notes','Notas de prensa')],
   'que_titol':'Qué es quivoto',
   'que':[
-    'quivoto son dos cosas. Una <strong>brújula electoral</strong> para las municipales del 23 de mayo de 2027: 25 afirmaciones sobre tu municipio y con qué partido coincides. Y el <a href="https://quivoto.cat/observatori/">Observatorio municipal</a>, que ya se puede abrir: una ficha para cada uno de los {municipis} municipios de Cataluña con quién manda, qué se ha votado desde 1979, cómo están las cuentas y qué paga la gente. En castellano la portada se llama quienvoto; el Observatorio está en catalán, que es la lengua de las fuentes oficiales.',
-    'Todo sale de fuentes oficiales, no hay ningún modelo de lenguaje de por medio, los cálculos se pueden repetir y los datos derivados son abiertos, con licencia CC BY 4.0.'],
-  'redaccio_titol':'La redacción',
+    'quivoto es un <strong>portal sin ánimo de lucro</strong> que reúne en un solo lugar lo que pasa en los ayuntamientos de Cataluña: quién gobierna cada municipio y con quién, qué se ha votado desde 1979, cómo están las cuentas y qué paga la gente. Es el <a href="https://quivoto.cat/observatori/">Observatorio municipal</a>, con una ficha para cada uno de los {municipis} municipios, y, de cara a las municipales del 23 de mayo de 2027, una <strong>brújula electoral</strong>: 25 afirmaciones sobre tu municipio y con qué partido coincides. En castellano la portada se llama quienvoto; el Observatorio está en catalán, que es la lengua de las fuentes oficiales.',
+    'Todo sale de fuentes oficiales y abiertas, no hay ningún modelo de lenguaje de por medio, cada cifra lleva la fuente al lado y los cálculos se pueden repetir. Los datos derivados son abiertos, con licencia CC BY 4.0, y el código es público.'],
+  'redaccio_titol':'Quién hay detrás',
   'redaccio':[
-    'quivoto es un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a>. El titular legal es <strong>Damos en el Blanco, S.L.</strong>, con sede en Sant Just Desvern (Barcelona); los datos completos están en el <a href="/es/avis-legal.html">aviso legal</a>. El código está en <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.',
-    'No somos un medio de comunicación y no recibimos dinero de ningún partido, candidatura ni administración. Publicamos datos y explicamos cómo los hemos calculado.'],
+    'Detrás de quivoto hay una persona: <a href="https://x.com/humbertblanco">Humbert Blanco</a>, un joven emprendedor catalán que empezó el proyecto por su cuenta y lo mantiene sin ánimo de lucro. No hay ninguna redacción, ningún partido ni ninguna administración detrás: quivoto no recibe dinero de ninguna candidatura, no hace campaña por nadie y no pertenece a ningún medio.',
+    'El amparo legal lo da <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a>, el estudio desde donde trabaja, que pone los servidores y las horas. El titular legal es <strong>Damos en el Blanco, S.L.</strong>, con sede en Sant Just Desvern (Barcelona); los datos completos están en el <a href="/es/avis-legal.html">aviso legal</a>. El código está en <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.'],
+  'historia_titol':'Por qué existe, en sus palabras',
+  'historia':[
+    '«Todo empezó con una pregunta que no sabía responder: quién manda en mi pueblo, y qué ha hecho desde que manda. La respuesta existía, pero estaba repartida en veinte sitios distintos: el Idescat, el portal de transparencia, el BOE, el boletín de la Generalitat, actas de pleno en PDF. Ningún sitio lo juntaba todo. Si yo, que me dedico a esto, no lo encontraba, la mayoría de la gente directamente no lo miraría.»',
+    '«quivoto es el sitio que me habría gustado encontrar. Lo he hecho por las noches y los fines de semana, con datos abiertos que ya eran de todos pero que nadie había puesto juntos. No hay ningún partido detrás, y no quiero ninguno: la gracia es precisamente que todo el mundo pueda mirar los mismos datos y sacar sus propias conclusiones.»',
+    '«No es una herramienta para decirle a nadie a quién tiene que votar. Es una herramienta para que, antes de votar, puedas mirar qué se ha hecho en tu municipio con el mismo rigor con el que miras un recibo.»'],
   'xifres_titol':'En cifras',
   'xifres_lab':{'municipis':'municipios, una ficha cada uno','electes':'electos en el pleno','candidatures':'páginas de candidatura',
                 'comarques':'comarcas','partits':'partidos con página','fonts':'fuentes oficiales','1979':'desde cuándo hay resultados: doce elecciones'},
@@ -1427,9 +1457,23 @@ PREMSA_T = {
   'contacte_text':'Si es sobre un dato, decidnos el municipio y el enlace de la ficha.',
   'xarxes':[('https://x.com/humbertblanco','Humbert Blanco en X'),('https://github.com/humbertblanco/quivoto','El código en GitHub'),('https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits','Damos en el Blanco')],
   'notes_titol':'Notas de prensa',
+  'nota_generica_titol':'Nota genérica, para publicar tal cual',
+  'nota_generica_intro':'Un texto listo para adaptarlo a cualquier pieza sobre quivoto. Se puede recortar, pero las cifras se leen del Observatorio publicado y valen para la fecha que consta.',
+  'nota_generica':{
+    'titol':'Nace quivoto, el portal sin ánimo de lucro que reúne en un solo lugar los datos de todos los ayuntamientos de Cataluña',
+    'sub':'El Observatorio municipal publica una ficha para cada uno de los {municipis} municipios con quién gobierna, los resultados de las doce elecciones desde 1979, las cuentas y los impuestos, todo a partir de fuentes oficiales y abiertas',
+    'cos':[
+      'quivoto (quivoto.cat) es un portal independiente y sin ánimo de lucro que hace algo que hasta ahora no existía: poner en un solo lugar, y en el mismo formato para todos, lo que pasa en cada ayuntamiento de Cataluña. Quién gobierna y con qué pactos, quién se sienta en el pleno con nombre y apellidos, qué se ha votado en todas las elecciones municipales desde 1979, cómo están las cuentas, qué pagan los vecinos de IBI o de agua, y cómo se compara todo eso con los municipios de tamaño parecido.',
+      'El Observatorio municipal cubre los {municipis} municipios, con {electes} electos en el pleno, {candidatures} páginas de candidatura y {fonts} fuentes oficiales citadas una a una. Cada cifra lleva la fuente, el organismo y el año al lado; no hay veredictos ni estimaciones, y cuando un dato no existe la ficha lo dice en lugar de poner un cero. No interviene ningún modelo de lenguaje: todo son cálculos que se pueden repetir, y los datos derivados se pueden descargar en CSV y JSON con licencia CC BY 4.0.',
+      'De cara a las elecciones municipales del 23 de mayo de 2027, quivoto añade una brújula electoral: 25 afirmaciones sobre el municipio de cada cual, sacadas de las actas del pleno y de los programas, para ver con qué partido se coincide más. Cada afirmación enlaza el punto votado.',
+      'El proyecto es obra de Humbert Blanco, un joven emprendedor catalán que lo empezó por su cuenta y lo mantiene sin financiación de ningún partido, candidatura ni administración. «Quería poder responder a una pregunta sencilla, quién manda en mi pueblo y qué ha hecho, sin tener que visitar veinte webs. Como el sitio no existía, lo hice», explica. «No es una herramienta para decirle a nadie a quién votar: es para que todo el mundo pueda mirar los mismos datos y sacar sus conclusiones.»'],
+    'sobre_titol':'Sobre quivoto',
+    'sobre':'quivoto es un portal sin ánimo de lucro de información municipal de Cataluña, creado por Humbert Blanco. Reúne datos abiertos de fuentes oficiales sobre los {municipis} municipios (gobierno, pleno, elecciones desde 1979, cuentas e impuestos) y los publica con la fuente al lado, sin veredictos y sin ningún modelo de lenguaje de por medio. El código es público y los datos derivados son CC BY 4.0. Más información y materiales en quivoto.cat/es/prensa.html.',
+    'contacte':'Contacto de prensa: hola@quivoto.cat',
+  },
   'notes':[('2026-09','Septiembre de 2026','quivoto abre el Observatorio municipal con los 947 municipios',
-            'Una ficha por municipio con quién manda y con quién, el pleno con nombres y apellidos, los resultados de las doce elecciones desde 1979, las cuentas y los impuestos. Todo hecho con datos abiertos y ningún modelo de lenguaje de por medio, y los 1.894 ficheros de datos se pueden descargar en CSV y JSON.')],
-  'notes_avis':'<b>Borrador interno, todavía no indexado.</b> El Observatorio se hace a la vista de todos y todavía no está revisado del todo. Cuando se abra, lo diremos aquí.',
+            'Una ficha por municipio con quién manda y con quién, el pleno con nombres y apellidos, los resultados de las doce elecciones desde 1979, las cuentas y los impuestos. Todo hecho con datos abiertos y ningún modelo de lenguaje de por medio, y los ficheros de datos se pueden descargar en CSV y JSON.')],
+  'notes_avis':'El Observatorio está abierto y se actualiza a la vista de todos: si encontráis un dato que no cuadra, escribidnos con el enlace de la ficha y lo revisaremos.',
   'tornar':'Volver al inicio',
  },
 }
@@ -1546,7 +1590,9 @@ def escriu_materials():
 def json_ld_premsa(lang, url, p):
     """La pàgina sobre l'organització, lligada al mateix @id que la portada i
     l'Observatori. Del qui som, només el que diu el web: nom legal, seu, correu,
-    el codi i qui la fa; cap dada que no surti a l'avís legal o al peu."""
+    el codi i qui la fa; cap dada que no surti a l'avís legal o al peu. El
+    contactPoint és el de premsa, amb el mateix correu que la pàgina escriu a
+    «Contacte de premsa»: és el que un cercador ensenya com a via de contacte."""
     import json
     org_id = 'https://quivoto.cat/#organitzacio'
     return json.dumps({
@@ -1558,6 +1604,8 @@ def json_ld_premsa(lang, url, p):
              'address': {'@type': 'PostalAddress', 'addressLocality': 'Sant Just Desvern',
                          'addressRegion': 'Barcelona', 'addressCountry': 'ES'},
              'sameAs': ['https://github.com/humbertblanco/quivoto'],
+             'contactPoint': {'@type': 'ContactPoint', 'contactType': 'press', 'email': 'hola@quivoto.cat',
+                              'availableLanguage': ['ca', 'es']},
              'founder': {'@type': 'Person', 'name': 'Humbert Blanco', 'url': 'https://x.com/humbertblanco'}},
             {'@type': 'AboutPage', '@id': url + '#pagina', 'url': url, 'name': p['titol'],
              'description': p['desc'], 'inLanguage': lang, 'about': {'@id': org_id},
@@ -1573,6 +1621,11 @@ CSS_PREMSA = '''<style>
 .premsa{max-width:var(--ample);margin:0 auto;padding:var(--e4) var(--e3) var(--e5)}
 .premsa h1{font-size:clamp(2.4rem,7vw,4rem);margin-bottom:var(--e2)}
 .premsa .lead{font-size:1.15rem;max-width:56ch;margin-bottom:var(--e3)}
+.pr-nota-generica{margin:var(--e2) 0 var(--e4);padding:var(--e3);background:#fff;border:2px solid var(--ink);border-radius:14px;box-shadow:5px 5px 0 var(--ink)}
+.pr-nota-generica h4{font-family:var(--display);font-weight:900;font-size:1.35rem;line-height:1.2;margin:0 0 .5rem}
+.pr-nota-generica h5{font-family:var(--display);font-weight:700;margin:var(--e2) 0 .3rem}
+.pr-nota-generica .pr-nota-sub{font-weight:700;margin:0 0 var(--e2)}
+.pr-nota-generica .pr-nota-contacte{margin:var(--e2) 0 0;font-size:.95rem;color:var(--ink-2,#5a5670)}
 .pr-sumari{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0 0 var(--e4);padding:0}
 .pr-sumari a{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;
   border:2px solid var(--vora);border-radius:var(--r-max);background:var(--paper-2);
@@ -1704,6 +1757,8 @@ PREMSA = '''<!doctype html>
   <div><p class="micro">02</p><h2>{redaccio_titol}</h2></div>
   <div class="pr-cos">
 {redaccio}
+    <h3>{historia_titol}</h3>
+{historia}
   </div>
 </section>
 
@@ -1774,6 +1829,17 @@ PREMSA = '''<!doctype html>
 <section class="pr-seccio" id="notes">
   <div><p class="micro">08</p><h2>{notes_titol}</h2></div>
   <div class="pr-cos">
+    <h3>{nota_generica_titol}</h3>
+    <p>{nota_generica_intro}</p>
+    <article class="pr-nota-generica">
+      <h4>{ng_titol}</h4>
+      <p class="pr-nota-sub">{ng_sub}</p>
+{ng_cos}
+      <h5>{ng_sobre_titol}</h5>
+      <p>{ng_sobre}</p>
+      <p class="pr-nota-contacte">{ng_contacte}</p>
+    </article>
+    <h3>{notes_titol}</h3>
     <ul class="pr-notes">
 {notes}
     </ul>
@@ -1801,6 +1867,15 @@ def build_premsa(lang):
     municipis = f"{x['municipis']:,}".replace(',', '.') if x['municipis'] else '947'
     data = data_llarga(x['generatedAt'], lang) if x['generatedAt'] else None
     paragrafs = lambda ps: '\n'.join(f'    <p>{s.replace("{municipis}", municipis)}</p>' for s in ps)
+    # La nota genèrica porta les mateixes xifres que les pastilles, llegides
+    # del que hi ha publicat; si una no s'ha pogut comptar, la frase no pot
+    # dir un zero i es queda amb «milers de».
+    def amb_xifres(text):
+        for clau in ('municipis', 'electes', 'candidatures', 'fonts'):
+            valor = x.get(clau)
+            text = text.replace('{' + clau + '}', f"{valor:,}".replace(',', '.') if valor else ('947' if clau == 'municipis' else 'milers de'))
+        return text
+    ng = p['nota_generica']
 
     # Les pastilles de xifres: només les que s'han pogut comptar, i cada una amb
     # el seu nom, que és la regla dura de la casa.
@@ -1843,6 +1918,10 @@ def build_premsa(lang):
       sumari='\n'.join(f'  <li><a href="#{i}">{s}</a></li>' for i, s in p['sumari']),
       que_titol=p['que_titol'], que=paragrafs(p['que']),
       redaccio_titol=p['redaccio_titol'], redaccio=paragrafs(p['redaccio']),
+      historia_titol=p['historia_titol'], historia=paragrafs(p['historia']),
+      nota_generica_titol=p['nota_generica_titol'], nota_generica_intro=p['nota_generica_intro'],
+      ng_titol=amb_xifres(ng['titol']), ng_sub=amb_xifres(ng['sub']), ng_cos=paragrafs([amb_xifres(x) for x in ng['cos']]),
+      ng_sobre_titol=ng['sobre_titol'], ng_sobre=amb_xifres(ng['sobre']), ng_contacte=ng['contacte'],
       xifres_titol=p['xifres_titol'], xifres=xifres,
       xifres_nota=p['xifres_nota'].replace('{data}', data) if data else p['xifres_nota_sense'],
       com_titol=p['com_titol'], com='\n'.join(f'      <li>{s}</li>' for s in p['com']),

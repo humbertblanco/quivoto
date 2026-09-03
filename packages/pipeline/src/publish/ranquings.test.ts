@@ -274,6 +274,20 @@ describe("el cap SEO dels rànquings", () => {
     expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Rànquings municipals"]);
   });
 
+  it("cada rànquing publicat és un ItemList amb els 40 primers i la mida sencera", () => {
+    const llistes = jsonLdDe(html).filter((o) => o["@type"] === "ItemList");
+    expect(llistes).toHaveLength(ids(files()).length);
+    for (const l of llistes) {
+      const elements = l.itemListElement as { position: number; url: string }[];
+      expect(elements.length).toBeLessThanOrEqual(40);
+      expect(elements.length).toBeGreaterThan(0);
+      expect(l.numberOfItems as number).toBeGreaterThanOrEqual(elements.length);
+      expect(elements[0]!.position).toBe(1);
+      expect(elements.every((e) => e.url.startsWith("https://quivoto.cat/observatori/m/"))).toBe(true);
+      expect(String(l.url)).toMatch(/^https:\/\/quivoto\.cat\/observatori\/ranquings\/#[a-z0-9-]+$/);
+    }
+  });
+
   it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {
     expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
     expect(descripcioDe(html).length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
