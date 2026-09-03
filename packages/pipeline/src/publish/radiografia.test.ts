@@ -3327,3 +3327,40 @@ describe("la taula d'alcaldies amb els passos de Wikidata", () => {
     expect(sense).not.toContain("segons Wikidata");
   });
 });
+
+describe("la taula d'alcaldies amb el que ve del Ministeri", () => {
+  const mayors: NonNullable<RadiografiaData["mayors"]> = {
+    history: [
+      { term: "2011-2015", name: "PERSONA DEL MINISTERI", partyRaw: null, tookOfficeOn: "2013-03-01", font: "ministeri", finsA: null, llistaMinisteri: "CIU" },
+      { term: "2011-2015", name: "XAVIER GARCIA ALBIOL", partyRaw: "PP", tookOfficeOn: "2011-06-11", finsA: "2013-03-01", fontFi: "ministeri" },
+      { term: "2007-2011", name: "JORDI SERRA ISERN", partyRaw: "PSC-PM", tookOfficeOn: "2008-04-08", fontInici: "ministeri" },
+      { term: "2007-2011", name: "MAITE ARQUE FERRER", partyRaw: "PSC-PM", tookOfficeOn: "2007-06-16", finsA: "2008-04-08", fontFi: "ministeri" },
+    ],
+    changes: [
+      { term: "2011-2015", mayors: [{ name: "XAVIER GARCIA ALBIOL", tookOfficeOn: "2011-06-11" }, { name: "PERSONA DEL MINISTERI", tookOfficeOn: "2013-03-01" }], partyChanged: true },
+      { term: "2007-2011", mayors: [{ name: "MAITE ARQUE FERRER", tookOfficeOn: "2007-06-16" }, { name: "JORDI SERRA ISERN", tookOfficeOn: "2008-04-08" }], partyChanged: false },
+    ],
+    currentTermChange: null, distinctPeople: 4,
+  };
+  const html = renderRadiografia(fitxa({ government: govern(), mayors }));
+  const on = html.indexOf('id="alcaldies"');
+  const taula = html.slice(on, html.indexOf("</section>", on));
+  const filaDe = (nom: string) => taula.slice(taula.lastIndexOf("<tr", taula.indexOf(nom)), taula.indexOf("</tr>", taula.indexOf(nom)));
+
+  it("marca el pas del Ministeri, la seva llista, la data de baixa i la possessió que la Generalitat no tenia", () => {
+    expect(filaDe("Persona del Ministeri")).toContain('<span class="marca-canvi">segons el Ministeri</span>');
+    expect(filaDe("Persona del Ministeri")).toContain('CIU <span class="secundari">segons el Ministeri</span>');
+    expect(filaDe("Maite Arque Ferrer")).toContain("<span class=\"marca-canvi\" title=\"segons el Ministeri\">fins al 8 d'abril del 2008</span>");
+    expect(filaDe("Jordi Serra Isern")).toContain('<span class="secundari" title="la Generalitat no en dona la data">segons el Ministeri</span>');
+    // Res del Ministeri no es fa passar per Wikidata.
+    expect(taula).not.toContain("segons Wikidata");
+  });
+
+  it("explica al peu què vol dir «segons el Ministeri», i només quan hi ha res del Ministeri", () => {
+    expect(taula).toContain("El que va marcat «segons el Ministeri»");
+    expect(taula).toContain("Sistema d'Informació Local");
+    const nomes = { term: "2011-2015", name: "XAVIER GARCIA ALBIOL", partyRaw: "PP", tookOfficeOn: "2011-06-11" };
+    const sense = renderRadiografia(fitxa({ government: govern(), mayors: { ...mayors, history: [nomes], changes: [] } }));
+    expect(sense).not.toContain("segons el Ministeri");
+  });
+});

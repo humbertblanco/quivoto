@@ -1,9 +1,11 @@
 import { siglesFamily } from "@quivoto/shared-schemas/brands";
 import type { AlcaldiaWikidata } from "../jobs/j31-alcaldies-wikidata";
+import type { AlcaldiaMinisteri } from "../jobs/j35-alcaldes-ministeri";
 import { normalize, normalizePersonName } from "../lib/text";
 
 /**
- * Fusió de l'historial d'alcaldies de la Generalitat amb el de Wikidata (J31).
+ * Fusió de l'historial d'alcaldies de la Generalitat amb el de Wikidata (J31)
+ * i, després, amb el del Ministeri (J35): vegeu `fusionaAmbMinisteri` al final.
  *
  * La regla de la casa és que **la Generalitat mana i no se n'esborra res**:
  * cada fila seva es queda tal com és, amb el nom en majúscules i el partit
@@ -31,18 +33,28 @@ import { normalize, normalizePersonName } from "../lib/text";
  * per a aquell municipi: es completen forats, no s'inventen files.
  */
 
-/** Una fila de l'historial, de la Generalitat o afegida de Wikidata. */
+/** Una fila de l'historial: de la Generalitat, o afegida de Wikidata o del Ministeri. */
 export type PasAlcaldia = {
   term: string;
   name: string;
   partyRaw: string | null;
   tookOfficeOn: string | null;
-  /** Només a les files que no són de la Generalitat. */
-  font?: "wikidata";
+  /** Només a les files que no són de la Generalitat: qui les ha afegides. */
+  font?: "wikidata" | "ministeri";
   /** QID de la persona a Wikidata, quan la fila hi lliga. */
   qid?: string;
-  /** Data de fi (P582), de Wikidata, en `AAAA-MM-DD`. */
+  /** Data de fi en `AAAA-MM-DD`: de Wikidata (P582) o, si ho diu `fontFi`, del Ministeri (FECHA BAJA). */
   finsA?: string | null;
+  /** `finsA` no és de Wikidata sinó del Ministeri (J35). Absent quan és de Wikidata. */
+  fontFi?: "ministeri";
+  /** La Generalitat no tenia `tookOfficeOn` i l'ha posada el Ministeri (FECHA POSESIÓN). */
+  fontInici?: "ministeri";
+  /**
+   * La columna LISTA del Ministeri («PSOE», «CIU», «IND»), només als passos
+   * que ell afegeix i quan diu alguna cosa: «C. ELECTORAL» i «OTROS» no són
+   * cap partit i es queden fora.
+   */
+  llistaMinisteri?: string | null;
   /** Causa del final (P1534), de Wikidata, com a etiqueta: «dimissió», «moció de censura». */
   motiuFinal?: string | null;
   /** Wikidata diu que va ser una alcaldia interina o en funcions. */
@@ -214,6 +226,91 @@ export function fusionaAmbWikidata(
     }
   }
 
+  return resultat.sort((a, b) => a.term.localeCompare(b.term) || compareDates(a.tookOfficeOn, b.tookOfficeOn));
+}
+
+/**
+ * Una LISTA del Ministeri que diu alguna cosa. Des del 2015 gairebé totes són
+ * «C. ELECTORAL» (o «C.ELECTORAL») i «OTROS», que volen dir «una candidatura»
+ * i «una altra»: no és cap partit i no es publica com si ho fos.
+ */
+export function llistaMinisteriAmbSentit(llista: string | null): string | null {
+  if (llista === null) return null;
+  const n = normalize(llista);
+  if (n === "" || n === "c electoral" || n === "otros") return null;
+  return llista.trim();
+}
+
+/**
+ * Completa l'historial —el de la Generalitat ja fusionat amb Wikidata— amb el
+ * que el Ministeri (J35) en sap. Va **després** de Wikidata i amb la mateixa
+ * regla: no s'esborra ni es canvia res del que ja hi és; només s'omplen forats,
+ * i cada forat omplert queda marcat perquè la pàgina digui «segons el
+ * Ministeri». Tres coses, i una que no:
+ *
+ *   1. **Quan va acabar.** Un pas sense `finsA` de la mateixa persona i el
+ *      mateix mandat que una fila del Ministeri amb FECHA BAJA en pren la
+ *      data, amb `fontFi: "ministeri"`. Si Wikidata ja l'havia dita, mana la
+ *      de Wikidata, que és la que ve amb el motiu.
+ *   2. **Quan va començar.** La Generalitat sovint no dona la presa de
+ *      possessió de qui arriba a mig mandat; si el Ministeri la té i ni la
+ *      Generalitat ni Wikidata l'han posada, es completa amb `fontInici`.
+ *   3. **Els passos que hi falten.** Una persona que el Ministeri té en un
+ *      mandat i cap de les altres fonts hi té és un pas nou, amb
+ *      `font: "ministeri"`, la possessió, la baixa i la llista si diu res.
+ *   4. **El motiu, mai.** El Ministeri no diu per què algú va plegar, i
+ *      `motiuFinal` no es toca en cap cas: no s'inventen motius.
+ *
+ * La persona es compara com sempre, amb `mateixaPersona()`: «XABIER García
+ * Albiol» i «XAVIER GARCIA ALBIOL» són la mateixa pels cognoms i la inicial.
+ * Només dins d'un mandat que l'historial ja tingui: no s'inventen mandats.
+ * Una baixa anterior a la possessió és una errada del fitxer i no s'hi fa res.
+ */
+export function fusionaAmbMinisteri(historial: readonly PasAlcaldia[], ministeri: readonly AlcaldiaMinisteri[]): PasAlcaldia[] {
+  const terms = new Set(historial.map((r) => r.term));
+  const resultat: PasAlcaldia[] = historial.map((r) => ({ ...r }));
+  // Només es reordena si s'ha afegit o completat res: sense el Ministeri,
+  // l'historial ha de sortir exactament com ha entrat.
+  let tocat = false;
+
+  for (const alcaldia of ministeri) {
+    if (!terms.has(alcaldia.mandat)) continue;
+    const baixa = alcaldia.baixa !== null && alcaldia.possessio !== null && alcaldia.baixa < alcaldia.possessio ? null : alcaldia.baixa;
+
+    const seves = resultat.filter((r) => r.term === alcaldia.mandat && mateixaPersona(r.name, alcaldia.nom));
+    if (seves.length > 0) {
+      // La fila més propera en data de possessió: la mateixa persona pot
+      // haver tingut dos trams en un mandat, i cadascun s'ha de completar amb
+      // la seva baixa i no amb la de l'altre.
+      const distancia = (r: PasAlcaldia): number =>
+        r.tookOfficeOn === null || alcaldia.possessio === null ? Number.POSITIVE_INFINITY : Math.abs(Date.parse(r.tookOfficeOn) - Date.parse(alcaldia.possessio));
+      const fila = [...seves].sort((a, b) => distancia(a) - distancia(b))[0]!;
+      if ((fila.finsA === undefined || fila.finsA === null) && baixa !== null) {
+        fila.finsA = baixa;
+        fila.fontFi = "ministeri";
+        tocat = true;
+      }
+      if (fila.tookOfficeOn === null && alcaldia.possessio !== null) {
+        fila.tookOfficeOn = alcaldia.possessio;
+        fila.fontInici = "ministeri";
+        tocat = true;
+      }
+      continue;
+    }
+
+    tocat = true;
+    resultat.push({
+      term: alcaldia.mandat,
+      name: alcaldia.nom,
+      partyRaw: null,
+      tookOfficeOn: alcaldia.possessio,
+      font: "ministeri",
+      finsA: baixa,
+      llistaMinisteri: llistaMinisteriAmbSentit(alcaldia.llista),
+    });
+  }
+
+  if (!tocat) return resultat;
   return resultat.sort((a, b) => a.term.localeCompare(b.term) || compareDates(a.tookOfficeOn, b.tookOfficeOn));
 }
 

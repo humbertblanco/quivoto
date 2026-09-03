@@ -86,9 +86,10 @@ import { partitDe, sigla } from "./sigla";
 
 /** Una fila de l'historial d'alcaldies, tal com la desa la mètrica `mayors`. */
 /**
- * Una fila de l'historial: de la Generalitat, o afegida de Wikidata (J31) per
- * `derive/alcaldies.ts`, que llavors porta `font: "wikidata"` i, quan els té,
- * el final (`finsA`), el motiu (`motiuFinal`) i el partit sencer.
+ * Una fila de l'historial: de la Generalitat, o afegida de Wikidata (J31) o
+ * del Ministeri (J35) per `derive/alcaldies.ts`, que llavors porta `font` i,
+ * quan els té, el final (`finsA`, amb `fontFi` si és del Ministeri), el motiu
+ * (`motiuFinal`, només de Wikidata) i el partit sencer.
  */
 export type FilaHistorial = PasAlcaldia;
 
@@ -155,10 +156,16 @@ export type Mandat = {
   arribaAMigMandat: boolean;
   /** Algú altre el va rellevar abans que s'acabés el mandat. */
   marxaAMigMandat: boolean;
-  /** El pas no és a l'historial de la Generalitat: el diu Wikidata. */
-  font: "generalitat" | "wikidata";
-  /** Quan va acabar, segons Wikidata (P582); `null` si no ho diu o encara hi és. */
+  /** El pas no és a l'historial de la Generalitat: el diu Wikidata, o el Ministeri. */
+  font: "generalitat" | "wikidata" | "ministeri";
+  /** Quan va acabar, segons Wikidata (P582) o, si `fontFi` ho diu, segons el Ministeri; `null` si no consta o encara hi és. */
   finsA: string | null;
+  /** `finsA` és del Ministeri (FECHA BAJA), no de Wikidata. */
+  fontFi: "ministeri" | null;
+  /** La data de possessió no era a la Generalitat: l'ha posada el Ministeri. */
+  fontInici: "ministeri" | null;
+  /** La llista segons el Ministeri («PSOE», «CIU»), només als passos que ell afegeix i quan diu res. */
+  llistaMinisteri: string | null;
   /** Per què va acabar, segons Wikidata (P1534), ja escrit per a la pàgina: «va dimitir». */
   motiuFinal: string | null;
   /** Alcaldia interina o en funcions, segons Wikidata. */
@@ -467,7 +474,7 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
       primerAny: 0,
       ultimAny: 0,
       sigles: seus[seus.length - 1]!.partyRaw,
-      color: colorDe(seus[seus.length - 1]!.partyRaw ?? seus[seus.length - 1]!.partitWikidata ?? null),
+      color: colorDe(seus[seus.length - 1]!.partyRaw ?? seus[seus.length - 1]!.partitWikidata ?? seus[seus.length - 1]!.llistaMinisteri ?? null),
       durada: { dies: 0, aproximat: false },
       abans: null,
       despres: null,
@@ -515,11 +522,14 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
       tookOfficeOn: pas.tookOfficeOn,
       arribaAMigMandat: arriba,
       marxaAMigMandat: marxa,
-      font: pas.font === "wikidata" ? "wikidata" : "generalitat",
+      font: pas.font ?? "generalitat",
       finsA: pas.finsA ?? null,
+      fontFi: pas.fontFi ?? null,
+      fontInici: pas.fontInici ?? null,
       motiuFinal: motiuFinalEscrit(pas.motiuFinal),
       interina: pas.interina === true,
       partitWikidata: pas.partitWikidata ?? null,
+      llistaMinisteri: pas.llistaMinisteri ?? null,
       abansEnElMandat: arriba && anterior && anterior.term === pas.term ? vei(anterior) : null,
       despresEnElMandat: marxa && seguent && seguent.term === pas.term ? vei(seguent) : null,
       resultat: resultatDeLaLlista(opcions.results, pas.term, pas.partyRaw),
@@ -785,35 +795,45 @@ function renderMandats(p: PersonaAlcaldia): string {
     // El partit: el de la Generalitat com a sigla; si no n'hi ha, el que diu
     // Wikidata, dit amb aquestes paraules. I quan la Generalitat el retalla
     // («BADALONA EN COM»), el nom sencer de Wikidata al costat, no a sobre.
+    // El partit: el de la Generalitat com a sigla; si no n'hi ha, el que diu
+    // Wikidata, o la llista del Ministeri, dits amb aquestes paraules.
     const partit = m.partyRaw
       ? sigla(m.partyRaw, { base: BASE, color: p.color })
       : m.partitWikidata
         ? `<span class="partit-wikidata">${escape(m.partitWikidata)} <span class="secundari">segons Wikidata</span></span>`
-        : `<span class="secundari">partit no consignat</span>`;
+        : m.llistaMinisteri
+          ? `<span class="partit-wikidata">${escape(m.llistaMinisteri)} <span class="secundari">segons el Ministeri</span></span>`
+          : `<span class="secundari">partit no consignat</span>`;
     const partitSencer = m.partyRaw && m.partitWikidata
       ? `<p class="secundari">Nom complet segons Wikidata: ${escape(m.partitWikidata)}.</p>`
       : "";
     const marques = [
       m.font === "wikidata" ? `<span class="marca-canvi">segons Wikidata</span>` : "",
+      m.font === "ministeri" ? `<span class="marca-canvi">segons el Ministeri</span>` : "",
       m.interina ? `<span class="marca-canvi">alcaldia interina</span>` : "",
     ].join("");
+    // La data de possessió: quan la Generalitat no la tenia i l'ha posada el
+    // Ministeri, es diu de qui és.
     const possessio = m.tookOfficeOn
-      ? `<p>Va prendre possessió ${elDia(m.tookOfficeOn)}.</p>`
+      ? `<p>Va prendre possessió ${elDia(m.tookOfficeOn)}${m.fontInici === "ministeri" ? ", segons el Ministeri" : ""}.</p>`
       : `<p class="secundari">La font no en dona la data de presa de possessió.</p>`;
     const arribada = m.arribaAMigMandat
       ? `<p class="relleu">Va arribar a mig mandat${m.abansEnElMandat ? `, rellevant ${enllacVei(m.abansEnElMandat)}` : ""}.
          <span class="marca-canvi">relleu sense urnes</span></p>`
       : "";
     // El final: la Generalitat no diu mai per què algú plega. Quan Wikidata ho
-    // diu, es diu amb la seva data i amb el seu nom al costat; quan no, la
+    // diu, es diu amb la seva data i amb el seu nom al costat. Quan només el
+    // Ministeri en dona la data, es diu la data i de qui és, i del motiu, la
     // frase de sempre, que és la veritat.
     const despres = m.despresEnElMandat ? `: hi va seguir ${enllacVei(m.despresEnElMandat)}` : "";
     const marxa = m.motiuFinal
       ? `<p class="relleu">Va deixar l'alcaldia ${m.finsA ? elDia(m.finsA) : "abans d'acabar el mandat"}${despres}.
          Segons Wikidata, ${perQue(m.motiuFinal)}.</p>`
-      : m.marxaAMigMandat
-        ? `<p class="relleu">Va deixar l'alcaldia abans d'acabar el mandat${despres}. La font no en diu el motiu, i nosaltres tampoc.</p>`
-        : "";
+      : m.finsA && m.fontFi === "ministeri" && (m.marxaAMigMandat || m.despresEnElMandat)
+        ? `<p class="relleu">Va deixar l'alcaldia ${elDia(m.finsA)}, segons el Ministeri${despres}. Cap font no en diu el motiu, i nosaltres tampoc.</p>`
+        : m.marxaAMigMandat
+          ? `<p class="relleu">Va deixar l'alcaldia abans d'acabar el mandat${despres}. La font no en diu el motiu, i nosaltres tampoc.</p>`
+          : "";
     const r = m.resultat;
     const resultat = r
       ? `<p class="resultat">A les municipals del ${r.any}, la llista ${llistaDe(r.sigles)} va treure
@@ -831,6 +851,12 @@ function renderMandats(p: PersonaAlcaldia): string {
     el nom sencer del partit— no és de la Generalitat: ve de Wikidata (dades CC0), que l'escriu qui vol, i aquí s'afegeix
     sense treure res de la font oficial.`
     : "";
+  const ambMinisteri = p.mandats.some((m) => m.font === "ministeri" || m.fontFi === "ministeri" || m.fontInici === "ministeri" || m.llistaMinisteri !== null);
+  const notaMinisteri = ambMinisteri
+    ? ` El que va marcat «segons el Ministeri» —la data en què va deixar l'alcaldia, alguna presa de possessió que a la
+    Generalitat li falta, o un pas sencer— ve dels fulls «Alcaldes por mandato» del Sistema d'Informació Local del
+    Ministeri de Política Territorial, que tampoc no diu mai per què algú plega.`
+    : "";
   return `<section class="bloc" id="mandats">
     <h2>${p.mandats.length === 1 ? "El mandat" : "Els mandats"}</h2>
     <p class="entrada-bloc">${
@@ -840,7 +866,7 @@ function renderMandats(p: PersonaAlcaldia): string {
     <ol class="mandats">${targetes.join("")}</ol>
     <p class="nota">Historial d'alcaldes i alcaldesses 1979-2027 de la Generalitat de Catalunya (Dades Obertes,
     conjunt <code>2v2p-vu4h</code>). Els resultats de cada llista són els de les municipals del mateix any segons
-    el Departament d'Acció Exterior i Govern Obert; només es diuen quan la sigla de l'alcaldia lliga amb una sola llista.${notaWikidata}</p>
+    el Departament d'Acció Exterior i Govern Obert; només es diuen quan la sigla de l'alcaldia lliga amb una sola llista.${notaWikidata}${notaMinisteri}</p>
   </section>`;
 }
 

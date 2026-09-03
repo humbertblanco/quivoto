@@ -30,6 +30,7 @@ import { j30SousConsells } from "./jobs/j30-sous-consells";
 import { j28FotosExalcaldes } from "./jobs/j28-fotos-exalcaldes";
 import { j31AlcaldiesWikidata } from "./jobs/j31-alcaldies-wikidata";
 import { j34Vehicles } from "./jobs/j34-vehicles";
+import { j35AlcaldesMinisteri } from "./jobs/j35-alcaldes-ministeri";
 import { j33MunicipiWikidata } from "./jobs/j33-municipi-wikidata";
 import { j32Territori } from "./jobs/j32-territori";
 import { deriveMetrics } from "./derive/metrics";
@@ -78,6 +79,10 @@ const COMMANDS = {
   // «alcaldies» fusiona amb l'historial de la Generalitat. No és a `ORDER`.
   j31: (db: Parameters<typeof j31AlcaldiesWikidata>[0]) => j31AlcaldiesWikidata(db),
   j34: j34Vehicles,
+  // J35 també a mà i després de J5: els alcaldes de cada mandat segons el
+  // Ministeri (SIL), amb la data de baixa, que «alcaldies» fusiona darrere de
+  // Wikidata. Onze XLSX; necessita `python3` amb `openpyxl`. No és a `ORDER`.
+  j35: (db: Parameters<typeof j35AlcaldesMinisteri>[0]) => j35AlcaldesMinisteri(db),
   // J33 també a mà i després de J20: agermanaments i persones nascudes al
   // municipi segons Wikidata, per a la fitxa i les curiositats. No és a `ORDER`.
   j33: (db: Parameters<typeof j33MunicipiWikidata>[0]) => j33MunicipiWikidata(db),

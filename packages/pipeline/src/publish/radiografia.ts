@@ -2331,26 +2331,39 @@ function renderMayors(
     // quan la Generalitat no el té, el motiu del final quan el sap, i el nom
     // sencer del partit quan la Generalitat el retalla, al costat i no a sobre.
     const motiu = motiuFinalEscrit(m.motiuFinal);
+    // I el que ve del Ministeri (J35), també amb aquestes paraules: el pas
+    // sencer quan cap altra font el té, i la data en què va deixar l'alcaldia
+    // quan només ell la dona (sense motiu: el Ministeri no en diu cap).
     const marques = [
       late ? ' <span class="marca-canvi">va arribar a mig mandat</span>' : "",
       m.font === "wikidata" ? ' <span class="marca-canvi">segons Wikidata</span>' : "",
+      m.font === "ministeri" ? ' <span class="marca-canvi">segons el Ministeri</span>' : "",
       m.interina ? ' <span class="marca-canvi">alcaldia interina</span>' : "",
       motiu ? ` <span class="marca-canvi" title="segons Wikidata">${escape(motiu)}</span>` : "",
+      !motiu && m.finsA && m.fontFi === "ministeri"
+        ? ` <span class="marca-canvi" title="segons el Ministeri">fins al ${formatDate(m.finsA)}</span>`
+        : "",
     ].join("");
     const partit = m.partyRaw
       ? `${escape(m.partyRaw)}${m.partitWikidata ? ` <span class="secundari" title="nom complet segons Wikidata">(${escape(m.partitWikidata)})</span>` : ""}`
       : m.partitWikidata
         ? `${escape(m.partitWikidata)} <span class="secundari">segons Wikidata</span>`
-        : "—";
+        : m.llistaMinisteri
+          ? `${escape(m.llistaMinisteri)} <span class="secundari">segons el Ministeri</span>`
+          : "—";
+    const desDe = m.tookOfficeOn
+      ? `${formatDate(m.tookOfficeOn)}${m.fontInici === "ministeri" ? ' <span class="secundari" title="la Generalitat no en dona la data">segons el Ministeri</span>' : ""}`
+      : "<span class=\"buit\" title=\"la font no en dona la data\">—</span>";
     return `<tr${repeteix ? ' class="mateix-mandat"' : ""}>
       <th scope="row">${escape(m.term)}</th>
       <td>${qui}${marques}</td>
       <td class="partit">${marca}${partit}</td>
-      <td class="secundari">${m.tookOfficeOn ? formatDate(m.tookOfficeOn) : "<span class=\"buit\" title=\"la font no en dona la data\">—</span>"}</td>
+      <td class="secundari">${desDe}</td>
     </tr>`;
   });
   const relleus = history.filter((m, i) => history[i - 1]?.term === m.term).length;
   const deWikidata = history.filter((m) => m.font === "wikidata" || m.motiuFinal || m.partitWikidata).length;
+  const delMinisteri = history.filter((m) => m.font === "ministeri" || m.fontFi === "ministeri" || m.fontInici === "ministeri").length;
   // Tres mandats oberts i la resta plegada. Quinze files per arribar al 1979
   // són quinze files de les quals la gent en mira dues: qui mana i qui manava
   // abans. La resta hi és sencera —plegada, no esborrada, com la lletra
@@ -2378,6 +2391,12 @@ function renderMayors(
     deWikidata > 0
       ? `<p class="nota">El que va marcat «segons Wikidata» no és a l'historial de la Generalitat: són passos, motius de relleu
         o noms sencers de partit que Wikidata (dades CC0) sí que té, afegits sense treure res de la font oficial.</p>`
+      : ""
+  }${
+    delMinisteri > 0
+      ? `<p class="nota">El que va marcat «segons el Ministeri» —fins quan va durar una alcaldia, alguna data de possessió
+        que a la Generalitat li falta, o un pas sencer— ve dels fulls «Alcaldes por mandato» del Sistema d'Informació Local
+        del Ministeri de Política Territorial, que tampoc no diu mai per què algú plega.</p>`
       : ""
   }${creditsRetrats(ambRetrat.values())}`;
 }

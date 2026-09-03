@@ -467,3 +467,60 @@ describe("els passos que vénen de Wikidata", () => {
     expect(html).not.toContain("Nom complet segons Wikidata");
   });
 });
+
+/**
+ * Badalona al 2007-2011 i al 2011-2015 després de la fusió amb el Ministeri
+ * (J35): la Generalitat té Arqué i Serra sense data de possessió del segon;
+ * el Ministeri hi posa la baixa d'Arqué i la possessió de Serra, i al mandat
+ * següent hi afegeix algú que cap altra font té, amb la llista «CIU».
+ */
+const AMB_MINISTERI: HistorialAlcaldies = {
+  history: [
+    { term: "2011-2015", name: "PERSONA DEL MINISTERI", partyRaw: null, tookOfficeOn: "2013-03-01", font: "ministeri", finsA: null, llistaMinisteri: "CIU" },
+    { term: "2011-2015", name: "XAVIER GARCIA ALBIOL", partyRaw: "PP", tookOfficeOn: "2011-06-11", finsA: "2013-03-01", fontFi: "ministeri" },
+    { term: "2007-2011", name: "JORDI SERRA ISERN", partyRaw: "PSC-PM", tookOfficeOn: "2008-04-08", fontInici: "ministeri" },
+    { term: "2007-2011", name: "MAITE ARQUE FERRER", partyRaw: "PSC-PM", tookOfficeOn: "2007-06-16", finsA: "2008-04-08", fontFi: "ministeri" },
+  ],
+  changes: [
+    { term: "2011-2015", mayors: [{ name: "XAVIER GARCIA ALBIOL", tookOfficeOn: "2011-06-11" }, { name: "PERSONA DEL MINISTERI", tookOfficeOn: "2013-03-01" }], partyChanged: true },
+    { term: "2007-2011", mayors: [{ name: "MAITE ARQUE FERRER", tookOfficeOn: "2007-06-16" }, { name: "JORDI SERRA ISERN", tookOfficeOn: "2008-04-08" }], partyChanged: false },
+  ],
+};
+
+describe("el que ve del Ministeri", () => {
+  const persones = () => alcaldiesHistoriques(AMB_MINISTERI, { avui: AVUI });
+  const de = (clau: string) => persones().find((p) => p.clau === clau)!;
+  const pagina = (clau: string) => renderAlcaldiaHistorica(de(clau), BADALONA_MUNICIPI, { generatedAt: "avui", genere: null, avui: AVUI });
+
+  it("el mandat sap d'on ve cada dada", () => {
+    expect(de("maite arque ferrer").mandats[0]).toMatchObject({ font: "generalitat", finsA: "2008-04-08", fontFi: "ministeri", motiuFinal: null, marxaAMigMandat: true });
+    expect(de("jordi serra isern").mandats[0]).toMatchObject({ font: "generalitat", fontInici: "ministeri", arribaAMigMandat: true });
+    expect(de("persona del ministeri").mandats[0]).toMatchObject({ font: "ministeri", llistaMinisteri: "CIU", fontFi: null });
+    // La durada compta fins a la baixa del Ministeri: del 16-06-2007 al 08-04-2008.
+    expect(de("maite arque ferrer").durada).toEqual({ dies: 297, aproximat: false });
+  });
+
+  it("la pàgina diu «segons el Ministeri» on toca, i no s'inventa cap motiu", () => {
+    const arque = pagina("maite arque ferrer");
+    expect(arque).toContain("Va deixar l'alcaldia el 8 d'abril del 2008, segons el Ministeri: hi va seguir <a href=\"../../alcaldia/jordi-serra-isern/\">Jordi Serra Isern</a>. Cap font no en diu el motiu, i nosaltres tampoc.");
+    expect(arque).not.toContain("Segons Wikidata");
+    expect(arque).toContain("El que va marcat «segons el Ministeri»");
+    expect(arque).toContain("Sistema d'Informació Local");
+
+    const serra = pagina("jordi serra isern");
+    expect(serra).toContain("Va prendre possessió el 8 d'abril del 2008, segons el Ministeri.");
+    expect(serra).not.toContain("La font no en dona la data de presa de possessió");
+
+    const nou = pagina("persona del ministeri");
+    expect(nou).toContain('<span class="marca-canvi">segons el Ministeri</span>');
+    expect(nou).toContain('CIU <span class="secundari">segons el Ministeri</span>');
+    expect(nou).not.toContain("segons Wikidata");
+  });
+
+  it("sense res del Ministeri, la pàgina no en parla", () => {
+    const html = renderAlcaldiaHistorica(roig(), MUNICIPI, { generatedAt: "avui", genere: null, avui: AVUI });
+    expect(html).not.toContain("segons el Ministeri");
+    const sabater = renderAlcaldiaHistorica(alcaldiesHistoriques(BADALONA, { avui: AVUI })[0]!, BADALONA_MUNICIPI, { generatedAt: "avui", genere: "alcaldessa", avui: AVUI });
+    expect(sabater).not.toContain("segons el Ministeri");
+  });
+});

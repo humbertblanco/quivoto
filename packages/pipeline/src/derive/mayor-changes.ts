@@ -1,9 +1,10 @@
 import { asc, eq } from "drizzle-orm";
 import { mayors, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { KIND as KIND_ALCALDIES_WIKIDATA, type FitxaAlcaldiesWikidata } from "../jobs/j31-alcaldies-wikidata";
+import { KIND as KIND_ALCALDIES_MINISTERI, type FitxaAlcaldiesMinisteri } from "../jobs/j35-alcaldes-ministeri";
 import { normalize } from "../lib/text";
 import { withRun } from "../lib/run";
-import { familiaDelPartit, fusionaAmbWikidata, mateixaPersona, type PasAlcaldia } from "./alcaldies";
+import { familiaDelPartit, fusionaAmbMinisteri, fusionaAmbWikidata, mateixaPersona, type PasAlcaldia } from "./alcaldies";
 
 /**
  * Canvis d'alcaldia a mig mandat.
@@ -24,6 +25,13 @@ import { familiaDelPartit, fusionaAmbWikidata, mateixaPersona, type PasAlcaldia 
  * oficial sense esborrar-ne res, i cada pas que ve de Wikidata queda marcat
  * amb `font: "wikidata"`. Si J31 no s'ha executat, tot funciona igual que
  * abans, només amb la Generalitat.
+ *
+ * I el que ni la Generalitat ni Wikidata diuen —**quan** va acabar cada
+ * alcaldia, de tots els municipis i no només de les ciutats— ho diu el
+ * Ministeri (J35, «Alcaldes por mandato» del SIL), que es fusiona darrere de
+ * Wikidata amb la mateixa regla i marca el que hi posa amb `fontFi`,
+ * `fontInici` o `font: "ministeri"`. El motiu no el diu ningú més que
+ * Wikidata, i no s'inventa.
  */
 
 /**
@@ -94,7 +102,9 @@ export function findChanges(
     // PP i PSC— semblaria un relleu sense canviar de mans.
     const parties = new Set(ordered.map((s) => normalize(s.partyRaw ?? "")).filter(Boolean));
     const families = new Set(
-      ordered.map((s) => familiaDelPartit(s.partyRaw) ?? familiaDelPartit(s.partitWikidata)).filter((f): f is string => f !== null),
+      ordered
+        .map((s) => familiaDelPartit(s.partyRaw) ?? familiaDelPartit(s.partitWikidata) ?? familiaDelPartit(s.llistaMinisteri))
+        .filter((f): f is string => f !== null),
     );
     changes.push({
       term,
@@ -142,6 +152,18 @@ export async function deriveMayorChanges(db: Db): Promise<void> {
     }
     if (wikidata.size > 0) run.say(`${wikidata.size} municipis amb alcaldies segons Wikidata (J31)`);
 
+    // I el que el Ministeri en sap (J35), si s'ha executat: sobretot la data
+    // de baixa, que cap altra font dona de tots els municipis.
+    const ministeri = new Map<number, FitxaAlcaldiesMinisteri>();
+    for (const f of await db
+      .select({ municipalityId: municipalityMetrics.municipalityId, data: municipalityMetrics.data })
+      .from(municipalityMetrics)
+      .where(eq(municipalityMetrics.kind, KIND_ALCALDIES_MINISTERI))) {
+      const fitxa = f.data as FitxaAlcaldiesMinisteri;
+      if (Array.isArray(fitxa?.alcaldies)) ministeri.set(f.municipalityId, fitxa);
+    }
+    if (ministeri.size > 0) run.say(`${ministeri.size} municipis amb alcaldies segons el Ministeri (J35)`);
+
     const byMunicipality = new Map<number, typeof rows>();
     for (const row of rows) {
       const list = byMunicipality.get(row.municipalityId);
@@ -157,13 +179,26 @@ export async function deriveMayorChanges(db: Db): Promise<void> {
 
     let passosDeWikidata = 0;
     let municipisCompletats = 0;
+    let passosDelMinisteri = 0;
+    let finalsDelMinisteri = 0;
+    let inicisDelMinisteri = 0;
     for (const [municipalityId, list] of byMunicipality) {
       const generalitat: PasAlcaldia[] = list.map((r) => ({ term: r.term, name: r.name, partyRaw: r.partyRaw, tookOfficeOn: r.tookOfficeOn }));
       const fitxaWikidata = wikidata.get(municipalityId) ?? null;
-      const history = fusionaAmbWikidata(generalitat, fitxaWikidata?.alcaldies ?? [], termStarts);
+      const fitxaMinisteri = ministeri.get(municipalityId) ?? null;
+      const history = fusionaAmbMinisteri(
+        fusionaAmbWikidata(generalitat, fitxaWikidata?.alcaldies ?? [], termStarts),
+        fitxaMinisteri?.alcaldies ?? [],
+      );
       const afegits = history.filter((h) => h.font === "wikidata").length;
       passosDeWikidata += afegits;
       if (afegits > 0) municipisCompletats += 1;
+      const afegitsMinisteri = history.filter((h) => h.font === "ministeri").length;
+      const finalsMinisteri = history.filter((h) => h.fontFi === "ministeri").length;
+      const inicisMinisteri = history.filter((h) => h.fontInici === "ministeri").length;
+      passosDelMinisteri += afegitsMinisteri;
+      finalsDelMinisteri += finalsMinisteri;
+      inicisDelMinisteri += inicisMinisteri;
       const changes = findChanges(history, termStarts);
       const current = changes.find((c) => c.term === "2023-2027");
       if (current) {
@@ -197,6 +232,18 @@ export async function deriveMayorChanges(db: Db): Promise<void> {
         wikidata: fitxaWikidata
           ? { font: fitxaWikidata.font, llicencia: fitxaWikidata.llicenciaDades, consultat: fitxaWikidata.consultat, url: fitxaWikidata.url, passosAfegits: afegits }
           : null,
+        ministeri: fitxaMinisteri
+          ? {
+              font: fitxaMinisteri.font,
+              organisme: fitxaMinisteri.organisme,
+              llicencia: fitxaMinisteri.llicencia,
+              consultat: fitxaMinisteri.consultat,
+              url: fitxaMinisteri.url,
+              passosAfegits: afegitsMinisteri,
+              finalsCompletats: finalsMinisteri,
+              inicisCompletats: inicisMinisteri,
+            }
+          : null,
       };
 
       await db
@@ -212,10 +259,16 @@ export async function deriveMayorChanges(db: Db): Promise<void> {
     run.say(`${currentTermChanges} municipis han canviat d'alcaldia en el mandat actual`);
     run.say(`${currentTermPartyChanges} d'aquests van canviar també de partit`);
     if (passosDeWikidata > 0) run.say(`${passosDeWikidata} passos afegits de Wikidata a ${municipisCompletats} municipis`);
+    if (ministeri.size > 0) {
+      run.say(`del Ministeri: ${finalsDelMinisteri} dates de baixa, ${inicisDelMinisteri} dates de possessió que faltaven i ${passosDelMinisteri} passos que cap altra font tenia`);
+    }
     return {
       municipis: run.rowsOut,
       passos_de_wikidata: passosDeWikidata,
       municipis_completats_amb_wikidata: municipisCompletats,
+      passos_del_ministeri: passosDelMinisteri,
+      finals_del_ministeri: finalsDelMinisteri,
+      inicis_del_ministeri: inicisDelMinisteri,
       canvis_mandat_actual: currentTermChanges,
       canvis_amb_color_diferent: currentTermPartyChanges,
       mostra: currentList.slice(0, 25),
