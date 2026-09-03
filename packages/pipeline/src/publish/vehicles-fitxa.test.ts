@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { VehiclesMetric } from "../jobs/j34-vehicles";
 import { LLICENCIA_IDESCAT, NOTA_COMPETENCIES, NOTA_QUE_COMPTA, PAGINA_IDESCAT } from "../jobs/j34-vehicles";
-import { curiositatsVehicles, renderVehicles, renderVehiclesBloc, type FilaVehicles } from "./vehicles-fitxa";
+import { curiositatsVehicles, esFlota, renderVehicles, renderVehiclesBloc, type FilaVehicles } from "./vehicles-fitxa";
 
 /** Girona el 2024, amb les xifres reals de l'Idescat i el padró del mateix any. */
 const girona: VehiclesMetric = {
@@ -105,6 +105,27 @@ describe("renderVehicles", () => {
     expect(buit).toContain('<section class="bloc" id="vehicles">');
     expect(buit).toContain("L'Idescat no publica el parc de vehicles d'aquest municipi");
     expect(buit).toContain("un buit no és un zero");
+  });
+});
+
+describe("una flota domiciliada", () => {
+  it("es diu per habitant i no per mil, s'explica, i no es compara amb els de la seva mida", () => {
+    const rajadell: VehiclesMetric = {
+      ...girona,
+      parc: { total: 26574, turismes: 7508, motocicletes: 640, industrials: 11518, altres: 6908 },
+      perMil: { total: 44737.4, turismes: 12640, motocicletes: 1077, industrials: 19391, altres: 11630 },
+    };
+    const html = renderVehicles(rajadell);
+    expect(html).toContain("45 per cada habitant");
+    expect(html).toContain("rènting");
+    expect(html).toContain("no entra al rànquing");
+    expect(html).toContain("flota domiciliada: no es compara");
+    expect(html).not.toContain("percentil");
+  });
+  it("comença per sobre de dos vehicles per habitant", () => {
+    expect(esFlota(2000)).toBe(false);
+    expect(esFlota(2000.1)).toBe(true);
+    expect(esFlota(null)).toBe(false);
   });
 });
 

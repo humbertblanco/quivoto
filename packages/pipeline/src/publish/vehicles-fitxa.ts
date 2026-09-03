@@ -53,9 +53,38 @@ function comparacioDe(
   return { mediana: c.mediana, quants: c.grup.ambDada, etiqueta: c.grup.etiqueta, percentil: c.percentil };
 }
 
-/** «El 2024 hi havia 70.297 vehicles domiciliats: 669 per cada 1.000 habitants, i 66 de cada 100 són turismes.» */
+/**
+ * A partir de quants vehicles per 1.000 habitants el parc ja no diu res dels
+ * veïns. Rajadell (594 habitants) té 26.574 vehicles domiciliats, 45 per
+ * persona; Aguilar de Segarra, 43; Torrebesses, 15. No són els cotxes dels
+ * veïns: les empreses de rènting i lísing domicilien flotes senceres en
+ * municipis on l'impost de vehicles (IVTM) és baix, i la DGT els compta allà
+ * on són domiciliats. Per sobre de dos vehicles per habitant es tracta com a
+ * flota: la fitxa ho diu així, i el rànquing deixa el municipi fora perquè
+ * una taxa de 44.737 no és comparable amb cap altra.
+ */
+export const FLOTA_DOMICILIADA = 2000;
+
+/** Si el parc és una flota domiciliada i no el dels veïns (vegeu `FLOTA_DOMICILIADA`). */
+export function esFlota(perMil: number | null | undefined): boolean {
+  return typeof perMil === "number" && perMil > FLOTA_DOMICILIADA;
+}
+
+/**
+ * «El 2024 hi havia 70.297 vehicles domiciliats: 669 per cada 1.000
+ * habitants, i 66 de cada 100 són turismes.» I quan és una flota: «26.574
+ * vehicles domiciliats: 45 per cada habitant. No són els dels veïns…».
+ */
 function fraseObertura(dades: VehiclesMetric): string {
   let frase = `El ${dades.any} hi havia <b>${enter(dades.parc.total)}</b> vehicles domiciliats`;
+  if (dades.perMil && esFlota(dades.perMil.total)) {
+    const perPersona = dades.perMil.total / 1000;
+    frase += `: <b>${perPersona.toLocaleString("ca-ES", { maximumFractionDigits: perPersona >= 10 ? 0 : 1 })} per cada habitant</b>. ` +
+      "No són els dels veïns: les empreses de rènting i lísing domicilien flotes senceres en municipis on " +
+      "l'impost de vehicles és baix, i la DGT els compta allà on són domiciliats. La xifra diu on hi ha " +
+      "l'empresa, no com es mouen els veïns, i per això aquest municipi no entra al rànquing de vehicles per habitant";
+    return `<p class="entrada-bloc">${frase}.</p>`;
+  }
   if (dades.perMil) frase += `: <b>${enter(dades.perMil.total)} per cada 1.000 habitants</b>`;
   if (dades.pes) frase += `${dades.perMil ? ", i" : ":"} ${enter(dades.pes.turismes)} de cada 100 són turismes`;
   return `<p class="entrada-bloc">${frase}.</p>`;
@@ -67,7 +96,10 @@ function tesselles(dades: VehiclesMetric, medianes: MedianaGrup | null | undefin
   const c = comparacioDe(dades, medianes);
   if (dades.perMil) {
     const peu: string[] = [`${dades.any}`];
-    if (c) {
+    // Amb una flota domiciliada la mediana i el percentil no diuen res:
+    // el que compara és l'empresa, no el poble.
+    if (c && esFlota(dades.perMil.total)) peu.push("flota domiciliada: no es compara amb els de la seva mida");
+    else if (c) {
       peu.push(`la mediana dels ${enter(c.quants)} de la seva mida, <b>${enter(c.mediana)}</b>`);
       if (c.percentil !== null) peu.push(`percentil ${c.percentil}`);
     }

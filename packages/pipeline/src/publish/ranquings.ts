@@ -37,7 +37,7 @@ import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./se
 import { cohortHomogenia, extremsEmpatats } from "./contracte-metriques";
 import { curiositatsTerritori } from "./territori-fitxa";
 import { curiositatsWikidata } from "./wikidata-fitxa";
-import { curiositatsVehicles } from "./vehicles-fitxa";
+import { curiositatsVehicles, esFlota } from "./vehicles-fitxa";
 import { CURIOSITATS_CSS, preparaCuriositats, renderCuriositats, type DadesCuriositats } from "./curiositats";
 import { atributsEtiqueta, GRAFICS_CSS, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { peu } from "./peu";
@@ -161,10 +161,13 @@ export const METRIQUES: readonly Metrica[] = [
   },
   {
     id: "vehicles", titol: "Vehicles per 1.000 habitants",
-    valor: (r) => r.veh, periode: (r) => r.veha,
+    // Una flota de rènting domiciliada (Rajadell: 44.737 per 1.000) no és
+    // comparable amb res: es deixa fora del rànquing i es diu a les curiositats.
+    valor: (r) => (finit(r.veh) && !esFlota(r.veh) ? r.veh : null), periode: (r) => r.veha,
     decimals: 0, sufix: " per 1.000 hab.",
     font: "Idescat, a partir de la DGT · parc de vehicles",
-    metode: "Vehicles amb permís de circulació domiciliats al municipi, per cada 1.000 habitants del padró de l'any de la dada.",
+    metode: "Vehicles amb permís de circulació domiciliats al municipi, per cada 1.000 habitants del padró de l'any de la dada. " +
+      "Els municipis amb més de dos vehicles per habitant queden fora: són flotes d'empreses de rènting domiciliades, no els vehicles dels veïns, i surten a les curiositats.",
     cautela: "Compta els vehicles domiciliats, no els que hi circulen: una empresa de lloguer o una flota d'autocars poden posar-hi més vehicles que veïns, i als pobles petits cent vehicles mouen molt la taxa. Depèn del transport públic i de la dispersió, no del govern municipal.",
   },
   {
