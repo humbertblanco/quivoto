@@ -44,6 +44,10 @@ export async function captures(llista: readonly Captura[]): Promise<Record<strin
     await chrome.crida("Page.enable");
     for (const c of llista) {
       await chrome.crida("Emulation.setDeviceMetricsOverride", { width: c.ample, height: c.alt, deviceScaleFactor: c.escala, mobile: c.mobil });
+      // El Chrome sense cap perfil arrenca amb el tema fosc del sistema, i el
+      // web el respecta: la captura sortia en fosc i no s'assemblava al que
+      // veu la majoria. S'hi força el tema clar, que és el de la marca.
+      await chrome.crida("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "light" }] });
       if (c.mobil) {
         await chrome.crida("Emulation.setUserAgentOverride", { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" });
         await chrome.crida("Emulation.setTouchEmulationEnabled", { enabled: true });

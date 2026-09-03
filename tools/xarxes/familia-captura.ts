@@ -48,7 +48,7 @@ function cos(m: Marc, d: Dades, _mida: Mida): string {
   const src = d.captures[m.captura];
   if (!src) throw new Error(`no hi ha la captura ${m.captura}`);
   const marc = m.tipus === "mobil"
-    ? `<div class="mobil"><div class="pantalla"><img src="${src}" alt=""></div></div>`
+    ? `<div class="telefon"><div class="pantalla"><img src="${src}" alt=""></div></div>`
     : `<div class="finestra"><div class="barra"><i></i><i></i><i></i><span class="url">${escape(m.url)}</span></div><div class="pantalla"><img src="${src}" alt=""></div></div>`;
   return `<div class="marca">${logo(3)}</div>
 <p class="etiqueta">Captura del web</p>
@@ -64,30 +64,37 @@ ${peu(`captura de l'Observatori publicat el ${d.generat}`)}`;
 }
 
 const CSS = `
-.escena{flex-direction:row;align-items:center;gap:4rem}
+/* La composició reparteix l'alçada entre el text i el marc; el marc mai no es
+   mesura en rem absoluts perquè a 1600x900 no hi cabria i trepitjaria el peu:
+   pren l'alçada que li queda i la proporció de la pantalla que imita. */
+.escena{flex-direction:row;align-items:stretch;gap:4rem;min-height:0}
 body.vertical .escena{flex-direction:column;align-items:stretch;gap:2rem;justify-content:flex-start}
-.escena.mobil .text{flex:0 0 46%}
+.escena.mobil .text{flex:0 0 42%;display:flex;flex-direction:column;justify-content:center}
+body.vertical .escena.mobil .text{flex:0 0 auto}
 .escena.escriptori{flex-direction:column;align-items:stretch;gap:1.6rem;justify-content:flex-start}
-.escena.escriptori .text{display:flex;align-items:baseline;gap:2rem;flex-wrap:wrap}
+.escena.escriptori .text{flex:0 0 auto}
 body.vertical .escena.escriptori .text{display:block}
-.figura{flex:1 1 auto;min-width:0;min-height:0;display:flex;justify-content:center;align-items:flex-start}
-.titol{font-size:4.6rem}
-body.vertical .titol{font-size:4.8rem}
-.sota{font-size:1.9rem;font-weight:600;color:var(--suau);margin-top:1.2rem;line-height:1.3;max-width:56rem}
+.figura{flex:1 1 auto;min-width:0;min-height:0;display:flex;justify-content:center;align-items:center}
+.titol{font-size:4.2rem}
+body.vertical .titol{font-size:4.6rem}
+.escena.escriptori .titol{font-size:4.6rem}
+.sota{font-size:1.85rem;font-weight:600;color:var(--suau);margin-top:1.2rem;line-height:1.3;max-width:56rem}
 .adreca-pag{font-family:Gabarito,sans-serif;font-weight:900;font-size:1.6rem;margin-top:1.4rem;letter-spacing:-.02em}
 .escena.escriptori .adreca-pag{display:none}
-/* El mòbil: un rectangle arrodonit amb vora de tinta i ombra dura, la captura a dins retallada. */
-.mobil{width:26rem;height:52rem;border:.35rem solid var(--ink);border-radius:3.2rem;box-shadow:1.1rem 1.1rem 0 var(--ink);
-  overflow:hidden;background:#fff;padding:.5rem}
-body.vertical .mobil{width:36rem;height:56rem}
-.mobil .pantalla{width:100%;height:100%;border-radius:2.4rem;overflow:hidden}
-.mobil img{width:100%;height:auto;display:block}
+/* El mòbil: un rectangle arrodonit amb vora de tinta i ombra dura, la captura
+   a dins retallada. L'alçada la mana la figura; l'amplada surt de la proporció.
+   Es diu «telefon» i no «mobil» perquè l'escena ja porta la classe «mobil»: amb
+   el mateix nom, el marc es pintava també al contenidor de tota la composició. */
+.telefon{height:100%;aspect-ratio:390/844;max-width:100%;border:.35rem solid var(--ink,#1E1B2E);border-radius:3.2rem;
+  box-shadow:1.1rem 1.1rem 0 var(--tinta);border-color:var(--tinta);overflow:hidden;background:#fff;padding:.5rem}
+.telefon .pantalla{width:100%;height:100%;border-radius:2.4rem;overflow:hidden}
+.telefon img{width:100%;height:auto;display:block}
 /* La finestra de navegador: barra amb tres punts i l'adreça, la captura retallada per sota. */
-.finestra{width:100%;height:42rem;border:.3rem solid var(--ink);border-radius:1.6rem;box-shadow:1rem 1rem 0 var(--ink);overflow:hidden;background:#fff}
-body.vertical .finestra{height:auto;aspect-ratio:16/10;max-height:74rem}
-.barra{height:3.2rem;background:var(--presec);border-bottom:.25rem solid var(--ink);display:flex;align-items:center;gap:.6rem;padding:0 1.4rem}
-.barra i{width:1rem;height:1rem;border-radius:50%;border:.18rem solid var(--ink);background:#fff}
-.barra .url{margin-left:1.2rem;font-weight:800;font-size:1.15rem;background:#fff;border:.18rem solid var(--ink);border-radius:999px;padding:.15rem 1.2rem;color:var(--ink)}
+.finestra{height:100%;aspect-ratio:1440/860;max-width:100%;border:.3rem solid var(--tinta);border-radius:1.6rem;
+  box-shadow:1rem 1rem 0 var(--tinta);overflow:hidden;background:#fff}
+.barra{height:3.2rem;background:#FFD8B8;border-bottom:.25rem solid #1E1B2E;display:flex;align-items:center;gap:.6rem;padding:0 1.4rem}
+.barra i{width:1rem;height:1rem;border-radius:50%;border:.18rem solid #1E1B2E;background:#fff}
+.barra .url{margin-left:1.2rem;font-weight:800;font-size:1.15rem;background:#fff;border:.18rem solid #1E1B2E;border-radius:999px;padding:.15rem 1.2rem;color:#1E1B2E}
 .finestra .pantalla{overflow:hidden;height:calc(100% - 3.2rem)}
 .finestra img{width:100%;height:auto;display:block}
 `;
