@@ -121,6 +121,24 @@ export function termDe(data: string, terms: readonly string[], termStarts: Reado
   return trobat;
 }
 
+/** Dies entre dues dates ISO, de la primera a la segona. */
+const diesEntre = (a: string, b: string): number => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);
+
+/**
+ * La presa de possessió del qui va obrir un mandat segons una font oficial
+ * (no Wikidata), si n'hi ha: la primera del mandat, i només si cau dins dels
+ * quaranta-cinc dies de la constitució general. Un que arriba més tard —
+ * Guijarro, el novembre del 2021— és un relleu, no qui va obrir el mandat, i
+ * no diu res de fins quan va durar l'alcalde sortint en funcions.
+ */
+function primerOficialDe(historial: readonly PasAlcaldia[], term: string, inici: string): string | undefined {
+  const primera = historial
+    .filter((r) => r.term === term && r.font === undefined && r.tookOfficeOn !== null)
+    .map((r) => r.tookOfficeOn!)
+    .sort()[0];
+  return primera !== undefined && Math.abs(diesEntre(inici, primera)) <= 45 ? primera : undefined;
+}
+
 const compareDates = (a: string | null, b: string | null): number => (a ?? "").localeCompare(b ?? "");
 
 /**
@@ -148,7 +166,14 @@ export function fusionaAmbWikidata(
     // d'aquest mandat: van al tram de després (vegeu més avall).
     const seguent = ordenatsPerTram[ordenatsPerTram.indexOf(term) + 1];
     const iniciSeguent = seguent !== undefined ? (termStarts.get(seguent) ?? `${seguent.slice(0, 4)}-06-15`) : null;
-    const acabaEnAquest = alcaldia.fi !== null && (iniciSeguent === null || alcaldia.fi < iniciSeguent);
+    // Acaba en aquest mandat si plega abans del ple següent, o el mateix dia
+    // (o abans) que el primer alcalde oficial del següent pren possessió al
+    // seu poble: fins llavors era l'alcalde sortint en funcions, no un
+    // alcalde del mandat nou (vegeu més avall, on el tram no es duplica).
+    const primerOficialSeguent = seguent === undefined || iniciSeguent === null ? undefined : primerOficialDe(resultat, seguent, iniciSeguent);
+    const acabaEnAquest =
+      alcaldia.fi !== null &&
+      (iniciSeguent === null || alcaldia.fi < iniciSeguent || (primerOficialSeguent !== undefined && alcaldia.fi <= primerOficialSeguent));
     // Si continua, el tram d'aquest mandat s'acaba on comença el següent:
     // la durada surt bé i el motiu de deixar-ho, que és d'un altre any, no.
     const fi = acabaEnAquest ? alcaldia.fi : iniciSeguent;
@@ -208,6 +233,14 @@ export function fusionaAmbWikidata(
       if (inici < alcaldia.inici) continue;
       if (alcaldia.fi !== null && alcaldia.fi <= inici) break;
       if (resultat.some((r) => r.term === term && mateixaPersona(r.name, alcaldia.nom))) continue;
+      // Qui deixa l'alcaldia el mateix dia (o abans) que el primer alcalde
+      // oficial del mandat pren possessió no va ser alcalde d'aquest mandat:
+      // era el sortint en funcions fins al ple de constitució del seu poble.
+      // Wikidata data Màrius Díaz fins al 24 de maig del 1983, que és el dia
+      // que Joan Blanch va prendre possessió a Badalona; sense això, un tram
+      // de setze dies de Díaz encapçalaria el 1983-1987.
+      const primerOficial = primerOficialDe(resultat, term, inici);
+      if (alcaldia.fi !== null && primerOficial !== undefined && alcaldia.fi <= primerOficial) break;
       const seguent = ordenats[ordenats.indexOf(term) + 1];
       const finsAlMandat = seguent !== undefined ? (termStarts.get(seguent) ?? `${seguent.slice(0, 4)}-06-15`) : null;
       const acabaAqui = alcaldia.fi !== null && (finsAlMandat === null || alcaldia.fi < finsAlMandat);

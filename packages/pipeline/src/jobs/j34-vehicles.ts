@@ -1,4 +1,4 @@
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import {
   emexMassiu,
@@ -194,6 +194,13 @@ export type TaxesVehicles = {
   altres: number | null;
 };
 
+/** Una llista partida en tandes de `mida`, per no demanar-ho tot d'un cop. */
+export function perTandes<T>(llista: readonly T[], mida: number): T[][] {
+  const tandes: T[][] = [];
+  for (let i = 0; i < llista.length; i += mida) tandes.push(llista.slice(i, i + mida));
+  return tandes;
+}
+
 /** Vehicles per 1.000 habitants, amb un decimal, o `null` sense padró. */
 export function taxesPerMil(parc: ParcVehicles, habitants: number | null): TaxesVehicles | null {
   if (habitants === null || habitants <= 0) return null;
@@ -351,23 +358,29 @@ export async function j34Vehicles(db: Db): Promise<void> {
     run.say(`${dades.municipis.length} municipis · any ${total.any} · actualitzat ${total.updated ?? "?"}`);
 
     // ── 2. El padró i els enllaços que J18 ja té ─────────────────────────────
+    // Es llegeixen per tandes de cent municipis i no tot d'un cop: la sèrie
+    // del padró de cada municipi és llarga, i demanar les 947 files en una
+    // sola consulta feia caure el PGlite («memory access out of bounds»).
+    // Amb `inArray` de cent en cent, com fa J29, la resposta cap sempre.
     const padroPer = new Map<number, PuntSerie[]>();
-    const filesPoblacio = await db
-      .select({ municipalityId: municipalityMetrics.municipalityId, data: municipalityMetrics.data })
-      .from(municipalityMetrics)
-      .where(eq(municipalityMetrics.kind, "poblacio"));
-    for (const fila of filesPoblacio) {
-      const serie = seriePadro(fila.data);
-      if (serie) padroPer.set(fila.municipalityId, serie);
-    }
     const enllacPer = new Map<number, EnllacMunicipi>();
-    const filesEnllacos = await db
-      .select({ municipalityId: municipalityMetrics.municipalityId, data: municipalityMetrics.data })
-      .from(municipalityMetrics)
-      .where(eq(municipalityMetrics.kind, "poblacioEnllacos"));
-    for (const fila of filesEnllacos) {
-      const enllac = enllacVehicles(fila.data);
-      if (enllac) enllacPer.set(fila.municipalityId, enllac);
+    for (const tanda of perTandes(tots.map((m) => m.id), 100)) {
+      const filesPoblacio = await db
+        .select({ municipalityId: municipalityMetrics.municipalityId, data: municipalityMetrics.data })
+        .from(municipalityMetrics)
+        .where(and(eq(municipalityMetrics.kind, "poblacio"), inArray(municipalityMetrics.municipalityId, tanda)));
+      for (const fila of filesPoblacio) {
+        const serie = seriePadro(fila.data);
+        if (serie) padroPer.set(fila.municipalityId, serie);
+      }
+      const filesEnllacos = await db
+        .select({ municipalityId: municipalityMetrics.municipalityId, data: municipalityMetrics.data })
+        .from(municipalityMetrics)
+        .where(and(eq(municipalityMetrics.kind, "poblacioEnllacos"), inArray(municipalityMetrics.municipalityId, tanda)));
+      for (const fila of filesEnllacos) {
+        const enllac = enllacVehicles(fila.data);
+        if (enllac) enllacPer.set(fila.municipalityId, enllac);
+      }
     }
 
     // ── 3. La mètrica de cada municipi, sense comparació encara ─────────────

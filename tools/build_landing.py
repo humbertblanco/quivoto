@@ -80,7 +80,7 @@ T = {
   'peu_legal':'Avís legal','peu_priv':'Privadesa','peu_metod':'Metodologia (aviat)','peu_obs':'Observatori',
   'peu_premsa':'Premsa','premsa_url':'/premsa.html',
   'peu':'quivoto — brúixola electoral de les municipals 2027.',
-  'credit':'Un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
+  'credit':'Un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
   'gracies_h':'Fet!','gracies_p':'T’avisarem quan obrim el teu municipi. Mentrestant, ja pots tancar aquesta pestanya.','gracies_torna':'Tornar a l’inici',
  },
  'es': {
@@ -150,7 +150,7 @@ T = {
   'peu_legal':'Aviso legal','peu_priv':'Privacidad','peu_metod':'Metodología (pronto)','peu_obs':'Observatorio',
   'peu_premsa':'Prensa','premsa_url':'/es/prensa.html',
   'peu':'quienvoto — brújula electoral de las municipales 2027.',
-  'credit':'Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
+  'credit':'Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a>',
   'gracies_h':'¡Hecho!','gracies_p':'Te avisaremos cuando abramos tu municipio. Mientras, ya puedes cerrar esta pestaña.','gracies_torna':'Volver al inicio',
  },
 }
@@ -1323,7 +1323,7 @@ PREMSA_T = {
     'Tot surt de fonts oficials, no hi ha cap model de llenguatge pel mig, els càlculs es poden repetir i les dades derivades són obertes, amb llicència CC BY 4.0.'],
   'redaccio_titol':'La redacció',
   'redaccio':[
-    'quivoto és un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com">Damos en el Blanco</a>. El titular legal és <strong>Damos en el Blanco, S.L.</strong>, amb seu a Sant Just Desvern (Barcelona); les dades completes són a l’<a href="/avis-legal.html">avís legal</a>. El codi és a <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.',
+    'quivoto és un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a>. El titular legal és <strong>Damos en el Blanco, S.L.</strong>, amb seu a Sant Just Desvern (Barcelona); les dades completes són a l’<a href="/avis-legal.html">avís legal</a>. El codi és a <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.',
     'No som un mitjà de comunicació i no rebem diners de cap partit, candidatura ni administració. Publiquem dades i expliquem com les hem calculades.'],
   'xifres_titol':'En xifres',
   'xifres_lab':{'municipis':'municipis, una fitxa cadascun','electes':'electes al ple','candidatures':'pàgines de candidatura',
@@ -1364,7 +1364,7 @@ PREMSA_T = {
   'contacte_titol':'Contacte de premsa',
   'contacte':'hola@quivoto.cat',
   'contacte_text':'Si és sobre una dada, digueu-nos el municipi i l’enllaç de la fitxa.',
-  'xarxes':[('https://x.com/humbertblanco','Humbert Blanco a X'),('https://github.com/humbertblanco/quivoto','El codi a GitHub'),('https://damosenelblanco.com','Damos en el Blanco')],
+  'xarxes':[('https://x.com/humbertblanco','Humbert Blanco a X'),('https://github.com/humbertblanco/quivoto','El codi a GitHub'),('https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits','Damos en el Blanco')],
   'notes_titol':'Notes de premsa',
   'notes':[('2026-09','Setembre del 2026','quivoto obre l’Observatori municipal amb els 947 municipis',
             'Una fitxa per municipi amb qui hi mana i amb qui, el ple amb nom i cognoms, els resultats de les dotze eleccions des del 1979, els comptes i els impostos. Tot fet amb dades obertes i cap model de llenguatge pel mig, i els 1.894 fitxers de dades es poden baixar en CSV i JSON.')],
@@ -1384,7 +1384,7 @@ PREMSA_T = {
     'Todo sale de fuentes oficiales, no hay ningún modelo de lenguaje de por medio, los cálculos se pueden repetir y los datos derivados son abiertos, con licencia CC BY 4.0.'],
   'redaccio_titol':'La redacción',
   'redaccio':[
-    'quivoto es un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com">Damos en el Blanco</a>. El titular legal es <strong>Damos en el Blanco, S.L.</strong>, con sede en Sant Just Desvern (Barcelona); los datos completos están en el <a href="/es/avis-legal.html">aviso legal</a>. El código está en <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.',
+    'quivoto es un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a>. El titular legal es <strong>Damos en el Blanco, S.L.</strong>, con sede en Sant Just Desvern (Barcelona); los datos completos están en el <a href="/es/avis-legal.html">aviso legal</a>. El código está en <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.',
     'No somos un medio de comunicación y no recibimos dinero de ningún partido, candidatura ni administración. Publicamos datos y explicamos cómo los hemos calculado.'],
   'xifres_titol':'En cifras',
   'xifres_lab':{'municipis':'municipios, una ficha cada uno','electes':'electos en el pleno','candidatures':'páginas de candidatura',
@@ -1425,7 +1425,7 @@ PREMSA_T = {
   'contacte_titol':'Contacto de prensa',
   'contacte':'hola@quivoto.cat',
   'contacte_text':'Si es sobre un dato, decidnos el municipio y el enlace de la ficha.',
-  'xarxes':[('https://x.com/humbertblanco','Humbert Blanco en X'),('https://github.com/humbertblanco/quivoto','El código en GitHub'),('https://damosenelblanco.com','Damos en el Blanco')],
+  'xarxes':[('https://x.com/humbertblanco','Humbert Blanco en X'),('https://github.com/humbertblanco/quivoto','El código en GitHub'),('https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits','Damos en el Blanco')],
   'notes_titol':'Notas de prensa',
   'notes':[('2026-09','Septiembre de 2026','quivoto abre el Observatorio municipal con los 947 municipios',
             'Una ficha por municipio con quién manda y con quién, el pleno con nombres y apellidos, los resultados de las doce elecciones desde 1979, las cuentas y los impuestos. Todo hecho con datos abiertos y ningún modelo de lenguaje de por medio, y los 1.894 ficheros de datos se pueden descargar en CSV y JSON.')],

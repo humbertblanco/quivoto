@@ -73,6 +73,29 @@ function daysBetween(a: string, b: string): number {
  * —Pilar Díaz substituïda per Eduard Sanz l'octubre del 2024— hi seria invisible
  * si només comptéssim files.
  */
+/**
+ * La data de constitució de cada mandat: la presa de possessió més repetida
+ * de totes les que consten, i en cas d'empat la primera. La mínima no servia:
+ * un sol municipi amb «1995-01-01» al mandat 1995-1999 feia que tots els
+ * altres semblessin arribats 167 dies tard, i un «1983-05-08» (el dia de les
+ * eleccions, no del ple) partia en dos un alcalde que plegava el 24 de maig.
+ */
+export function datesDeConstitucio(passos: Iterable<{ term: string; data: string | null }>): Map<string, string> {
+  const compte = new Map<string, Map<string, number>>();
+  for (const { term, data } of passos) {
+    if (!data) continue;
+    const perData = compte.get(term) ?? new Map<string, number>();
+    perData.set(data, (perData.get(data) ?? 0) + 1);
+    compte.set(term, perData);
+  }
+  const inicis = new Map<string, string>();
+  for (const [term, perData] of compte) {
+    const [millor] = [...perData].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    if (millor) inicis.set(term, millor[0]);
+  }
+  return inicis;
+}
+
 export function findChanges(
   rows: readonly (MayorSpell & { term: string })[],
   termStarts: ReadonlyMap<string, string> = new Map(),
@@ -130,16 +153,6 @@ export async function deriveMayorChanges(db: Db): Promise<void> {
       .orderBy(asc(mayors.municipalityId), asc(mayors.term));
     run.rowsIn = rows.length;
 
-    // Data de constitució de cada mandat: la primera presa de possessió que
-    // consta a tot Catalunya. Sortir-la de les dades evita haver de mantenir una
-    // taula de dates a mà i que se'n desactualitzi cap.
-    const termStarts = new Map<string, string>();
-    for (const row of rows) {
-      if (!row.tookOfficeOn) continue;
-      const current = termStarts.get(row.term);
-      if (!current || row.tookOfficeOn < current) termStarts.set(row.term, row.tookOfficeOn);
-    }
-
     // El que Wikidata en sap (J31), si s'ha executat. Sense fitxa, la fusió no
     // afegeix res i l'historial és el de la Generalitat i prou.
     const wikidata = new Map<number, FitxaAlcaldiesWikidata>();
@@ -163,6 +176,15 @@ export async function deriveMayorChanges(db: Db): Promise<void> {
       if (Array.isArray(fitxa?.alcaldies)) ministeri.set(f.municipalityId, fitxa);
     }
     if (ministeri.size > 0) run.say(`${ministeri.size} municipis amb alcaldies segons el Ministeri (J35)`);
+
+    // Data de constitució de cada mandat, treta de les dades i no d'una taula
+    // a mà: la presa de possessió més repetida a tot Catalunya, entre les de
+    // la Generalitat i les del Ministeri (que en té dels mandats en què la
+    // Generalitat no en dona cap, del 2011 ençà).
+    const termStarts = datesDeConstitucio([
+      ...rows.map((r) => ({ term: r.term, data: r.tookOfficeOn })),
+      ...[...ministeri.values()].flatMap((f) => f.alcaldies.map((a) => ({ term: a.mandat, data: a.possessio }))),
+    ]);
 
     const byMunicipality = new Map<number, typeof rows>();
     for (const row of rows) {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AlcaldiaWikidata } from "../jobs/j31-alcaldies-wikidata";
 import { fusionaAmbWikidata, mateixaPersona, motiuFinalEscrit, partitTruncat, termDe, type PasAlcaldia } from "./alcaldies";
-import { findChanges } from "./mayor-changes";
+import { datesDeConstitucio, findChanges } from "./mayor-changes";
 
 /**
  * Badalona segons la Generalitat: una alcaldia per mandat, el partit retallat
@@ -152,5 +152,52 @@ describe("les peces", () => {
     expect(motiuFinalEscrit("nomenament a un altre càrrec")).toBe("nomenament a un altre càrrec");
     expect(motiuFinalEscrit(null)).toBeNull();
     expect(motiuFinalEscrit("  ")).toBeNull();
+  });
+});
+
+describe("datesDeConstitucio", () => {
+  it("pren la data més repetida de cada mandat, no la mínima, i la primera si hi ha empat", () => {
+    const inicis = datesDeConstitucio([
+      { term: "1995-1999", data: "1995-01-01" },
+      { term: "1995-1999", data: "1995-06-17" },
+      { term: "1995-1999", data: "1995-06-17" },
+      { term: "1995-1999", data: null },
+      { term: "2011-2015", data: "2011-06-11" },
+      { term: "2011-2015", data: "2011-06-10" },
+    ]);
+    expect(inicis.get("1995-1999")).toBe("1995-06-17");
+    expect(inicis.get("2011-2015")).toBe("2011-06-10");
+    expect(inicis.has("2015-2019")).toBe(false);
+  });
+});
+
+describe("l'alcalde sortint en funcions", () => {
+  it("no encapçala el mandat següent si plega el dia que el primer oficial pren possessió", () => {
+    const generalitat: PasAlcaldia[] = [
+      { term: "1979-1983", name: "MARIUS DIAZ BIELSA", partyRaw: "PSUC", tookOfficeOn: "1979-04-19" },
+      { term: "1983-1987", name: "JOAN BLANCH RODRIGUEZ", partyRaw: "PSC-PSOE", tookOfficeOn: "1983-05-24" },
+    ];
+    const wikidata = [wd({ qid: "Q9", nom: "Màrius Díaz i Bielsa", inici: "1979-04-19", fi: "1983-05-24" })];
+    const inicis = new Map([["1979-1983", "1979-04-19"], ["1983-1987", "1983-05-23"]]);
+    const history = fusionaAmbWikidata(generalitat, wikidata, inicis);
+    expect(history.map((h) => `${h.term} ${h.name}`)).toEqual(["1979-1983 MARIUS DIAZ BIELSA", "1983-1987 JOAN BLANCH RODRIGUEZ"]);
+    expect(history[0]).toMatchObject({ finsA: "1983-05-24", qid: "Q9" });
+  });
+
+  it("però qui arriba a mig mandat no és qui l'obre: el tram de Wikidata que el precedeix es queda", () => {
+    const generalitat: PasAlcaldia[] = [
+      { term: "2015-2019", name: "MA. DOLORS SABATER PUIG", partyRaw: "BADALONA EN COM", tookOfficeOn: "2015-06-13" },
+      { term: "2019-2023", name: "RUBEN GUIJARRO PALMA", partyRaw: "PSC-CP", tookOfficeOn: "2021-11-08" },
+    ];
+    const wikidata = [wd({ qid: "Q3", nom: "Àlex Pastor López", inici: "2018-06-20", fi: "2020-04-22", motiuFinal: "renúncia" })];
+    const inicis = new Map([["2015-2019", "2015-06-13"], ["2019-2023", "2019-06-15"]]);
+    const history = fusionaAmbWikidata(generalitat, wikidata, inicis);
+    expect(history.map((h) => `${h.term} ${h.name}`)).toEqual([
+      "2015-2019 MA. DOLORS SABATER PUIG",
+      "2015-2019 Àlex Pastor López",
+      "2019-2023 Àlex Pastor López",
+      "2019-2023 RUBEN GUIJARRO PALMA",
+    ]);
+    expect(history[2]).toMatchObject({ tookOfficeOn: "2019-06-15", finsA: "2020-04-22", motiuFinal: "renúncia" });
   });
 });

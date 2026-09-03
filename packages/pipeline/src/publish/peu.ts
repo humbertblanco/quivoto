@@ -227,7 +227,7 @@ export function peu(
     <a href="${escape(`${arrel(base)}privadesa.html`)}">Privadesa</a> ·
     <a href="${escape(`${arrel(base)}premsa.html`)}">Premsa</a></p>
     <p class="credit">Un projecte d’<a href="https://x.com/humbertblanco">Humbert Blanco</a> gràcies a
-    <a href="https://damosenelblanco.com">Damos en el Blanco</a> ·
+    <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a> ·
     <a href="https://github.com/humbertblanco/quivoto">GitHub</a>.</p>
   </div>
 </footer>`;

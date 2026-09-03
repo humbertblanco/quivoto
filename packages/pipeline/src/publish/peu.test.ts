@@ -41,7 +41,7 @@ describe("peu", () => {
   it("acredita l'autor i Damos en el Blanco amb els seus enllaços", () => {
     const html = peu("./", "avui");
     expect(html).toContain('<a href="https://x.com/humbertblanco">Humbert Blanco</a>');
-    expect(html).toContain('<a href="https://damosenelblanco.com">Damos en el Blanco</a>');
+    expect(html).toContain('<a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a>');
     expect(html).toContain('<a href="https://github.com/humbertblanco/quivoto">GitHub</a>');
   });
 
