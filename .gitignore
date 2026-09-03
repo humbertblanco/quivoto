@@ -19,3 +19,6 @@ packages/db/.data/
 web/public/observatori/
 # Actes descarregades
 packages/db/.data/
+
+# Imatges per a xarxes generades amb tools/xarxes/genera.ts
+exports/
