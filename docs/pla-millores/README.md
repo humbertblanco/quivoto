@@ -11,6 +11,10 @@ Aquesta carpeta recull una anàlisi completa de quivoto (usabilitat, dades i gr�
 | [02-dades-i-grafiques.md](02-dades-i-grafiques.md) | Auditoria de dades, gràfics, descàrregues i model de la brúixola (prefix **DAD-**) |
 | [03-fonts-noves.md](03-fonts-noves.md) | Fonts obertes noves verificades, amb URL, cobertura, llicència i calendari (prefix **FON-**) |
 | [04-tecnica.md](04-tecnica.md) | Revisió tècnica: operació, seguretat, arquitectura, tests, rendiment i SEO (prefix **TEC-**) |
+| [05-bruixola.md](05-bruixola.md) | Segona ronda: la brúixola comparada amb les de referència i amb la recerca; abast i calendari (prefix **BRU-**) |
+| [06-legal-i-electoral.md](06-legal-i-electoral.md) | Segona ronda: LOREG, protecció de dades, llicències, rectificació i governança; llista de comprovació electoral (prefix **LEG-**) |
+| [07-audiencia-i-difusio.md](07-audiencia-i-difusio.md) | Segona ronda: audiència, mitjans locals, xarxes, butlletí, SEO, idees de producte i finançament (prefix **AUD-**) |
+| [08-dades-segona-passada.md](08-dades-segona-passada.md) | Segona ronda: actes i votacions, resultats per secció, programes, fonts municipals noves i controls creuats (prefix **DD2-**) |
 
 Cada tasca del pla té un identificador (`F0-1`, `F1-5`…) i remet a les troballes dels annexos (`UX-5.1`, `TEC-O4`…). Les troballes porten `fitxer:línia`, el problema, per què importa, la solució proposada, l'esforç i l'impacte.
 
@@ -32,4 +36,4 @@ Cada tasca del pla té un identificador (`F0-1`, `F1-5`…) i remet a les trobal
 
 ## Com es va fer
 
-El 26-10-2026 es van fer quatre auditories en paral·lel sobre el commit `e53c589`: lectura del codi i de `docs/` i `design/`, generació de pàgines amb els *fixtures* dels tests, captures amb Playwright a 390 i 1280 px, execució de `pnpm test` i `typecheck`, lectura del web en directe a través de resums de text, i consultes reals a les API de Socrata, l'Idescat i datos.gob.es per a les fonts noves. No es va modificar cap fitxer del codi. Els límits d'aquesta anàlisi són a la secció 10 del pla.
+El 26-10-2026 es van fer dues rondes. A la primera, quatre auditories en paral·lel sobre el commit `e53c589`: lectura del codi i de `docs/` i `design/`, generació de pàgines amb els *fixtures* dels tests, captures amb Playwright a 390 i 1280 px, execució de `pnpm test` i `typecheck`, lectura del web en directe a través de resums de text, i consultes reals a les API de Socrata, l'Idescat i datos.gob.es per a les fonts noves. A la segona, quatre exploracions més a fons (brúixola, marc legal, audiència i dades) amb recerca web i consultes reals a les fonts. No es va modificar cap fitxer del codi. Els límits d'aquesta anàlisi són a la secció 10 del pla.

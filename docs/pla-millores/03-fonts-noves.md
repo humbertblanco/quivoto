@@ -344,7 +344,7 @@ El 2023 (eleccions el 28-05): decret al BOE el 4-04, candidatures del 19 al 24-0
 | **Proclamació** | dia 27 | **26-04-2027** |
 | Publicació de les proclamades al BOP | dia 29 | **28-04-2027** |
 | Campanya | dies 38-52 | **7 → 21-05-2027** |
-| Darrer dia per publicar enquestes | −5 dies | 18-05-2027 |
+| Prohibició de publicar enquestes (art. 69.7 LOREG: els 5 dies anteriors a la votació) | −5 dies | **18 → 22-05-2027**; el darrer dia per publicar-ne és el 17-05 (corregit a la segona ronda, vegeu BRU-9.1) |
 
 ### 7.2 Butlletins oficials de la província (font de les llistes)
 
