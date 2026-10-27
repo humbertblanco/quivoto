@@ -205,7 +205,16 @@ export function nomLlegible(text: string): string {
   // i de la primera lletra: «ramon "Ramonet" Golart Ávila» ve així de la font
   // (el sobrenom hi és entre cometes i el nom de pila en minúscula), i un nom
   // de persona que comença en minúscula al títol d'una pàgina és una errata.
-  if (/\p{Ll}/u.test(nom.replace(/\([^)]*\)/g, ""))) return conjuncioCatalana(majusculaInicial(nom));
+  //
+  // Les partícules escrites en minúscula tampoc no compten: «NOEMÍ TRUCHARTE i
+  // CERVERA» ve així del registre de plens dels consells, i amb aquella «i»
+  // el nom es quedava tot en majúscules perquè semblava ja ben escrit.
+  const perDecidir = nom
+    .replace(/\([^)]*\)/g, "")
+    .split(" ")
+    .filter((mot) => !PARTICULES.has(mot))
+    .join(" ");
+  if (/\p{Ll}/u.test(perDecidir)) return conjuncioCatalana(majusculaInicial(nom));
   const capitalitza = (mot: string): string =>
     mot.charAt(0).toLocaleUpperCase("ca") + mot.slice(1).toLocaleLowerCase("ca");
   return nom

@@ -19,6 +19,12 @@ describe("nomLlegible", () => {
     expect(nomLlegible("PASQUAL MARAGALL MIRA")).toBe("Pasqual Maragall Mira");
   });
 
+  it("no es deixa enganyar per una partícula escrita en minúscula", () => {
+    // Així surt al registre de plens del Consell Comarcal de l'Anoia.
+    expect(nomLlegible("NOEMÍ TRUCHARTE i CERVERA")).toBe("Noemí Trucharte i Cervera");
+    expect(nomLlegible("JOAN PUIG de la BELLACASA")).toBe("Joan Puig de la Bellacasa");
+  });
+
   it("deixa la partícula en minúscula, però no si obre el nom", () => {
     expect(nomLlegible("JOAN DE LA CRUZ SOLER")).toBe("Joan de la Cruz Soler");
     expect(nomLlegible("PASQUAL MARAGALL I MIRA")).toBe("Pasqual Maragall i Mira");

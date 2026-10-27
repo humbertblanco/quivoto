@@ -3,6 +3,40 @@
 Cap efecte secundari: només dades i funcions que retornen SVG.
 Ho fan servir tant els generadors del llenç de disseny (design/identitat/gen_*.py)
 com el generador de la landing (tools/build_landing.py).
+
+Les regles del joc
+------------------
+Abans, cada icona s'havia dibuixat pel seu compte: unes amb un filet de tinta
+només a la teulada, d'altres sense cap vora, i detalls de tinta (les rodes del
+bus, la grua, la tapa del cubell, el faristol del ple) penjats directament sobre
+el fons. Sobre el paper, la menta i el préssec gairebé no es distingien del fons;
+en mode fosc, tots aquells detalls de tinta desapareixien i la grua d'«Urbanisme»
+es quedava en un quadradet. Ara totes segueixen les mateixes cinc regles:
+
+1. **La graella.** viewBox de 48, que és una graella de 24 a doble resolució. El
+   dibuix (la geometria) cap dins de 7–41 i la vora de tinta en surt 3, de
+   manera que res no passa de 4–44. Es queda a 48 i no a 24 perquè l'animació de
+   les pupil·les es mou en unitats del dibuix i la portada, el sprite i la fitxa
+   ja hi estan fets.
+2. **Un sol gruix: 3.** És el mateix pes visual que el contorn de 4 de la
+   mascota quan la mascota surt a 96 px i la icona a 48. La vora exterior es fa
+   amb `silueta()`: un traç de 6 per darrere i el color a sobre, de manera que
+   en queden 3 a fora i cap a dins. Així una forma composta (el bus amb les
+   rodes, la grua) té una sola vora contínua, sense costures. Els detalls de
+   dins (finestres, ratlles) també van a 3, centrats.
+3. **Cap tinta sobre el fons.** Tot detall de tinta va damunt d'un color de la
+   casa. En fosc la vora es fon amb el fons, però el cos de color, el paper de
+   les finestres i la tinta damunt del color continuen llegint-se.
+4. **Colors només de la casa.** Un to principal per icona (`COLOR`), tinta i
+   paper. Un segon to només quan és un objecte diferent (el tronc de l'arbre).
+   Cap degradat, cap ombra.
+5. **La cara és la mateixa a totes.** Ulls de 3,6 a ±5 (±4 quan el cos és
+   estret), pupil·les d'1,9, parpelles de 8×8,4 i boca de 2,1. Va sempre sobre
+   una zona llisa del cos, amb aire al voltant: cap detall no li passa per sota.
+   Si un detall i la cara no hi caben junts, se'n va el detall, i si el detall
+   és el que diu què és la cosa, el cos es redibuixa perquè hi càpiguen tots
+   dos. La boca és més fina que la vora (2,1 i no 3) a posta, com a la mascota:
+   les faccions són més fines que el contorn.
 """
 
 PAPER = '#FBF7EE'
@@ -13,44 +47,121 @@ LAV   = '#C9C4F2'
 PEACH = '#FFD8B8'
 WHITE = '#FFFFFF'
 
+# El gruix de la casa, en unitats del viewBox de 48.
+TRAC = 3
+
+
+def silueta(*formes, fill='{fill}', ink='{ink}'):
+    """La vora exterior: un traç de 6 per darrere i el color per damunt.
+
+    Del traç de 6, la meitat de dins queda tapada pel color i la de fora en
+    surt 3, que és el gruix de la casa. Les formes es passen sense `fill`:
+    l'hereten del grup. Per defecte deixa els marcadors `{fill}` i `{ink}` com
+    a text, perquè `icon()` els substitueix amb `.format()`.
+    """
+    cos = ''.join(formes)
+    return (f'<g fill="{ink}" stroke="{ink}" stroke-width="{2 * TRAC}" stroke-linejoin="round" '
+            f'stroke-linecap="round">{cos}</g><g fill="{fill}">{cos}</g>')
+
+
+def ratlla(d, ink='{ink}'):
+    """Un detall de tinta, al gruix de la casa i amb el cap rodó."""
+    return (f'<path d="{d}" fill="none" stroke="{ink}" stroke-width="{TRAC}" '
+            f'stroke-linecap="round" stroke-linejoin="round"/>')
+
+
+def estrella(cx, cy, r_ext, r_int):
+    """Una estrella de cinc puntes, amb la primera punta amunt."""
+    import math
+    punts = []
+    for k in range(10):
+        r = r_ext if k % 2 == 0 else r_int
+        a = math.radians(k * 36 - 90)
+        punts.append(f'{cx + r * math.cos(a):.1f} {cy + r * math.sin(a):.1f}')
+    return 'M' + ' L'.join(punts) + ' Z'
+
+
 # (etiqueta, cos, detall, y dels ulls)  ·  viewBox 0 0 48 48
 ICONS = [
- ("Habitatge",   '<path d="M8 22 L24 8 L40 22 V40 H8 Z" fill="{fill}"/>', '<path d="M8 22 L24 8 L40 22" fill="none" stroke="{ink}" stroke-width="3" stroke-linejoin="round"/><rect x="20" y="28" width="8" height="12" fill="{ink}"/>', 34),
- ("Mobilitat",   '<rect x="6" y="12" width="36" height="24" rx="6" fill="{fill}"/>', '<rect x="10" y="17" width="9" height="8" rx="2" fill="{ink}"/><rect x="22" y="17" width="9" height="8" rx="2" fill="{ink}"/><rect x="34" y="17" width="4" height="8" rx="2" fill="{ink}"/><circle cx="14" cy="39" r="4" fill="{ink}"/><circle cx="34" cy="39" r="4" fill="{ink}"/>', 30),
- ("Urbanisme",   '<rect x="6" y="26" width="16" height="16" fill="{fill}"/>', '<path d="M36 42 V8 M36 8 H10 M10 8 V16 M40 8 H44" fill="none" stroke="{ink}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 16 L10 22 L22 22 Z" fill="{ink}"/>', 34),
- ("Seguretat",   '<path d="M24 5 L40 11 V24 C40 34 32 40 24 43 C16 40 8 34 8 24 V11 Z" fill="{fill}"/>', '<path d="M17 24 L22 29 L31 18" fill="none" stroke="{ink}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>', 13),
- ("Fiscalitat",  '<circle cx="24" cy="24" r="17" fill="{fill}"/>', '<path d="M30 16 A9 9 0 1 0 30 32 M14 21 H27 M14 27 H27" fill="none" stroke="{ink}" stroke-width="3.5" stroke-linecap="round"/>', 38),
- ("Medi ambient",'<path d="M40 8 C20 8 8 20 10 40 C30 40 42 28 40 8 Z" fill="{fill}"/>', '<path d="M12 38 C18 30 26 22 34 14" fill="none" stroke="{ink}" stroke-width="3" stroke-linecap="round"/>', 20),
- ("Cultura",     '<path d="M6 14 H42 V22 A4 4 0 0 0 42 30 V38 H6 V30 A4 4 0 0 0 6 22 Z" fill="{fill}"/>', '<path d="M16 16 V36" fill="none" stroke="{ink}" stroke-width="3" stroke-dasharray="3 3"/><path d="M30 19 L32.2 24 L37.5 24.4 L33.4 27.8 L34.7 33 L30 30.2 L25.3 33 L26.6 27.8 L22.5 24.4 L27.8 24 Z" fill="{ink}"/>', 40),
- ("Educació",    '<path d="M6 12 H22 A4 4 0 0 1 24 14 A4 4 0 0 1 26 12 H42 V36 H26 A4 4 0 0 0 24 38 A4 4 0 0 0 22 36 H6 Z" fill="{fill}"/>', '<path d="M24 14 V38 M11 19 H19 M11 25 H19 M29 19 H37 M29 25 H37" fill="none" stroke="{ink}" stroke-width="2.5" stroke-linecap="round"/>', 33),
- ("Serveis socials", '<path d="M24 42 C10 32 4 24 6 16 C8 8 18 8 24 16 C30 8 40 8 42 16 C44 24 38 32 24 42 Z" fill="{fill}"/>', '<path d="M14 22 C18 18 22 20 24 24 C26 20 30 18 34 22" fill="none" stroke="{ink}" stroke-width="3" stroke-linecap="round"/><path d="M19 24 L24 31 L29 24" fill="none" stroke="{ink}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>', 14),
- ("Comerç",      '<rect x="8" y="20" width="32" height="22" fill="{fill}"/><path d="M6 12 H42 L44 20 H4 Z" fill="{fill}"/>', '<path d="M4 20 H44" stroke="{ink}" stroke-width="3"/><path d="M12 12 V20 M20 12 V20 M28 12 V20 M36 12 V20" stroke="{ink}" stroke-width="2.5"/><rect x="20" y="30" width="8" height="12" fill="{ink}"/>', 26),
- ("Participació",'<rect x="10.2" y="23" width="5.6" height="13" rx="2.8" fill="{fill}" transform="rotate(-32 13 29.5)"/><rect x="17.4" y="14" width="5.8" height="15" rx="2.9" fill="{fill}"/><rect x="24.6" y="10" width="5.8" height="19" rx="2.9" fill="{fill}"/><rect x="31.8" y="15" width="5.8" height="14" rx="2.9" fill="{fill}"/><path d="M14 27 H38 V35 A8 8 0 0 1 30 43 H22 A8 8 0 0 1 14 35 Z" fill="{fill}"/>', '<path d="M19 33 H33" fill="none" stroke="{ink}" stroke-width="2.4" stroke-linecap="round"/>', 34),
- ("Llengua",     '<path d="M8 8 H40 V32 H22 L12 40 V32 H8 Z" fill="{fill}"/>', '<text x="24" y="27" text-anchor="middle" font-family="Gabarito, sans-serif" font-weight="800" font-size="18" fill="{ink}">ç</text>', 12),
- ("Esports",     '<circle cx="24" cy="24" r="17" fill="{fill}"/>', '<path d="M24 16 L31.6 21.5 L28.7 30.5 H19.3 L16.4 21.5 Z" fill="{ink}"/><path d="M24 16 V8 M31.6 21.5 L39 19 M28.7 30.5 L33 38 M19.3 30.5 L15 38 M16.4 21.5 L9 19" stroke="{ink}" stroke-width="2.5" stroke-linecap="round"/>', 40),
- ("Turisme",     '<path d="M24 44 C14 32 8 25 8 18 A16 16 0 0 1 40 18 C40 25 34 32 24 44 Z" fill="{fill}"/>', '<circle cx="24" cy="18" r="5" fill="{ink}"/><path d="M24 7 V4 M35 18 H38 M10 18 H13 M31.8 10.2 L34 8 M16.2 10.2 L14 8" stroke="{ink}" stroke-width="2.2" stroke-linecap="round"/>', 33),
- ("Neteja",      '<path d="M10 14 H38 L35 42 H13 Z" fill="{fill}"/>', '<rect x="6" y="8" width="36" height="6" rx="3" fill="{ink}"/><path d="M19 20 V36 M29 20 V36" stroke="{ink}" stroke-width="2.5" stroke-linecap="round"/>', 30),
- ("El ple",      '<path d="M6 30 A18 18 0 0 1 42 30 Z" fill="{fill}"/>', '<path d="M6 30 A18 18 0 0 1 42 30" fill="none" stroke="{ink}" stroke-width="3" stroke-linecap="round"/><circle cx="12" cy="22" r="2.5" fill="{ink}"/><circle cx="18" cy="16" r="2.5" fill="{ink}"/><circle cx="24" cy="14" r="2.5" fill="{ink}"/><circle cx="30" cy="16" r="2.5" fill="{ink}"/><circle cx="36" cy="22" r="2.5" fill="{ink}"/><rect x="18" y="34" width="12" height="8" rx="2" fill="{ink}"/>', 27),
+ # La casa amb la xemeneia. La porta només va a la versió sense cara: queia
+ # entre els ulls i es menjava la boca.
+ ("Habitatge", silueta('<path d="M7 22 L24 8 L41 22 V41 H7 Z"/>', '<rect x="30" y="9" width="5" height="9"/>'),
+  '<rect x="20" y="30" width="8" height="11" rx="1.5" fill="{ink}"/>', 28),
+ # El bus de cara: la finestra és de paper amb vora, i les rodes són de color
+ # amb la seva vora per davant de la carrosseria. Les de tinta en fosc no hi
+ # eren, i foses amb la carrosseria semblaven dents.
+ ("Mobilitat", silueta('<rect x="7" y="8" width="34" height="28" rx="6"/>') +
+               silueta('<circle cx="13" cy="37.5" r="3.5"/>', '<circle cx="35" cy="37.5" r="3.5"/>'),
+  f'<rect x="11" y="11" width="26" height="7.5" rx="2" fill="{PAPER}" stroke="{{ink}}" stroke-width="{TRAC}"/>', 25.5),
+ # La grua i l'edifici que aixeca. La grua era de tinta pura i en fosc no es
+ # veia: ara és del mateix lila que l'edifici, amb vora.
+ ("Urbanisme", silueta('<rect x="32" y="8" width="5" height="33"/>', '<rect x="10" y="8" width="31" height="5"/>',
+                       '<rect x="7" y="21" width="18" height="20" rx="2"/>'),
+  '', 28),
+ # L'escut. El vistiplau només a la versió sense cara: feia de boca.
+ ("Seguretat", silueta('<path d="M24 7 L40 12 V23 C40 32 33 38 24 41 C15 38 8 32 8 23 V12 Z"/>'),
+  ratlla('M17 23 L22 28 L31 17'), 20),
+ # La moneda amb el cantell. Sense el cantell era la pilota d'«Esports»; amb
+ # l'euro i la cara alhora, tot plegat era una taca a 24 px.
+ ("Fiscalitat", silueta('<circle cx="24" cy="24" r="17"/>'),
+  ratlla('M30 17 A8 8 0 1 0 30 31 M16 21.5 H27 M16 26.5 H27') +
+  f'<circle cx="24" cy="24" r="12.5" fill="none" stroke="{{ink}}" stroke-width="{TRAC}"/>', 23),
+ # La fulla. La nervadura passava pel mig dels ulls: només sense cara.
+ ("Medi ambient", silueta('<path d="M40 8 C21 8 8 20 9 40 C29 41 41 28 40 8 Z"/>'),
+  ratlla('M13 36 C19 29 26 22 34 14'), 23),
+ # L'entrada, amb l'estrella a la matriu i les osques a la línia de tall.
+ ("Cultura", silueta('<path d="M7 13 H27 A2.5 2.5 0 0 0 32 13 H41 V35 H32 A2.5 2.5 0 0 0 27 35 H7 Z"/>'),
+  f'<path d="{estrella(36, 24, 4.6, 2.0)}" fill="{{ink}}" stroke="{{ink}}" stroke-width="{TRAC}" stroke-linejoin="round"/>', 22),
+ # El llibre obert, amb una ratlla per pàgina per sobre dels ulls. El llom
+ # partia la cara pel mig: només sense cara.
+ ("Educació", silueta('<path d="M7 12 H20 A4 4 0 0 1 24 15 A4 4 0 0 1 28 12 H41 V36 H28 A4 4 0 0 0 24 39 A4 4 0 0 0 20 36 H7 Z"/>'),
+  ratlla('M11 17 H19 M29 17 H37'), 26),
+ # El cor, sol.
+ ("Serveis socials", silueta('<path d="M24 41 C11 32 7 25 7.5 17 C9 9.5 18.5 9 24 16 C29.5 9 39 9.5 40.5 17 C41 25 37 32 24 41 Z"/>'),
+  '', 20.5),
+ # La botiga amb el tendal de ratlles.
+ ("Comerç", silueta('<rect x="9" y="20" width="30" height="21"/>', '<path d="M10 10 H38 L41 20 H7 Z"/>'),
+  ratlla('M7 20 H41') + ratlla('M17.5 11.5 L16.5 18.5 M24 11.5 V18.5 M30.5 11.5 L31.5 18.5'), 26.5),
+ # La mà alçada: quatre dits, el polze i el palmell en una sola silueta, i
+ # tres ratlles curtes que separen els dits.
+ ("Participació", silueta('<rect x="9" y="21" width="6" height="13" rx="3" transform="rotate(-28 12 31)"/>',
+                          '<rect x="15" y="13" width="6" height="14" rx="3"/>', '<rect x="21" y="8" width="6" height="19" rx="3"/>',
+                          '<rect x="27" y="10" width="6" height="17" rx="3"/>', '<rect x="33" y="14" width="6" height="13" rx="3"/>',
+                          '<path d="M15 23 H39 V33 A8 8 0 0 1 31 41 H23 A8 8 0 0 1 15 33 Z"/>'),
+  ratlla('M21 17 V22 M27 13 V22 M33 17 V22'), 29),
+ # La bafarada. La ç només sense cara: quedava sota la boca.
+ ("Llengua", silueta('<path d="M11 8 H37 A4 4 0 0 1 41 12 V28 A4 4 0 0 1 37 32 H23 L14 40 V32 H11 A4 4 0 0 1 7 28 V12 A4 4 0 0 1 11 8 Z"/>'),
+  '<text x="24" y="27" text-anchor="middle" font-family="Gabarito, sans-serif" font-weight="800" font-size="18" fill="{ink}">ç</text>', 17),
+ # La pilota amb les dues costures, que és el que la separa de la moneda.
+ ("Esports", silueta('<circle cx="24" cy="24" r="17"/>'),
+  ratlla('M11 13 C15 19 15 29 11 35 M37 13 C33 19 33 29 37 35'), 22),
+ # La maleta. El pin del mapa amb raigs era, a 24 px, una gota del revés: es
+ # confonia amb l'«Aigua potable» i els raigs de tinta en fosc no hi eren.
+ ("Turisme", silueta('<rect x="7" y="15" width="34" height="25" rx="4"/>',
+                     '<path d="M17 16 V12 A4 4 0 0 1 21 8 H27 A4 4 0 0 1 31 12 V16 H27 V12 H21 V16 Z"/>'),
+  ratlla('M13 15 V40 M35 15 V40'), 25),
+ # El cubell amb la tapa i el pom, tot de color. Les costelles passaven pels ulls.
+ ("Neteja", silueta('<rect x="20" y="7" width="8" height="5" rx="2"/>', '<rect x="7" y="11" width="34" height="5" rx="2.5"/>',
+                    '<path d="M10 16 H38 L35.5 41 H12.5 Z"/>'),
+  ratlla('M8.5 16 H39.5'), 25),
+ # L'hemicicle, sol. Els escons de tinta semblaven ulls, i el faristol a sota,
+ # amb la vora, el convertia en un bolet.
+ ("El ple", silueta('<path d="M7 33 A17 17 0 0 1 41 33 Z"/>'),
+  '', 22),
 ]
 
 # Color fix per tema (mai canvia entre pantalles)
 COLOR = [CORAL, MINT, LAV, PEACH, MINT, MINT, LAV, PEACH, CORAL, PEACH, LAV, CORAL, MINT, PEACH, LAV, CORAL]
 
-# Quan la icona porta cara, alguns detalls li trepitgen els ulls o la boca.
-# Aquí hi ha què s'ha de dibuixar en comptes del detall normal ('' = no res).
+# Què es dibuixa en comptes del detall normal quan la icona porta cara ('' = no
+# res). Els cossos s'han redibuixat perquè la cara hi càpiga amb el detall que
+# diu què és cada cosa; aquí només hi queden els detalls que sobren amb cara.
 DETALL_AMB_CARA = {
- 0:  '<path d="M8 22 L24 8 L40 22" fill="none" stroke="{ink}" stroke-width="3" stroke-linejoin="round"/>',  # Habitatge: fora la porta, que queia entre els ulls i es menjava la boca
- 3:  '',                                                                          # Seguretat: l'escut ja s'entén; el vistiplau feia de boca
- 5:  '',                                                                          # Medi ambient: la nervadura passava pel mig dels ulls
- 6:  '<path d="M30 19 L32.2 24 L37.5 24.4 L33.4 27.8 L34.7 33 L30 30.2 L25.3 33 L26.6 27.8 L22.5 24.4 L27.8 24 Z" fill="{ink}"/>',  # Cultura: fora la línia de puntets
- 7:  '<path d="M11 19 H19 M11 25 H19 M29 19 H37 M29 25 H37" fill="none" stroke="{ink}" stroke-width="2.5" stroke-linecap="round"/>',  # Educació: fora el llom, que partia la cara pel mig i feia de boca
- 8:  '',                                                                          # Serveis socials: el cor sol
- 9:  '<path d="M4 20 H44" stroke="{ink}" stroke-width="3"/><path d="M12 12 V20 M20 12 V20 M28 12 V20 M36 12 V20" stroke="{ink}" stroke-width="2.5"/>',  # Comerç: fora la porta, que tapava la boca del tot
- 10: '',                                                                          # Participació: el plec del palmell cauria damunt dels ulls
- 11: '',                                                                          # Llengua: la bafarada sola, sense la ç sota la boca
- 12: '',                                                                          # Esports: la pilota sola, sense pentàgon ni radis
- 13: '<path d="M24 7 V4 M35 18 H38 M10 18 H13 M31.8 10.2 L34 8 M16.2 10.2 L14 8" stroke="{ink}" stroke-width="2.2" stroke-linecap="round"/>',  # Turisme: els raigs, sense el cercle que feia de tercer ull
- 15: '<path d="M6 30 A18 18 0 0 1 42 30" fill="none" stroke="{ink}" stroke-width="3" stroke-linecap="round"/><rect x="18" y="34" width="12" height="8" rx="2" fill="{ink}"/>',  # El ple: fora els escons, que semblaven més ulls
+ 0:  '',                                                                          # Habitatge: sense porta
+ 3:  '',                                                                          # Seguretat: sense vistiplau
+ 4:  f'<circle cx="24" cy="24" r="12.5" fill="none" stroke="{{ink}}" stroke-width="{TRAC}"/>',  # Fiscalitat: el cantell sol
+ 5:  '',                                                                          # Medi ambient: sense nervadura
+ 11: '',                                                                          # Llengua: sense la ç
 }
 
 SLUG = ["habitatge","mobilitat","urbanisme","seguretat","fiscalitat","medi-ambient","cultura",
@@ -58,25 +169,27 @@ SLUG = ["habitatge","mobilitat","urbanisme","seguretat","fiscalitat","medi-ambie
 
 
 # Posició dels ulls per icona: (centre x, centre y, separació). Mesurada perquè
-# sempre caiguin dins del cos de la icona i no trepitgin el detall.
+# la cara sencera (ulls, parpelles i boca) quedi a 1 unitat o més de la vora i
+# de qualsevol detall.
 EYES = [
- (24, 33, 5),   # Habitatge — dins la casa, sota la teulada
- (24, 30, 5),   # Mobilitat — sota les finestres del bus
- (14, 34, 4),   # Urbanisme — dins l'edifici petit
- (24, 21, 5),   # Seguretat — a la part alta de l'escut, sobre el vistiplau
- (24, 14, 5),   # Fiscalitat — a dalt de la moneda, sobre l'euro
- (26, 24, 5),   # Medi ambient — al mig de la fulla
- (18, 26, 5),   # Cultura — a l'esquerra de l'estrella
- (24, 31, 6),   # Educació — a les pàgines del llibre
- (24, 17, 5),   # Serveis socials — dins el cor
- (24, 27, 5),   # Comerç — dins la botiga
- (26, 34, 5),   # Participació — al palmell de la mà
- (24, 18, 5),   # Llengua — a dalt de la bafarada, sobre la ç
- (24, 22, 5),   # Esports — a dalt de la pilota
- (24, 18, 5),   # Turisme — a la part baixa del pin, més juntets
- (24, 28, 5),   # Neteja — dins el contenidor
- (24, 24, 5),   # El ple — dins l'hemicicle, sota els escons
+ (24, 28, 5),     # Habitatge — dins la casa, sota la teulada
+ (24, 25.5, 5),   # Mobilitat — sota la finestra del bus
+ (16, 28, 4),     # Urbanisme — dins l'edifici
+ (24, 20, 5),     # Seguretat — a la part ampla de l'escut
+ (24, 23, 5),     # Fiscalitat — dins del cantell de la moneda
+ (25, 23, 5),     # Medi ambient — al mig de la fulla
+ (17, 22, 4),     # Cultura — a la matriu, a l'esquerra del tall
+ (24, 26, 6),     # Educació — a les pàgines, sota les ratlles
+ (24, 20.5, 5),   # Serveis socials — dins el cor
+ (24, 26.5, 5),   # Comerç — dins la botiga, sota el tendal
+ (27, 29, 5),     # Participació — al palmell
+ (24, 17, 5),     # Llengua — dins la bafarada
+ (24, 22, 4),     # Esports — entre les costures
+ (24, 25, 4),     # Turisme — entre les corretges de la maleta
+ (24, 25, 5),     # Neteja — dins el cubell
+ (24, 22, 4),     # El ple — dins l'hemicicle
 ]
+
 
 
 def face(cx, cy, sep=5, ink=INK, sclera=PAPER, cls="cara"):

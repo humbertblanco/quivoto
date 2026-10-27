@@ -701,8 +701,13 @@ export function serieTemporal(punts: readonly PuntSerie[], opcions: OpcionsSerie
     ${dibuix(estret(base), "estret")}`
     : dibuix(base, "unic");
 
+  // Els dibuixos van dins del seu llenç i no directament a la figura: al
+  // telèfon el dibuix no hi cap i llisca de costat (vegeu GRAFICS_CSS), i si
+  // llisqués la figura sencera, portar-la al final per ensenyar l'any d'ara
+  // (ho fa GRAFICS_JS) deixaria la clau i les notes de sota tallades per
+  // l'esquerra. Llisca el dibuix; el text es queda quiet.
   return `<figure class="grafic serie serie-${mida}">
-    ${dibuixos}
+    <div class="serie-llenc">${dibuixos}</div>
     ${clau === "" ? "" : `<figcaption class="clau-grafic">${clau}</figcaption>`}
     ${zeroSignificatiu || !base.eix ? "" : `<p class="compta">L'eix no comença a zero: aquesta xifra pot ser negativa i el zero no en marca cap límit.</p>`}
     ${taula}
@@ -1140,11 +1145,159 @@ export type OpcionsDispersio = {
   base?: string;
   /** El recompte del peu del títol, escrit per qui crida: «23 de 30 municipis amb dada». */
   quants?: string;
-  /** Com es diu la fila del mig: «La mediana d'aquí» per defecte. */
+  /**
+   * Com es diu la fila del mig: «El del mig» per defecte, al costat d'«El més
+   * baix» i «El més alt». Deia «La mediana d'aquí», que és la paraula tècnica
+   * i no la del veí; la tècnica es queda a l'etiqueta de cada marca
+   * («respecte a la mediana»), per a qui la busqui.
+   */
   etiquetaMediana?: string;
-  /** El subtítol de la mediana: «el municipi del mig» per defecte. */
+  /** El que vol dir «el del mig», a sota: «la meitat queda per sota» per defecte. */
   sotaMediana?: string;
+  /**
+   * Com es reparteixen les marques al llarg del regle: vegeu `EscalaRegle`.
+   * Per defecte, lineal.
+   */
+  escala?: EscalaRegle;
 };
+
+/**
+ * L'escala del regle de dispersió.
+ *
+ * «lineal» és la de sempre: el tros de regle entre dues marques és la
+ * diferència entre les dues xifres. Funciona quan els municipis es reparteixen
+ * més o menys de punta a punta, com la renda o la participació.
+ *
+ * «log» és per a les xifres esbiaixades, com la població o els vehicles: 900
+ * municipis tenen menys de 20.000 habitants i un en té 1,6 milions, i en
+ * lineal 946 marques queden amuntegades en el primer centímetre de barra i
+ * l'única que es veu és Barcelona. En logarítmica, de 100 a 1.000 hi ha el
+ * mateix tros que de 1.000 a 10.000: cada salt multiplica per deu, i la forma
+ * del grup torna a ser visible.
+ *
+ * «log-creixement» és la mateixa idea per a un creixement en percentatge, que
+ * pot ser negatiu: el que s'escala és la proporció entre l'any final i el
+ * d'inici (1 + creixement/100), que sempre és positiva. Perdre la meitat del
+ * cens i doblar-lo queden a la mateixa distància del zero, que és el que
+ * volen dir.
+ *
+ * Si alguna xifra no hi cap —un zero o un negatiu en «log», una pèrdua del
+ * 100 % en «log-creixement»— el regle torna a lineal sense dir res: és millor
+ * un dibuix amuntegat que una marca a l'infinit.
+ */
+export type EscalaRegle = "lineal" | "log" | "log-creixement";
+
+/**
+ * On cau una xifra dins del regle, en percentatge de l'amplada (del 4 al 96).
+ *
+ * Del 4 % al 96 % i no de 0 a 100: la marca fa 14 px i als extrems mitja marca
+ * quedava fora de la caixa arrodonida.
+ *
+ * Viatja al navegador amb `toString()` —el JavaScript dels rànquings refà el
+ * regle quan canvia l'àmbit— i per això no crida res de fora ni té funcions
+ * internes: el transpilador hi ficaria ajudants que al navegador no existeixen.
+ */
+export function posicioEscala(v: number, baix: number, alt: number, escala: string): number {
+  const log = (escala === "log" && baix > 0) || (escala === "log-creixement" && baix > -100);
+  const creix = escala === "log-creixement";
+  const t0 = log ? Math.log10(creix ? 1 + baix / 100 : baix) : baix;
+  const t1 = log ? Math.log10(creix ? 1 + alt / 100 : alt) : alt;
+  const tv = log ? Math.log10(creix ? 1 + v / 100 : v) : v;
+  if (!(t1 > t0)) return 50;
+  return 4 + (92 * (tv - t0)) / (t1 - t0);
+}
+
+/**
+ * Les marques de l'eix d'un regle logarítmic, en les unitats de la xifra.
+ *
+ * Una escala logarítmica sense marques no es pot llegir: no se sap on és el
+ * mil. Per això hi van les potències de deu que cauen dins del regle (10,
+ * 100, 1.000…), i quan n'hi ha menys de dues, també els 2 i els 5 de cada
+ * desena. En lineal no n'hi va cap: els dos extrems etiquetats ja hi diuen
+ * tot. Per a «log-creixement», les marques es trien sobre la proporció i es
+ * tornen en creixement: ×0,5 és −50 %, ×1 és 0 %, ×10 és +900 %.
+ *
+ * Com `posicioEscala()`, viatja al navegador i no pot tenir funcions internes.
+ */
+export function tallsEscala(baix: number, alt: number, escala: string): number[] {
+  const creix = escala === "log-creixement";
+  if (!((escala === "log" && baix > 0) || (creix && baix > -100))) return [];
+  const r0 = creix ? 1 + baix / 100 : baix;
+  const r1 = creix ? 1 + alt / 100 : alt;
+  const uns: number[] = [];
+  const tots: number[] = [];
+  for (let k = Math.floor(Math.log10(r0)); k <= Math.ceil(Math.log10(r1)); k++) {
+    for (const m of [1, 2, 5]) {
+      const r = m * Math.pow(10, k);
+      if (r <= r0 || r >= r1) continue;
+      const v = Math.round((creix ? (r - 1) * 100 : r) * 1e6) / 1e6;
+      tots.push(v);
+      if (m === 1) uns.push(v);
+    }
+  }
+  return uns.length >= 2 || tots.length > 5 ? uns : tots;
+}
+
+/**
+ * L'etiqueta curta d'una marca de l'eix: «100», «10 mil», «1 M», «+400 %».
+ *
+ * Curta perquè en un mòbil n'hi caben quatre en 300 px; la xifra sencera, amb
+ * la unitat, és als dos extrems i a sota del regle. Viatja al navegador com
+ * les dues d'abans.
+ */
+export function etiquetaTall(v: number, escala: string): string {
+  if (escala === "log-creixement") {
+    return (v > 0 ? "+" : v < 0 ? "\u2212" : "") + Math.abs(v).toLocaleString("ca-ES") + " %";
+  }
+  if (v >= 1e6) return (v / 1e6).toLocaleString("ca-ES") + " M";
+  if (v >= 1e4) return (v / 1e3).toLocaleString("ca-ES") + " mil";
+  return v.toLocaleString("ca-ES");
+}
+
+/**
+ * Les ratlles de l'eix dins del regle i la fila d'etiquetes de sota.
+ *
+ * Els dos extrems sempre van etiquetats, arrambats a cada punta: el regle va
+ * del més baix al més alt del grup i no de zero, i sense dir-ho a la vora la
+ * barra semblava començar al zero. Les marques intermèdies només hi són en
+ * logarítmica; cada una pinta una ratlla discontínua dins de la barra i, si no
+ * trepitja l'etiqueta d'un extrem (del 24 % al 76 %), també la seva xifra.
+ *
+ * `ini` i `fi` arriben ja escrits i escapats per qui crida, amb la unitat.
+ * Viatja al navegador: crida `posicioEscala`, `tallsEscala` i `etiquetaTall`,
+ * que el JavaScript dels rànquings defineix amb el mateix nom.
+ */
+export function eixDispersio(
+  baix: number,
+  alt: number,
+  escala: string,
+  ini: string,
+  fi: string,
+): { linies: string; eix: string; log: boolean } {
+  const talls = tallsEscala(baix, alt, escala);
+  let linies = "";
+  let etiquetes = "";
+  for (const v of talls) {
+    const p = posicioEscala(v, baix, alt, escala).toFixed(1);
+    linies += '<i class="tall" style="--p:' + p + '%"></i>';
+    if (Number(p) >= 24 && Number(p) <= 76) {
+      etiquetes += '<span class="tall" style="--p:' + p + '%">' + etiquetaTall(v, escala) + "</span>";
+    }
+  }
+  return {
+    linies: linies,
+    eix: '<div class="regle-eix" aria-hidden="true"><span class="ini">' + ini + "</span>" + etiquetes +
+      '<span class="fi">' + fi + "</span></div>",
+    log: talls.length > 0,
+  };
+}
+
+/**
+ * La frase que explica l'escala, sota el títol. Només en logarítmica: en
+ * lineal el regle es llegeix sol i no cal cap avís.
+ */
+export const NOTA_ESCALA_LOG =
+  "Escala que s'eixampla als petits: cada ratlla multiplica per deu, perquè hi càpiguen tots.";
 
 /**
  * Un regle del valor més baix al més alt del grup, amb una marca per municipi.
@@ -1181,11 +1334,13 @@ export function regleDispersio(
     ordenats.length % 2 === 0
       ? (ordenats[meitat - 1]!.valor + ordenats[meitat]!.valor) / 2
       : ordenats[meitat]!.valor;
-  // Del 4 % al 96 % i no de 0 a 100: la marca fa 14 px i als extrems mitja
-  // marca quedava fora de la caixa arrodonida.
-  const on = (v: number): string => (4 + (92 * (v - baix.valor)) / (alt.valor - baix.valor)).toFixed(2);
+  // On cau cada xifra: vegeu `posicioEscala()`, que és la mateixa funció que
+  // fa servir el navegador als rànquings.
+  const escala = opcions.escala ?? "lineal";
+  const on = (v: number): string => posicioEscala(v, baix.valor, alt.valor, escala).toFixed(2);
   const base = opcions.base ?? "../../";
   const fmt = opcions.format;
+  const eix = eixDispersio(baix.valor, alt.valor, escala, escape(fmt(baix.valor)), escape(fmt(alt.valor)));
 
   const ambAquest = ordenats.some((v) => v.aquest);
   const marques = ordenats
@@ -1225,13 +1380,16 @@ export function regleDispersio(
 
   return `<figure class="dispersio">
   <figcaption class="titol">${escape(titol)}
-    ${opcions.quants ? `<span class="secundari">${escape(opcions.quants)}</span>` : ""}</figcaption>
-  <div class="regle-dispersio${ambAquest ? " amb-aquest" : ""}"><i class="mig" style="--p:${on(mig)}%"></i>${marques}</div>
+    ${opcions.quants ? `<span class="secundari">${escape(opcions.quants)}</span>` : ""}${
+      eix.log ? `<span class="escala">${NOTA_ESCALA_LOG}</span>` : ""
+    }</figcaption>
+  <div class="regle-dispersio${ambAquest ? " amb-aquest" : ""}">${eix.linies}<i class="mig" style="--p:${on(mig)}%"></i>${marques}</div>
+  ${eix.eix}
   <ul class="extrems">
     <li><span class="cap">El més baix</span>
       ${extrem(baix)}<b>${fmt(baix.valor)}</b></li>
-    <li><span class="cap">${escape(opcions.etiquetaMediana ?? "La mediana d'aquí")}</span>
-      <span class="secundari">${escape(opcions.sotaMediana ?? "el municipi del mig")}</span><b>${fmt(mig)}</b></li>
+    <li><span class="cap">${escape(opcions.etiquetaMediana ?? "El del mig")}</span>
+      <span class="secundari">${escape(opcions.sotaMediana ?? "la meitat queda per sota")}</span><b>${fmt(mig)}</b></li>
     <li><span class="cap">El més alt</span>
       ${extrem(alt)}<b>${fmt(alt.valor)}</b></li>
   </ul>
@@ -1244,7 +1402,14 @@ export function regleDispersio(
  */
 export const GRAFICS_CSS = `
 /* --- els gràfics d'eix: sèries temporals i distribucions ------------------ */
-.grafic{margin:var(--e2) 0 0;padding:0}
+/* L'única regla del marge de la figura. N'hi havia dues —aquesta, amb
+   «var(--e2) 0 0», i una altra a estil.ts amb «0 0 var(--e3)»— i guanyava
+   aquesta perquè va al final del full: el gràfic es quedava sense marge a
+   sota, i el paràgraf que el seguia (que no en porta a dalt) s'enganxava a la
+   llegenda. Ara en porta tant a dalt com a sota; l'últim d'un bloc no, que el
+   bloc ja té el seu farciment i s'hi sumaria. */
+.grafic{margin:var(--e2) 0 var(--e3);padding:0}
+.grafic:last-child{margin-bottom:0}
 .grafic svg{display:block;width:100%;height:auto;overflow:visible}
 .grafic .graella{stroke:var(--vora);stroke-width:1}
 .grafic .eix{stroke:var(--ink);stroke-width:2}
@@ -1282,21 +1447,26 @@ export const GRAFICS_CSS = `
 /* L'etiqueta flotant: una sola caixa per pàgina, que el script crea i mou. Va
    de tinta sobre paper invertit perquè es distingeixi del fons a la primera i
    no es confongui amb una tessel·la; «pointer-events:none» perquè no tapi el
-   punt del costat quan el ratolí hi passa. */
+   punt del costat quan el ratolí hi passa.
+   Tot el text fa com a mínim 14 px: és el que es llegeix en un telèfon sense
+   ampliar, i l'etiqueta és justament el que es consulta amb el dit. El nom de
+   dalt va com està escrit, en Nunito 700 i sense espaiar: en majúscules
+   espaiades de 11 px era el rètol de plantilla que la marca no vol. El que el
+   separa de la dada és la mida i el pes de la dada, no el tipus de lletra. */
 .etiqueta-grafic{position:fixed;z-index:60;max-width:min(320px,calc(100vw - 16px));
-  padding:7px 11px;background:var(--ink);color:var(--paper);border-radius:var(--r-s);
-  box-shadow:3px 3px 0 rgba(0,0,0,.18);font-family:var(--text);font-size:.8rem;font-weight:700;
-  line-height:1.3;pointer-events:none;font-variant-numeric:tabular-nums}
+  padding:8px 12px;background:var(--ink);color:var(--paper);border-radius:var(--r-s);
+  box-shadow:3px 3px 0 rgba(0,0,0,.18);font-family:var(--text);font-size:.875rem;font-weight:700;
+  line-height:1.35;pointer-events:none;font-variant-numeric:tabular-nums}
 .etiqueta-grafic[hidden]{display:none}
-.etiqueta-grafic b{display:block;font-family:var(--display);font-weight:900;font-size:.72rem;
-  letter-spacing:.03em;text-transform:uppercase;opacity:.85}
-.etiqueta-grafic .dada{display:block;font-size:.92rem}
+.etiqueta-grafic b{display:block;font-family:var(--text);font-weight:700;font-size:.875rem;
+  letter-spacing:0;opacity:.85}
+.etiqueta-grafic .dada{display:block;font-size:1rem;font-weight:800}
 .etiqueta-grafic .seus{display:block;opacity:.85}
 .etiqueta-grafic .extres{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:6px 0 0;padding:6px 0 0;
-  border-top:1px solid rgba(251,247,238,.25);font-size:.78rem}
+  border-top:1px solid rgba(251,247,238,.25);font-size:.875rem}
 .etiqueta-grafic .extres dt{opacity:.75;font-weight:700}
 .etiqueta-grafic .extres dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}
-.etiqueta-grafic .nota-punt{display:block;margin-top:5px;font-size:.7rem;opacity:.7}
+.etiqueta-grafic .nota-punt{display:block;margin-top:5px;font-size:.875rem;font-weight:600;opacity:.75}
 .grafic .tall-mandat{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:3 4;opacity:.45}
 .grafic .etiqueta-mandat{font-family:var(--display);font-size:11px;font-weight:900;
   fill:var(--ink-suau);letter-spacing:.02em}
@@ -1430,8 +1600,24 @@ export const GRAFICS_CSS = `
 .dispersio{margin:0 0 var(--e3)}
 .dispersio .titol{font-weight:800;font-size:.95rem;margin:0 0 10px;display:flex;
   flex-wrap:wrap;gap:0 8px;align-items:baseline}
+/* Fons pla. Hi havia un degradat de paper a lavanda, i a més de ser el que la
+   marca prohibeix, deia una cosa falsa: un fons que s'enfosqueix cap a la
+   dreta es llegeix com «més és pitjor» o «més és més intens», i el regle no
+   valora res. */
 .dispersio .regle-dispersio{position:relative;height:46px;border:2.5px solid var(--ink);border-radius:var(--r-s);
-  background:linear-gradient(90deg,var(--paper-2),var(--lavanda))}
+  background:var(--paper-2)}
+/* Les ratlles de l'eix logarítmic: discontínues i de vora, perquè es vegin
+   sense competir amb les marques, que són la dada. */
+.dispersio .regle-dispersio .tall{position:absolute;left:var(--p);top:0;bottom:0;width:0;
+  border-left:1.5px dashed var(--vora);pointer-events:none}
+/* Els extrems etiquetats a cada punta i, en logarítmica, les marques del mig. */
+.dispersio .regle-eix{position:relative;height:1.35em;margin:5px 0 0;font-size:.72rem;font-weight:700;
+  color:var(--ink-suau);font-variant-numeric:tabular-nums;line-height:1.35}
+.dispersio .regle-eix span{position:absolute;top:0;white-space:nowrap}
+.dispersio .regle-eix .ini{left:0}
+.dispersio .regle-eix .fi{right:0}
+.dispersio .regle-eix .tall{left:var(--p);transform:translateX(-50%)}
+.dispersio .titol .escala{flex-basis:100%;font-weight:600;font-size:.8rem;color:var(--ink-suau)}
 .dispersio .marca{position:absolute;left:var(--p);top:0;bottom:0;width:14px;margin-left:-7px}
 .dispersio .marca::before{content:"";position:absolute;left:5px;top:5px;bottom:5px;width:4px;
   border-radius:2px;background:var(--ink);opacity:.5}
@@ -1451,8 +1637,9 @@ export const GRAFICS_CSS = `
 .dispersio .extrems{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:var(--e1);
   grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 .dispersio .extrems li{display:flex;flex-direction:column;gap:1px}
-.dispersio .cap{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--ink-suau)}
+/* En minúscula i sense espaiar: les etiquetes en majúscules espaiades són el
+   tic que la marca vol evitar. */
+.dispersio .cap{font-size:.78rem;font-weight:800;color:var(--ink-suau)}
 .dispersio .extrems b{font-family:var(--display);font-weight:900;font-size:1.1rem;
   letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 
@@ -1469,9 +1656,15 @@ export const GRAFICS_CSS = `
 /* A 320px un eix de 720 unitats amb text de 12 hi cabria a 5px reals. Abans que
    això passi, el gràfic llisca **dins de la seva caixa**: la figura no pot fer
    més ample que la columna, o qui llisca és la pàgina sencera i la fitxa se'n
-   va de costat sense que es vegi res que l'empenyi. */
+   va de costat sense que es vegi res que l'empenyi.
+   A la sèrie qui llisca és el llenç, no la figura: la clau i les notes de sota
+   es queden a la vista mentre el dibuix es mou, i GRAFICS_JS el deixa portat
+   al final, que és on hi ha l'any d'ara. La figura conserva el seu
+   «overflow-x» com a xarxa per als altres gràfics, que no tenen llenç. */
 @media (max-width:520px){
   .grafic{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch}
+  .serie-llenc{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;
     -webkit-overflow-scrolling:touch}
   .grafic .dibuix{min-width:420px}
   .serie-espurna .dibuix,.pendent .dibuix{min-width:0}
@@ -1603,6 +1796,17 @@ export const GRAFICS_JS = `<script id="grafics-etiqueta">
     var natiu = punts[i].querySelector('title');
     if (natiu && natiu.parentNode === punts[i]) punts[i].removeChild(natiu);
     punts[i].removeAttribute('title');
+  }
+
+  // Al telèfon la sèrie no hi cap i llisca dins del seu llenç, i un llenç que
+  // llisca comença per l'esquerra: es veien els anys més vells i l'any d'ara,
+  // que és el que es ve a mirar, quedava amagat a la dreta. Es porta cada llenç
+  // al final, un sol cop i de cop, sense animació. Els que no llisquen (a
+  // l'escriptori, tots) tenen el mateix ample a dins que a fora i no es toquen.
+  var llencs = document.querySelectorAll('.serie-llenc');
+  for (var j = 0; j < llencs.length; j += 1) {
+    var llenc = llencs[j];
+    if (llenc.scrollWidth > llenc.clientWidth) llenc.scrollLeft = llenc.scrollWidth - llenc.clientWidth;
   }
 
   // El ratolí i el llapis ensenyen en passar; el dit va per «click», que és

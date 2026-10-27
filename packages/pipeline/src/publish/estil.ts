@@ -49,8 +49,10 @@ export const CERCADOR_CSS = `
 .cerca-cap input{flex:1 1 auto;min-width:0;border:0;background:none;font-family:var(--text);
   font-size:1rem;font-weight:700;color:var(--ink);outline:none}
 .cerca-cap input::placeholder{color:var(--ink-suau);font-weight:600}
-.cerca-tanca{font-family:var(--text);font-size:.66rem;font-weight:800;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--ink-suau);background:none;border:2px solid var(--vora);
+/* «Esc» i la mena de cada fila, tal com estan escrits: en majúscules
+   espaiades eren rètols de plantilla, i «CANDIDATURA» ni hi cabia. */
+.cerca-tanca{font-family:var(--text);font-size:.74rem;font-weight:700;letter-spacing:0;
+  color:var(--ink-suau);background:none;border:2px solid var(--vora);
   border-radius:6px;padding:3px 7px;cursor:pointer}
 .cerca-resultats{max-height:min(420px,54vh);overflow-y:auto}
 .cerca-buit{font-size:.9rem;color:var(--ink-suau);margin:0;padding:20px 18px;line-height:1.45}
@@ -58,14 +60,33 @@ export const CERCADOR_CSS = `
   color:inherit;border-top:1px solid var(--vora)}
 .cerca-fila:first-child{border-top:0}
 .cerca-fila.tria{background:var(--presec);color:#1E1B2E}
-.cerca-fila .mena{flex:none;font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--ink-suau);width:4.6em}
+.cerca-fila .mena{flex:none;font-size:.74rem;font-weight:700;letter-spacing:0;
+  color:var(--ink-suau);width:6.4em}
 .cerca-fila.tria .mena{color:rgba(30,27,46,.66)}
 .cerca-fila .qui{display:flex;flex-direction:column;gap:1px;min-width:0}
 .cerca-fila .qui b{font-family:var(--display);font-weight:900;font-size:1rem;letter-spacing:-.01em}
 .cerca-fila .qui span{font-size:.76rem;color:var(--ink-suau);font-weight:700}
 .cerca-fila.tria .qui span{color:rgba(30,27,46,.7)}
 `;
+
+/**
+ * El selector de la llegenda de l'hemicicle: qui té quantes regidories o quants
+ * seients, una fila per força amb la barra de la proporció a sota.
+ *
+ * Era `.llegenda` a seques, i un nom tan genèric el pot fer servir qualsevol
+ * pàgina per a una llegenda que no s'hi assembla gens: la clau del mapa dels
+ * 947 en va heretar la graella de dues columnes i el filet de sota de cada
+ * fila, i el mapa va haver de canviar de nom per escapar-se'n. Ara la regla
+ * només val per a les dues llegendes que són d'aquest disseny: la que va just
+ * sota d'un hemicicle (la fitxa municipal i les de diputació i consell) i la
+ * de la composició de les diputacions i els consells, que hi va fins i tot quan
+ * la font no diu quants seients té l'ens i no hi ha hemicicle per dibuixar.
+ *
+ * Va dins de `:where()` perquè pesi el mateix que el `.llegenda` d'abans: una
+ * pàgina que en retoca un marge (`.ens-composicio{margin-bottom}`) ha de poder
+ * guanyar-li com fins ara, sense haver de pujar l'especificitat.
+ */
+const LLEGENDA = ".llegenda:where(.hemicicle + *,.ens-composicio)";
 
 const FULL = `
 :root{
@@ -76,7 +97,7 @@ const FULL = `
   --e1:8px; --e2:16px; --e3:24px; --e4:40px; --e5:64px;
   --display:"Gabarito",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --text:"Nunito Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
-  --ample:900px; --ombra:3px 3px 0 var(--ink);
+  --ample-columna:900px; --ample:var(--ample-columna); --ombra:3px 3px 0 var(--ink);
   /* El coral de marca sobre el paper clar es queda a 2,9:1 i no arriba al 4,5:1
      que demana el text petit. Com que també fa de fons (botons, pastilles), on
      hi va tinta fosca a sobre, no el podem enfosquir: cal un to germà només per
@@ -124,18 +145,18 @@ a{color:inherit;text-underline-offset:3px}
   clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px;padding:0;border:0}
 
 /* --- la capçalera compartida -------------------------------------------
-   Quatre peces en una fila: la marca, la secció, el menú i la casella. La marca
-   és «quivoto» i no «Observatori» perquè qui arriba a la pàgina d'un regidor
-   per un enllaç ha de poder saber a casa de qui és; l'Observatori hi va al
-   costat, com a rastre.
+   Tres peces en una fila: la marca, el menú i la casella. La marca és
+   «quivoto» i no «Observatori» perquè qui arriba a la pàgina d'un regidor per
+   un enllaç ha de poder saber a casa de qui és; l'Observatori és la primera
+   entrada del menú.
 
-   El menú no es plega darrere de cap botó: quatre enllaços caben, i un botó que
-   amaga quatre coses és més feina per a qui llegeix que les quatre coses. Quan
-   no hi caben, la fila embolcalla i el menú baixa sencer. */
+   A l'escriptori el menú no es plega darrere de cap botó: hi cap sencer, i un
+   botó que amaga vuit coses que hi caben és més feina que les vuit coses. Entre
+   720 i 900 px baixa sencer a una segona fila, que encara és una sola fila. Al
+   mòbil, en canvi, eren dues files més i la capçalera feia 180 px: allà el menú
+   es plega darrere d'un botó «Menú» (vegeu més avall i capcalera.ts). */
 .capcalera{display:flex;align-items:center;gap:var(--e2);flex-wrap:wrap;
   max-width:var(--ample);margin:0 auto;padding:var(--e3)}
-.capcalera .seccio{font-family:var(--text);font-weight:800;font-size:.82rem;color:var(--ink-suau);
-  text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
 .capcalera .menu{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-left:auto}
 .capcalera .menu a,.capcalera .menu .ara{font-family:var(--text);font-weight:800;font-size:.82rem;
   text-decoration:none;display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
@@ -156,29 +177,75 @@ a{color:inherit;text-underline-offset:3px}
   .capcalera .etiqueta{margin-left:auto}
 }
 /* Sota de 720px la fila ja va justa i l'etiqueta d'esborrany és el primer que
-   sobra: no diu on ets ni t'hi porta. El menú es queda, que és el que hi fa
-   falta, i el logotip i la casella no es mouen mai de lloc. */
+   sobra: no diu on ets ni t'hi porta. El logotip i la casella no es mouen mai
+   de lloc. */
 @media (max-width:720px){
   .capcalera{padding:var(--e2) var(--e3)}
   .capcalera .etiqueta{display:none}
 }
+/* Sense JavaScript no hi ha botó i el menú es queda embolcallat a sota, amb
+   tots els enllaços a la vista: aquesta és la mida de les seves lletres. Els
+   enllaços porten la seva pròpia mida escrita, i encongir el contenidor no els
+   encongia a ells. */
 @media (max-width:420px){
-  .capcalera .seccio{display:none}
-  /* Els enllaços porten la seva pròpia mida escrita: encongir el contenidor
-     no els encongia a ells, i la regla era morta. */
   .capcalera .menu a,.capcalera .menu .ara{font-size:.78rem}
+}
+
+/* --- el botó «Menú» i el full ------------------------------------------
+   El botó el crea el guió de capcalera.ts, que també marca la capçalera amb
+   «amb-plec»: totes les regles del plec hi pengen, i per això sense guió no es
+   plega res. Fora del mòbil el botó no es veu mai.
+
+   Una sola fila: logotip a l'esquerra, i a la dreta «Menú» i la casella, en
+   aquest ordre perquè és el del Tab. Els dos botons fan el mateix dibuix
+   —pastilla amb vora de tinta, com la casella de sempre— i el mateix alt de
+   44 px, que és l'objectiu de toc de la casa. La fletxa del botó és la del plec
+   dels grups del ple: gira quan s'obre i no és l'única cosa que ho diu, perquè
+   el botó també s'omple de tinta.
+
+   El full penja de sota de la capçalera, de punta a punta, i tapa la pàgina en
+   comptes d'empènyer-la: obrir el menú no ha de moure el que hi ha a sota. És
+   una llista vertical d'enllaços de 48 px separats per un filet, sense ombra
+   (la marca no en vol, de targetes flotants), tancada per la ratlla de tinta de
+   la casa. On ets va en coral i subratllat, com a la fila de l'escriptori. */
+.obre-menu{display:none}
+@media (max-width:720px){
+  .capcalera.amb-plec{position:relative;flex-wrap:nowrap;gap:10px}
+  .capcalera.amb-plec .logo{margin-right:auto}
+  .capcalera.amb-plec .obre-cerca{margin:0;min-height:44px}
+  .capcalera .obre-menu{display:inline-flex;align-items:center;gap:9px;flex:none;min-height:44px;
+    padding:0 15px 0 16px;font-family:var(--text);font-weight:800;font-size:.86rem;color:var(--ink);
+    background:var(--paper-2);border:2px solid var(--ink);border-radius:var(--r-max);cursor:pointer}
+  .capcalera .obre-menu::after{content:"";width:7px;height:7px;flex:none;
+    border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;
+    transform:translateY(-2px) rotate(45deg)}
+  .capcalera .obre-menu:hover,.capcalera .obre-menu[aria-expanded="true"]{background:var(--ink);color:var(--paper)}
+  .capcalera .obre-menu[aria-expanded="true"]::after{transform:translateY(2px) rotate(-135deg)}
+  .capcalera.amb-plec .menu{display:none}
+  .capcalera.amb-plec.obert .menu{display:flex;flex-direction:column;align-items:stretch;flex-wrap:nowrap;gap:0;
+    position:absolute;z-index:30;top:100%;left:0;right:0;margin:0;padding:0 var(--e3) var(--e1);
+    background:var(--paper);border-top:1px solid var(--vora);border-bottom:2.5px solid var(--ink)}
+  .capcalera.amb-plec .menu a,.capcalera.amb-plec .menu .ara{min-height:48px;font-size:1rem;
+    border-top:1px solid var(--vora)}
+  .capcalera.amb-plec .menu > :first-child{border-top:0}
 }
 /* Els objectius de toc que van sols (no els enllaços dins d'una frase) han de
    fer 44px d'alt: la mida on un dit hi encerta sense ampliar la pàgina. */
 .logo{font-family:var(--display);font-weight:900;letter-spacing:-.05em;font-size:1.3rem;text-decoration:none;
   display:inline-flex;align-items:center;min-height:44px}
-.etiqueta{background:var(--presec);color:#1E1B2E;border-radius:var(--r-max);padding:5px 12px;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
 
 ${CERCADOR_CSS}
 
 main{max-width:var(--ample);margin:0 auto;padding:0 var(--e3) var(--e5)}
 .portada{padding:var(--e3) 0 var(--e4)}
-.micro{font-size:.76rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--coral-text);margin:0 0 var(--e2)}
+/* El rètol de sobre del títol és un fil d'Ariadna —«Vallès Occidental ·
+   Barcelona», «Comarca», «Poble a poble»— i no un cartell. Anava en majúscules
+   espaiades i en coral, que és el rètol de plantilla que la marca no vol: ara
+   és una línia de text petit, tal com està escrita, amb els enllaços subratllats
+   perquè es vegi que porten a algun lloc. */
+.micro{font-size:.88rem;font-weight:700;letter-spacing:0;line-height:1.4;color:var(--ink-suau);margin:0 0 var(--e2)}
+.micro a{color:var(--ink);text-decoration-color:var(--coral);text-decoration-thickness:2px}
+.micro a:hover{color:var(--coral-text)}
 .entrada{font-size:1.15rem;color:var(--ink-suau);margin:var(--e2) 0 0}
 .entrada-bloc{color:var(--ink-suau)}
 .bloc{padding:var(--e4) 0;border-top:2.5px solid var(--ink)}
@@ -217,9 +284,53 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
    del poble. Encongida i sense el descens de la caixa, es llegeix com una
    paraula més que casualment porta color. */
 .resum .sigla{font-size:.74em;padding:0 10px;vertical-align:.1em}
+
+/* --- les pastilles: tres menes i prou -----------------------------------
+   La mateixa pastilla arrodonida feia massa feines —índex, destins, estats,
+   sigles— i a la pàgina d'una persona n'hi havia cinc dibuixos en una sola
+   fila. Ara cada feina té una cara, i només una:
+
+   1. **La sigla d'un partit** («.sigla», a dalt): xip ple del color del partit,
+      amb vora de tinta. És una marca de dada i és l'única pastilla arrodonida.
+   2. **Un estat** («.estat», i les classes antigues que fan aquesta feina):
+      etiqueta petita i plana, sense vora, cantons poc arrodonits i en
+      minúscula com una frase. Diu com està una cosa; no porta enlloc. El fons
+      és un gris de tinta; les que ja tenien un color de la casa per un motiu
+      (el presec de l'esborrany, la menta del govern) el conserven.
+   3. **Navegar** («.navega», «.index», «.pastilles-context», «.destins»,
+      «.prova-enllac»): text subratllat i prou. El subratllat ja diu que és un
+      enllaç; la vora i el fons de pastilla el feien semblar un botó, i la
+      fletxa del final («→») hi sobrava.
+
+   Els botons de debò (la casella, «Menú», «Respon les preguntes») no són
+   pastilles: fan una acció i porten el seu propi dibuix. */
+.estat,.etiqueta,.marca-canvi,.marca-govern,.districte,.punt-tipus,.vot-unanim,.vot-grup{
+  display:inline-block;font-family:var(--text);font-size:.74rem;font-weight:700;line-height:1.35;
+  letter-spacing:0;text-transform:none;white-space:nowrap;
+  border:0;border-radius:5px;padding:2px 8px;background:var(--vora);color:var(--ink)}
+.etiqueta,.marca-canvi{background:var(--presec);color:#1E1B2E}
+/* El «display» de dalt guanya l'atribut «hidden»: la prova escriu el districte
+   buit i amagat fins que el guió el sap, i sense això sortia una capsa buida. */
+:is(.estat,.etiqueta,.marca-canvi,.marca-govern,.districte,.punt-tipus,.vot-unanim,.vot-grup)[hidden]{display:none}
+.navega{display:inline-flex;align-items:center;min-height:44px;font-weight:800;color:inherit;
+  text-decoration:underline;text-decoration-color:var(--coral);text-decoration-thickness:2px;
+  text-underline-offset:4px}
+.navega:hover{color:var(--coral-text)}
 .alcaldia{display:flex;align-items:center;gap:var(--e2);margin:var(--e3) 0 0}
 .cara-alcaldia{width:52px;height:52px;border-radius:50%;border:2.5px solid var(--ink);
   box-shadow:var(--ombra);object-fit:cover;flex:0 0 auto;background:var(--paper-2)}
+/* El retrat va amb «loading=lazy» i, fins que arriba, el cercle era blanc i
+   buit: a la portada, vuit anelles sense res a dins. Mentre carrega, el fons
+   dibuixa una silueta —cap i espatlles— amb el gris dels filets, que diu «aquí
+   hi va una cara» sense fer veure que és de ningú en concret; la foto, opaca, la
+   tapa sencera quan arriba. Són dos cercles plens i no cap degradat: les
+   parades de color van enganxades. Les inicials sota la foto, que seria encara
+   millor, demanen un segon element a l'HTML, i la fitxa del regidor, que ja les
+   hi posa pel seu compte, deixa la foto transparent i no veu aquesta silueta. */
+img.cara-alcaldia{background:
+  radial-gradient(ellipse 19% 19% at 50% 39%,var(--vora) 97%,transparent 100%),
+  radial-gradient(ellipse 36% 30% at 50% 100%,var(--vora) 97%,transparent 100%),
+  var(--paper-2)}
 .cara-alcaldia.inicials{display:flex;align-items:center;justify-content:center;
   font-family:var(--display);font-weight:900;font-size:1.05rem;background:var(--c);color:var(--t)}
 /* La mateixa cara més petita (vegeu cara.ts): la mida va a --mida. */
@@ -239,22 +350,26 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
    que l'explica. Va sense contorn ni ombra a propòsit: és un índex amb números
    i no una targeta més de dades, i si pesés com les de sota competiria amb
    elles en comptes de deixar-hi anar. */
-/* --- la graella de sis xifres ------------------------------------------
-   Tres coses la deixaven descuadrada, i totes tres es veien alhora.
+/* --- la graella de xifres («ullada») -----------------------------------
+   Les tres, quatre, cinc o sis xifres que obren la fitxa del poble, la de la
+   comarca, la de l'AMB i les de diputacions i consells. És un sol component, i
+   per això ha de fer el mateix a totes les pàgines i a totes les amplades.
 
-   L'ajust automàtic amb un mínim de 230px repartia quatre columnes i dues, o tres i
-   tres, segons l'amplada: a les mides del mig quedaven dues pastilles òrfenes
-   sota d'una fila de quatre. Ara les columnes són fixes a cada tram —tres, dues
-   o una— i el rectangle no es trenca mai.
+   Abans els separadors eren vores esquerra i de dalt a cada pastilla, i qui
+   obria fila —qui no n'havia de portar— es decidia amb una cadena de
+   «:nth-child» diferent per a cada tram de columnes. Les regles de tram
+   estaven dins de @container i les d'una columna també, però «li:nth-child(3n+1)»
+   pesa més que «li» a seques: a mòbil la quarta pastilla recuperava la vora
+   esquerra i el farciment, i la graella alternava pastilles amb caixa i sense.
+   Ara no hi ha vores verticals: cada pastilla porta només un filet a sobre, la
+   separació entre columnes és un buit, i el filet de la primera fila el talla
+   el mateix <ul> (marge negatiu de la pastilla + «overflow:hidden»), perquè
+   allà ja hi ha la ratlla de tinta del bloc. No hi ha cap regla que depengui de
+   quantes columnes hi ha, i per tant cap que es pugui contradir.
 
-   La separació de 2px vertical contra els 24 horitzontals feia que l'espai entre
-   files i el de entre columnes no s'assemblessin gens. Ara no n'hi ha cap: els
-   separadors són filets de debò, i el que hi ha entre pastilles és el mateix
-   coixí per tots costats.
-
-   I les files internes eren automàtiques, de manera que una pastilla sense
-   percentil —que es quedava sense barra— pujava el seu peu cinc píxels respecte
-   de la del costat. Ara les quatre files són fixes i la barra hi és sempre. */
+   Les files internes de cada pastilla són fixes —etiqueta, xifra, barra i
+   peu— perquè el peu d'una pastilla sense barra no pugi respecte del de la del
+   costat. */
 .ullada{margin:var(--e3) 0 0;border-top:2.5px solid var(--ink);container-type:inline-size}
 /* Les columnes les decideix l'amplada del CONTENIDOR i no la de la finestra.
    Amb els media queries, la pàgina de comarca —que té el rail de l'índex i
@@ -262,39 +377,35 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
    pantalla ampla i escapçava les etiquetes: «REGIDORIES EN JOC EL 23…» i
    «GOVERNA QUI NO VA…». L'etiqueta és el que dona sentit a la xifra, i tallada
    deixa el número sense voler dir res. */
-.ullada ul{list-style:none;margin:0;padding:0;display:grid;gap:0;
-  grid-template-columns:minmax(0,1fr)}
+.ullada ul{list-style:none;margin:0;padding:0;display:grid;column-gap:var(--e3);row-gap:0;
+  grid-template-columns:minmax(0,1fr);overflow:hidden}
+.ullada li{min-width:0;margin-top:-1.5px;border-top:1.5px solid var(--vora)}
 @container (min-width:470px){ .ullada ul{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @container (min-width:820px){ .ullada ul{grid-template-columns:repeat(3,minmax(0,1fr))} }
+/* Les fitxes de diputació i de consell en porten quatre: en tres columnes en
+   quedava una sola a la segona fila. Fan dues i dues, i quatre en fila quan hi
+   caben. */
+@container (min-width:820px){
+  .ullada ul:has(> li:nth-child(4):last-child){grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+/* En dues columnes, una última pastilla senar no deixa cap forat al costat:
+   ocupa la fila sencera. */
+@container (min-width:470px) and (max-width:819px){
+  .ullada:not(.cinc) li:last-child:nth-child(odd){grid-column:1 / -1}
+}
 /* La fitxa municipal en porta cinc —gasta, deu, paga, vota, mana— i van en
-   una fila a partir de 900 px de contenidor, en 3+2 fins a 600 i en 2+2+1 a
-   sota. Va amb classe pròpia perquè «.ullada» la comparteixen la comarca i
-   l'AMB, que en tenen sis. Els filets es refan a cada tram —qui obre fila
-   canvia— i per això cada tram diu els seus; el selector porta «:nth-child(n)»
-   perquè pesi més que els de la graella de tres de més amunt. */
-@container (min-width:900px){
-  .ullada.cinc ul{grid-template-columns:repeat(5,minmax(0,1fr))}
-  .ullada.cinc li:nth-child(n){border-top:0;border-left:1.5px solid var(--vora)}
-  .ullada.cinc li:nth-child(n) a{padding-left:var(--e2)}
-  .ullada.cinc li:first-child{border-left:0}
-  .ullada.cinc li:first-child a{padding-left:0}
-}
+   una fila a partir de 900 px de contenidor. Entre 600 i 899 fan tres i dues
+   sobre sis columnes de fons, de manera que les dues de baix omplen la fila en
+   comptes de deixar-hi una cel·la buida; entre 470 i 599 fan dues, dues i una
+   d'ample. Va amb classe pròpia perquè «.ullada» la comparteixen la comarca i
+   l'AMB, que en tenen sis. */
+@container (min-width:900px){ .ullada.cinc ul{grid-template-columns:repeat(5,minmax(0,1fr))} }
 @container (min-width:600px) and (max-width:899px){
-  .ullada.cinc ul{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .ullada.cinc li:nth-child(n){border-top:1.5px solid var(--vora);border-left:1.5px solid var(--vora)}
-  .ullada.cinc li:nth-child(n) a{padding-left:var(--e2)}
-  .ullada.cinc li:nth-child(3n+1){border-left:0}
-  .ullada.cinc li:nth-child(3n+1) a{padding-left:0}
-  .ullada.cinc li:nth-child(-n+3){border-top:0}
+  .ullada.cinc ul{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .ullada.cinc li{grid-column:span 2}
+  .ullada.cinc li:nth-child(n+4){grid-column:span 3}
 }
-@container (min-width:470px) and (max-width:599px){
-  .ullada.cinc ul{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .ullada.cinc li:nth-child(n){border-top:1.5px solid var(--vora);border-left:1.5px solid var(--vora)}
-  .ullada.cinc li:nth-child(n) a{padding-left:var(--e2)}
-  .ullada.cinc li:nth-child(2n+1){border-left:0}
-  .ullada.cinc li:nth-child(2n+1) a{padding-left:0}
-  .ullada.cinc li:nth-child(-n+2){border-top:0}
-}
+@container (min-width:470px) and (max-width:599px){ .ullada.cinc li:last-child{grid-column:1 / -1} }
 /* La pastilla de sigles com a xifra, i el «des de» petit al costat: la
    pastilla no ha de fer la mida del número, que la faria un botó. */
 .ullada .xifra .sigla{font-size:.55em;display:inline-block;width:auto;height:auto;
@@ -303,47 +414,34 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
 .ullada .xifra .des-de{display:block;font-size:.45em;font-weight:700;color:var(--ink-suau);margin-top:4px}
 .ullada .xifra .des-de{display:block;font-family:var(--text);font-size:.74rem;font-weight:800;
   letter-spacing:0;color:var(--ink-suau);margin-top:4px;line-height:1.3}
-.ullada li{border-top:1.5px solid var(--vora);border-left:1.5px solid var(--vora)}
-/* La primera fila ja té el filet de tinta del bloc a sobre, i la primera
-   columna la vora del contingut: repetir-los-hi faria una doble ratlla. */
-.ullada li:nth-child(3n+1){border-left:0}
-.ullada li:nth-child(-n+3){border-top:0}
-/* Per sota de tres columnes els filets es refan: qui obre fila canvia. */
-@container (max-width:819px){
-  .ullada li:nth-child(3n+1){border-left:1.5px solid var(--vora)}
-  .ullada li:nth-child(-n+3){border-top:1.5px solid var(--vora)}
-  .ullada li:nth-child(2n+1){border-left:0}
-  .ullada li:nth-child(-n+2){border-top:0}
-}
-@container (max-width:469px){
-  .ullada li{border-left:0}
-  .ullada li:nth-child(-n+2){border-top:1.5px solid var(--vora)}
-  .ullada li:first-child{border-top:0}
-}
 /* La icona del tema al davant de cada xifra: és el que fa que el resum es
    reculli d'una ullada en comptes de llegir-se etiqueta per etiqueta. Va a
-   l'esquerra i no a sobre perquè la columna de dibuixos guiï la vista avall. */
-/* Files fixes: etiqueta, xifra, barra i peu. Amb alçada automàtica la pastilla sense
-   percentil desalineava el seu peu respecte de la del costat; amb una alçada
-   demanada per a la barra, totes quatre comencen a la mateixa línia. */
+   l'esquerra i no a sobre perquè la columna de dibuixos guiï la vista avall.
+   Files fixes: etiqueta, xifra, barra i peu. Amb alçada automàtica la
+   pastilla sense percentil desalineava el seu peu respecte de la del costat;
+   amb una alçada demanada per a la barra, totes quatre comencen a la mateixa
+   línia. El farciment és només de dalt i de baix: entre columnes ja hi ha el
+   buit de la graella, i així el text de totes les pastilles comença al mateix
+   lloc, siguin a la primera columna o no. */
 .ullada a{display:grid;grid-template-columns:26px minmax(0,1fr);column-gap:11px;
   grid-template-rows:auto auto 5px auto;align-content:start;min-height:124px;
-  text-decoration:none;color:inherit;padding:var(--e2) var(--e2) var(--e2) var(--e2)}
-.ullada li:nth-child(3n+1) a{padding-left:0}
-@container (max-width:819px){
-  .ullada li:nth-child(3n+1) a{padding-left:var(--e2)}
-  .ullada li:nth-child(2n+1) a{padding-left:0}
-}
-@container (max-width:469px){ .ullada a{padding-left:0;min-height:0} }
+  text-decoration:none;color:inherit;padding:var(--e2) 0}
+/* El <ul> retalla el que en surt (és el que amaga el filet de la primera
+   fila), i un contorn per fora quedaria tallat: va per dins. */
+.ullada a:focus-visible{outline-offset:-3px}
+@container (max-width:469px){ .ullada a{min-height:0} }
 .ullada .dibuix{grid-row:1 / span 4;align-self:start;margin-top:2px}
 .ullada .dibuix .icona{width:26px;height:26px;display:block}
 .ullada .etq,.ullada .xifra,.ullada .on,.ullada .peu{grid-column:2}
 .ullada a:hover .xifra{color:var(--coral-text)}
 /* Dues línies sempre, tant si el nom n'ocupa una com si n'ocupa dues.
-   «ESTALVI NET» en fa una i «ÒRGANS DE GOVERN, PER HABITANT» en fa dues, i
+   «Estalvi net» en fa una i «Òrgans de govern, per habitant» en fa dues, i
    sense una alçada demanada la xifra de la primera començava una línia més
-   amunt que la de la segona: la fila sencera quedava escapçada. */
-.ullada .etq{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
+   amunt que la de la segona: la fila sencera quedava escapçada.
+   L'etiqueta va com està escrita, en minúscula de frase: en majúscules
+   espaiades era el rètol de plantilla que la marca no vol, i ocupava un terç
+   més d'amplada per dir el mateix. */
+.ullada .etq{font-size:.8rem;font-weight:700;letter-spacing:0;
   color:var(--ink-suau);line-height:1.25;min-height:2.5em;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 @container (max-width:469px){ .ullada .etq{min-height:0} }
@@ -352,31 +450,43 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
 .ullada .on{display:block;height:5px;background:var(--vora);border-radius:var(--r-max);
   align-self:center}
 /* Sense percentil no hi ha res a marcar, i marcar-hi el zero seria dir que el
-   municipi és l'últim de tots. Ocupa el lloc perquè la graella no es desmunti,
-   però no pot ser una canaleta plena: al costat d'una barra de debò, una ratlla
-   sencera de vora a vora es llegeix com un cent per cent. De punts, es llegeix
-   com el que és: aquí no hi ha mesura. */
-.ullada .on.buida{background:none;border-bottom:2px dotted var(--vora);height:0;
-  align-self:center;opacity:.8}
-.ullada .on i{display:block;height:100%;width:var(--w);min-width:4px;background:var(--lavanda);
+   municipi és l'últim de tots. La barra buida només guarda el lloc —perquè el
+   peu comenci a la mateixa línia que el de la pastilla del costat— i no
+   pinta res: ni canaleta plena, que al costat d'una barra de debò es llegeix
+   com un cent per cent, ni la ratlla de punts d'abans, que sota el número feia
+   una segona línia sense voler dir res. Una barra, doncs, només on hi ha una
+   proporció. */
+.ullada .on.buida{background:none}
+/* Un zero de debò —un partit sense cap alcaldia— no dibuixa res; una part
+   petita però no nul·la —2 alcaldies de 947, un 0,2 %— en dibuixa com a mínim
+   4 px, perquè es vegi que hi és. Amb un «min-width:4px» a seques el zero
+   també en treia 4, i una barra de zero es llegeix com «una mica». La fórmula
+   ho distingeix sense saber res de l'HTML: «--w × 1000» és zero només si --w
+   és zero, i qualsevol altra cosa passa de 4 px de seguida. Ho fa amb el que
+   l'HTML escriu: si qui la crida arrodoneix el 0,2 % a «0%», aquí és un zero. */
+.ullada .on i{display:block;height:100%;width:max(var(--w),min(4px,var(--w) * 1000));background:var(--lavanda);
   border-radius:var(--r-max)}
 /* Dues línies i para: un peu de tres estirava tota la fila de la graella. */
 .ullada .peu{font-size:.74rem;color:var(--ink-suau);line-height:1.3;margin-top:7px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-/* «entre els 947 →»: l'enllaç al rànquing d'aquella xifra, a les pastilles que
+/* «entre els 947»: l'enllaç al rànquing d'aquella xifra, a les pastilles que
    en tenen. Va FORA de la tessel·la —que ja és un enllaç sencer— com a segon
    fill del <li>, i per això «.ullada a» l'agafava i en feia una segona graella
    de 124 px: aquí es desfà tot això. La pastilla es fa columna flexible i la
    tessel·la s'estira, perquè l'enllaç quedi enganxat a baix a la dreta a totes
-   les pastilles de la fila, tinguin el peu d'una línia o de dues; a la dreta,
-   i no sota la xifra, perquè el marge esquerre de la tessel·la canvia amb la
-   columna i alinear-s'hi demanaria repetir totes les regles de nth-child. */
+   les pastilles de la fila, tinguin el peu d'una línia o de dues. Va a
+   l'esquerra, a la columna del text (26 px d'icona + 11 de separació), com
+   l'etiqueta, la xifra i el peu: ara que cap pastilla no té farciment lateral,
+   el marge esquerre és el mateix a totes les columnes. */
 .ullada li:has(> .entre-947){display:flex;flex-direction:column}
 .ullada li:has(> .entre-947) > a:first-child{flex:1 0 auto}
-.ullada a.entre-947{display:block;flex:0 0 auto;min-height:0;margin-top:-10px;padding:0 var(--e2) var(--e2) 0;
-  text-align:right;font-size:.72rem;font-weight:800;letter-spacing:.02em;color:var(--coral-text);
-  text-decoration:none}
-.ullada a.entre-947:hover,.ullada a.entre-947:focus-visible{text-decoration:underline;text-decoration-thickness:2px}
+/* Va subratllat sempre, i no només en passar-hi per sobre: és un enllaç dins
+   d'una peça que ja n'és un altre, i sense el subratllat semblava una nota. La
+   fletxa «→» que portava al final no hi és: el subratllat ja ho diu. */
+.ullada a.entre-947{display:block;flex:0 0 auto;min-height:0;margin-top:-10px;padding:0 0 var(--e2) 37px;
+  text-align:left;font-size:.76rem;font-weight:800;letter-spacing:0;color:var(--coral-text);
+  text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
+.ullada a.entre-947:hover,.ullada a.entre-947:focus-visible{text-decoration-thickness:2.5px}
 /* A les tires («.tires .peu») l'enllaç va dins del peu, en línia, i només
    canvia de color: allà el peu no és cap enllaç i no cal treure'l de res. */
 .tires .peu .entre-947{color:var(--coral-text);font-weight:800;display:inline-block}
@@ -398,16 +508,29 @@ a.sigla:hover,a.sigla:focus-visible{box-shadow:var(--ombra)}
 .retrat.inicials.sense-foto{filter:none;color:var(--t);background:var(--c);font-size:.9rem}
 
 /* --- índex: amb dotze blocs, cal poder-hi saltar --- */
-.index{display:flex;flex-wrap:wrap;gap:6px;padding:var(--e3) 0 0;border-top:2.5px solid var(--ink);margin-top:var(--e4)}
-.index a{font-size:.78rem;font-weight:800;text-decoration:none;border:2px solid var(--ink);
-  border-radius:var(--r-max);padding:0 15px;display:inline-flex;align-items:center;min-height:44px;
-  transition:background .12s ease,color .12s ease}
-.index a:hover{background:var(--ink);color:var(--paper)}
-/* La secció que s'està llegint. Com a filera de pastilles es marca amb el
-   presec de la casa i no amb la tinta plena, que és el que fa el «:hover»: si
-   fossin iguals, passar-hi el ratolí per sobre semblaria que s'hi ha anat. */
-.index a[aria-current]{background:var(--presec);color:#1E1B2E}
+/* És navegació, i per tant text subratllat (vegeu «les pastilles», a dalt):
+   abans era una filera de pastilles amb vora, com un grup de botons, i a un
+   telèfon les vint entrades feien set files de 44 px. En text n'hi caben tres
+   o quatre per fila i el bloc fa la meitat. El subratllat és fluix en repòs i
+   s'omple en passar-hi per sobre. */
+.index{display:flex;flex-wrap:wrap;gap:0 18px;padding:var(--e2) 0 0;border-top:2.5px solid var(--ink);margin-top:var(--e4)}
+.index a{font-size:.86rem;font-weight:800;display:inline-flex;align-items:center;min-height:44px;
+  text-decoration:underline;text-decoration-color:var(--vora);text-decoration-thickness:2px;
+  text-underline-offset:5px;transition:color .12s ease,text-decoration-color .12s ease}
+.index a:hover{color:var(--coral-text);text-decoration-color:currentColor}
+/* La secció que s'està llegint: en coral i amb el subratllat ple, com l'apartat
+   actual del menú de la capçalera. */
+.index a[aria-current]{color:var(--coral-text);text-decoration-color:currentColor}
 @media (prefers-reduced-motion:reduce){.index a{transition:none}}
+/* Entre la portada i l'índex hi ha d'haver un sol pas de --e4, com entre dos
+   blocs. Hi havia el farciment de baix de la portada (40) i el marge de dalt
+   de l'índex (40) un damunt de l'altre: al telèfon, entre la darrera xifra de
+   la ullada i la ratlla de l'índex quedaven cent píxels buits. Quan el que hi
+   ha al davant ja porta el seu farciment —la portada i les seves bessones de
+   partit i de candidatura, o un bloc—, l'índex no n'hi afegeix; quan no en
+   porta —la ullada solta de la fitxa municipal, la banda del joc, la portada
+   de les diputacions, que es posa el seu propi marge—, es queda amb el seu. */
+.portada + .index,.partit-portada + .index,.cand-portada + .index,.bloc + .index{margin-top:0}
 /* --- la lletra petita ----------------------------------------------------
    Trenta-vuit notes al peu, 1.592 paraules: el 22 % del text de la fitxa era
    com es compta cada cosa i d'on surt. No en sobra cap —és el que fa que una
@@ -471,23 +594,26 @@ details.nota > .serie{font-size:1rem}
 .hemicicle svg{width:100%;height:auto;display:block}
 .hemicicle figcaption{font-size:.86rem;color:var(--ink-suau);text-align:center;margin-top:var(--e1)}
 /* Tres posicions fixes per força: marca i sigles, regidories, vots. Amb
-   «flex-wrap» cada fila partia per un lloc diferent i no es podien comparar. */
-.llegenda{list-style:none;margin:0;padding:0;display:grid;gap:0;
+   «flex-wrap» cada fila partia per un lloc diferent i no es podien comparar.
+   El selector és la constant LLEGENDA (vegeu-la a dalt): només la llegenda de
+   l'hemicicle, i no qualsevol llista que es digui «llegenda». */
+${LLEGENDA}{list-style:none;margin:0;padding:0;display:grid;gap:0;
   grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));column-gap:var(--e3)}
-.llegenda li{display:grid;grid-template-columns:1fr auto;align-items:baseline;
+${LLEGENDA} > li{display:grid;grid-template-columns:1fr auto;align-items:baseline;
   gap:2px var(--e2);padding:9px 0;border-bottom:1px solid var(--vora)}
-.llegenda .qui{display:flex;align-items:center;gap:8px;min-width:0}
-.llegenda .qui b{font-weight:800;overflow-wrap:anywhere}
-.llegenda .xifra{font-weight:700;font-size:.82rem;color:var(--ink-suau);white-space:nowrap}
-.llegenda .xifra b{font-family:var(--display);font-weight:900;font-size:1.35rem;
+${LLEGENDA} .qui{display:flex;align-items:center;gap:8px;min-width:0}
+${LLEGENDA} .qui b{font-weight:800;overflow-wrap:anywhere}
+${LLEGENDA} .xifra{font-weight:700;font-size:.82rem;color:var(--ink-suau);white-space:nowrap}
+${LLEGENDA} .xifra b{font-family:var(--display);font-weight:900;font-size:1.35rem;
   letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;margin-right:2px}
 /* La proporció de vot, que a l'hemicicle no es pot mesurar: dos cercles de
-   diferència no es veuen, un 2,7 % de barra sí. */
-.llegenda .proporcio{grid-column:1/-1;height:6px;background:var(--vora);border-radius:var(--r-max);
+   diferència no es veuen, un 2,7 % de barra sí. Un zero no hi pinta res i una
+   part minúscula, com a mínim 3 px: és la mateixa fórmula que la de la ullada. */
+${LLEGENDA} .proporcio{grid-column:1/-1;height:6px;background:var(--vora);border-radius:var(--r-max);
   margin:3px 0 1px}
-.llegenda .proporcio i{display:block;height:100%;width:var(--w);min-width:3px;background:var(--c);
+${LLEGENDA} .proporcio i{display:block;height:100%;width:max(var(--w),min(3px,var(--w) * 1000));background:var(--c);
   border-radius:var(--r-max)}
-.llegenda .secundari{grid-column:1/-1;font-size:.78rem;font-variant-numeric:tabular-nums}
+${LLEGENDA} .secundari{grid-column:1/-1;font-size:.78rem;font-variant-numeric:tabular-nums}
 .mostra{width:14px;height:14px;border-radius:4px;background:var(--c);border:1.5px solid var(--ink);flex:none;align-self:center}
 .xifra{font-weight:800}
 
@@ -551,8 +677,12 @@ details.nota > .serie{font-size:1rem}
    60,6 % de participació o un 36,6 % de dones al ple no es poden jutjar, i el
    bloc es llegia com una xifra que no diu res. Les targetes creixen una mica
    perquè hi càpiga la comparació, i per això demanen més amplada mínima. */
-.participacio,.paritat{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))}
-.participacio li,.paritat li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:4px}
+/* Sense contorn ni ombra: eren targetes idèntiques en filera, que és el kit que
+   la marca no vol, i ara són el mateix que l'ullada —un filet a sobre de cada
+   xifra i un buit entre columnes—. Les xifres de tota la fitxa es llegeixen
+   així com una sola peça, i no com cinc menes de capsa. */
+.participacio,.paritat{list-style:none;margin:0;padding:0;display:grid;gap:0 var(--e3);grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))}
+.participacio li,.paritat li{border-top:1.5px solid var(--vora);padding:var(--e2) 0;display:flex;flex-direction:column;gap:4px;min-width:0}
 /* El regle dins d'una targeta no té els 32px de marge que necessita al bloc
    dels diners, on l'etiqueta penja de la marca i pot anar al 94 % del recorregut. */
 .participacio .regle,.paritat .regle{margin:16px 22px 2px}
@@ -560,7 +690,7 @@ details.nota > .serie{font-size:1rem}
 /* El regle de dispersió del grup va sota les targetes de participació i ha de
    respirar: sense marge, el seu títol tocava la vora de la targeta de sobre. */
 .participacio + .dispersio{margin-top:var(--e3)}
-.paritat .etq{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-suau)}
+.paritat .etq{font-size:.8rem;font-weight:700;color:var(--ink-suau)}
 .gran{font-family:var(--display);font-weight:900;font-size:2.1rem;line-height:1;letter-spacing:-.03em}
 /* Una xifra de set dígits («2.416.005») no cap en una targeta de mòbil i
    sortia per sobre del text del costat. No es pot partir: només encongir. */
@@ -576,8 +706,12 @@ details.nota > .serie{font-size:1rem}
    «align-items:start» cada grup fa l'alçada que li toca. */
 .plens{display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));
   align-items:start;align-content:start;margin-bottom:var(--e2)}
-.grup{background:var(--paper-2);border:2.5px solid var(--ink);border-left-width:10px;border-left-color:var(--c);
-  border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2);container-type:inline-size}
+/* El grup plegable és un «details» i la regla hi va lligada: «.grup» a seques
+   casava també amb el <span class="grup"> que el comparador escriu a la
+   capçalera de la taula, i li posava contorn, ombra i farciment de targeta.
+   Sense contorn ni ombra, com el ple compacte: el color del grup fa de franja
+   a l'esquerra, que és on diu de qui és, i la resta és paper. */
+details.grup{border-left:10px solid var(--c);padding:4px 0 4px 14px;container-type:inline-size}
 /* El grup es pot plegar. Amb 41 regidories el bloc són quatre pantalles de
    telèfon, i qui ja ha vist qui hi ha a un grup ha de poder passar de llarg
    sense recórrer-les totes. Va amb «details» i no amb un guió: sense CSS i
@@ -612,10 +746,10 @@ details.nota > .serie{font-size:1rem}
    regidor val menys. */
 .retrat.inicials{display:flex;align-items:center;justify-content:center;font-family:var(--display);
   font-weight:900;font-size:.86rem;color:var(--t,var(--ink));background:var(--c,var(--paper-2))}
-.grup.noadscrit{border-left-style:dashed}
+details.grup.noadscrit{border-left-style:dashed}
 /* Al govern: fons lleugerament tenyit i marca a cada regidoria. El govern pot
    ser de més d'un partit, i per això la marca va per persona i no per grup. */
-.grup.al-govern{box-shadow:var(--ombra),inset 0 0 0 999px rgba(191,232,210,.16)}
+details.grup.al-govern{background:rgba(191,232,210,.16);border-radius:0 var(--r-s) var(--r-s) 0}
 /* El nom complet no ocupa una línia sota cada cara, però no queda amagat:
    surt en passar-hi el ratolí i també en posar-hi el focus de teclat. */
 .retrats a[data-tip]{position:relative}
@@ -638,9 +772,10 @@ details.nota > .serie{font-size:1rem}
   border:1.5px solid var(--ink);border-radius:6px;background:var(--ink);color:var(--paper);
   font:700 .72rem/1.2 var(--text);white-space:normal;pointer-events:none;box-shadow:var(--ombra)}
 @media (prefers-reduced-motion:reduce){.retrats a[data-tip]::after{transition:none}}
-.grup li.govern .marca-govern{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
-  background:var(--menta);color:#1E1B2E;border:1.5px solid var(--ink);border-radius:var(--r-max);
-  padding:2px 7px;white-space:nowrap;margin-left:auto;flex:none}
+/* Un estat (vegeu «les pastilles»): la forma la dona la regla comuna, i aquí
+   només hi ha el color, que és la menta del govern, i el lloc. */
+.marca-govern{background:var(--menta);color:#1E1B2E}
+.grup li.govern .marca-govern{margin-left:auto;flex:none}
 .resum-govern{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2);margin:0 0 var(--e3);font-size:1rem}
 .grup .qui a{text-decoration:none;border-bottom:1.5px solid var(--vora)}
@@ -707,7 +842,9 @@ details.nota > .serie{font-size:1rem}
 /* --- alcaldies --- */
 .alcaldies{width:100%;border-collapse:collapse;font-size:.94rem}
 .alcaldies th,.alcaldies td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--vora);vertical-align:top}
-.alcaldies thead th{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
+/* Les capçaleres de taula, com estan escrites: «Any», «Alcaldia». En
+   majúscules espaiades eren rètols, i les columnes no en necessiten cap. */
+.alcaldies thead th{font-size:.8rem;font-weight:700;color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
 .alcaldies tbody th{font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
 /* El partit és la segona columna en importància i era la més esvaïda de la
    taula: anava amb el gris del text secundari, com la data. Ara va amb la
@@ -724,7 +861,8 @@ details.nota > .serie{font-size:1rem}
    sigui un segon lloc on clicar. */
 .alcaldies .qui-alcaldia{display:inline-flex;align-items:center;gap:8px;font-weight:700;text-decoration:none}
 .alcaldies .qui-alcaldia:hover,.alcaldies .qui-alcaldia:focus-visible{text-decoration:underline;text-decoration-thickness:2px}
-.marca-canvi{display:inline-block;background:var(--presec);color:#1E1B2E;border-radius:var(--r-max);padding:2px 9px;font-size:.7rem;font-weight:800;white-space:nowrap}
+/* «.marca-canvi» («canvi a mig mandat», «segons Wikidata») és un estat: la
+   forma i el presec els porta la regla comuna de «les pastilles». */
 /* Les alcaldies de fa més de deu anys. Mateixa manera de plegar que la lletra
    petita, perquè és el mateix tracte: hi són senceres, no s'obren soles. */
 .mes-enrere{margin-top:var(--e2)}
@@ -740,8 +878,10 @@ details.nota > .serie{font-size:1rem}
 /* --- dotze eleccions, una columna cadascuna ---------------------------
    L'alçada de cada tros és la seva part del ple, no un valor absolut: el que
    interessa és qui el domina, no com de gran és. Per això hi ha la línia de la
-   majoria absoluta al mig, que és l'única referència que importa de debò. */
-.grafic{margin:0 0 var(--e3)}
+   majoria absoluta al mig, que és l'única referència que importa de debò.
+   El marge de la figura «.grafic» no és aquí: és a GRAFICS_CSS (grafics.ts),
+   que va al final del full. Aquí n'hi havia un segon, i com que l'altre venia
+   després i li guanyava, el «0 0 var(--e3)» d'aquí no feia res. */
 .eleccions-marc{position:relative;padding-top:var(--e2)}
 /* La línia de la majoria: al 50% de l'alçada de les columnes. */
 .eleccions-marc .majoria{position:absolute;left:0;right:0;top:calc(var(--e2) + 108px);height:0;
@@ -792,9 +932,10 @@ details.nota > .serie{font-size:1rem}
 /* L'etiqueta de la marca cau damunt del regle, que ja va tenyit: amb el gris
    del text secundari s'hi quedava a 4,2:1, i a 9 px de lletra. Puja de mida i
    agafa el gris de les pastilles, que és el que aguanta damunt d'un fons. */
+/* La paraula de la marca («habitual») va com està escrita: és una anotació
+   del regle, no un rètol, i en majúscules espaiades feia el doble d'ample. */
 .regle b span,.diners .regle b span{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% - 3px);text-align:center;
-  font-size:.66rem;font-weight:800;text-transform:uppercase;
-  letter-spacing:.06em;color:var(--ink-suau-tint);white-space:nowrap}
+  font-size:.72rem;font-weight:700;letter-spacing:0;color:var(--ink-suau-tint);white-space:nowrap}
 .diners li:not(:first-child) .regle b span{display:none}
 .diners .comparativa{grid-column:1/-1;font-size:.8rem;margin-top:-2px}
 /* A mòbil el regle ocupa tota la fila i no li sobra amplada per al marge: hi
@@ -831,8 +972,13 @@ details.nota > .serie{font-size:1rem}
 .rebut dd .espurna{flex:1 0 100%;max-width:200px}
 @media (max-width:520px){ .rebut > div{grid-template-columns:1fr;gap:2px} }
 .comparativa{font-size:.78rem;color:var(--ink-suau)}
-.comparativa.mes{color:var(--coral-text);font-weight:700}
-.comparativa.menys{font-weight:700}
+/* «Per sobre» i «per sota» de la mediana porten el mateix pes i el mateix
+   color. Abans el «per sobre» anava en coral i el «per sota» en gris, i això
+   és un veredicte pintat: diu que gastar més que la mediana és l'alarma i
+   gastar-ne menys, la calma, quan la xifra sola no diu si és bo ni dolent. El
+   negre marca que la distància és gran (més d'un 15 %), en un sentit o en
+   l'altre; «a tocar» queda en gris perquè no hi ha distància a dir. */
+.comparativa.mes,.comparativa.menys{color:var(--ink);font-weight:700}
 
 /* --- el balanç del mandat -------------------------------------------
    Tres columnes de xifra i una fletxa al mig. La diferència va en tinta
@@ -845,8 +991,8 @@ details.nota > .serie{font-size:1rem}
    qui les vulgui llegir, però no pinten cap color. «igual» només s'atenua:
    «sense canvi» no és cap judici. */
 .balanc{width:100%;border-collapse:collapse;font-size:.95rem}
-.balanc thead th{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-suau);
-  text-align:right;padding:0 0 8px;border-bottom:2.5px solid var(--ink);font-weight:800}
+.balanc thead th{font-size:.8rem;color:var(--ink-suau);
+  text-align:right;padding:0 0 8px;border-bottom:2.5px solid var(--ink);font-weight:700}
 .balanc thead th:first-child{text-align:left}
 .balanc tbody th{text-align:left;font-weight:800;padding:14px 12px 14px 0;vertical-align:top;line-height:1.25}
 .balanc td{text-align:right;padding:14px 0;vertical-align:top;font-variant-numeric:tabular-nums;
@@ -861,15 +1007,29 @@ details.nota > .serie{font-size:1rem}
 .balanc .canvi .peu-nota{text-align:right;max-width:none}
 .destacat{background:var(--presec);color:#1E1B2E;border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2);margin:var(--e3) 0 0;font-size:1rem}
+/* A mòbil, el balanç del mandat es plega en fitxes: el nom a dalt, «abans →
+   ara» a sota i la diferència al peu. Aquest plegat només té sentit per a la
+   taula que té aquestes cel·les —abans, fletxa, ara, diferència— i per això va
+   lligat a «:has(td.fletxa)»: la cel·la, i no el <span class="fletxa"> que la
+   criminalitat posa dins del canvi. La classe «balanc» la reutilitzen altres taules
+   (criminalitat, la sèrie any a any, cens, llistes obertes, vehicles) amb
+   columnes que no són aquestes: plegades així perdien la capçalera i
+   quedaven com una tira de números sense nom, amb una fletxa enganxada a la
+   mediana. Aquelles es queden en taula, dins de «.taula-envolta», que llisca
+   de costat i manté la capçalera a la vista. */
+/* Les altres taules «balanc» posen xifra al costat de xifra, i sense cap
+   coixí entre columnes les capçaleres s'enganxaven: «2025» i «per 1.000 hab.»
+   es llegien «20251.000 hab.». */
+.balanc:not(:has(td.fletxa)) thead th + th,.balanc:not(:has(td.fletxa)) td{padding-left:12px}
 @media (max-width:620px){
-  .balanc thead{display:none}
-  .balanc tr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:12px 0;border-bottom:1px solid var(--vora)}
-  .balanc tbody th,.balanc td{border:0;padding:0;text-align:left}
-  .balanc tbody th{grid-column:1/-1}
-  .balanc .fletxa{display:none}
-  .balanc .abans::after{content:" →";color:var(--ink-suau)}
-  .balanc .abans,.balanc .ara{display:inline}
-  .balanc .canvi{grid-column:1/-1;text-align:left;padding:2px 0 0}
+  .balanc:has(td.fletxa) thead{display:none}
+  .balanc:has(td.fletxa) tr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:12px 0;border-bottom:1px solid var(--vora)}
+  .balanc:has(td.fletxa) tbody th,.balanc:has(td.fletxa) td{border:0;padding:0;text-align:left}
+  .balanc:has(td.fletxa) tbody th{grid-column:1/-1}
+  .balanc:has(td.fletxa) .fletxa{display:none}
+  .balanc:has(td.fletxa) .abans::after{content:" →";color:var(--ink-suau)}
+  .balanc:has(td.fletxa) .abans,.balanc:has(td.fletxa) .ara{display:inline}
+  .balanc:has(td.fletxa) .canvi{grid-column:1/-1;text-align:left;padding:2px 0 0}
 }
 
 /* --- de qui és cada tram de la sèrie --- */
@@ -879,12 +1039,16 @@ details.nota > .serie{font-size:1rem}
 .clau-mandats .mandat-2019-2023 .tram-mandat,li.mandat-2019-2023 .tram-mandat{background:var(--menta)}
 .clau-mandats li.mandat-2015-2019 .tram-mandat{background:var(--presec)}
 
-/* --- semàfor financer --------------------------------------------------
-   El color no és l'única senyal: cada targeta porta també una barra lateral de
-   gruix diferent, perquè es distingeixin sense veure els colors. */
-.indicadors{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-.indicador{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:6px;border-left-width:10px}
-.indicador .nom{font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-suau)}
+/* --- els indicadors de la comarca -------------------------------------
+   Era el «semàfor financer»: targetes amb una franja menta, presec o coral
+   segons si la xifra era «bona», «d'avís» o «d'alerta». Això és un veredicte
+   pintat, i cap pàgina ja no el fa servir —les classes «nivell-*» no surten
+   enlloc—, així que les regles s'han tret. El que en queda són xifres en
+   filera, i van com l'ullada: un filet a sobre i un buit entre columnes, sense
+   contorn, ombra ni franja. */
+.indicadors{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:0 var(--e3);grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr))}
+.indicador{border-top:1.5px solid var(--vora);padding:var(--e2) 0;display:flex;flex-direction:column;gap:6px;min-width:0}
+.indicador .nom{font-size:.8rem;font-weight:700;color:var(--ink-suau)}
 /* La sèrie de dotze anys dins de la targeta de l'indicador: més curta que la
    de les targetes grans, perquè aquí competeix amb la xifra i no l'ha de
    guanyar. */
@@ -892,10 +1056,6 @@ details.nota > .serie{font-size:1rem}
 .indicador .espurna svg{height:34px}
 .indicador .espurna .ara{width:8px;height:8px}
 .indicador .secundari{font-size:.82rem;line-height:1.4}
-.nivell-bo{border-left-color:var(--menta)}
-.nivell-avis{border-left-color:var(--presec)}
-.nivell-alerta{border-left-color:var(--coral)}
-.nivell-sense-dades{border-left-color:var(--vora)}
 .subtitol{font-family:var(--display);font-weight:900;font-size:1.05rem;margin:var(--e3) 0 var(--e2)}
 /* Un subtítol amb àncora dins d'un bloc fusionat («#balanc», «#com-queda»)
    es llegeix com el títol que era, una mica més gran que el subtítol corrent. */
@@ -934,8 +1094,18 @@ details.nota > .serie{font-size:1rem}
 .joc-banda p{color:#1E1B2E}
 .joc-banda .nota,.joc-banda .nota > summary,.joc-banda .nota > :not(summary){color:rgba(30,27,46,.74)}
 .joc-banda .nota-linia{font-size:.9rem;margin:var(--e2) 0 0}
-.joc-banda .tires > li{background:#FFFFFF;color:#1E1B2E;border-color:#1E1B2E;box-shadow:3px 3px 0 #1E1B2E}
+/* Les tires d'aquí eren capses blanques amb ombra damunt de la lavanda. Ara
+   són com totes les altres —un filet a sobre i prou—, amb el filet de tinta
+   fosca perquè el gris de la casa no es veu damunt del lila. */
+.joc-banda .tires > li{color:#1E1B2E;border-top-color:rgba(30,27,46,.24)}
 .joc-banda .tires .etq,.joc-banda .tires .peu{color:#524D63}
+/* La lavanda no s'enfosqueix en mode fosc, i la tinta del cos sí: el que
+   dins de les tires va amb «var(--ink)» s'hi tornaria clar sobre clar. */
+.joc-banda .tires .peu b,.joc-banda .tires .canvi b,.joc-banda .espurna{color:#1E1B2E}
+/* I el coral de text, que damunt del blanc de les capses d'abans feia 5:1,
+   damunt de la lavanda es queda a 3,5:1: l'enllaç «entre els 947» hi va de
+   tinta fosca, amb el subratllat coral que ja diu que és un enllaç. */
+.joc-banda .tires .peu .entre-947{color:#1E1B2E;text-decoration-color:var(--coral-text)}
 .joc-banda .crida{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin:var(--e3) 0 0;
   font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.02em;line-height:1.35}
 .joc-banda .crida-text{flex:1 1 20rem;min-width:0}
@@ -945,18 +1115,18 @@ details.nota > .serie{font-size:1rem}
 .joc-banda .boto-joc:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(30,27,46,.3)}
 .joc-banda .avisa{display:inline-flex;align-items:center;min-height:44px;font-family:var(--text);
   font-weight:800;font-size:.88rem;color:#1E1B2E;text-underline-offset:4px}
-.joc-banda .pastilles-context a{background:#FBF7EE;color:#1E1B2E;border-color:#1E1B2E}
+.joc-banda .pastilles-context a{color:#1E1B2E}
+.joc-banda .pastilles-context a b{text-decoration-color:#1E1B2E}
 .joc-banda .pastilles-context a span{color:#524D63}
-.joc-banda .pastilles-context a:hover{background:#1E1B2E;color:#FBF7EE}
-.joc-banda .pastilles-context a:hover span{color:inherit}
+.joc-banda .pastilles-context a:hover b{color:#1E1B2E;text-decoration-thickness:3px}
 @media (prefers-reduced-motion:reduce){.joc-banda .boto-joc{transition:none}}
 /* Les pastilles de la banda del joc a un mòbil: 2+2 i no una columna de
-   quatre, que era mitja pantalla de caixes blanques. Dins de la banda el
-   mínim general de 160 px no hi cap mai —la mascota ja es menja 80— i per
-   això es fixen dues columnes i es rebaixa el coixí. */
+   quatre, que era mitja pantalla. Dins de la banda el mínim general de 160 px
+   no hi cap mai —la mascota ja es menja 80— i per això es fixen dues columnes
+   i es rebaixa el coixí. */
 @media (max-width:620px){
-  .joc-banda .tires{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .joc-banda .tires > li{padding:12px}
+  .joc-banda .tires{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--e2)}
+  .joc-banda .tires > li{padding:12px 0}
   .joc-banda .tires .xifra{font-size:1.4rem}
 }
 @media (max-width:560px){
@@ -964,23 +1134,27 @@ details.nota > .serie{font-size:1rem}
   .joc-banda .papereta{width:64px;height:75px}
 }
 
-/* --- les tires: la pastilla petita de tota la fitxa ------------------------
-   Etiqueta en versaletes, xifra gran i peu petit, com a l'ullada. Les targetes
-   de «Qui hi viu» i de «Quant fa que mana» eren cadascuna d'una mida i amb
-   quatre línies de text a dins; aquestes en tenen tres i el que no hi cap va a
-   la lletra petita. La graella s'omple amb les que hi ha: cinc caben en una
-   fila a 900 px i en dues a un telèfon. */
+/* --- les tires: la xifra petita de tota la fitxa --------------------------
+   Etiqueta, xifra gran i peu petit, com a l'ullada. Les targetes de «Qui hi
+   viu» i de «Quant fa que mana» eren cadascuna d'una mida i amb quatre línies
+   de text a dins; aquestes en tenen tres i el que no hi cap va a la lletra
+   petita. La graella s'omple amb les que hi ha: cinc caben en una fila a
+   900 px i en dues a un telèfon.
+
+   Eren capses amb contorn de tinta i ombra dura, totes iguals en filera: el
+   kit de targetes que la marca no vol, i una cinquena manera de dibuixar una
+   xifra a la mateixa fitxa. Ara són el component de l'ullada —filet a sobre,
+   buit entre columnes— i res més. */
 .tires{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--e2)}
-/* Les capses d'una mateixa fila fan la mateixa alçada —l'estirament per
-   defecte de la graella— i el peu es queda enganxat a baix: l'espai que sobra
-   queda entre la xifra i el peu, no penjant sota una capsa més curta. */
-.tires > li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:3px;min-width:0}
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0 var(--e3)}
+/* Les d'una mateixa fila fan la mateixa alçada —l'estirament per defecte de
+   la graella— i el peu es queda enganxat a baix: l'espai que sobra queda entre
+   la xifra i el peu, i els peus de la fila comencen a la mateixa línia. */
+.tires > li{border-top:1.5px solid var(--vora);padding:var(--e2) 0;display:flex;flex-direction:column;gap:3px;min-width:0}
 .tires > li > a{display:flex;flex-direction:column;gap:3px;text-decoration:none;color:inherit;flex:1 1 auto}
+.tires > li > a:hover .xifra{color:var(--coral-text)}
 .tires .peu:last-child{margin-top:auto}
-.tires .etq{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--ink-suau);line-height:1.25}
+.tires .etq{font-size:.8rem;font-weight:700;color:var(--ink-suau);line-height:1.25}
 .tires .xifra{font-family:var(--display);font-weight:900;font-size:1.7rem;line-height:1.05;
   letter-spacing:-.03em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .tires .xifra .sigla{font-size:.62em;vertical-align:.18em}
@@ -1035,16 +1209,26 @@ details.nota > .serie{font-size:1rem}
 .avis-dades{background:var(--presec);color:#1E1B2E;border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2);margin:0 0 var(--e2);font-size:.95rem}
 
-/* --- on anar després: les peces han d'estar connectades entre elles --- */
-.destins{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-.destins > li > a{display:flex;flex-direction:column;gap:4px;background:var(--paper-2);border:2.5px solid var(--ink);
-  border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2);text-decoration:none;color:inherit;height:100%;
-  transition:transform .12s ease,box-shadow .12s ease}
-.destins > li > a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-.destins b{font-family:var(--display);font-weight:900;font-size:1.1rem;letter-spacing:-.02em}
+/* --- on anar després: les peces han d'estar connectades entre elles ------
+   «Segueix estirant», al final de la pàgina d'una persona, d'una alcaldia
+   històrica o de les preguntes. Eren tres o quatre targetes idèntiques amb
+   contorn de tinta i ombra que s'enfonsava en passar-hi per sobre: el kit de
+   targetes de plantilla que la marca no vol, i amb pinta de botó per a una
+   cosa que és un enllaç.
+
+   Ara és una llista de files amb un filet entre elles, com el rebut o els
+   acumulats: el destí en titular subratllat —que és el que diu que s'hi pot
+   anar— i a sota, en gris, què s'hi troba. Amb amplada en fan dues columnes. */
+.destins{list-style:none;margin:0;padding:0;display:grid;gap:0 var(--e4);
+  grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))}
+.destins > li{border-top:1px solid var(--vora)}
+.destins > li > a{display:flex;flex-direction:column;gap:3px;padding:14px 0;min-height:44px;
+  text-decoration:none;color:inherit}
+.destins b{font-family:var(--display);font-weight:900;font-size:1.1rem;letter-spacing:-.02em;line-height:1.2;
+  text-decoration:underline;text-decoration-color:var(--coral);text-decoration-thickness:2px;text-underline-offset:4px}
+.destins > li > a:hover b{color:var(--coral-text)}
 .destins span{font-size:.86rem;color:var(--ink-suau);line-height:1.4}
 .destins span a{color:inherit}
-@media (prefers-reduced-motion:reduce){.destins > li > a{transition:none}}
 
 /* --- què publica i què no ---------------------------------------------
    El senyal no és només color: hi ha la marca, la paraula i la posició. Qui no
@@ -1103,7 +1287,13 @@ details.nota > .serie{font-size:1rem}
 .cobertura-cap{border-left-color:var(--coral)}
 .fonts ul{margin:0;padding-left:1.1em;font-size:.92rem;color:var(--ink-suau)}
 .fonts code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em;background:var(--paper-2);border:1px solid var(--vora);border-radius:5px;padding:1px 5px}
-.peu{max-width:var(--ample);margin:0 auto;padding:var(--e3);border-top:2.5px solid var(--ink);font-size:.84rem;color:var(--ink-suau)}
+/* Aquí hi havia «.peu{…}», la regla del peu de pàgina antic: 900 px d'ample,
+   «margin:0 auto», farciment i una ratlla de tinta a sobre. El peu de pàgina
+   d'ara és «footer.peu» i té el seu full (peu.ts, PEU_CSS, que va al final i
+   ho reescriu tot), però la regla nua casava també amb cada
+   <span class="peu"> de les pastilles —ullada, tires, regidor, vehicles—: el
+   peu de cada xifra quedava centrat i amb una ratlla negra flotant a sobre.
+   No en queda res que la necessiti, i per això s'ha tret sencera. */
 
 /* --- la portada, en dues columnes ------------------------------------
    El mapa anava sota de tot i amidava 300px: en una pantalla d'escriptori
@@ -1121,25 +1311,45 @@ details.nota > .serie{font-size:1rem}
    Amb dotze blocs, l'índex és el que fa navegable la pàgina, i com a filera de
    pastilles només serveix un cop: en el moment que s'ha passat de llarg ja no
    hi és. A partir de 1180px hi ha lloc per deixar-lo a la vista tota l'estona
-   sense robar amplada al text, que es queda igual d'ample que abans. */
+   sense robar amplada al text, que es queda igual d'ample que abans.
+
+   Les dues columnes són NOMÉS per a les pàgines que tenen rail, és a dir, les
+   que porten el <nav class="index"> com a fill directe del <main> (fitxa
+   municipal, comarca, partit, candidatura, diputació i consell, AMB, els que
+   manen). Abans la graella era de tot <main>, i les pàgines sense índex —els
+   partits, el comparador, els rànquings, la fitxa de regidor, els 947—
+   quedaven amb 186 px de no-res a l'esquerra i el contingut empès a la dreta;
+   dues s'ho havien arreglat cadascuna pel seu compte. Ara la regla de base és
+   la d'abans i la que la desfà demana «:has()»: un navegador que no l'entén
+   llença la regla sencera i es queda amb el comportament antic, que és lleig
+   però es llegeix. Sense rail, el <main> torna a la columna de sempre
+   (--ample-columna) i la capçalera es queda a 1.180, com a totes les altres. */
 @media (min-width:1180px){
   :root{ --ample:1180px }
   main{display:grid;grid-template-columns:186px minmax(0,1fr);column-gap:var(--e5);align-items:start}
   main > *{grid-column:2;min-width:0}
-  .index{grid-column:1;grid-row:1 / span 99;position:sticky;top:var(--e3);align-self:start;
+  main:not(:has(> .index)){display:block;max-width:var(--ample-columna)}
+  /* El rail és l'índex fill directe del <main>. Un «.index» de dins d'un bloc
+     —la llista de les 42 comarques dels 947— és una llista d'enllaços i prou,
+     i amb «.index» a seques es convertia en una columna de 42 files. */
+  main > .index{grid-column:1;grid-row:1 / span 99;position:sticky;top:var(--e3);align-self:start;
     display:flex;flex-direction:column;gap:0;border-top:0;margin-top:0;padding:var(--e5) 0 0}
-  .index a{border:0;border-left:2.5px solid var(--vora);border-radius:0;min-height:0;
+  main > .index a{border:0;border-left:2.5px solid var(--vora);border-radius:0;min-height:0;
     padding:8px 0 8px 14px;font-size:.82rem;justify-content:flex-start;line-height:1.25;
-    transition:border-color .12s ease,color .12s ease}
-  .index a:hover{background:none;color:var(--coral-text);border-left-color:var(--coral)}
+    text-decoration:none;transition:border-color .12s ease,color .12s ease}
+  main > .index a:hover{background:none;color:var(--coral-text);border-left-color:var(--coral)}
   /* Al rail la marca és la barra de l'esquerra, que és el que dibuixa el
      recorregut de la pàgina: es veu on ets i quant en queda. */
-  .index a[aria-current]{background:none;color:var(--ink);font-weight:900;
+  main > .index a[aria-current]{background:none;color:var(--ink);font-weight:900;
     border-left-color:var(--ink);border-left-width:4px;padding-left:12px}
   /* Una línia de text de 1.180px no es llegeix: l'amplada de més va als blocs
      de dades i la prosa es queda on ha d'estar. */
   .bloc > p,.entrada-bloc,.nota,.compta,figcaption,.peu-nota{max-width:70ch}
 }
+/* El «transition:none» de dalt (el de l'índex en pastilles) arriba abans i pesa
+   menys que el rail: sense repetir-lo aquí, qui demana menys moviment el tenia
+   igualment a la barra de l'esquerra. */
+@media (min-width:1180px) and (prefers-reduced-motion:reduce){ main > .index a{transition:none} }
 @media (max-width:560px){ .alcaldies thead{display:none} .alcaldies tr{display:grid;grid-template-columns:auto 1fr;gap:0 var(--e2);padding:var(--e1) 0;border-bottom:1px solid var(--vora)} .alcaldies th,.alcaldies td{border:0;padding:1px 0} .alcaldies tbody th{grid-row:span 3} }
 
 /* La crida a respondre les preguntes: ha de destacar sobre el text de la pàgina
@@ -1154,15 +1364,30 @@ details.nota > .serie{font-size:1rem}
 .presenta>div{flex:1 1 14rem;min-width:0}
 .presenta .papereta{flex:0 0 auto}
 @media (max-width:520px){.presenta .papereta{width:84px;height:98px}}
+/* Per sota de 420 px la papereta de 84 i el bloc del títol, que demana 14rem,
+   no hi cabien de costat: la papereta queia sola a una fila i es menjava 120 px
+   de la primera pantalla a cada pàgina que la porta. Aquí es queden de costat,
+   amb la papereta a 64 i el títol amb base zero, que vol dir «ocupa el que
+   quedi» i no «salta de línia si no tens 14rem». El títol baixa una mica de
+   cos perquè hi càpiga un nom de poble llarg sense sortir de la pantalla, i si
+   una paraula encara no hi cap es parteix abans que fer lliscar la pàgina.
+   Va lligat a la papereta («.papereta + div») a posta: la Catalunya de la
+   portada, de 150 px, no hi cap de costat ni amb tot això i continua a sobre. */
+@media (max-width:420px){
+  .presenta{column-gap:var(--e2)}
+  .presenta .papereta{width:64px;height:75px}
+  .presenta .papereta + div{flex-basis:0}
+  .presenta .papereta + div h1{font-size:clamp(1.9rem,8.2vw,2.6rem);overflow-wrap:break-word}
+}
 /* Una afirmació amb una cita que no hem trobat: es veu que està tocada sense
    haver de llegir el text, i no es confon amb les bones. */
 .pregunta.cita-fallida{border-style:dashed;opacity:.85}
 .avis-cita{background:var(--coral);color:#FBF7EE;border:2.5px solid var(--ink);
   border-radius:var(--r-m);padding:var(--e2);margin:0 0 var(--e2);font-size:.9rem}
 /* El districte d'una afirmació, a les ciutats que en tenen. */
-.districte{display:inline-block;margin-left:8px;background:var(--lavanda);color:#1E1B2E;
-  border:1.5px solid var(--ink);border-radius:var(--r-max);padding:3px 12px;font-size:.7rem;
-  font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+/* És un estat (vegeu «les pastilles»): sense vora ni majúscules, i amb la
+   lavanda que ja portava. */
+.districte{margin-left:8px;background:var(--lavanda);color:#1E1B2E}
 /* Com ha anat el mandat: el canvi del poble i el dels seus, un al costat de
    l'altre. El salt va en color de tinta, A POSTA, com a la taula del balanç:
    abans anava en verd quan «millorava» i en coral quan «empitjorava», i això
@@ -1260,8 +1485,9 @@ h2.amb-icona .icona{width:40px;height:40px;flex:0 0 auto}
    sencera, contorn i ombra incloses, i el «flex-direction:column» hi partia
    «Diputació de Barcelona, Presidències delegades» en dues línies amb la coma
    penjant al principi de la segona. */
-.gent > li,.origens > li,.preus > li{background:var(--paper-2);border:2.5px solid var(--ink);
-  border-radius:var(--r-m);box-shadow:var(--ombra);padding:var(--e2) var(--e3);
+/* Sense contorn ni ombra: eren el mateix kit de targetes idèntiques que les
+   tires, i ara són el mateix que l'ullada, un filet a sobre de cada xifra. */
+.gent > li,.origens > li,.preus > li{border-top:1.5px solid var(--vora);padding:var(--e2) 0;
   display:flex;flex-direction:column;gap:4px;min-width:0}
 /* La llista de dins: text i prou. */
 .gent .apart li{padding:0;margin:0 0 8px;font-size:.9rem;line-height:1.45}
@@ -1273,17 +1499,23 @@ h2.amb-icona .icona{width:40px;height:40px;flex:0 0 auto}
   font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .gent .sub,.origens .sub,.preus .sub{font-size:.82rem;color:var(--ink-suau);font-weight:700}
 .gent .canvi b,.origens .canvi b,.preus .canvi b{color:var(--ink)}
-.preus .sou-diputacio{border-color:var(--coral);background:color-mix(in srgb,var(--coral) 8%,var(--paper-2))}
-.preus .sou-diputacio .etq{color:var(--coral)}
+/* El sou que paga una altra administració es marca amb el filet de dalt en
+   coral i gruixut, ara que no hi ha contorn per pintar. L'etiqueta va amb el
+   coral de text: el de fons es quedava a 2,9:1 damunt del paper. */
+.preus .sou-diputacio{border-top:2.5px solid var(--coral)}
+.preus .sou-diputacio .etq{color:var(--coral-text)}
 .vots-resum{margin-top:var(--e2)}
 .punts-ple{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e2)}
 .punts-ple>li{border-left:5px solid var(--ink);padding:var(--e2) var(--e3);background:var(--paper-2);display:grid;gap:6px}
 .punt-cap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--ink-suau);font-size:.78rem;font-weight:800}
-.punt-tipus,.vot-unanim{border:1.5px solid var(--vora);border-radius:999px;padding:2px 7px}
-.vot-unanim{color:var(--green);border-color:var(--green)}
+/* «.punt-tipus», «.vot-unanim» i «.vot-grup» són estats (vegeu «les
+   pastilles»): la forma la porta la regla comuna. La unanimitat anava en
+   «var(--green)», un color que la casa no té —el navegador el descartava— i
+   que, si n'hi hagués, faria de veredicte: votar tots el mateix no és bo ni
+   dolent. El sentit del vot d'un grup pot ser llarg i es parteix. */
 .resultat-vot{font-weight:800;color:var(--ink-suau)}
 .vots-grups{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}
-.vot-grup{font-size:.76rem;padding:3px 7px;border:1px solid var(--vora);border-radius:4px;background:var(--paper)}
+.vot-grup{white-space:normal}
 .font-acta{font-size:.78rem;font-weight:800;color:var(--coral)}
 /* Què compta exactament la xifra: no és lletra petita decorativa, és el que
    impedeix confondre nacionalitat amb lloc de naixement. Per això es llegeix. */
@@ -1363,9 +1595,8 @@ details.compta > summary:hover{color:var(--coral-text);text-decoration-color:cur
 /* Els encapçalaments sí que poden fer dues línies: amb ells en una sola, la
    taula demanava 385px i a 320 calia arrossegar-la per veure la columna que fa
    que el bloc tingui sentit. Les xifres, en canvi, no es parteixen mai. */
-.euros-resultat thead th{font-family:var(--display);font-weight:900;font-size:.8rem;
-  text-transform:uppercase;letter-spacing:.06em;color:var(--ink-suau);
-  border-bottom:2.5px solid var(--ink);white-space:normal;line-height:1.15}
+.euros-resultat thead th{font-family:var(--text);font-weight:700;font-size:.8rem;
+  color:var(--ink-suau);border-bottom:2.5px solid var(--ink);white-space:normal;line-height:1.15}
 @media (max-width:400px){ .euros-resultat th,.euros-resultat td{padding:8px 3px;font-size:.84rem} }
 .euros-resultat tbody th{text-align:left;font-weight:900}
 .euros-resultat .buit{color:var(--ink-suau);font-weight:700;font-size:.8rem}
@@ -1378,31 +1609,39 @@ details.compta > summary:hover{color:var(--coral-text);text-decoration-color:cur
    amb la seva escala: el que val la pena mirar és si van juntes. */
 .dues-series{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
   gap:var(--e2) var(--e4);margin:var(--e3) 0 0}
-.rotul-serie{display:block;font-size:.68rem;font-weight:800;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink-suau)}
+.rotul-serie{display:block;font-size:.8rem;font-weight:700;color:var(--ink-suau)}
 
-/* --- les pastilles de context ------------------------------------------
+/* --- on continua la fitxa ----------------------------------------------
    Els tres o quatre llocs on continua la fitxa —la comarca, l'AMB si hi és,
-   les preguntes o la prova, el comparador— en una filera de pastilles i no en
-   targetes de tres línies: el peu ja porta la resta de destins del web. */
-.pastilles-context{list-style:none;margin:var(--e2) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
-.pastilles-context a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;
-  font-weight:800;font-size:.85rem;text-decoration:none;color:inherit;
-  border:2px solid var(--ink);border-radius:var(--r-max);background:var(--paper-2)}
-.pastilles-context a:hover{background:var(--ink);color:var(--paper)}
-.pastilles-context a b{font-weight:900}
-.pastilles-context a span{font-weight:700;color:var(--ink-suau);font-size:.78rem}
-.pastilles-context a:hover span{color:inherit}
-@media (prefers-color-scheme:dark){ .bloc.joc .pastilles-context a{background:#FBF7EE;color:#1E1B2E}
-  .bloc.joc .pastilles-context a:hover{background:#1E1B2E;color:#FBF7EE} }
+   les preguntes o la prova, el comparador— en una filera d'enllaços i no en
+   targetes de tres línies: el peu ja porta la resta de destins del web.
+   Es diu «pastilles» perquè ho van ser; ara és navegació i, com tota la
+   navegació, text subratllat: el nom del lloc subratllat, i al costat, en gris,
+   què s'hi troba. */
+.pastilles-context{list-style:none;margin:var(--e2) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:0 var(--e3)}
+.pastilles-context a{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:0 7px;min-height:44px;
+  padding:11px 0;font-weight:800;font-size:.92rem;text-decoration:none;color:inherit}
+.pastilles-context a b{font-weight:900;text-decoration:underline;text-decoration-color:var(--coral);
+  text-decoration-thickness:2px;text-underline-offset:4px}
+.pastilles-context a:hover b{color:var(--coral-text)}
+.pastilles-context a span{font-weight:700;color:var(--ink-suau);font-size:.8rem}
+@media (prefers-color-scheme:dark){ .bloc.joc .pastilles-context a{color:#1E1B2E} }
 
+/* El botó de la prova sí que és un botó —obre el joc— i per això conserva el
+   dibuix de botó de la casa. L'enllaç de sota no: és navegació, i va com tota
+   la navegació, subratllat (vegeu «les pastilles»). */
 .boto-prova{display:inline-block;font-weight:800;font-size:1rem;text-decoration:none;
   background:var(--coral);color:#1E1B2E;border:2.5px solid var(--ink);border-radius:var(--r-max);
   padding:12px 26px;box-shadow:var(--ombra);transition:transform .12s ease,box-shadow .12s ease}
 .boto-prova:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-.prova-enllac{display:inline-flex;align-items:center;min-height:44px;margin-top:6px;font-weight:800;font-size:.85rem;
-  border:2px solid var(--ink);border-radius:var(--r-max);padding:0 16px;text-decoration:none}
-.prova-enllac:hover{background:var(--presec);color:#1E1B2E}
+/* El subratllat, només quan és un enllaç: a la llista de preguntes, la prova
+   que encara està en revisió surt com a <span class="prova-enllac bloquejada">,
+   i subratllada semblaria que s'hi pot anar. */
+.prova-enllac{display:inline-flex;align-items:center;min-height:44px;margin-top:6px;margin-right:var(--e3);
+  font-weight:800;font-size:.92rem}
+a.prova-enllac{text-decoration:underline;text-decoration-color:var(--coral);
+  text-decoration-thickness:2px;text-underline-offset:4px}
+a.prova-enllac:hover{color:var(--coral-text)}
 
 /* --- on cau entre els seus ---------------------------------------------
    Deu files iguals: etiqueta i any, la xifra en gros, una barra del percentil
@@ -1410,9 +1649,14 @@ details.compta > summary:hover{color:var(--coral-text);text-decoration-color:cur
    dels valors, per això la mediana és sempre al mig i totes es llegeixen igual.
    Res no té amplada fixa ni «nowrap»: a 390px la barra s'encongeix amb la fila
    i els textos es parteixen on calgui, i cap fila no surt per la dreta. */
+/* Els tres extrems de l'escala («el més baix del grup», «el del mig», «el més
+   alt») en minúscula de frase i sense espaiar: en majúscules espaiades eren
+   un rètol, i a 360 px «EL MÉS BAIX DEL GRUP» feia tres línies. La primera
+   lletra la posa el CSS perquè el text ve escrit en minúscula. */
 .comparat-llegenda{display:flex;justify-content:space-between;gap:var(--e1);margin:var(--e3) 0 0;
-  font-size:.68rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-suau)}
+  font-size:.76rem;font-weight:700;color:var(--ink-suau)}
 .comparat-llegenda span{min-width:0;overflow-wrap:anywhere}
+.comparat-llegenda span::first-letter{text-transform:uppercase}
 .comparat-llegenda span:nth-child(2){text-align:center}
 .comparat-llegenda span:last-child{text-align:right}
 .comparat-files{list-style:none;margin:var(--e1) 0 0;padding:0}

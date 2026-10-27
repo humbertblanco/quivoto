@@ -13,8 +13,12 @@ import {
   escalaDivergent,
   marquesEix,
   pendent,
+  eixDispersio,
+  etiquetaTall,
+  posicioEscala,
   regleDispersio,
   serieTemporal,
+  tallsEscala,
   type BandaGrup,
   type FilaDivergent,
   type PuntSerie,
@@ -1030,5 +1034,192 @@ describe("el que l'etiqueta diu de més: banda, distàncies, canvis i mandat", (
       expect(html).toContain('data-valor="1 municipi" data-extres="part del grup¦8,3 % de 12"');
       expect(html).toContain("<title>De 2 € a 4 €: 1 municipi · part del grup: 8,3 % de 12</title>");
     });
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// El regle de dispersió: fons pla, extrems etiquetats i escala logarítmica
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Com al navegador: la funció sola, sense res del seu mòdul al voltant. */
+const sola = <T>(fn: T): T => new Function("return (" + String(fn) + ")")() as T;
+
+describe("el regle de dispersió, més llegible", () => {
+  const poblacions = [40, 120, 300, 800, 1_500, 4_000, 12_000, 60_000, 1_600_000].map((valor, i) => ({
+    valor, nom: `Poble ${i}`, slug: `poble-${i}`,
+  }));
+  const habitants = (v: number): string => v.toLocaleString("ca-ES");
+
+  it("el fons és pla: cap degradat, que la marca prohibeix i que suggereix una escala de valor", () => {
+    const regla = GRAFICS_CSS.slice(GRAFICS_CSS.indexOf(".dispersio .regle-dispersio{"), GRAFICS_CSS.indexOf("}", GRAFICS_CSS.indexOf(".dispersio .regle-dispersio{")));
+    expect(regla).toContain("background:var(--paper-2)");
+    expect(GRAFICS_CSS).not.toMatch(/\.dispersio[^{]*\{[^}]*gradient/);
+  });
+
+  it("els dos extrems van etiquetats a cada punta del regle, també en lineal", () => {
+    const html = regleDispersio("Renda", poblacions.slice(0, 5), { format: euros });
+    expect(html).toContain('<div class="regle-eix" aria-hidden="true"><span class="ini">40 €</span><span class="fi">1.500 €</span></div>');
+    expect(html).not.toContain('class="tall"');
+    expect(html).not.toContain('class="escala"');
+  });
+
+  it("en logarítmica, la població deixa d'amuntegar-se a l'esquerra", () => {
+    const lineal = regleDispersio("Població", poblacions, { format: habitants });
+    const log = regleDispersio("Població", poblacions, { format: habitants, escala: "log" });
+    const pos = (html: string): number[] => [...html.matchAll(/class="marca" style="--p:([\d.]+)%"/g)].map((m) => Number(m[1]));
+    // En lineal, vuit dels nou queden en el primer 4 % de barra; en logarítmica es reparteixen.
+    expect(pos(lineal).filter((p) => p < 8).length).toBe(8);
+    expect(pos(log).filter((p) => p < 8).length).toBe(1);
+    expect(pos(log)[0]).toBe(4);
+    expect(pos(log).at(-1)).toBe(96);
+    expect(log).toContain("cada ratlla multiplica per deu");
+    expect(log).toContain('<span class="tall" style="--p:');
+    expect(log).toContain('<span class="ini">40</span>');
+    expect(log).toContain('<span class="fi">1.600.000</span>');
+  });
+
+  it("l'etiqueta flotant continua llegint els mateixos data-*: el contracte amb GRAFICS_JS no canvia", () => {
+    const log = regleDispersio("Població", poblacions, { format: habitants, escala: "log" });
+    expect(log).toContain('data-nom="Poble 0" data-valor="40" data-extres="posició¦1r més baix de 9');
+    // Les ratlles de l'eix no porten «data-valor»: l'etiqueta no s'hi encén.
+    expect(log).toMatch(/<i class="tall" style="--p:[\d.]+%"><\/i>/);
+    expect(GRAFICS_JS).toContain("closest('[data-valor]')");
+  });
+
+  it("si hi ha un zero, la logarítmica torna a lineal en lloc de posar una marca a l'infinit", () => {
+    expect(posicioEscala(0, 0, 100, "log")).toBe(posicioEscala(0, 0, 100, "lineal"));
+    expect(tallsEscala(0, 100, "log")).toEqual([]);
+    expect(posicioEscala(-100, -100, 50, "log-creixement")).toBe(4);
+  });
+
+  it("el creixement s'escala sobre la proporció: perdre la meitat i doblar queden a la mateixa distància del zero", () => {
+    const zero = posicioEscala(0, -50, 100, "log-creixement");
+    expect(zero).toBeCloseTo(50, 6);
+    expect(tallsEscala(-60, 1_000, "log-creixement")).toEqual([0, 900]);
+    expect(tallsEscala(-60, 300, "log-creixement")).toEqual([-50, 0, 100]);
+    expect(etiquetaTall(-50, "log-creixement")).toBe("\u221250 %");
+    expect(etiquetaTall(900, "log-creixement")).toBe("+900 %");
+  });
+
+  it("les marques de l'eix són potències de deu, curtes, i no trepitgen els extrems", () => {
+    expect(tallsEscala(4, 1_600_000, "log")).toEqual([10, 100, 1_000, 10_000, 100_000, 1_000_000]);
+    expect(tallsEscala(1_000, 60_400, "log")).toEqual([2_000, 5_000, 10_000, 20_000, 50_000]);
+    expect(etiquetaTall(10_000, "log")).toBe("10 mil");
+    expect(etiquetaTall(1_000_000, "log")).toBe("1 M");
+    expect(etiquetaTall(1_000, "log")).toBe("1.000");
+    const { eix } = eixDispersio(4, 1_600_000, "log", "4", "1.600.000");
+    for (const m of eix.matchAll(/<span class="tall" style="--p:([\d.]+)%">/g)) {
+      expect(Number(m[1])).toBeGreaterThanOrEqual(24);
+      expect(Number(m[1])).toBeLessThanOrEqual(76);
+    }
+  });
+
+  it("les quatre funcions de l'escala viatgen al navegador i hi funcionen soles", () => {
+    expect(sola(posicioEscala)(1_000, 10, 100_000, "log")).toBe(50);
+    expect(sola(tallsEscala)(4, 1_600_000, "log")).toHaveLength(6);
+    expect(sola(etiquetaTall)(100_000, "log")).toBe("100 mil");
+    for (const fn of [posicioEscala, tallsEscala, etiquetaTall, eixDispersio]) {
+      expect(String(fn)).not.toMatch(/\b__[A-Za-z0-9_$]+\s*\(/);
+    }
+  });
+});
+
+describe("al telèfon, la sèrie comença per l'any d'ara", () => {
+  const punts = serie([[2015, 300], [2017, 380], [2019, 500], [2021, 420], [2023, 610]]);
+
+  /**
+   * Llisca el llenç dels dibuixos i no la figura: si llisqués la figura,
+   * portar-la al final deixaria la clau i les notes tallades per l'esquerra.
+   */
+  it("els dibuixos van dins d'un llenç, i el que llisca a 520 px és el llenç", () => {
+    const html = serieTemporal(punts, { titol: "Deute per habitant", format: euros });
+    const llenc = html.match(/<div class="serie-llenc">([\s\S]*?<\/svg>)<\/div>/)?.[1] ?? "";
+    expect(svgs(llenc).map((svg) => svg.match(/class="dibuix (\w+)"/)?.[1])).toEqual(["ample", "estret"]);
+    // Dins del llenç només hi ha els dos dibuixos: la clau, les notes i la
+    // taula per a lectors de pantalla queden fora, quietes.
+    expect(llenc.replace(/<svg[\s\S]*?<\/svg>/g, "").trim()).toBe("");
+    expect(html.indexOf('class="nomes-lectors"')).toBeGreaterThan(html.indexOf("</svg></div>"));
+    const mobil = GRAFICS_CSS.slice(GRAFICS_CSS.indexOf("@media (max-width:520px)"));
+    expect(mobil).toContain(".serie-llenc{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain");
+  });
+
+  /**
+   * Un DOM de mentida amb el mínim que fa servir el guió: dos llenços, un que
+   * llisca (420 px de dibuix en una columna de 312) i un que no.
+   */
+  function executa(llencs: Array<{ scrollWidth: number; clientWidth: number; scrollLeft: number }>): void {
+    const oient = (): void => undefined;
+    const document = {
+      querySelectorAll: (sel: string) => (sel === ".serie-llenc" ? llencs : []),
+      addEventListener: oient,
+      createElement: () => ({ setAttribute: oient }),
+      body: { appendChild: oient },
+    };
+    const window = { addEventListener: oient, innerWidth: 360 };
+    const cos = GRAFICS_JS.replace(/^<script[^>]*>/, "").replace(/<\/script>$/, "");
+    new Function("document", "window", cos)(document, window);
+  }
+
+  it("el guió porta al final el llenç que llisca, i no toca el que no", () => {
+    const llisca = { scrollWidth: 420, clientWidth: 312, scrollLeft: 0 };
+    const quiet = { scrollWidth: 680, clientWidth: 680, scrollLeft: 0 };
+    executa([llisca, quiet]);
+    expect(llisca.scrollLeft).toBe(108);
+    expect(quiet.scrollLeft).toBe(0);
+    // De cop i sense animació: res de «smooth» ni de «scrollTo» amb comportament.
+    expect(GRAFICS_JS).not.toContain("smooth");
+  });
+});
+
+describe("l'etiqueta flotant es llegeix al telèfon", () => {
+  /** Totes les mides de lletra de les regles de l'etiqueta, en rem. */
+  const mides = (): number[] =>
+    [...GRAFICS_CSS.matchAll(/\.etiqueta-grafic[^{]*\{([^}]*)\}/g)].flatMap((m) =>
+      [...m[1]!.matchAll(/font-size:([\d.]+)rem/g)].map((f) => Number(f[1])),
+    );
+
+  it("cap text de l'etiqueta no baixa de 14 px", () => {
+    expect(mides().length).toBeGreaterThanOrEqual(4);
+    for (const mida of mides()) expect(mida * 16).toBeGreaterThanOrEqual(14);
+  });
+
+  it("el nom va com està escrit, en Nunito 700 i sense espaiar", () => {
+    const nom = GRAFICS_CSS.match(/\.etiqueta-grafic b\{([^}]*)\}/)![1]!;
+    expect(nom).toContain("font-family:var(--text)");
+    expect(nom).toContain("font-weight:700");
+    expect(nom).toContain("letter-spacing:0");
+    expect(nom).not.toContain("uppercase");
+    expect(GRAFICS_CSS).not.toMatch(/\.etiqueta-grafic[^{]*\{[^}]*text-transform:uppercase/);
+  });
+});
+
+describe("el regle de dispersió parla com el veí", () => {
+  const municipis = [11_000, 14_000, 16_000, 24_000].map((valor, i) => ({ valor, nom: `Poble ${i}` }));
+
+  it("la fila del mig és «El del mig», i la paraula tècnica es queda a l'etiqueta de la marca", () => {
+    const html = regleDispersio("Renda", municipis, { format: euros });
+    expect(html).toContain('<span class="cap">El del mig</span>');
+    expect(html).toContain('<span class="secundari">la meitat queda per sota</span>');
+    expect(html).not.toContain("La mediana d'aquí");
+    // Al text de la fila no hi ha «mediana»; a l'etiqueta flotant, sí, per a qui la busqui.
+    const extrems = html.slice(html.indexOf('<ul class="extrems">'));
+    expect(extrems).not.toMatch(/mediana/i);
+    expect(html).toContain("respecte a la mediana");
+  });
+
+  it("qui crida pot continuar triant com es diu", () => {
+    const html = regleDispersio("Renda", municipis, {
+      format: euros, etiquetaMediana: "El poble del mig", sotaMediana: "de la comarca",
+    });
+    expect(html).toContain('<span class="cap">El poble del mig</span>');
+    expect(html).toContain('<span class="secundari">de la comarca</span>');
+  });
+});
+
+describe("la figura del gràfic té un sol marge", () => {
+  it("a dalt i a sota, i l'últim d'un bloc no en suma cap al farciment del bloc", () => {
+    expect(GRAFICS_CSS).toContain(".grafic{margin:var(--e2) 0 var(--e3);padding:0}");
+    expect(GRAFICS_CSS).toContain(".grafic:last-child{margin-bottom:0}");
+    expect(GRAFICS_CSS.match(/(^|\n)\.grafic\{/g)).toHaveLength(1);
   });
 });
