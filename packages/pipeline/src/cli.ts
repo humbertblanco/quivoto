@@ -40,6 +40,10 @@ import { j39SubvencionsEns } from "./jobs/j39-subvencions-ens";
 import { j40UrbanismeHabitatge } from "./jobs/j40-urbanisme-habitatge";
 import { j41DinersGeneralitat } from "./jobs/j41-diners-generalitat";
 import { j42ServeisEns } from "./jobs/j42-serveis-ens";
+import { j43AltresEleccions } from "./jobs/j43-altres-eleccions";
+import { j44Socioeconomia } from "./jobs/j44-socioeconomia";
+import { j45Gaip } from "./jobs/j45-gaip";
+import { j46HabitatgesTuristics } from "./jobs/j46-habitatges-turistics";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
 import { deriveFinances } from "./derive/finances";
@@ -123,6 +127,16 @@ const COMMANDS = {
   // consells i dels municipis que són àrea bàsica, i agregats de contractació de
   // les 4 diputacions i els 40 consells. Consultes agregades, cap adjudicatari. No és a `ORDER`.
   j42: (db: Parameters<typeof j42ServeisEns>[0]) => j42ServeisEns(db),
+  // J43 a mà, després de J1: com vota cada municipi al Parlament (2024, 2021), al Congrés
+  // (2023, nov. 2019) i a les europees (2024). ~90.000 files de ntc4-rnwr i una consulta a irrv-2mfc. No és a `ORDER`.
+  j43: j43AltresEleccions,
+  // J44 a mà, després de J1 i J18: atur registrat del SEPE (CSV anuals del 2019 ençà,
+  // desats a `packages/db/.data/sepe/`) i cinc indicadors de l'EMEX en una crida. No és a `ORDER`.
+  j44: (db: Parameters<typeof j44Socioeconomia>[0]) => j44Socioeconomia(db),
+  // J45 a mà, després de J1: reclamacions a la GAIP i incompliments, lligats pel nom. No és a `ORDER`.
+  j45: j45Gaip,
+  // J46 a mà, després de J1: registre de turisme viu, consulta agregada (cap titular). No és a `ORDER`.
+  j46: j46HabitatgesTuristics,
   derive: deriveMetrics,
   alcaldies: deriveMayorChanges,
   comptes: deriveFinances,

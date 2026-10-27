@@ -1,0 +1,22 @@
+[
+{"id_eleccio": "A20211", "territori_codi": "08001", "territori_nom": "Abrera", "cens_electoral": "9262", "votants": "4966", "vots_nuls": "66", "vots_blancs": "42", "vots_valids": "4900"},
+{"id_eleccio": "A20241", "territori_codi": "08001", "territori_nom": "Abrera", "cens_electoral": "9700", "votants": "5643", "vots_nuls": "59", "vots_blancs": "71", "vots_valids": "5584"},
+{"id_eleccio": "E20241", "territori_codi": "08001", "territori_nom": "Abrera", "cens_electoral": "9732", "votants": "4195", "vots_nuls": "32", "vots_blancs": "22", "vots_valids": "4163"},
+{"id_eleccio": "G20192", "territori_codi": "08001", "territori_nom": "Abrera", "cens_electoral": "9097", "votants": "6860", "vots_nuls": "42", "vots_blancs": "39", "vots_valids": "6818"},
+{"id_eleccio": "G20231", "territori_codi": "08001", "territori_nom": "Abrera", "cens_electoral": "9577", "votants": "6557", "vots_nuls": "61", "vots_blancs": "76", "vots_valids": "6496"},
+{"id_eleccio": "A20211", "territori_codi": "08019", "territori_nom": "Barcelona", "cens_electoral": "1099283", "votants": "628002", "vots_nuls": "6804", "vots_blancs": "4185", "vots_valids": "621198"},
+{"id_eleccio": "A20241", "territori_codi": "08019", "territori_nom": "Barcelona", "cens_electoral": "1088879", "votants": "668022", "vots_nuls": "3684", "vots_blancs": "6102", "vots_valids": "664338"},
+{"id_eleccio": "E20241", "territori_codi": "08019", "territori_nom": "Barcelona", "cens_electoral": "1107178", "votants": "549471", "vots_nuls": "1799", "vots_blancs": "2634", "vots_valids": "547672"},
+{"id_eleccio": "G20192", "territori_codi": "08019", "territori_nom": "Barcelona", "cens_electoral": "1122914", "votants": "824423", "vots_nuls": "3386", "vots_blancs": "5287", "vots_valids": "821037"},
+{"id_eleccio": "G20231", "territori_codi": "08019", "territori_nom": "Barcelona", "cens_electoral": "1084347", "votants": "730726", "vots_nuls": "4433", "vots_blancs": "4537", "vots_valids": "726293"},
+{"id_eleccio": "A20211", "territori_codi": "17099", "territori_nom": "Meranges", "cens_electoral": "78", "votants": "58", "vots_nuls": "6", "vots_blancs": "1", "vots_valids": "52"},
+{"id_eleccio": "A20241", "territori_codi": "17099", "territori_nom": "Meranges", "cens_electoral": "92", "votants": "63", "vots_nuls": "2", "vots_blancs": "0", "vots_valids": "61"},
+{"id_eleccio": "E20241", "territori_codi": "17099", "territori_nom": "Meranges", "cens_electoral": "94", "votants": "57", "vots_nuls": "1", "vots_blancs": "1", "vots_valids": "56"},
+{"id_eleccio": "G20192", "territori_codi": "17099", "territori_nom": "Meranges", "cens_electoral": "78", "votants": "55", "vots_nuls": "0", "vots_blancs": "0", "vots_valids": "55"},
+{"id_eleccio": "G20231", "territori_codi": "17099", "territori_nom": "Meranges", "cens_electoral": "91", "votants": "64", "vots_nuls": "2", "vots_blancs": "0", "vots_valids": "62"},
+{"id_eleccio": "A20211", "territori_codi": "17147", "territori_nom": "Ripoll", "cens_electoral": "7904", "votants": "4075", "vots_nuls": "82", "vots_blancs": "27", "vots_valids": "3993"},
+{"id_eleccio": "A20241", "territori_codi": "17147", "territori_nom": "Ripoll", "cens_electoral": "7776", "votants": "4745", "vots_nuls": "36", "vots_blancs": "46", "vots_valids": "4709"},
+{"id_eleccio": "E20241", "territori_codi": "17147", "territori_nom": "Ripoll", "cens_electoral": "7788", "votants": "3003", "vots_nuls": "30", "vots_blancs": "37", "vots_valids": "2973"},
+{"id_eleccio": "G20192", "territori_codi": "17147", "territori_nom": "Ripoll", "cens_electoral": "7916", "votants": "5672", "vots_nuls": "31", "vots_blancs": "41", "vots_valids": "5641"},
+{"id_eleccio": "G20231", "territori_codi": "17147", "territori_nom": "Ripoll", "cens_electoral": "7758", "votants": "4642", "vots_nuls": "85", "vots_blancs": "45", "vots_valids": "4557"}
+]

@@ -6,6 +6,8 @@ import {
   type FontUrbanisme,
   type UrbanismeHabitatgeMetric,
 } from "../jobs/j40-urbanisme-habitatge";
+import { FONT_REGISTRE_TURISME, type EstablimentsTuristicsMetric } from "../jobs/j46-habitatges-turistics";
+import { dataEscrita, delDia, elDia } from "../lib/text";
 
 /**
  * «Urbanisme i habitatge»: el bloc de la fitxa municipal que respon cinc
@@ -39,7 +41,23 @@ import {
 export type ContextUrbanisme = {
   /** El nom del municipi tal com surt a la fitxa («Cadaqués», «la Bisbal d'Empordà»). */
   nom: string;
+  /**
+   * Els establiments inscrits avui al Registre de Turisme (J46, kind
+   * `establimentsTuristics`). Opcional: sense J46 l'apartat de pisos
+   * turístics és el d'abans, amb la sèrie de l'Observatori i prou.
+   */
+  registre?: EstablimentsTuristicsMetric | null;
 };
+
+/**
+ * Què diu la norma dels pisos turístics, en una frase i sense valorar-la. És
+ * el mateix text a tots els municipis.
+ */
+export const QUE_DIU_DECRET_HUT =
+  "Des del Decret llei 3/2023, de 7 de novembre, de mesures urgents sobre el règim urbanístic dels habitatges " +
+  "d'ús turístic, als municipis que la Generalitat considera amb dificultats d'accés a l'habitatge o amb molts " +
+  "pisos turístics cal una llicència urbanística per destinar un habitatge a ús turístic; el decret hi fixa un " +
+  "màxim de 10 pisos turístics per cada 100 habitants i demana que el planejament municipal en reguli l'ús.";
 
 const escape = (text: string): string =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -52,17 +70,11 @@ const percent = (n: number): string => `${decimal(n)}&nbsp;%`;
 const ratio = (n: number): string =>
   n.toLocaleString("ca-ES", { minimumFractionDigits: n < 1 ? 2 : 1, maximumFractionDigits: n < 1 ? 2 : 1 });
 
-const MESOS = ["gener", "febrer", "març", "abril", "maig", "juny", "juliol", "agost", "setembre", "octubre", "novembre", "desembre"];
-
-/** «2024-03-16» → «16 de març del 2024»; «d'abril», «d'agost» i «d'octubre» amb apòstrof. */
-export function dataLlarga(iso: string | null): string | null {
-  const m = iso ? /^(\d{4})-(\d{2})-(\d{2})/.exec(iso) : null;
-  if (!m) return null;
-  const mes = MESOS[Number(m[2]) - 1];
-  if (!mes) return null;
-  const de = /^[aeiou]/.test(mes) ? "d'" : "de ";
-  return `${Number(m[3])} ${de}${mes} del ${m[1]}`;
-}
+/*
+ * Les dates que llegeix el veí passen per `lib/text.ts` (`elDia`, `delDia`,
+ * `dataEscrita`). Aquí n'hi havia una còpia, `dataLlarga()`, que escrivia bé
+ * el mes però no l'article: «des del 1 de febrer» en lloc de «des de l'1».
+ */
 
 /** La primera lletra en minúscula: «Pla general d'ordenació» → «pla general d'ordenació». */
 const minuscula = (text: string): string => text.charAt(0).toLocaleLowerCase("ca") + text.slice(1);
@@ -159,37 +171,86 @@ export function apartatPla(dades: Dades, ctx: ContextUrbanisme): string {
     ${liniaFont(font, `dades del ${p.any}`)}`);
 }
 
-/** «Pisos turístics». */
+/** «Pisos turístics»: el registre d'avui (J46), si n'hi ha, i la sèrie de l'Observatori (J40). */
 export function apartatPisos(dades: Dades, ctx: ContextUrbanisme): string {
   const t = dades.pisosTuristics;
+  const r = ctx.registre ?? null;
   const font = dades.fonts.territori;
-  if (!t) {
+  if (!t && !r) {
     return apartat("pisos", "Pisos turístics", `<p class="urb-resposta">La font no publica quants pisos turístics
     hi ha a ${escape(ctx.nom)}.</p>${liniaFont(font, null)}`);
   }
-  let resposta: string;
-  if (t.huts === null) resposta = `La font no diu quants pisos turístics hi havia el ${t.any}.`;
-  else if (t.huts === 0) resposta = `El ${t.any} no hi constava cap pis turístic registrat.`;
-  else {
-    resposta = `El ${t.any} hi havia <b>${enter(t.huts)}</b> ${t.huts === 1 ? "pis turístic registrat" : "pisos turístics registrats"}`;
-    if (t.placesHuts !== null) resposta += `, amb ${enter(t.placesHuts)} places`;
-    if (t.hutsPer100 !== null) resposta += `: ${ratio(t.hutsPer100)} per cada 100 habitants`;
-    resposta += ".";
+  const respostes: string[] = [];
+  if (r) respostes.push(respostaRegistre(r));
+  if (t) {
+    // Amb el registre d'avui, la xifra de l'Observatori és la de comparar: «el 2024 n'hi havia…».
+    if (t.huts === null) respostes.push(`La font no diu quants pisos turístics hi havia el ${t.any}.`);
+    else if (t.huts === 0) respostes.push(`El ${t.any} no hi constava cap pis turístic registrat.`);
+    else {
+      let frase = r
+        ? `El ${t.any}, segons l'Observatori del Territori, n'hi havia ${enter(t.huts)}`
+        : `El ${t.any} hi havia <b>${enter(t.huts)}</b> ${t.huts === 1 ? "pis turístic registrat" : "pisos turístics registrats"}`;
+      if (t.placesHuts !== null) frase += `, amb ${enter(t.placesHuts)} places`;
+      if (t.hutsPer100 !== null) frase += `: ${ratio(t.hutsPer100)} per cada 100 habitants`;
+      respostes.push(`${frase}.`);
+    }
   }
-  return apartat("pisos", "Pisos turístics", `<p class="urb-resposta">${resposta}</p>
-    ${xifres([
-      { etq: "Pisos turístics", valor: t.huts === null ? null : enter(t.huts), peu: t.hutsPer100 === null ? undefined : `${ratio(t.hutsPer100)} per 100 hab.` },
-      { etq: "Places en pisos turístics", valor: t.placesHuts === null ? null : enter(t.placesHuts) },
+  const llista: Xifra[] = [];
+  if (r) {
+    llista.push({
+      etq: "Pisos turístics inscrits avui",
+      valor: enter(r.hut.establiments),
+      peu: r.hutPer100Hab === null ? undefined : `${ratio(r.hutPer100Hab)} per 100 hab.`,
+    });
+  }
+  if (t) {
+    llista.push(
+      { etq: r ? `Pisos turístics el ${t.any}` : "Pisos turístics", valor: t.huts === null ? null : enter(t.huts), peu: t.hutsPer100 === null ? undefined : `${ratio(t.hutsPer100)} per 100 hab.` },
+      { etq: "Places en pisos turístics", valor: t.placesHuts === null ? null : enter(t.placesHuts), peu: `el ${t.any}` },
       {
         etq: "Places turístiques en total",
         valor: t.placesTuristiques === null ? null : enter(t.placesTuristiques),
-        peu: t.placesTuristiquesPer100 === null ? undefined : `${ratio(t.placesTuristiquesPer100)} per 100 hab.`,
+        peu: [t.placesTuristiquesPer100 === null ? null : `${ratio(t.placesTuristiquesPer100)} per 100 hab.`, `el ${t.any}`].filter(Boolean).join(", "),
       },
-    ])}
+    );
+  }
+  if (r) {
+    llista.push({ etq: "Hotels, càmpings i turisme rural avui", valor: enter(r.hotels.establiments + r.campings.establiments + r.turismeRural.establiments), peu: altresEstabliments(r) });
+  }
+  const fonts = [
+    r ? liniaFont(FONT_REGISTRE_TURISME, `consultat ${elDia(r.dataConsulta)}`) : "",
+    t ? liniaFont(font, `dades del ${t.any}`) : "",
+  ].join("");
+  return apartat("pisos", "Pisos turístics", `<p class="urb-resposta">${respostes.join(" ")}</p>
+    ${xifres(llista)}
     <p class="urb-explica">Són els habitatges d'ús turístic inscrits al registre de la Generalitat: els que es
-    lloguen sense inscriure-hi no hi surten. Les places turístiques totals inclouen les dels pisos turístics i les
-    dels hotels, càmpings i altres establiments.</p>
-    ${liniaFont(font, `dades del ${t.any}`)}`);
+    lloguen sense inscriure-hi no hi surten.${t ? ` Les places turístiques totals inclouen les dels pisos turístics i les
+    dels hotels, càmpings i altres establiments.` : ""}${r && r.catalunya.hut > 0 ? ` A tot Catalunya n'hi ha
+    ${enter(r.catalunya.hut)} d'inscrits${r.catalunya.hutPer100Hab === null ? "" : `, ${ratio(r.catalunya.hutPer100Hab)} per cada 100 habitants`}.` : ""}</p>
+    <p class="urb-explica">${escape(QUE_DIU_DECRET_HUT)}</p>
+    ${fonts}`);
+}
+
+/**
+ * «Segons el Registre de Turisme de Catalunya, consultat el 27 d'octubre del
+ * 2026, hi ha 997 pisos turístics inscrits: 34,17 per cada 100 habitants.»
+ */
+function respostaRegistre(r: EstablimentsTuristicsMetric): string {
+  const quan = `Segons el Registre de Turisme de Catalunya, consultat ${elDia(r.dataConsulta)},`;
+  const n = r.hut.establiments;
+  if (n === 0) return `${quan} no hi consta cap pis turístic inscrit.`;
+  const per100 = r.hutPer100Hab === null ? "" : `: ${ratio(r.hutPer100Hab)} per cada 100 habitants${r.poblacioAny ? ` del padró del ${r.poblacioAny}` : ""}`;
+  return `${quan} hi ha <b>${enter(n)}</b> ${n === 1 ? "pis turístic inscrit" : "pisos turístics inscrits"}${per100}.`;
+}
+
+/** «31 hotels i 1 càmping», el peu de la xifra d'establiments. */
+function altresEstabliments(r: EstablimentsTuristicsMetric): string | undefined {
+  const parts = [
+    r.hotels.establiments ? `${enter(r.hotels.establiments)} ${r.hotels.establiments === 1 ? "hotel" : "hotels"}` : null,
+    r.campings.establiments ? `${enter(r.campings.establiments)} ${r.campings.establiments === 1 ? "càmping" : "càmpings"}` : null,
+    r.turismeRural.establiments ? `${enter(r.turismeRural.establiments)} de turisme rural` : null,
+  ].filter((x): x is string => x !== null);
+  return parts.length ? parts.join(", ") : undefined;
 }
 
 /** «Quant costa viure-hi»: el lloguer i la hipoteca sobre els ingressos. */
@@ -315,8 +376,7 @@ export function apartatZona(dades: Dades, ctx: ContextUrbanisme): string {
   const z = dades.zonaTensa;
   const font = dades.fonts.zones;
   const titol = "Zona tensa (topall de lloguer)";
-  const actualitzada = dataLlarga(font.actualitzat);
-  const quan = actualitzada ? `llista actualitzada el ${actualitzada}` : null;
+  const quan = dataEscrita(font.actualitzat) ? `llista actualitzada ${elDia(font.actualitzat)}` : null;
   let resposta: string;
   let valor: string | null;
   let peu: string | undefined;
@@ -327,12 +387,12 @@ export function apartatZona(dades: Dades, ctx: ContextUrbanisme): string {
     resposta = `<b>No.</b> ${escape(majuscula(ctx.nom))} no és zona de mercat residencial tensat, i el topall de lloguer d'aquestes zones no s'hi aplica.`;
     valor = "No";
   } else {
-    const des = dataLlarga(z.vigentDes);
+    const des = dataEscrita(z.vigentDes) ? delDia(z.vigentDes) : null;
     const grup = z.zona === "ZMRT1" ? "primera" : "segona";
-    resposta = `<b>Sí.</b> ${escape(majuscula(ctx.nom))} és zona de mercat residencial tensat${des ? ` des del ${des}` : ""}, ` +
+    resposta = `<b>Sí.</b> ${escape(majuscula(ctx.nom))} és zona de mercat residencial tensat${des ? ` des ${des}` : ""}, ` +
       `dins de la ${grup} llista que va declarar la Generalitat: el preu dels lloguers nous hi té topall.`;
     valor = "Sí";
-    peu = `${z.zona === "ZMRT1" ? "ZMRT 1" : "ZMRT 2"}${des ? `, des del ${des}` : ""}`;
+    peu = `${z.zona === "ZMRT1" ? "ZMRT 1" : "ZMRT 2"}${des ? `, des ${des}` : ""}`;
   }
   return apartat("zona", titol, `<p class="urb-resposta">${resposta}</p>
     ${xifres([{ etq: "Zona de mercat residencial tensat", valor, peu }])}
@@ -355,7 +415,14 @@ export function fraseObertura(dades: Dades, ctx: ContextUrbanisme): string {
   const p = dades.planejament;
   if (p?.anyAprovacioAprox != null) parts.push(`es regeix per un pla urbanístic de cap al ${p.anyAprovacioAprox}`);
   const t = dades.pisosTuristics;
-  if (t?.huts != null) {
+  const r = ctx.registre;
+  if (r) {
+    // El registre d'avui mana: la xifra de l'Observatori és de fa un o dos anys.
+    const n = r.hut.establiments;
+    parts.push(n === 0
+      ? "avui no hi consta cap pis turístic inscrit"
+      : `avui hi ha ${enter(n)} ${n === 1 ? "pis turístic inscrit" : "pisos turístics inscrits"}`);
+  } else if (t?.huts != null) {
     parts.push(t.huts === 0
       ? `el ${t.any} no hi constava cap pis turístic registrat`
       : `el ${t.any} hi havia ${enter(t.huts)} ${t.huts === 1 ? "pis turístic registrat" : "pisos turístics registrats"}`);
@@ -370,16 +437,18 @@ export function fraseObertura(dades: Dades, ctx: ContextUrbanisme): string {
 }
 
 /** El peu comú: les tres fonts amb la llicència, la data d'actualització i la de consulta. */
-function peuFonts(dades: Dades): string {
-  const una = (f: FontUrbanisme): string => {
-    const act = dataLlarga(f.actualitzat);
+function peuFonts(dades: Dades, registre?: EstablimentsTuristicsMetric | null): string {
+  const una = (f: Pick<FontUrbanisme, "nom" | "url" | "organisme" | "llicencia" | "actualitzat">): string => {
+    const act = dataEscrita(f.actualitzat) ? elDia(f.actualitzat) : null;
     return `<a href="${escape(f.url)}" rel="noopener nofollow">${escape(f.nom)}</a> (${escape(f.organisme)}; ${escape(f.llicencia)}${
-      act ? `; actualitzat el ${act}` : ""
+      act ? `; actualitzat ${act}` : ""
     })`;
   };
-  const consultat = dataLlarga(dades.consultat) ?? dades.consultat;
-  return `<p class="peu-nota urb-peu">Fonts: ${una(dades.fonts.territori)}, ${una(dades.fonts.hpo)} i ${una(dades.fonts.zones)}.
-  Consultades el ${escape(consultat)}. Les xifres es publiquen tal com les dona la Generalitat, sense les etiquetes de
+  const consultat = dataEscrita(dades.consultat) ? elDia(dades.consultat) : `el ${dades.consultat}`;
+  const fonts = [dades.fonts.territori, dades.fonts.hpo, dades.fonts.zones].map(una);
+  if (registre) fonts.push(una({ ...registre.font, actualitzat: registre.actualitzat }));
+  return `<p class="peu-nota urb-peu">Fonts: ${fonts.slice(0, -1).join(", ")} i ${fonts[fonts.length - 1]}.
+  Consultades ${escape(consultat)}. Les xifres es publiquen tal com les dona la Generalitat, sense les etiquetes de
   «compleix» o «no compleix» que hi afegeix l'Observatori del Territori.</p>`;
 }
 
@@ -391,8 +460,13 @@ function peuFonts(dades: Dades): string {
 export function renderUrbanismeHabitatgeBloc(dades: UrbanismeHabitatgeMetric | null, ctx: ContextUrbanisme): string {
   if (!dades) {
     const f = FONTS_URBANISME;
+    // Sense J40 però amb el registre de J46, el que se sap dels pisos turístics es diu igualment.
+    const registre = ctx.registre
+      ? `<p class="urb-resposta">${respostaRegistre(ctx.registre)}</p>${liniaFont(FONT_REGISTRE_TURISME, `consultat ${elDia(ctx.registre.dataConsulta)}`)}`
+      : "";
     return `<p class="entrada-bloc">No consta cap dada d'urbanisme ni d'habitatge de ${escape(ctx.nom)}: ni el pla
-  urbanístic, ni els pisos turístics, ni l'habitatge protegit, ni si és zona tensa. Un buit no és un zero.</p>
+  urbanístic, ${ctx.registre ? "" : "ni els pisos turístics, "}ni l'habitatge protegit, ni si és zona tensa. Un buit no és un zero.</p>
+  ${registre}
   <p class="peu-nota urb-peu">Fonts consultades: <a href="${f.territori.url}" rel="noopener nofollow">${escape(f.territori.nom)}</a>,
   <a href="${f.hpo.url}" rel="noopener nofollow">${escape(f.hpo.nom)}</a> i
   <a href="${f.zones.url}" rel="noopener nofollow">${escape(f.zones.nom)}</a>.</p>`;
@@ -408,7 +482,7 @@ export function renderUrbanismeHabitatgeBloc(dades: UrbanismeHabitatgeMetric | n
   <p class="nota"><b>Què hi decideix l'ajuntament.</b> L'ajuntament redacta i tramita el pla urbanístic, però
   l'aprovació definitiva és de la Generalitat. Amb el planejament pot limitar on s'obren pisos turístics i reservar
   sòl per a habitatge protegit. La zona tensa no la decideix l'ajuntament: la declara la Generalitat.</p>
-  ${peuFonts(dades)}`;
+  ${peuFonts(dades, ctx.registre)}`;
 }
 
 /** El títol del bloc, per a la llista de seccions de la fitxa. */

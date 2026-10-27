@@ -1,0 +1,117 @@
+{
+ "fitxes": {
+  "p": "i=f385,f10,f376,f389,f377;tipus=mun",
+  "indicadors": {
+   "i": [
+    {
+     "r": "2024 (p)",
+     "c": "Índex socioeconòmic territorial",
+     "s": "Idescat. Índex socioeconòmic territorial.",
+     "t": {
+      "id": "t213",
+      "content": "Índex socioeconòmic territorial (IST). Índex Catalunya=100"
+     },
+     "u": "índex Catalunya=100",
+     "v": "93.9,107.6,106.5,97.2,97.7,96.5,112.0",
+     "id": "f385",
+     "updated": "2026-06-26T10:00:00+00:00"
+    },
+    {
+     "r": "2023",
+     "c": "IRPF. Base imposable per declarant",
+     "s": "Idescat, a partir de l'Agència Estatal d'Administració Tributària.",
+     "t": {
+      "id": "t9",
+      "content": "Impost sobre la renda de les persones físiques (IRPF)"
+     },
+     "u": "euros",
+     "v": "13934,27474,33097,28899,26161,20538,34702",
+     "id": "f10",
+     "updated": "2025-10-30T11:00:00+00:00"
+    },
+    {
+     "r": "2025",
+     "c": "Pensió contributiva mitjana",
+     "s": "Idescat, a partir de l'Institut Nacional de la Seguretat Social (INSS) i de l'Institut Social de la Marina (ISM).",
+     "t": {
+      "id": "t209",
+      "content": "Pensions contributives de la Seguretat Social. Desembre"
+     },
+     "u": "euros",
+     "v": "882.58,1498.88,1542.6,1485.55,1321.71,1202.89,1320.69",
+     "id": "f376",
+     "updated": "2026-06-22T10:00:00+00:00"
+    },
+    {
+     "r": "2024",
+     "c": "Educació superior",
+     "s": "Idescat, a partir del Cens de població anual de l'INE.",
+     "t": {
+      "id": "t215",
+      "content": "Població de 15 anys i més. Per nivell de formació assolit"
+     },
+     "u": "%",
+     "v": "36.7,33.8,51.0,39.1,32.6,29.3,48.0",
+     "id": "f389",
+     "updated": "2026-06-04T10:00:00+00:00"
+    },
+    {
+     "r": "08/2026",
+     "c": "Afiliats a la Seguretat Social segons residència de l'afiliat",
+     "s": "Idescat.",
+     "t": {
+      "id": "t210",
+      "content": "Afiliats a la Seguretat Social segons residència de l'afiliat"
+     },
+     "u": "",
+     "v": "75,6365,765320,49595,100170,420,145",
+     "id": "f377",
+     "updated": "2026-09-10T10:00:00+00:00"
+    }
+   ]
+  },
+  "lang": "ca",
+  "version": "1.00",
+  "cols": {
+   "col": [
+    {
+     "scheme": "mun",
+     "id": "250019",
+     "content": "Abella de la Conca"
+    },
+    {
+     "scheme": "mun",
+     "id": "080018",
+     "content": "Abrera"
+    },
+    {
+     "scheme": "mun",
+     "id": "080193",
+     "content": "Barcelona"
+    },
+    {
+     "scheme": "mun",
+     "id": "170792",
+     "content": "Girona"
+    },
+    {
+     "scheme": "mun",
+     "id": "081878",
+     "content": "Sabadell"
+    },
+    {
+     "scheme": "mun",
+     "id": "430521",
+     "content": "Xerta"
+    },
+    {
+     "scheme": "mun",
+     "id": "080266",
+     "content": "Brull, el"
+    }
+   ]
+  },
+  "n": "6",
+  "o": "dades"
+ }
+}

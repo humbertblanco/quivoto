@@ -1,0 +1,87 @@
+;;;;PARO REGISTRADO POR MUNICIPIOS DESGLOSADO POR SEXO, TRAMOS DE EDAD Y SECTOR DE LA ACTIVIDAD ECONÓMICA;;;;;;;;;;;;;;;
+Código mes ;mes;Código de CA;Comunidad Autónoma;Codigo Provincia;Provincia;Codigo Municipio; Municipio;total Paro Registrado;Paro hombre edad < 25;Paro hombre edad 25 -45 ;Paro hombre edad >=45;Paro mujer edad < 25;Paro mujer edad 25 -45 ;Paro mujer edad >=45;Paro Agricultura;Paro Industria;Paro Construcción;Paro Servicios;Paro Sin empleo Anterior
+202306;Junio de 2023;1;Andalucía;4;Almería;04001;Abla;86;<5;9;30;5;24;17;9;<5;8;60;5
+202301;Enero de 2023;9;Cataluña;8;Barcelona;08001;Abrera;494;10;73;112;12;96;191;<5;77;30;364;21
+202301;Enero de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;62539;1415;10705;16128;1264;13326;19701;233;4378;3538;50924;3466
+202301;Enero de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;5;0;<5;0;0;<5;<5;0;0;<5;<5;0
+202301;Enero de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11575;393;1768;2800;375;2441;3798;86;1564;987;7941;997
+202301;Enero de 2023;9;Cataluña;17;Girona;17079;Girona;4742;208;820;1091;198;1125;1300;76;473;375;3388;430
+202301;Enero de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;10;0;<5;5;0;0;<5;<5;<5;0;6;0
+202301;Enero de 2023;9;Cataluña;43;Tarragona;43052;Xerta;64;<5;10;21;<5;7;23;6;9;5;42;<5
+202302;Febrero de 2023;9;Cataluña;8;Barcelona;08001;Abrera;505;15;73;118;13;98;188;<5;80;27;371;25
+202302;Febrero de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;63008;1566;10850;16185;1393;13319;19695;239;4378;3582;51104;3705
+202302;Febrero de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;5;0;<5;0;0;<5;<5;0;0;<5;<5;0
+202302;Febrero de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11547;420;1775;2755;409;2406;3782;87;1557;981;7904;1018
+202302;Febrero de 2023;9;Cataluña;17;Girona;17079;Girona;4753;211;790;1098;230;1134;1290;79;469;371;3384;450
+202302;Febrero de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;11;0;<5;6;0;0;<5;<5;<5;0;7;0
+202302;Febrero de 2023;9;Cataluña;43;Tarragona;43052;Xerta;62;<5;8;20;<5;8;23;5;8;<5;44;<5
+202303;Marzo de 2023;9;Cataluña;8;Barcelona;08001;Abrera;498;14;73;118;16;91;186;<5;84;28;356;28
+202303;Marzo de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;63120;1591;10911;16082;1510;13389;19637;239;4403;3619;50955;3904
+202303;Marzo de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;6;<5;<5;0;0;<5;<5;0;<5;<5;<5;0
+202303;Marzo de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11469;448;1751;2739;392;2379;3760;90;1579;979;7780;1041
+202303;Marzo de 2023;9;Cataluña;17;Girona;17079;Girona;4715;218;788;1073;239;1086;1311;82;483;369;3313;468
+202303;Marzo de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;9;0;<5;5;0;0;<5;<5;<5;0;5;0
+202303;Marzo de 2023;9;Cataluña;43;Tarragona;43052;Xerta;58;<5;9;17;<5;7;22;<5;7;<5;41;<5
+202304;Abril de 2023;9;Cataluña;8;Barcelona;08001;Abrera;480;15;68;120;13;90;174;<5;82;27;339;30
+202304;Abril de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;61697;1439;10523;15830;1293;13154;19458;241;4292;3578;49796;3790
+202304;Abril de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;6;<5;<5;0;0;<5;<5;0;<5;<5;<5;0
+202304;Abril de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11249;428;1702;2730;357;2325;3707;87;1524;961;7635;1042
+202304;Abril de 2023;9;Cataluña;17;Girona;17079;Girona;4530;200;761;1057;190;1042;1280;86;472;375;3154;443
+202304;Abril de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;10;0;<5;5;0;0;<5;<5;<5;0;6;0
+202304;Abril de 2023;9;Cataluña;43;Tarragona;43052;Xerta;58;<5;7;17;<5;7;24;<5;6;<5;42;<5
+202305;Mayo de 2023;9;Cataluña;8;Barcelona;08001;Abrera;478;15;73;114;12;92;172;<5;81;26;343;26
+202305;Mayo de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;61433;1389;10350;15804;1253;13207;19430;228;4276;3539;49615;3775
+202305;Mayo de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;7;<5;<5;0;0;<5;<5;<5;<5;<5;<5;0
+202305;Mayo de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11206;430;1709;2685;363;2314;3705;90;1517;946;7581;1072
+202305;Mayo de 2023;9;Cataluña;17;Girona;17079;Girona;4492;188;752;1048;188;1019;1297;83;461;368;3150;430
+202305;Mayo de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;10;0;<5;6;0;0;<5;<5;<5;<5;5;0
+202305;Mayo de 2023;9;Cataluña;43;Tarragona;43052;Xerta;60;<5;8;19;0;8;23;6;8;<5;38;5
+202306;Junio de 2023;9;Cataluña;8;Barcelona;08001;Abrera;469;16;68;109;13;94;169;<5;83;26;330;27
+202306;Junio de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;60314;1331;10068;15501;1146;13095;19173;222;4175;3503;48707;3707
+202306;Junio de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;6;<5;<5;0;0;<5;<5;0;<5;0;5;0
+202306;Junio de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;10948;409;1624;2605;380;2264;3666;85;1470;917;7410;1066
+202306;Junio de 2023;9;Cataluña;17;Girona;17079;Girona;4435;180;737;1032;184;1015;1287;81;458;374;3100;422
+202306;Junio de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;10;0;<5;6;0;0;<5;<5;<5;<5;5;0
+202306;Junio de 2023;9;Cataluña;43;Tarragona;43052;Xerta;64;<5;9;20;0;9;25;7;8;<5;40;6
+202307;Julio de 2023;9;Cataluña;8;Barcelona;08001;Abrera;465;13;59;111;6;99;177;<5;83;25;329;24
+202307;Julio de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;60973;1320;10219;15429;1210;13461;19334;226;4175;3524;49331;3717
+202307;Julio de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;<5;0;<5;0;0;<5;<5;0;0;0;<5;0
+202307;Julio de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11053;403;1639;2611;401;2312;3687;86;1480;897;7536;1054
+202307;Julio de 2023;9;Cataluña;17;Girona;17079;Girona;4474;184;739;1032;191;1034;1294;83;458;387;3109;437
+202307;Julio de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;12;<5;<5;6;0;0;<5;<5;<5;<5;6;0
+202307;Julio de 2023;9;Cataluña;43;Tarragona;43052;Xerta;62;0;8;18;<5;7;27;5;8;<5;40;6
+202308;Agosto de 2023;9;Cataluña;8;Barcelona;08001;Abrera;483;17;63;108;11;105;179;<5;86;27;343;23
+202308;Agosto de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;62515;1360;10630;15613;1244;14126;19542;230;4212;3560;50887;3626
+202308;Agosto de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;6;0;<5;<5;0;<5;<5;0;0;0;6;0
+202308;Agosto de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11313;400;1677;2689;409;2386;3752;85;1522;925;7734;1047
+202308;Agosto de 2023;9;Cataluña;17;Girona;17079;Girona;4582;197;760;1043;179;1105;1298;85;460;392;3211;434
+202308;Agosto de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;13;<5;<5;6;0;0;<5;<5;<5;<5;7;0
+202308;Agosto de 2023;9;Cataluña;43;Tarragona;43052;Xerta;56;0;9;16;<5;6;23;<5;6;<5;37;6
+202309;Septiembre de 2023;9;Cataluña;8;Barcelona;08001;Abrera;460;13;64;98;12;99;174;<5;76;25;330;27
+202309;Septiembre de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;61792;1475;10552;15570;1314;13670;19211;230;4120;3515;50246;3681
+202309;Septiembre de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;8;0;<5;<5;<5;<5;<5;0;<5;0;7;0
+202309;Septiembre de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11214;420;1657;2685;406;2331;3715;91;1512;911;7628;1072
+202309;Septiembre de 2023;9;Cataluña;17;Girona;17079;Girona;4482;191;741;1047;192;1049;1262;86;454;381;3142;419
+202309;Septiembre de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;11;<5;<5;5;<5;0;<5;<5;<5;0;6;0
+202309;Septiembre de 2023;9;Cataluña;43;Tarragona;43052;Xerta;62;<5;8;18;<5;6;27;<5;6;<5;43;6
+202310;Octubre de 2023;9;Cataluña;8;Barcelona;08001;Abrera;457;12;66;101;13;92;173;<5;69;25;336;24
+202310;Octubre de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;62414;1488;10706;15667;1355;13774;19424;232;4150;3575;50718;3739
+202310;Octubre de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;8;0;<5;<5;<5;<5;<5;0;<5;0;7;0
+202310;Octubre de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11232;432;1676;2672;433;2286;3733;92;1492;907;7631;1110
+202310;Octubre de 2023;9;Cataluña;17;Girona;17079;Girona;4534;208;760;1058;197;1052;1259;86;456;383;3192;417
+202310;Octubre de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;11;<5;<5;5;<5;0;<5;<5;<5;0;6;0
+202310;Octubre de 2023;9;Cataluña;43;Tarragona;43052;Xerta;61;<5;9;17;<5;6;26;<5;6;<5;43;5
+202311;Noviembre de 2023;9;Cataluña;8;Barcelona;08001;Abrera;473;11;69;109;14;90;180;<5;72;24;345;28
+202311;Noviembre de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;62721;1414;10936;15657;1270;13916;19528;230;4175;3563;51040;3713
+202311;Noviembre de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;9;0;<5;<5;<5;<5;<5;0;<5;0;8;0
+202311;Noviembre de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11221;426;1661;2660;395;2329;3750;90;1485;906;7630;1110
+202311;Noviembre de 2023;9;Cataluña;17;Girona;17079;Girona;4535;233;746;1062;190;1054;1250;89;454;374;3197;421
+202311;Noviembre de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;12;<5;<5;5;<5;0;<5;<5;<5;0;7;0
+202311;Noviembre de 2023;9;Cataluña;43;Tarragona;43052;Xerta;59;<5;9;18;<5;<5;24;5;8;<5;40;<5
+202312;Diciembre de 2023;9;Cataluña;8;Barcelona;08001;Abrera;476;11;67;112;12;90;184;<5;69;26;350;27
+202312;Diciembre de 2023;9;Cataluña;8;Barcelona;08019;Barcelona;63525;1439;11156;15904;1243;14155;19628;217;4249;3605;51792;3662
+202312;Diciembre de 2023;9;Cataluña;8;Barcelona;08026;Brull, El;10;0;<5;<5;<5;<5;<5;0;<5;0;9;0
+202312;Diciembre de 2023;9;Cataluña;8;Barcelona;08187;Sabadell;11375;432;1719;2709;380;2370;3765;87;1487;949;7754;1098
+202312;Diciembre de 2023;9;Cataluña;17;Girona;17079;Girona;4543;217;755;1078;194;1036;1263;85;469;388;3188;413
+202312;Diciembre de 2023;9;Cataluña;25;Lleida;25001;Abella de la Conca;11;<5;<5;5;<5;0;<5;<5;<5;0;6;0
+202312;Diciembre de 2023;9;Cataluña;43;Tarragona;43052;Xerta;60;<5;9;18;<5;<5;24;<5;8;<5;43;<5

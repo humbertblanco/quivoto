@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { FONTS_URBANISME, type UrbanismeHabitatgeMetric } from "../jobs/j40-urbanisme-habitatge";
+import { FONT_REGISTRE_TURISME, type EstablimentsTuristicsMetric } from "../jobs/j46-habitatges-turistics";
 import {
+  QUE_DIU_DECRET_HUT,
   URBANISME_FITXA_CSS,
-  dataLlarga,
   fraseObertura,
   renderUrbanismeHabitatge,
   renderUrbanismeHabitatgeBloc,
@@ -37,15 +38,6 @@ const cadaques: UrbanismeHabitatgeMetric = {
 
 const ctx = { nom: "Cadaqués" };
 
-describe("dataLlarga", () => {
-  it("escriu les dates en català, amb apòstrof davant de vocal", () => {
-    expect(dataLlarga("2024-03-16")).toBe("16 de març del 2024");
-    expect(dataLlarga("2024-10-10")).toBe("10 d'octubre del 2024");
-    expect(dataLlarga(null)).toBeNull();
-    expect(dataLlarga("ahir")).toBeNull();
-  });
-});
-
 describe("bloc d'urbanisme i habitatge", () => {
   const html = renderUrbanismeHabitatge(cadaques, ctx);
 
@@ -73,6 +65,12 @@ describe("bloc d'urbanisme i habitatge", () => {
     expect(html).toContain("des del 16 de març del 2024");
     expect(html).toContain("Llei estatal 12/2023");
     expect(html).toContain("llista actualitzada el 14 de febrer del 2025");
+  });
+
+  it("les dates de l'1 i de l'11 porten apòstrof: «des de l'1 de març»", () => {
+    const u = renderUrbanismeHabitatgeBloc({ ...cadaques, zonaTensa: { zona: "ZMRT1", vigentDes: "2024-03-01" } }, ctx);
+    expect(u).toContain("des de l'1 de març del 2024");
+    expect(u).not.toContain("des del 1 ");
   });
 
   it("un buit és «no consta», i un zero publicat és un zero", () => {
@@ -142,5 +140,62 @@ describe("camins buits", () => {
       protegit: { serie: zeros, darrer: zeros[2]!, desDe2023: { des: 2023, fins: 2025, iniciats: 0, acabats: 0 }, total: { des: 2023, fins: 2025, iniciats: 0, acabats: 0 } },
     }, ctx);
     expect(html).toContain("Entre el 2023 i el 2025 no hi consta cap habitatge protegit iniciat ni acabat.");
+  });
+});
+
+// Cadaqués al registre de turisme tal com el desa J46 el 27-10-2026 (padró del 2025, 2.918 habitants).
+const registreCadaques: EstablimentsTuristicsMetric = {
+  dataConsulta: "2026-10-27",
+  actualitzat: "2026-10-05",
+  hut: { establiments: 997, places: 324, ambPlaces: 62 },
+  hotels: { establiments: 31, places: 1271, ambPlaces: 31 },
+  campings: { establiments: 1, places: 435, ambPlaces: 1 },
+  turismeRural: { establiments: 0, places: 0, ambPlaces: 0 },
+  altres: { establiments: 22, places: 182, ambPlaces: 22 },
+  altresDetall: { apartaments: 1, llarsCompartides: 21, autocaravanes: 0, desconegut: 0 },
+  hutPer100Hab: 34.17,
+  poblacio: 2918,
+  poblacioAny: 2025,
+  catalunya: { hut: 104_502, municipisAmbHut: 874, hutPer100Hab: 1.3 },
+  font: FONT_REGISTRE_TURISME,
+};
+
+describe("el registre de turisme d'avui (J46)", () => {
+  const html = renderUrbanismeHabitatgeBloc(cadaques, { ...ctx, registre: registreCadaques });
+  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+  it("dona la xifra d'avui amb la data i la ràtio, i la del 2024 per comparar", () => {
+    expect(text).toContain("Segons el Registre de Turisme de Catalunya, consultat el 27 d'octubre del 2026, hi ha 997 pisos turístics inscrits: 34,2 per cada 100 habitants del padró del 2025");
+    expect(text).toContain("El 2024, segons l'Observatori del Territori, n'hi havia 1.004");
+    expect(text).toContain("Pisos turístics inscrits avui");
+    expect(text).toContain("Pisos turístics el 2024");
+  });
+
+  it("l'obertura fa servir la xifra d'avui", () => {
+    expect(fraseObertura(cadaques, { ...ctx, registre: registreCadaques })).toContain("avui hi ha 997 pisos turístics inscrits");
+  });
+
+  it("no publica les places dels HUT del registre, que només en porten 62 de 997", () => {
+    expect(text).not.toContain("324");
+  });
+
+  it("diu els hotels i càmpings, Catalunya com a referència, el decret i la font", () => {
+    expect(text).toContain("31 hotels, 1 càmping");
+    expect(text).toContain("A tot Catalunya n'hi ha 104.502 d'inscrits");
+    expect(html).toContain(QUE_DIU_DECRET_HUT.slice(0, 40));
+    expect(QUE_DIU_DECRET_HUT).toContain("Decret llei 3/2023, de 7 de novembre");
+    expect(html).toContain("https://analisi.transparenciacatalunya.cat/d/t2h3-cgys");
+  });
+
+  it("sense J40, el registre surt igualment", () => {
+    const t = renderUrbanismeHabitatgeBloc(null, { nom: "Cadaqués", registre: registreCadaques }).replace(/<[^>]+>/g, " ");
+    expect(t).toContain("997");
+    expect(t).not.toContain("ni els pisos turístics");
+  });
+
+  it("un municipi sense cap HUT inscrit ho diu com a zero", () => {
+    const zero = { ...registreCadaques, hut: { establiments: 0, places: 0, ambPlaces: 0 }, hutPer100Hab: 0 };
+    const t = renderUrbanismeHabitatgeBloc(cadaques, { ...ctx, registre: zero }).replace(/<[^>]+>/g, " ");
+    expect(t).toContain("no hi consta cap pis turístic inscrit");
   });
 });
