@@ -1,10 +1,37 @@
-# quivoto — què poden rastrejar els cercadors.
+# quivoto — què poden rastrejar els cercadors i els assistents d'IA.
 # /observatori/ s'indexa: cada pàgina porta «index,follow» i les dades
 # enriquides al <head>. Per tancar-lo sencer es publica amb QUIVOTO_NOINDEX=1
 # (cada pàgina surt amb noindex; vegeu docs/DESPLEGAMENT.md §11), mai des
 # d'aquí: un Disallow impediria llegir el noindex i les adreces sortirien igual.
 # Les demostracions de les preguntes porten noindex propi i no són al sitemap.
+#
+# Els cercadors amb IA i els assistents hi són benvinguts: les dades són obertes
+# (CC BY 4.0) i volem que ens trobin i ens citin. Es diuen pel nom, al mateix
+# grup que «*» i amb les mateixes regles, per deixar escrit que és a posta.
+# Compte si algun dia se'n separa un: un bot amb grup propi NO hereta les regles
+# de «*» (RFC 9309), i perdria els Disallow d'aquí sota.
+#   · Cerca i respostes: OAI-SearchBot i ChatGPT-User (OpenAI), Claude-SearchBot
+#     i Claude-User (Anthropic), PerplexityBot i Perplexity-User, DuckAssistBot.
+#   · Entrenament de models: GPTBot, ClaudeBot, CCBot (Common Crawl),
+#     Google-Extended (Gemini) i Applebot-Extended. Són una decisió a part de la
+#     cerca: treure'ls no treu el lloc de les respostes de cap assistent.
+# Resum del lloc per a models de llenguatge: https://quivoto.cat/llms.txt
 User-agent: *
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: Applebot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: DuckAssistBot
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: CCBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
 Allow: /
 Disallow: /api/
 Disallow: /gracies.html

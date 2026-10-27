@@ -216,10 +216,15 @@ L'Observatori **s'indexa per defecte**: cada pàgina surt amb
 `index,follow,max-image-preview:large`, el `<head>` porta títol, descripció,
 canònica, Open Graph i dades enriquides (JSON-LD de schema.org: `City` i
 `GovernmentOrganization` a la fitxa de municipi, `Person` a les de regidor i
-d'alcaldia, `AdministrativeArea` amb els municipis a comarques i AMB,
+d'alcaldia, `GovernmentOrganization` amb el ple a les de diputació i consell
+comarcal, `AdministrativeArea` amb els municipis a comarques i AMB,
 `ItemList` als 947 i als rànquings, `Dataset` a les dades, `WebSite` amb
 `SearchAction` a la portada, i `BreadcrumbList` a tot arreu), i
-`/observatori/sitemap.xml` és a `robots.txt`.
+`/observatori/sitemap.xml` és a `robots.txt`. Les coses porten `@id` estables
+(`…/m/<slug>/#municipi`, `#ajuntament`, `…/regidor/<persona>/#persona`,
+`…/partit/<id>/#partit`, `#ens`), i cada pàgina un node propi (`WebPage`,
+`ProfilePage` o `FAQPage` quan hi ha preguntes ràpides) que diu de què parla i
+de quan són les dades (`packages/pipeline/src/publish/seo.ts` i `seo-ld.ts`).
 
 ### Tancar-ho, si cal
 
@@ -251,30 +256,67 @@ podria llegir el `noindex` i les adreces podrien sortir igualment, sense títol.
 
 - `https://quivoto.cat/sitemap.xml`: landing i legals, amb `hreflang`
   (`tools/build_landing.py`, `build_sitemap()`).
-- `https://quivoto.cat/observatori/sitemap.xml`: el genera `publish.ts` a
-  cada publicació amb tot el que hi ha a disc (seccions, municipis,
-  candidatures, persones i alcaldies històriques; ~18.000 adreces, ~2,7 MB) i
-  el `lastmod` de cada fitxer. Si passa del límit del protocol (50.000 adreces
-  o 50 MB), el mateix `sitemap.xml` passa a ser un índex que apunta a
-  `sitemap-seccions.xml`, `sitemap-municipis.xml`, `sitemap-candidatures.xml`
-  i `sitemap-persones.xml`, sense canviar l'adreça que coneix `robots.txt`.
+- `https://quivoto.cat/observatori/sitemap.xml`: **un índex**, sempre, que el
+  genera `publish.ts` a cada publicació i que apunta a un sitemap per tipus de
+  pàgina: `sitemap-seccions.xml`, `sitemap-ens.xml`, `sitemap-municipis.xml`,
+  `sitemap-candidatures.xml` i `sitemap-persones.xml` (persones i alcaldies
+  històriques). Hi va tot el que hi ha a disc, no només el que s'acaba
+  d'escriure, i res que porti `noindex`. Separats, Search Console diu quantes
+  fitxes de cada tipus ha indexat. Si un grup passés de 45.000 adreces es
+  partiria en `-2`, `-3`…; els que deixen d'existir s'esborren. Ni `priority`
+  ni `changefreq`: Google i Bing no en fan cas.
+- **El `lastmod` és el del contingut, no el del fitxer.** Cada publicació
+  reescriu tots els HTML, i un `lastmod` que sempre és avui és el que Google
+  aprèn a ignorar. Per això es guarda l'empremta del que diu cada pàgina (sense
+  la data de generació, el peu, els estils ni els scripts) i el dia que va
+  canviar per última vegada a `web/private/data/sitemap-empremtes.json`. És
+  **local i fora de git** (`.gitignore`), i no es puja: `rsync` només envia
+  `web/public/`. Si es perd, la publicació següent data totes les adreces avui
+  una vegada i a partir de la següent tornen a ser de fiar. Per això la
+  publicació s'ha de fer sempre des de la mateixa màquina, o copiar-hi el fitxer.
+
+### `llms.txt` i `llms-full.txt`
+
+Els escriu `publish.ts` (`llms.ts`) a l'arrel del web a cada publicació:
+`https://quivoto.cat/llms.txt` és el resum per a models de llenguatge (qui som,
+principis, com citar, seccions i patrons d'adreça) i `llms-full.txt` el
+directori de municipis, comarques, ens i partits amb l'adreça de cada fitxa.
+Cap gran cercador no ha dit que els llegeixi; els fan servir els agents que un
+usuari apunta al web. El `.htaccess` els serveix amb `charset=utf-8`
+(`AddCharset utf-8 .txt .md`) i sense cap `noindex`: s'hi ha de poder arribar.
+
+### `robots.txt` i els rastrejadors d'IA
+
+`web/public/robots.txt` (a mà, no el genera res) deixa passar tothom: els
+cercadors i els bots d'IA de cerca (OAI-SearchBot, ChatGPT-User,
+Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User, DuckAssistBot) i
+els d'entrenament (GPTBot, ClaudeBot, CCBot, Google-Extended,
+Applebot-Extended). Van pel nom **al mateix grup que `*`**, amb les mateixes
+regles, per deixar escrit que és a posta. Si mai se'n vol treure un, cal donar-li
+un grup propi i **copiar-hi els `Disallow`**: un bot amb grup propi no hereta
+els de `*` (RFC 9309). Treure els d'entrenament no treu el lloc de les
+respostes; treure els de cerca, sí. Porta els dos `Sitemap:` i l'adreça de
+`llms.txt` en un comentari.
 
 ### Comprovació després de cada desplegament
 
 ```bash
 curl -s https://quivoto.cat/observatori/m/sabadell/ | grep -o '<meta name="robots"[^>]*>'   # index,follow,max-image-preview:large
-curl -s https://quivoto.cat/observatori/m/sabadell/ | grep -c 'application/ld+json'        # 3: fil d'Ariadna, City, GovernmentOrganization
+curl -s https://quivoto.cat/observatori/m/sabadell/ | grep -c 'application/ld+json'        # 4 o més: fil, City, GovernmentOrganization i el node de la pàgina
 curl -s https://quivoto.cat/observatori/preguntes/badalona/prova/ | grep -o 'content="noindex[^"]*"'  # noindex,nofollow
 curl -s https://quivoto.cat/robots.txt                                                      # Disallow només /api/, gràcies i 404; dos Sitemap:
 curl -s https://quivoto.cat/sitemap.xml | grep -c '<loc>'                                   # landing: 7
-curl -s https://quivoto.cat/observatori/sitemap.xml | grep -c '<loc>'                       # Observatori: milers; si és un índex, 4 i cal provar cada part
-curl -s https://quivoto.cat/observatori/sitemap.xml | grep -c 'prova/'                      # 0
+curl -s https://quivoto.cat/observatori/sitemap.xml | grep -c '<sitemap>'                   # índex: 5 (seccions, ens, municipis, candidatures, persones; sense J38, 4)
+curl -s https://quivoto.cat/observatori/sitemap-persones.xml | grep -c '<loc>'              # milers
+curl -s https://quivoto.cat/observatori/sitemap-seccions.xml | grep -c 'prova/'             # 0
+curl -sI https://quivoto.cat/llms.txt | grep -i '^content-type'                             # text/plain; charset=utf-8
 ```
 
 Després, a Google Search Console (propietat de domini `quivoto.cat`) i a Bing
-Webmaster Tools: enviar els dos sitemaps, i validar una fitxa de municipi, una
-de persona i la de dades amb «Prova de resultats enriquits»
-(https://search.google.com/test/rich-results) i el validador de schema.org
+Webmaster Tools: enviar els dos sitemaps (de l'Observatori, només l'índex), i
+validar una fitxa de municipi, una de persona, una de diputació i la de dades
+amb «Prova de resultats enriquits» (https://search.google.com/test/rich-results)
+i el validador de schema.org
 (https://validator.schema.org/). Al cap d'una setmana, a «Pàgines › Per què no
 s'han indexat»: si hi surt «Exclosa per l'etiqueta noindex» en pàgines que no
 són demostracions, és que alguna publicació s'ha fet amb `QUIVOTO_NOINDEX=1`.

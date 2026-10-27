@@ -1452,8 +1452,11 @@ const DADES_CSS = `${RADIOGRAFIA_CSS}
 .baixades a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
 .baixades b{font-family:var(--display);font-weight:900;font-size:1.35rem;letter-spacing:-.02em;display:block;margin-bottom:4px}
 .baixades span{color:var(--ink-suau);font-size:.95rem}
-.parell{display:flex;flex-wrap:wrap;gap:var(--e1);margin-top:var(--e2)}
-.parell a{border:2px solid var(--ink);border-radius:var(--r-max);padding:4px 13px;font-size:.8rem;font-weight:800;text-decoration:none;background:var(--paper)}
+/* Els fitxers de cada baixada («CSV», «JSON», «fonts.json»…) són enllaços i
+   van com tota la navegació, subratllats («.navega», a estil.ts): abans eren
+   pastilles amb vora, i al costat de la targeta semblaven botons. */
+.parell{display:flex;flex-wrap:wrap;gap:0 var(--e3);margin-top:var(--e1)}
+.parell a{font-size:.9rem}
 /* «.xifres-dades» i no «.xifres»: el nom curt és el de les tres xifres del peu
    compartit, i la regla de les pastilles de menta («li») hi arribava. */
 .xifres-dades{list-style:none;padding:0;margin:var(--e3) 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--e2)}
@@ -1485,12 +1488,25 @@ ${FONTS_CSS}
  * pàgina llista a «D'on surt». La llicència és la de les dades derivades, que
  * és l'única que podem donar: les d'origen conserven la seva, i la pàgina ho
  * diu. `dateModified` és la data de la publicació que ha escrit els fitxers.
+ *
+ * El conjunt de Catalunya diu també què mesura i de quan:
+ *
+ *   · `variableMeasured` són les etiquetes de les columnes de `catalunya.csv`
+ *     (`CAMPS_GLOBALS`), les mateixes que `camps.json` publica per a cada
+ *     clau. Google Dataset Search les ensenya a la fitxa del conjunt i són el
+ *     que algú escriu quan busca («Deute per habitant», «Participació del
+ *     2023»), i no se n'inventa cap: si una columna no és al fitxer, no hi és.
+ *   · `temporalCoverage` va del 1979, la primera municipal que el fitxer
+ *     compta (les alternances i les alcaldies «des del 1979»), a l'any de la
+ *     publicació. Sense data de publicació, l'interval queda obert
+ *     («1979/..», la forma ISO 8601 que schema.org admet).
  */
 export function datasetCatalunya(url: string, descripcio: string, municipis: number, generatedAt?: string): Record<string, unknown>[] {
   const quants = municipis.toLocaleString("ca-ES");
   const fonts = Object.values(FONTS).map((f) => f.url);
   const cataleg = `${url}#cataleg`;
   const dataModificacio = generatedAt?.slice(0, 10) ?? null;
+  const fins = generatedAt && /^\d{4}/.test(generatedAt) ? generatedAt.slice(0, 4) : "..";
   const catalunya = conjuntDeDades({
     url,
     id: "dataset",
@@ -1505,6 +1521,8 @@ export function datasetCatalunya(url: string, descripcio: string, municipis: num
     dataModificacio,
     cataleg,
     paraulesClau: ["municipis", "Catalunya", "eleccions municipals", "ajuntaments", "pressupostos municipals", "dades obertes"],
+    cobertura: `1979/${fins}`,
+    variables: CAMPS_GLOBALS.map((camp) => camp.etiqueta),
   });
   const registre = conjuntDeDades({
     url: `${url}#fonts`,
@@ -1585,13 +1603,13 @@ demanar-nos permís ni esperar cap resposta.</p>
     <li><a href="catalunya.csv"><b>Tot Catalunya</b>
       <span>Els ${municipis} municipis amb els indicadors principals, una fila per municipi.
       És el fitxer que fareu servir.</span></a>
-      <div class="parell"><a href="catalunya.csv">CSV</a><a href="catalunya.json">JSON</a></div></li>
+      <div class="parell"><a class="navega" href="catalunya.csv">CSV</a><a class="navega" href="catalunya.json">JSON</a></div></li>
     <li><a href="ESQUEMA.md"><b>L'esquema</b>
       <span>Cada camp: què vol dir, en quines unitats va, de quin any és i de quin conjunt
       obert surt, amb l'identificador per anar-lo a comprovar.</span></a></li>
     <li><a href="#fonts"><b>El registre de fonts</b>
       <span>Qui publica cada dada, de quin període és, com la tractem i quins límits té.</span></a>
-      <div class="parell"><a href="fonts.json">fonts.json</a><a href="camps.json">camps.json</a><a href="manifest.json">manifest.json</a></div></li>
+      <div class="parell"><a class="navega" href="fonts.json">fonts.json</a><a class="navega" href="camps.json">camps.json</a><a class="navega" href="manifest.json">manifest.json</a></div></li>
   </ul>
   <h2 style="margin-top:var(--e4)">Un municipi sol</h2>
   <p>Cada fitxa té el seu parell de fitxers amb tot el que ensenya. El nom és el mateix de
