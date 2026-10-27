@@ -117,7 +117,7 @@ describe("etiquetaEleccio", () => {
     expect(text).toBe(
       "Cens electoral: 2023 · 1.109.116 electors · votants: 672.053 · participació: 60,6 % · " +
         "cens respecte al 2019: −33.328 (−2,9 %) · participació respecte al 2019: −5,6 punts · " +
-        "mediana dels 11 de la seva mida: 58,1 % (Generalitat de Catalunya, processos electorals, consultat el 2026-09-03)",
+        "mediana dels 11 de la seva mida: 58,1 % (Generalitat de Catalunya, processos electorals, consultat el 3 de setembre del 2026)",
     );
   });
 
@@ -125,7 +125,7 @@ describe("etiquetaEleccio", () => {
     const text = textEtiqueta(etiquetaEleccio(bcn, e79!, null, "participacio"));
     expect(text).toBe(
       "Participació: 1979 · 54,3 % · cens: 1.480.453 · votants: 803.419 " +
-        "(Generalitat de Catalunya, processos electorals, consultat el 2026-09-03)",
+        "(Generalitat de Catalunya, processos electorals, consultat el 3 de setembre del 2026)",
     );
     expect(textEtiqueta(etiquetaEleccio(bcn, e83!, e79!, "cens"))).toContain("cens respecte al 1979: −120.864 (−8,2 %)");
   });
@@ -143,7 +143,7 @@ describe("renderCens", () => {
     expect(html).toContain("<b>Què hi decideix l'ajuntament.</b>");
     expect(html).toContain('href="https://analisi.transparenciacatalunya.cat/d/irrv-2mfc"');
     expect(html).toContain("1979-2023");
-    expect(html).toContain("consultat el 2026-09-03");
+    expect(html).toContain("consultat el 3 de setembre del 2026");
     expect(html).toContain("La mediana és la dels municipis de més de 100.000 habitants segons el padró d'avui");
     expect(html).not.toContain("Hi ha una elecció sense dada");
   });

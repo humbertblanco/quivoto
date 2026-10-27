@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ZERO_I_BUIT,
   PROGRAMES,
   codiPrograma,
   darrerAnyComparable,
@@ -222,5 +223,12 @@ describe("el catàleg de programes", () => {
       expect(programa.cobertura2024).toBeGreaterThan(300);
       expect(programa.cobertura2024).toBeLessThanOrEqual(947);
     }
+  });
+});
+
+describe("la nota del buit i el zero", () => {
+  it("és una frase per al veí, no el nom d'un camp", () => {
+    expect(ZERO_I_BUIT).not.toMatch(/liquidacio|false|:/);
+    expect(ZERO_I_BUIT).toContain("0 €");
   });
 });

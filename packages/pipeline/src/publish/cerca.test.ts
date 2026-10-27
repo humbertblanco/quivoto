@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  carrecsAmbFitxa,
   clauCerca,
   classifica,
   indexDeCerca,
@@ -191,6 +192,45 @@ describe("indexDeCerca", () => {
     // Rubí i Barcelona: el pes és la gent que governa, no les alcaldies.
     expect(psc![3]).toBe(79_609 + 1_731_649);
     expect(index.par.some((p) => p[1] === "local")).toBe(false);
+  });
+});
+
+describe("carrecsAmbFitxa: tothom qui té fitxa de regidor, no només els de la seu", () => {
+  // La regla de `escriuRegidors()`: la seu mana quan hi és; si no, el registre.
+  const seu = [
+    { municipalityId: 1, carrecs: [{ nom: "Jaume Collboni" }] },
+    // Una mètrica de càrrecs buida no és cap llista: hi entra el registre.
+    { municipalityId: 3, carrecs: [] },
+  ];
+  const registre = [
+    { municipalityId: 1, nom: "Algú del registre" },
+    { municipalityId: 2, nom: "Núria Vidal" },
+    { municipalityId: 2, nom: "Pere Soler" },
+    { municipalityId: 2, nom: "Pere Soler" },
+    { municipalityId: 3, nom: "Laia Font" },
+  ];
+  const carrecs = carrecsAmbFitxa(seu, registre);
+  const de = (id: number) => carrecs.find((c) => c.municipalityId === id)?.carrecs.map((c) => c.nom);
+
+  it("on hi ha seu, només la seu", () => {
+    expect(de(1)).toEqual(["Jaume Collboni"]);
+  });
+
+  it("on no n'hi ha, el registre, en el seu ordre i amb els repetits (que són «-2»)", () => {
+    expect(de(2)).toEqual(["Núria Vidal", "Pere Soler", "Pere Soler"]);
+    expect(de(3)).toEqual(["Laia Font"]);
+  });
+
+  it("i a l'índex hi surten tots, amb el sufix calculat per la mateixa funció que el directori", () => {
+    const files = [fila("alins", "Alins", "Pallars Sobirà", 250, null, null), fila("bossost", "Bossost", "Aran", 1_200, null, null)];
+    const index = indexDeCercaElectes(files, {
+      municipis: [{ id: 2, slug: "alins" }, { id: 3, slug: "bossost" }],
+      carrecs,
+      mandats: [],
+      llistes: [],
+    });
+    expect(index.reg.map((r) => r[0])).toEqual(["Núria Vidal", "Pere Soler", "Pere Soler", "Laia Font"]);
+    expect(Object.values(index.exr)).toEqual(["pere-soler-2"]);
   });
 });
 

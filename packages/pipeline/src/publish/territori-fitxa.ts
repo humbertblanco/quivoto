@@ -24,6 +24,7 @@
  * «El municipi més alt» vol dir «l'ajuntament més alt».
  */
 
+import { consultatEl } from "../lib/text";
 import { primers, type Curiositat, type FilaCuriosa } from "./curiositats";
 
 const escape = (s: string): string =>
@@ -121,7 +122,7 @@ export type OpcionsTerritori = {
  */
 export function curiositatsTerritori(files: readonly FilaTerritori[], opcions: OpcionsTerritori = {}): Curiositat[] {
   const total = files.length;
-  const periode = opcions.consultat ? `registre vigent, consultat el ${opcions.consultat}` : "registre vigent";
+  const periode = opcions.consultat ? `registre vigent, ${consultatEl(opcions.consultat)}` : "registre vigent";
   const fets: Curiositat[] = [];
 
   // ---- els més extensos i els més petits -----------------------------------

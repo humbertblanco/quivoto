@@ -7,6 +7,7 @@ import {
   type ServeisEnsDesats,
   type ServeisSocialsDesats,
 } from "../jobs/j42-serveis-ens";
+import { consultatEl } from "../lib/text";
 
 /**
  * Els blocs de la J42 a les fitxes: «Els serveis socials que presta» i «Com
@@ -80,7 +81,7 @@ function paraules(d: Pick<ServeisEnsDesats, "tipus">): { ens: string; Ens: strin
 /** Una font citada al peu del bloc: nom enllaçat i data de consulta. */
 function citaFonts(fonts: readonly FontServeis[]): string {
   return fonts
-    .map((f) => `<a href="${escape(f.url)}" rel="noopener">${escape(f.nom)}</a>${f.consultat ? ` (consultat el ${escape(f.consultat)})` : ""}`)
+    .map((f) => `<a href="${escape(f.url)}" rel="noopener">${escape(f.nom)}</a>${f.consultat ? ` (${escape(consultatEl(f.consultat))})` : ""}`)
     .join("; ");
 }
 

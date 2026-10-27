@@ -279,7 +279,7 @@ const MESOS = [
 ] as const;
 
 /**
- * Una data ISO escrita com es diu en català.
+ * Una data ISO (o «dd/mm/aaaa») escrita com es diu en català.
  *
  * Aquesta funció existia tres vegades —a `amb.ts`, a `comarques.ts` i a
  * `radiografia.ts`— i **només dues estaven bé**: la de la fitxa, que és la
@@ -287,8 +287,10 @@ const MESOS = [
  * d'alcaldies de tots els municipis. Abril, agost i octubre comencen per vocal
  * i demanen apòstrof.
  */
-export function dataCurta(iso: string | null): string {
-  if (!iso) return "";
+export function dataCurta(data: string | null): string {
+  if (!data) return "";
+  // Accepta també «27/10/2026», que és com escriuen les dates moltes fonts.
+  const iso = isoDeData(data) ?? data;
   const [any, mes, dia] = iso.slice(0, 10).split("-");
   const nom = MESOS[Number(mes) - 1];
   if (!nom) return `${any ?? ""}`;
@@ -296,16 +298,67 @@ export function dataCurta(iso: string | null): string {
   return `${Number(dia)} ${de}${nom} del ${any}`;
 }
 
-/** «el 21 d'agost del 2026», i «l'1 de gener del 2025» quan cau en dia 1. */
-export function elDia(iso: string | null): string {
-  if (!iso) return "";
-  return Number(iso.slice(8, 10)) === 1 ? `l'${dataCurta(iso)}` : `el ${dataCurta(iso)}`;
+/**
+ * Els dies que s'apostrofen: l'1 i l'11, perquè es pronuncien «u» i «onze»,
+ * que comencen per vocal. El 21 no: es diu «vint-i-u» i porta l'article sencer.
+ * Abans només s'hi comptava el dia 1, i la web escrivia «el 11 de juny».
+ */
+const diaApostrofat = (data: string): boolean => {
+  const dia = Number((isoDeData(data) ?? data).slice(8, 10));
+  return dia === 1 || dia === 11;
+};
+
+/** «el 21 d'agost del 2026», i «l'1 de gener del 2025» o «l'11 de juny» quan toca apòstrof. */
+export function elDia(data: string | null): string {
+  if (!data) return "";
+  return diaApostrofat(data) ? `l'${dataCurta(data)}` : `el ${dataCurta(data)}`;
 }
 
-/** El mateix darrere d'un «de»: «de l'1 de gener», «del 21 d'agost». */
-export function delDia(iso: string | null): string {
-  if (!iso) return "";
-  return Number(iso.slice(8, 10)) === 1 ? `de l'${dataCurta(iso)}` : `del ${dataCurta(iso)}`;
+/** El mateix darrere d'un «de»: «de l'1 de gener», «de l'11 de juny», «del 21 d'agost». */
+export function delDia(data: string | null): string {
+  if (!data) return "";
+  return diaApostrofat(data) ? `de l'${dataCurta(data)}` : `del ${dataCurta(data)}`;
+}
+
+/**
+ * Una data que pot arribar com a ISO («2026-10-27», o amb hora al darrere) o
+ * com l'escriuen les fonts («27/10/2026»), dita en català: «27 d'octubre del
+ * 2026». És la data que llegeix el veí; la que llegeixen les màquines
+ * (`<time datetime>`, JSON-LD) es queda en ISO i no passa per aquí.
+ *
+ * Si el text no s'entén com a data, torna `null` i qui crida decideix si el
+ * deixa tal com és o no diu res: mai una data inventada.
+ */
+export function dataEscrita(text: string | null | undefined): string | null {
+  if (!text) return null;
+  return isoDeData(text) ? dataCurta(text) : null;
+}
+
+/**
+ * «27/10/2026» o «2026-10-27T…» → «2026-10-27». Les fonts municipals escriuen
+ * dia/mes/any; el pipeline desa ISO. Torna `null` si no hi reconeix cap data.
+ */
+export function isoDeData(text: string): string | null {
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(text.trim());
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const barres = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(text.trim());
+  if (barres) return `${barres[3]}-${barres[2]!.padStart(2, "0")}-${barres[1]!.padStart(2, "0")}`;
+  return null;
+}
+
+/**
+ * «consultat el 27 d'octubre del 2026», «consultat l'1 de juny del 2026»: el
+ * peu de font de totes les fitxes. Si la data no s'entén, es deixa com ve.
+ */
+export function consultatEl(text: string | null | undefined): string {
+  if (!text) return "";
+  return isoDeData(text) ? `consultat ${elDia(text)}` : `consultat el ${text}`;
+}
+
+/** «el 27 d'octubre…» amb la primera en majúscula, per començar una frase: «El 27…», «L'1…». */
+export function elDiaAlPrincipi(data: string | null): string {
+  const text = elDia(data);
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /**

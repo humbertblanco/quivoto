@@ -39,7 +39,7 @@
  */
 
 import { writeFile } from "node:fs/promises";
-import { nomLlegible } from "../lib/text";
+import { dataEscrita, nomLlegible } from "../lib/text";
 import { SITE } from "./config";
 import { adrecaEns, type TipusEns } from "./ens-tipus";
 
@@ -72,15 +72,12 @@ const OBS = `${SITE}/observatori`;
 /** Milers amb punt, com a la resta del web. */
 const xifra = (n: number): string => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
-const MESOS = ["gener", "febrer", "març", "abril", "maig", "juny", "juliol", "agost", "setembre", "octubre", "novembre", "desembre"];
-
-/** «27 d'octubre del 2026», sense dependre de l'ICU de la màquina que publica. */
-function data(iso: string): string {
-  const [any, mes, dia] = iso.slice(0, 10).split("-");
-  const nom = MESOS[Number(mes) - 1];
-  if (!nom) return iso;
-  return `${Number(dia)} ${/^[aeiou]/.test(nom) ? "d'" : "de "}${nom} del ${any}`;
-}
+/**
+ * «27 d'octubre del 2026», sense dependre de l'ICU de la màquina que publica.
+ * És `dataEscrita()` de `lib/text.ts` —n'hi havia una còpia aquí— i, si el
+ * text no s'entén com a data, es deixa tal com ve.
+ */
+const data = (iso: string): string => dataEscrita(iso) ?? iso;
 
 /**
  * Un text de la font dins d'un enllaç Markdown: els claudàtors i els salts de

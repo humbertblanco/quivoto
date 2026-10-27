@@ -4,7 +4,7 @@ import {
 } from "@quivoto/db";
 import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
-import { de, nomLlegible, slugify } from "../lib/text";
+import { de, elDia, nomLlegible, slugify } from "../lib/text";
 import { carregaCarrecsAlcaldia, carregaPleDelRegistre, resolAlcaldia } from "./alcaldia";
 import { cara } from "./cara";
 import { RADIOGRAFIA_CSS } from "./estil";
@@ -14,7 +14,7 @@ import { comarcaLd } from "./seo-ld";
 import { atributsEtiqueta, GRAFICS_JS, regleDispersio, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { icona } from "./icones";
 import { capsaCami, geometria, projecta } from "./mapa";
-import { sigla } from "./sigla";
+import { sigla, siglesConegudes } from "./sigla";
 import { GLOSSARI_CSS, esClauGlossari, renderGlossari } from "./glossari";
 import { TERRITORI_CSS, renderBlocsPoder } from "./territori";
 import { capcalera, tipografia } from "./capcalera";
@@ -276,17 +276,20 @@ function etiquetaMunicipi(m: {
   mayorChangeDate?: string | null;
 }): string {
   const forca = labelOf(m.mayorBrandId ?? SENSE_MARCA);
-  const sigles = m.mayorSigles && m.mayorSigles !== forca ? ` (${m.mayorSigles})` : "";
+  // «N/A» o un guionet al camp del partit no són unes sigles: es tracten com el buit.
+  const mayorSigles = siglesConegudes(m.mayorSigles);
+  const winnerSigles = siglesConegudes(m.winnerSigles);
+  const sigles = mayorSigles && mayorSigles !== forca ? ` (${mayorSigles})` : "";
   const alcaldia = m.mayorName ? ` · alcaldia: ${m.mayorName}` : "";
   const extres: { etq: string; valor: string }[] = [];
   if (m.population !== null && m.population !== undefined) extres.push({ etq: "habitants", valor: number(m.population) });
   if (m.seats) extres.push({ etq: "regidories", valor: number(m.seats) });
-  if (m.mayorSigles) extres.push({ etq: "amb quina llista", valor: m.mayorSigles });
+  if (mayorSigles) extres.push({ etq: "amb quina llista", valor: mayorSigles });
   if (m.winnerGoverns === false) {
-    extres.push({ etq: "pacte", valor: m.winnerSigles ? `governa qui no va guanyar (va guanyar ${m.winnerSigles})` : "governa qui no va guanyar" });
+    extres.push({ etq: "pacte", valor: winnerSigles ? `governa qui no va guanyar (va guanyar ${winnerSigles})` : "governa qui no va guanyar" });
   }
   if (m.mayorChanged) {
-    extres.push({ etq: "canvi d'alcaldia", valor: m.mayorChangeDate ? `a mig mandat, el ${dataCurta(m.mayorChangeDate)}` : "a mig mandat" });
+    extres.push({ etq: "canvi d'alcaldia", valor: m.mayorChangeDate ? `a mig mandat, ${elDia(m.mayorChangeDate)}` : "a mig mandat" });
   }
   const dada: DadaEtiqueta = {
     nom: m.name,
@@ -296,12 +299,6 @@ function etiquetaMunicipi(m: {
   };
   return `${atributsEtiqueta(dada)}><title>${escape(textEtiqueta(dada))}</title>`;
 }
-
-/** «2024-06-15» → «15/6/2024»: la data tal com arriba de la base, escrita curta. */
-const dataCurta = (iso: string): string => {
-  const [any, mes, dia] = iso.slice(0, 10).split("-");
-  return any && mes && dia ? `${Number(dia)}/${Number(mes)}/${any}` : iso;
-};
 
 /**
  * L'article de cada comarca, per la clau del seu nom (`slugify`).
@@ -1396,8 +1393,9 @@ function renderMunicipis(data: ComarcaData): string {
             ? ""
             : '<span class="marca-minoria">ple sense majoria</span>';
       const canvi = m.mayorChanged ? '<span class="marca-canvi">canvi a mig mandat</span>' : "";
-      const pastilla = m.mayorSigles
-        ? sigla(m.mayorSigles, { base, brandId: m.mayorBrandId })
+      const siglesAlcaldia = siglesConegudes(m.mayorSigles);
+      const pastilla = siglesAlcaldia
+        ? sigla(siglesAlcaldia, { base, brandId: m.mayorBrandId })
         : "";
       /*
        * La cara és la mateixa peça que la portada i la fitxa (`cara.ts`): el

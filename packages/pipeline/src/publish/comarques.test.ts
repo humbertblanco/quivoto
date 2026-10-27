@@ -356,7 +356,7 @@ describe("renderMapaComarca", () => {
     expect(html).toContain(
       'data-extres="habitants¦2.800‖regidories¦11‖amb quina llista¦ERC-AM‖pacte¦governa qui no va guanyar (va guanyar JxCat)"',
     );
-    expect(html).toContain('data-extres="habitants¦250‖regidories¦7‖amb quina llista¦ERC-AM‖canvi d\'alcaldia¦a mig mandat, el 15/6/2024"');
+    expect(html).toContain('data-extres="habitants¦250‖regidories¦7‖amb quina llista¦ERC-AM‖canvi d\'alcaldia¦a mig mandat, el 15 de juny del 2024"');
     // On no hi ha ni pacte ni canvi no s'hi diu res: un «no» a cada poble seria soroll.
     expect(html).toContain('data-extres="habitants¦430‖regidories¦7‖amb quina llista¦ERC-AM"');
     expect(html).not.toContain("pacte¦governa qui va guanyar");

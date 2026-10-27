@@ -6,6 +6,7 @@ import {
   type TipusCriminalitat,
 } from "../jobs/j29-criminalitat";
 import { medianOf, type PeerGroup } from "../derive/peers";
+import { consultatEl } from "../lib/text";
 import { serieTemporal } from "./grafics";
 
 /**
@@ -282,7 +283,7 @@ export function renderCriminalitat(
   <p class="nota"><b>Què hi decideix l'ajuntament.</b> ${escape(metric.context.nota)}</p>
   <p class="peu-nota">Font: <a href="${escape(metric.font.url)}" rel="noopener nofollow">${escape(metric.font.organisme)}</a>,
   balanços del quart trimestre${primerBalanc ? ` del ${primerBalanc} al ${metric.darrerAny}` : ""},
-  consultats el ${escape(metric.font.consultat)}. ${escape(metric.llindar.nota)}
+  ${escape(consultatEl(metric.font.consultat).replace(/^consultat/, "consultats"))}. ${escape(metric.llindar.nota)}
   La reutilització obliga a citar-ho així: «${escape(metric.font.llicencia.atribucio)}».</p>`;
 }
 

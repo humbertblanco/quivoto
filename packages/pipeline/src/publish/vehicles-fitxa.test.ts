@@ -60,8 +60,8 @@ describe("renderVehicles", () => {
     expect(html).toContain("Idescat, a partir de la DGT.");
     expect(html).toContain("parc de vehicles del 2024");
     expect(html).toContain("padró del 2024 (105.052 habitants)");
-    expect(html).toContain("consultat el 2026-09-03");
-    expect(html).toContain("actualitzat el 2025-11-10");
+    expect(html).toContain("consultat el 3 de setembre del 2026");
+    expect(html).toContain("actualitzat el 10 de novembre del 2025");
   });
 
   it("no jutja: diu què compta i què hi decideix l'ajuntament", () => {

@@ -5,7 +5,7 @@ import { RADIOGRAFIA_CSS } from "./estil";
 import { atributsEtiqueta, GRAFICS_JS, textEtiqueta } from "./grafics";
 import { peu } from "./peu";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
-import { de, nomLlegible as nomLlegibleComu, normalize, slugify } from "../lib/text";
+import { consultatEl, de, nomLlegible as nomLlegibleComu, normalize, slugify } from "../lib/text";
 import { adrecaEns, type DadesEns, type FontEns, type MembreEns } from "./ens-tipus";
 import { ultimaDespesa } from "./ens-dades";
 
@@ -859,7 +859,7 @@ function blocFonts(llista: readonly DadesEns[]): string {
     .map(
       (f) =>
         `<li><a href="${escape(f.url)}" rel="noopener">${escape(f.nom)}</a>${
-          f.consultat ? `, consultat el ${escape(f.consultat)}` : ""
+          f.consultat ? `, ${escape(consultatEl(f.consultat))}` : ""
         }${f.llicencia ? ` (${escape(f.llicencia)})` : ""}.</li>`,
     )
     .join("");

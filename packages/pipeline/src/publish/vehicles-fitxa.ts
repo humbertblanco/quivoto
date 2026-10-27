@@ -1,4 +1,5 @@
 import type { VehiclesMetric } from "../jobs/j34-vehicles";
+import { consultatEl, elDia } from "../lib/text";
 import { primers, type Curiositat, type FilaCuriosa, type FilaCuriositat } from "./curiositats";
 import type { MedianaGrup } from "./medianes";
 
@@ -167,9 +168,9 @@ function peuFont(dades: VehiclesMetric): string {
         ? ` La taxa es fa amb el padró del ${dades.poblacio.anyPadro} (${enter(dades.poblacio.habitants)} habitants).`
         : ` La taxa es fa amb el padró del ${dades.poblacio.anyPadro} (${enter(dades.poblacio.habitants)} habitants), el més proper a l'any de la dada.`
     : "";
-  const actualitzat = dades.font.actualitzat ? `, actualitzat el ${escape(dades.font.actualitzat.slice(0, 10))}` : "";
+  const actualitzat = dades.font.actualitzat ? `, actualitzat ${escape(elDia(dades.font.actualitzat))}` : "";
   return `<p class="peu-nota">Font: <a href="${escape(href)}" rel="noopener nofollow">${escape(dades.font.organisme)}</a>,
-  parc de vehicles del ${dades.any}${actualitzat}, consultat el ${escape(dades.font.consultat)}.${padro}
+  parc de vehicles del ${dades.any}${actualitzat}, ${escape(consultatEl(dades.font.consultat))}.${padro}
   La comparació és amb els municipis del mateix tram de població i només amb els que tenen la dada.</p>`;
 }
 

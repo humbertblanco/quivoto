@@ -97,7 +97,7 @@ const DADES: DinersGeneralitat = {
 
 describe("peces petites", () => {
   it("escriu les dates com dd/mm/aaaa", () => {
-    expect(dataEscrita("2024-10-09")).toBe("09/10/2024");
+    expect(dataEscrita("2024-10-09")).toBe("9 d'octubre del 2024");
     expect(dataEscrita(null)).toBeNull();
   });
   it("contrau «a el» i «per a el»", () => {
@@ -121,14 +121,14 @@ describe("combinaTrameses i celDocument", () => {
   });
   it("cap de les dues és «No tramès»; una de sola, «en part»", () => {
     expect(combinaTrameses(no, no)).toEqual({ trames: false, data: null, observacio: null });
-    expect(combinaTrameses(si("2024-04-19"), no)?.enPart).toContain("les dades econòmiques el 19/04/2024");
+    expect(combinaTrameses(si("2024-04-19"), no)?.enPart).toContain("les dades econòmiques el 19 d'abril del 2024");
   });
   it("si la font en porta una sola, aquella; si cap, null", () => {
     expect(combinaTrameses(null, no)).toEqual(no);
     expect(combinaTrameses(null, null)).toBeNull();
   });
   it("pinta l'estat amb paraules, sense colors", () => {
-    expect(celDocument(si("2024-10-09"))).toContain("Tramès el 09/10/2024");
+    expect(celDocument(si("2024-10-09"))).toContain("Tramès el 9 d'octubre del 2024");
     expect(celDocument(no)).toContain("No tramès");
     expect(celDocument(null)).toContain("no consta");
     expect(celDocument({ trames: true, data: "2026-03-23", observacio: "En revisió" })).toContain("En revisió");
@@ -174,17 +174,17 @@ describe("renderDinersGeneralitatBloc", () => {
   });
 
   it("els comptes: estat literal per any, sense l'adjectiu de l'inventari", () => {
-    expect(html).toContain("Tramès el 09/10/2024");
+    expect(html).toContain("Tramès el 9 d'octubre del 2024");
     expect(html).toContain("Tramès en part");
     expect(html).toContain("No tramès");
     expect(html).toContain("no consta");
-    expect(html).toContain("Inventari actualitzat el 27/10/2026");
+    expect(html).toContain("Inventari actualitzat el 27 d'octubre del 2026");
     expect(html).not.toContain("No compleix");
     expect(html).not.toContain("Compleix");
   });
 
   it("el pendent: data de la relació, total d'un sol pagador i el retingut explicat", () => {
-    expect(html).toContain("El 01/10/2026 la Generalitat tenia reconeguts <b>19.398&nbsp;€</b>");
+    expect(html).toContain("L'1 d'octubre del 2026 la Generalitat tenia reconeguts <b>19.398&nbsp;€</b>");
     expect(html).toContain("Fons de Cooperació Local");
     expect(html).toContain("Retingut");
     expect(html).toContain("calendari normal de pagaments");
@@ -192,7 +192,7 @@ describe("renderDinersGeneralitatBloc", () => {
 
   it("cada apartat cita la seva font amb la data de consulta", () => {
     for (const id of ["ka4a-fyht", "v5fj-86q3", "7fnj-etev", "4w8y-gf8x"]) expect(html).toContain(`/d/${id}`);
-    expect(html).toContain("consultat el 27/10/2026");
+    expect(html).toContain("consultat el 27 d'octubre del 2026");
   });
 
   it("amb buits a totes les fonts, cada apartat diu que no consta", () => {
@@ -211,7 +211,7 @@ describe("renderDinersGeneralitatBloc", () => {
 
   it("si no surt a la relació de pendents, ho diu amb la data", () => {
     const res = renderDinersGeneralitatBloc({ ...DADES, pendents: { data: "2026-10-01", conceptes: [] } });
-    expect(res).toContain("A la relació del 01/10/2026, l'ajuntament no hi surt");
+    expect(res).toContain("A la relació de l'1 d'octubre del 2026, l'ajuntament no hi surt");
   });
 
   it("frase d'obres quan només n'hi ha de programades", () => {

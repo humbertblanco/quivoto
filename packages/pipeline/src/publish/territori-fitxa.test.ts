@@ -86,7 +86,7 @@ describe("curiositatsTerritori", () => {
     expect(fets.map((f) => f.id)).toEqual(["extensio", "altitud", "densitat", "gentilicis"]);
     for (const f of fets) {
       expect(f.font).toContain("Generalitat de Catalunya");
-      expect(f.periode).toBe("registre vigent, consultat el 2026-09-03");
+      expect(f.periode).toBe("registre vigent, consultat el 3 de setembre del 2026");
       expect(f.cobertura).toMatch(/^S'ha mirat .* dels 8\.$/);
       expect(f.llistes.length).toBeGreaterThan(0);
     }

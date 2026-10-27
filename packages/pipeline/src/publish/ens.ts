@@ -1,4 +1,7 @@
-import { de, nomLlegible } from "../lib/text";
+import { consultatEl, de, nomLlegible } from "../lib/text";
+
+/** «consultat el…» → «Consultat el…», per quan obre una frase. */
+const majusculaInicial = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg, titolAmbMarca, TITOL_MAXIM, DESCRIPCIO_MAXIMA } from "./seo";
@@ -8,7 +11,7 @@ import { hemicycle, seientsHemicicle, type GrupHemicicle } from "./hemicycle";
 import { quadres, type Caixa } from "./quadres";
 import { renderUllada, type Pastilla } from "./comarques";
 import { cara } from "./cara";
-import { sigla } from "./sigla";
+import { sigla, siglesBuides, siglesConegudes } from "./sigla";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -184,7 +187,9 @@ function importCurt(n: number): string {
  * l'hemicicle i a qualsevol lloc que escrigui el nom, i mai com un forat.
  */
 const nomDe = (m: Pick<MembreEns, "nom" | "partit">): string =>
-  esSeientSenseNom(m.nom) ? `Seient de ${m.partit ?? "partit no conegut"} (la font no en dona el nom)` : nomLlegible(m.nom);
+  esSeientSenseNom(m.nom)
+    ? `Seient de ${siglesConegudes(m.partit) ?? "partit no conegut"} (la font no en dona el nom)`
+    : nomLlegible(m.nom);
 
 /** El que es passa a `cara()`: el nom, o un interrogant per a un escó sense nom, que no té inicials. */
 const nomCara = (m: Pick<MembreEns, "nom" | "partit">): string => (esSeientSenseNom(m.nom) ? "?" : nomDe(m));
@@ -322,9 +327,10 @@ function carrecVisible(m: MembreEns): string {
   return m.carrec;
 }
 
-/** La pastilla del partit amb què hi seu, o res si la font no ho diu. */
+/** La pastilla del partit amb què hi seu, o res si la font no ho diu (tampoc si diu «N/A»). */
 function pastillaPartit(base: string, m: Pick<MembreEns, "partit" | "color">): string {
-  return m.partit ? sigla(m.partit, { base, color: colorSegur(m.color) }) : "";
+  const sigles = siglesConegudes(m.partit);
+  return sigles ? sigla(sigles, { base, color: colorSegur(m.color) }) : "";
 }
 
 // ------------------------------------------------------------------ portada
@@ -839,8 +845,9 @@ function filaPersona(base: string, m: MembreEns, mida: number, ambPartit = true)
   const on = dOn(base, m);
   // Dins d'un grup, l'etiqueta literal de la font només es diu si no és la del
   // grup: «Aramoià - AM» sota ERC sí, «ERC» sota ERC no.
-  const literal = !ambPartit && m.partit && m.partit !== m.grup
-    ? ` <span class="ens-etiqueta" title="Com ho escriu la font">${escape(m.partit)}</span>`
+  // «N/A» no és una etiqueta de la font: és la font dient que no en té cap.
+  const literal = !ambPartit && !siglesBuides(m.partit) && m.partit !== m.grup
+    ? ` <span class="ens-etiqueta" title="Com ho escriu la font">${escape(m.partit!)}</span>`
     : "";
   return `${cara(nomCara(m), m.foto, { mida, color: colorSegur(m.color) })}
       <span class="ens-qui">
@@ -1460,7 +1467,7 @@ function renderAltres(d: DadesEns, base: string): string {
 
 /** Una font citada: el nom enllaçat, la llicència i quan es va consultar. */
 function citaFont(f: FontEns): string {
-  const extres = [f.llicencia, f.consultat ? `consultat el ${f.consultat}` : null].filter(Boolean).join(", ");
+  const extres = [f.llicencia, f.consultat ? consultatEl(f.consultat) : null].filter(Boolean).join(", ");
   return `<li><a href="${escape(f.url)}" rel="noopener">${escape(f.nom)}</a>${extres ? ` (${escape(extres)})` : ""}.</li>`;
 }
 
@@ -1500,7 +1507,7 @@ function renderFonts(d: DadesEns): string {
     <li>Municipi, comarca i partit judicial: <code>ehvx-5ty7</code>; registre d'ens locals: <code>6nei-4b44</code>.</li>
   </ul>
   <p class="nota">El repartiment de la llei, les agrupacions per partit i els euros per habitant són
-  càlculs nostres sobre aquestes fonts, repetibles amb el codi del projecte. Consultat el ${escape(d.consultat)}.</p>
+  càlculs nostres sobre aquestes fonts, repetibles amb el codi del projecte. ${d.consultat ? escape(majusculaInicial(consultatEl(d.consultat))) : ""}.</p>
 </section>`;
 }
 

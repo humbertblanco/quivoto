@@ -1,7 +1,7 @@
 import { tintaSobre } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
-import { de, delDia, elDia, nomLlegible, normalize, normalizePersonName, slugify } from "../lib/text";
+import { consultatEl, de, delDia, elDia, nomLlegible, normalize, normalizePersonName, slugify } from "../lib/text";
 import { capcalera, tipografia } from "./capcalera";
 import { partitDe, sigla } from "./sigla";
 import { cara } from "./cara";
@@ -1232,7 +1232,7 @@ function pasPelPle(r: Regidor, ctx: ContextRegidor, generatedAt: string): string
   const votsDeterminats = ctx.votsDelGrup.filter((v) => v.tot);
   const comptaSentit = (sentit: string): number => votsDeterminats.filter((v) => v.sentit === sentit).length;
   const activitatVot = votsDeterminats.length > 0
-    ? `<div class="activitat-vot" aria-label="Resum de l'activitat de vot"><span><b>${comptaSentit("favor")}</b><small>a favor</small></span><span><b>${comptaSentit("contra")}</b><small>en contra</small></span><span><b>${comptaSentit("abstencio")}</b><small>abstencions</small></span><span><b>${Math.round((100 * votsDeterminats.length) / ctx.votsDelGrup.length)}%</b><small>vot atribuïble</small></span></div>`
+    ? `<div class="activitat-vot" aria-label="Resum de l'activitat de vot"><span><b>${comptaSentit("favor")}</b><small>a favor</small></span><span><b>${comptaSentit("contra")}</b><small>en contra</small></span><span><b>${comptaSentit("abstencio")}</b><small>abstencions</small></span><span><b>${Math.round((100 * votsDeterminats.length) / ctx.votsDelGrup.length)}&nbsp;%</b><small>vot atribuïble</small></span></div>`
     : "";
   caselles.push(
     casella(
@@ -1505,6 +1505,26 @@ function ordinalForca(n: number): string {
   return nomes[n - 1] ?? `${n}a`;
 }
 
+/** «dues», «tres»… fins a deu en lletres; a partir d'aquí, la xifra. */
+function quantesEnLletres(n: number): string {
+  const noms = ["", "una", "dues", "tres", "quatre", "cinc", "sis", "set", "vuit", "nou", "deu"];
+  return noms[n] ?? String(n);
+}
+
+/**
+ * On va quedar una llista per vots, dit com es diu: «la <b>més votada</b> de
+ * les tres candidatures», «la <b>segona més votada</b> de les cinc». Abans
+ * deia «la segona força de 2», que és com ho escriu un full de càlcul; i amb
+ * només dues llistes, la segona és «la <b>segona</b> de les dues candidatures»,
+ * sense «més votada», que amb dues no vol dir res.
+ */
+export function posicioEnVots(forca: number, forces: number): string {
+  const quantes = `de les ${quantesEnLletres(forces)} candidatures`;
+  if (forca === 1) return `la <b>més votada</b> ${quantes}`;
+  if (forces === 2) return `la <b>segona</b> ${quantes}`;
+  return `la <b>${ordinalForca(forca)} més votada</b> ${quantes}`;
+}
+
 /** «del <b>2015</b>, del <b>2019</b> i del <b>2023</b>», per a les frases d'anys. */
 function delsAnys(anys: readonly number[]): string {
   const parts = anys.map((a) => `del <b>${a}</b>`);
@@ -1621,8 +1641,7 @@ function comACapDeLlista(r: Regidor, ctx: ContextRegidor): string {
           ? " Va guanyar les eleccions i no té l'alcaldia."
           : " No va aconseguir l'alcaldia."
         : "";
-  const forca =
-    c.forces > 1 ? `, la <b>${ordinalForca(c.forca)} força</b> de ${c.forces}` : ", l'única candidatura";
+  const forca = c.forces > 1 ? `, ${posicioEnVots(c.forca, c.forces)}` : ", l'única candidatura";
   return `<section class="bloc" id="cap-de-llista">
     <h2>Com a cap de llista</h2>
     <p class="encapcala">Va encapçalar la llista de <b>${escape(c.sigles)}</b> a les municipals del
@@ -1779,7 +1798,7 @@ function queEnPublica(ctx: ContextRegidor): string {
     <details class="nota"><summary>La lletra petita</summary>De l'import que hi publiquen els ajuntaments no se n'agafa cap euro:
     només recull la part que paga l'ajuntament i deixa fora el que la persona cobri d'una altra
     administració, de manera que una xifra baixa exculpa. El que sí que és comprovable és si hi
-    consta o no.${p.font ? ` ${escape(p.font.nom)}, consultat el ${escape(p.font.consultat)}.` : ""}</details>
+    consta o no.${p.font ? ` ${escape(p.font.nom)}, ${escape(consultatEl(p.font.consultat))}.` : ""}</details>
   </section>`;
 }
 
@@ -1799,7 +1818,7 @@ function cronologia(r: Regidor, ctx: ContextRegidor): string {
     fets.push({ ordre: String(l.any), any: String(l.any), text: `${com} la llista ${escape(l.sigles)}${l.elegit ? " i en va sortir elegit" : " i no en va sortir elegit"}.` });
   }
   if (ctx.mandat?.constitucio) fets.push({ ordre: ctx.mandat.constitucio, any: ctx.mandat.constitucio.slice(0, 4), text: `Es va constituir el ple del mandat ${escape(ctx.mandat.nom)}.` });
-  if (r.desDe) fets.push({ ordre: r.desDe, any: r.desDe.slice(0, 4), text: `Va prendre possessió del càrrec el ${escape(delDia(r.desDe))}.` });
+  if (r.desDe) fets.push({ ordre: r.desDe, any: r.desDe.slice(0, 4), text: `Va prendre possessió del càrrec ${escape(elDia(r.desDe))}.` });
   if (r.entradaTardana) fets.push({ ordre: "9999", any: "", text: "Va entrar a mig mandat; la font no en dona la data exacta." });
   if (r.canviDeGrup) fets.push({ ordre: "9998", any: "", text: `Avui consta ${r.canviDeGrup.a ? `al grup ${escape(r.canviDeGrup.a)}` : "sense grup"}; va ser elegit per ${escape(r.canviDeGrup.de ?? "una altra llista")}.` });
   for (const c of ctx.trajectoria?.carrecs ?? []) if (c.inici || c.fi) fets.push({ ordre: c.inici ?? c.fi ?? "", any: `${c.inici?.slice(0, 4) ?? ""}${c.fi ? `–${c.fi.slice(0, 4)}` : ""}`, text: `Va ser ${escape(c.nom)}.` });
@@ -2204,15 +2223,24 @@ export function carrecCurt(carrec: string): string {
 }
 
 /**
- * «Marta Farrés Falgueras, alcaldessa de Sabadell». Si amb el càrrec no hi cap
- * —un nom de quatre paraules i un poble de cinc—, el nom i el poble; i si ni
- * això, el nom sol. El poble val més que el càrrec: és el que qui cerca escriu.
+ * «Marta Farrés Falgueras, alcaldessa de Sabadell». Una sola plantilla —el nom,
+ * una coma i on seu— que es va escurçant si no hi cap: primer cau el càrrec,
+ * que pot ser llarg («1a Tinent d'Alcalde»), i es diu «al ple de Sabadell», que
+ * val per a tothom i no ha d'endevinar el gènere de ningú; després, el nom i el
+ * poble; i si ni això, el nom sol. El poble val més que el càrrec: és el que
+ * qui cerca escriu.
+ *
+ * Abans el segon esglaó era «Nom · Poble», i amb la marca que hi afegeix
+ * `capSeo` sortia «Nom · Poble · quivoto» al costat de «Nom, regidor de
+ * Poble» a la mateixa llista de resultats: dues plantilles per a la mateixa
+ * pàgina.
  */
 export function titolRegidor(r: Pick<Regidor, "nom" | "carrec">, ctx: Pick<ContextRegidor, "municipi">): string {
   const nom = nomLlegible(r.nom);
   return titolQueCap([
     `${nom}, ${carrecAmbMunicipi(carrecCurt(r.carrec), ctx.municipi)}`,
-    `${nom} · ${ctx.municipi}`,
+    `${nom}, al ple ${de(ctx.municipi)}`,
+    `${nom}, ${ctx.municipi}`,
     nom,
   ]);
 }

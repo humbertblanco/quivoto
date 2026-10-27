@@ -488,6 +488,20 @@ describe("renderEns · el que s'ha arreglat després de mirar les pàgines", () 
     expect(html).toContain('<span class="ens-etiqueta" title="Com ho escriu la font">PSC-CP</span>');
   });
 
+  it("«N/A» al camp del partit no és cap partit: no es pinta ni com a pastilla ni com a etiqueta", () => {
+    const d = diputacio();
+    const senseEtiqueta = membre({ nom: "Dante Pérez Berenguer", carrec: "Conseller", partit: "N/A", grup: "ERC" });
+    const h = renderEns({ ...d, membres: [...d.membres, senseEtiqueta] }, GENERAT);
+    expect(h).toContain("Dante Pérez Berenguer");
+    expect(h).not.toContain("N/A");
+  });
+
+  it("les dates de consulta es diuen en català, no en ISO", () => {
+    expect(html).toContain("Consultat el 27 d'octubre del 2026.");
+    expect(html).toContain("consultat el 27 d'octubre del 2026");
+    expect(html).not.toMatch(/consultat el \d{4}-\d{2}-\d{2}/i);
+  });
+
   it("contreu la preposició amb el nom del municipi", () => {
     const d = diputacio();
     const elBruc = { ...d.membres[2]!, municipi: { slug: "bruc", nom: "el Bruc" } };

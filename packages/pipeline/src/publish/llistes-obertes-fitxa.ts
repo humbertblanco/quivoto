@@ -1,6 +1,6 @@
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { MUNICIPALS, type CandidatLlistaOberta, type EleccioLlistaOberta, type LlistesObertesMetric } from "../jobs/j37-llistes-obertes";
-import { normalizePersonName } from "../lib/text";
+import { consultatEl, normalizePersonName } from "../lib/text";
 import { type Curiositat, type FilaCuriosa, type FilaCuriositat } from "./curiositats";
 import { adrecesRegidors } from "./regidor";
 
@@ -134,7 +134,7 @@ export function renderLlistesObertesBloc(dades: LlistesObertesMetric | null | un
   const avui = darrera.any === ultima ? "" : ` La darrera elecció amb dades aquí és la del ${darrera.any}; les del ${ultima} encara no hi són.`;
   const peu = `<p class="peu-nota">Font: <a href="${escape(dades.font.url)}" rel="noopener nofollow">${escape(dades.font.organisme)}</a>, ` +
     `fitxers de candidats dels municipis de menys de 250 habitants de les municipals ${eleccions[eleccions.length - 1]!.any}-${darrera.any}, ` +
-    `consultats el ${escape(dades.font.consultat)}. Els noms s'escriuen com els publica el Ministeri; ` +
+    `${escape(consultatEl(dades.font.consultat).replace(/^consultat/, "consultats"))}. Els noms s'escriuen com els publica el Ministeri; ` +
     `l'enllaç porta a la fitxa de qui és avui al ple amb el mateix nom.</p>`;
   return `<p class="entrada-bloc">${escape(EXPLICACIO)}${avui}</p>
   <p class="llo-frase">${fraseEleccio(darrera)}</p>

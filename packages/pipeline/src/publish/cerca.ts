@@ -1,5 +1,5 @@
 import { writeFile } from "node:fs/promises";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import {
   candidatures,
   councilTerms,
@@ -38,8 +38,9 @@ import type { DadesEns, TipusEns } from "./ens-tipus";
  *
  * `cerca.json` són els 947 municipis amb l'alcaldia **plegada dins la fila**
  * —116 kB, 34 kB comprimits— i és el que es baixa quan s'obre la casella.
- * `cerca-electes.json` són els 4.807 regidors i les 2.626 candidatures: 206 kB,
- * 79 kB comprimits, que es baixa tot sol darrere del primer. Partir-ho no és
+ * `cerca-electes.json` són els regidors —tots els que tenen fitxa, uns 9.100
+ * dels 947 municipis— i les 2.626 candidatures: uns 370 kB, 130 kB
+ * comprimits, que es baixa tot sol darrere del primer. Partir-ho no és
  * una manieta: la major part de les cerques s'acaben al primer fitxer, i qui
  * escriu «rubi» ha de tenir el resultat abans que arribin els electes.
  *
@@ -61,8 +62,8 @@ import type { DadesEns, TipusEns } from "./ens-tipus";
  * L'excepció és el que `slugify()` **no pot** endevinar, perquè no depèn del
  * nom sinó de qui més hi ha: dues persones del mateix ple que es diguin igual
  * van a `-2`, i unes sigles que no deixen cap lletra van a `llista-N`. Avui no
- * n'hi ha cap de cada mena entre les 4.807 i les 2.626 —els dos diccionaris
- * surten buits—, i justament per això les excepcions es **calculen** amb
+ * n'hi havia cap de cada mena entre els regidors de la seu i les 2.626
+ * candidatures —els dos diccionaris sortien buits—, i justament per això les excepcions es **calculen** amb
  * `adrecesRegidors()` i `assignaSlugs()`, les mateixes funcions que decideixen
  * el nom del directori, en comptes d'escriure-les a mà: el dia que entri un
  * regidor amb el nom d'un company, l'enllaç aniria a la fitxa de l'altre i no
@@ -322,10 +323,10 @@ const ELECCIO = "M20231";
 export type DadesElectes = {
   municipis: { id: number; slug: string }[];
   /**
-   * Qui té fitxa pròpia: **la llista de la seu electrònica**, no la del
-   * registre. Les 4.807 pàgines de regidor les escriu `escriuRegidors()` a
-   * partir d'aquesta mètrica, i si l'índex sortís de cap altre lloc enviaria a
-   * adreces que no existeixen.
+   * Qui té fitxa pròpia, municipi per municipi, **en el mateix ordre i amb la
+   * mateixa regla que `escriuRegidors()`** (vegeu `carrecsAmbFitxa()`): la
+   * llista de la seu electrònica quan n'hi ha, i el registre electoral quan
+   * no. Si l'índex sortís de cap altre lloc enviaria a adreces que no existeixen.
    */
   carrecs: { municipalityId: number; carrecs: { nom: string }[] }[];
   /** El ple segons el registre: és qui sap de quina llista va sortir cadascú. */
@@ -339,7 +340,7 @@ export type DadesElectes = {
  *
  * `reg` i `cand` no porten ni la clau ni el slug —els deriva el navegador— i
  * apunten al municipi per la seva **posició a `mun`**, que és el que fa que
- * 4.807 files ocupin 190 kB i no 400: repetir «sant-cugat-del-valles» a cada
+ * 4.807 files ocupessin 190 kB i no 400 (avui en són el doble): repetir «sant-cugat-del-valles» a cada
  * regidor són 25 bytes per fila.
  */
 export type IndexElectes = {
@@ -358,6 +359,39 @@ export type IndexElectes = {
   exc: Record<number, string>;
 };
 
+/**
+ * Les persones que tenen fitxa a `m/<municipi>/regidor/`, amb la regla de
+ * `escriuRegidors()` a `publish.ts`: **la seu electrònica mana quan hi és**, i
+ * quan no hi és —483 dels 947 municipis, Santa Coloma de Gramenet inclosa—
+ * la fitxa surt del registre electoral, en l'ordre del ple (`orderNum`).
+ *
+ * L'índex abans només llegia la seu, i per això trobava 4.807 persones de 464
+ * municipis quan n'hi havia 9.094 pàgines a tots 947: qui buscava el nom
+ * d'una regidora de Santa Coloma no la trobava, i la seva pàgina hi era.
+ *
+ * L'ordre importa: `adrecesRegidors()` dona el sufix `-2` a la segona persona
+ * que es diu igual, i si aquí s'ordenés d'una altra manera l'enllaç aniria a
+ * la fitxa de l'altra. Per això el registre arriba ja ordenat com el llegeix
+ * la fitxa municipal (`loadRadiografia()`), i aquí només s'agrupa.
+ */
+export function carrecsAmbFitxa(
+  seu: readonly { municipalityId: number; carrecs: { nom: string }[] }[],
+  registre: readonly { municipalityId: number; nom: string }[],
+): DadesElectes["carrecs"] {
+  const deLaSeu = new Map(seu.filter((m) => m.carrecs.length > 0).map((m) => [m.municipalityId, m.carrecs]));
+  const delRegistre = new Map<number, { nom: string }[]>();
+  for (const r of registre) {
+    if (deLaSeu.has(r.municipalityId)) continue;
+    const llista = delRegistre.get(r.municipalityId) ?? [];
+    llista.push({ nom: r.nom });
+    delRegistre.set(r.municipalityId, llista);
+  }
+  return [
+    ...[...deLaSeu].map(([municipalityId, carrecs]) => ({ municipalityId, carrecs })),
+    ...[...delRegistre].map(([municipalityId, carrecs]) => ({ municipalityId, carrecs })),
+  ];
+}
+
 export async function carregaElectes(db: Db): Promise<DadesElectes> {
   const municipis = await db
     .select({ id: municipalities.id, slug: municipalities.slug })
@@ -366,7 +400,7 @@ export async function carregaElectes(db: Db): Promise<DadesElectes> {
   // Els càrrecs van en blocs, com a `els947`: són uns 5 kB per municipi i
   // demanar la taula sencera de mètriques és el que fa petar PGlite.
   const metriques = await carregaMetriques(db, ["carrecs"]);
-  const carrecs = metriques.map((m) => ({
+  const deLaSeu = metriques.map((m) => ({
     municipalityId: m.municipalityId,
     carrecs: ((m.data as { carrecs?: { nom: string }[] } | null)?.carrecs ?? []).map((c) => ({
       nom: c.nom,
@@ -388,6 +422,8 @@ export async function carregaElectes(db: Db): Promise<DadesElectes> {
   const termIds = new Set(terms.map((t) => t.id));
 
   // Ni correu ni cap altra dada de contacte: només el que ha de sortir a la llista.
+  // L'ordre és el de `loadRadiografia()` (`orderNum`), que és el que llegeix
+  // `escriuRegidors()` quan la seu no diu res: vegeu `carrecsAmbFitxa()`.
   const files = await db
     .select({
       municipalityId: councillorMandates.municipalityId,
@@ -399,7 +435,18 @@ export async function carregaElectes(db: Db): Promise<DadesElectes> {
     .from(councillorMandates)
     .innerJoin(people, eq(people.id, councillorMandates.personId))
     .leftJoin(politicalGroups, eq(politicalGroups.id, councillorMandates.groupId))
-    .leftJoin(candidatures, eq(candidatures.id, politicalGroups.candidatureId));
+    .leftJoin(candidatures, eq(candidatures.id, politicalGroups.candidatureId))
+    .orderBy(asc(councillorMandates.municipalityId), asc(councillorMandates.orderNum));
+  /*
+   * Les fitxes del registre: **totes les files** del municipi, sense filtrar
+   * per mandat, perquè `loadRadiografia()` tampoc no hi filtra i
+   * `escriuRegidors()` escriu una pàgina per cadascuna. Filtrar aquí faria
+   * l'índex més net que el web, i enviaria a sufixos `-2` que no són on toca.
+   */
+  const carrecs = carrecsAmbFitxa(
+    deLaSeu,
+    files.map((f) => ({ municipalityId: f.municipalityId, nom: f.nom })),
+  );
   const mandats = files
     .filter((m) => m.termId !== null && termIds.has(m.termId))
     .map((m) => ({
@@ -453,7 +500,7 @@ export function indexDeCercaElectes(
    */
   const siglesPerPersona = new Map<string, string | null>();
   for (const m of dades.mandats) {
-    const clau = `${m.municipalityId} ${normalizePersonName(m.nom)}`;
+    const clau = `${m.municipalityId}\u0000${normalizePersonName(m.nom)}`;
     if (!siglesPerPersona.has(clau)) siglesPerPersona.set(clau, m.sigles);
     else if (siglesPerPersona.get(clau) !== m.sigles) siglesPerPersona.set(clau, null);
   }
@@ -489,7 +536,7 @@ export function indexDeCercaElectes(
     for (const [carrec, adreca] of adreces) {
       const i = reg.length;
       const seves = siglesPerPersona.get(
-        `${fitxa.municipalityId} ${normalizePersonName(carrec.nom)}`,
+        `${fitxa.municipalityId}\u0000${normalizePersonName(carrec.nom)}`,
       );
       reg.push([carrec.nom, iMun, sigles.id(seves ?? null)]);
       if (adreca !== slugify(carrec.nom)) exr[i] = adreca;

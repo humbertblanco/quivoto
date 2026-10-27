@@ -179,7 +179,7 @@ describe("renderCriminalitat", () => {
 
   it("la font surt amb la citació literal que obliga l'avís legal", () => {
     expect(html).toContain("Origen de los datos: Portal Estadístico de Criminalidad");
-    expect(html).toContain("consultats el 2026-08-30");
+    expect(html).toContain("consultats el 30 d'agost del 2026");
     expect(html).toContain("del 2020 al 2025");
   });
 

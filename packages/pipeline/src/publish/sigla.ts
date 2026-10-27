@@ -36,6 +36,26 @@ export function partitDe(sigles: string | null | undefined, brandId?: string | n
   return id && id !== "local" && BRANDS_BY_ID.has(id) ? id : null;
 }
 
+/**
+ * Les etiquetes que la font posa al camp del partit quan no n'hi ha cap:
+ * «N/A», «NA», «n.a.», un guionet. No són unes sigles, i pintades dins d'una
+ * pastilla diuen que existeix un partit que es diu «N/A» —passava a la llista
+ * d'alcaldes de Torrelles de Foix i al consell del Segrià—. «No adscrita» no hi
+ * és: aquella sí que és informació, i qui la mostra la manté.
+ */
+const SENSE_SIGLES = /^(n\s*\/\s*a|n\.?\s*a\.?|s\s*\/\s*p|-+|—+)$/i;
+
+/** Si el text del camp del partit és un buit disfressat («N/A», «-», «»). */
+export function siglesBuides(sigles: string | null | undefined): boolean {
+  const net = (sigles ?? "").replace(/\s+/g, " ").trim();
+  return net === "" || SENSE_SIGLES.test(net);
+}
+
+/** Les sigles tal com són, o `null` si la font no en diu cap («N/A», «-», buit). */
+export function siglesConegudes(sigles: string | null | undefined): string | null {
+  return siglesBuides(sigles) ? null : sigles!.trim();
+}
+
 export type OpcionsSigla = {
   /** Camí fins a `/observatori/`, amb la barra final. Sense això no hi ha enllaç. */
   base?: string | null;

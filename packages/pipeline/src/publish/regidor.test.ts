@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   adrecesRegidors, carrecALaVista, carrecAmbMunicipi, carrecCurt, descripcioRegidor, fetsQueCaben, frasesQueCaben, indexDeLaFitxa,
-  nomCurt, quiEsDeWikidata,
+  nomCurt, posicioEnVots, quiEsDeWikidata,
   renderRegidor, slugRegidor, titolQueCap, titolRegidor, trajectoriaDePersona,
   type ContextRegidor,
 } from "./regidor";
@@ -928,12 +928,20 @@ describe("cap de llista", () => {
     expect(html).toContain("<h2>Com a cap de llista</h2>");
     expect(html).toContain("9.000 vots");
     expect(html).toContain("5 regidories");
-    expect(html).toContain("segona força");
+    expect(html).toContain("la <b>segona més votada</b> de les sis candidatures");
+    expect(html).not.toContain("força</b> de");
     expect(html).toContain("No va aconseguir l'alcaldia");
     // «Cap de llista» ja diu el número u: no es diu dues vegades.
     expect(html).not.toContain("Número 1 de la llista");
     // I torna a la pàgina de la seva candidatura.
     expect(html).toContain('href="../../erc-am/"');
+  });
+
+  it("diu on va quedar la llista com ho diria una persona, no «la segona força de 2»", () => {
+    expect(posicioEnVots(1, 2)).toBe("la <b>més votada</b> de les dues candidatures");
+    expect(posicioEnVots(2, 2)).toBe("la <b>segona</b> de les dues candidatures");
+    expect(posicioEnVots(3, 4)).toBe("la <b>tercera més votada</b> de les quatre candidatures");
+    expect(posicioEnVots(2, 12)).toBe("la <b>segona més votada</b> de les 12 candidatures");
   });
 
   it("qui no encapçalava només porta el número, sense bloc", () => {
@@ -1458,13 +1466,17 @@ describe("el títol de la persona", () => {
     expect(titolDe(html).length).toBeLessThanOrEqual(TITOL_MAXIM);
   });
 
-  it("amb un nom llarg i un poble llarg, el nom i el poble; i mai més de seixanta", () => {
+  it("amb un nom llarg i un poble llarg, el nom i el poble amb la mateixa coma; i mai més de seixanta", () => {
     const titol = titolRegidor(
       { nom: "JUAN ANTONIO CORCHADO PONCE", carrec: "Alcalde" },
       { municipi: "les Franqueses del Vallès" },
     );
-    expect(titol).toBe("Juan Antonio Corchado Ponce · les Franqueses del Vallès");
+    expect(titol).toBe("Juan Antonio Corchado Ponce, les Franqueses del Vallès");
     expect(titol.length).toBeLessThanOrEqual(TITOL_MAXIM);
+    // Un càrrec llarg cau abans que el poble: «al ple de…» val per a tothom.
+    expect(
+      titolRegidor({ nom: "Montserrat Puig Vilaró", carrec: "1a Tinent d'Alcalde" }, { municipi: "Sant Cugat del Vallès" }),
+    ).toBe("Montserrat Puig Vilaró, al ple de Sant Cugat del Vallès");
     expect(titolRegidor({ nom: "Anna Coll", carrec: "Regidora" }, { municipi: "Vilanova i la Geltrú" })).toBe(
       "Anna Coll, regidora de Vilanova i la Geltrú",
     );

@@ -81,7 +81,7 @@ describe("renderLlistesObertesBloc", () => {
     expect(html).toContain("<summary>2015 · 3 regidories, 2 persones</summary>");
     expect(html).toContain('<span class="llo-suplent">suplent</span>');
     expect(html).toContain("Ministeri de l&#39;Interior".replace("&#39;", "'"));
-    expect(html).toContain("municipals 2015-2019, consultats el 2026-09-03");
+    expect(html).toContain("municipals 2015-2019, consultats el 3 de setembre del 2026");
     expect(html).not.toMatch(/class="(marca|xifres|cara|crida)"/);
   });
 

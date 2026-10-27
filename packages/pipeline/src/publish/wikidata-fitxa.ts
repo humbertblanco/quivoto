@@ -1,5 +1,5 @@
 import type { AgermanamentWikidata, FitxaCuriositatsWikidata, PersonaNascuda } from "../jobs/j33-municipi-wikidata";
-import { dataCurta } from "../lib/text";
+import { consultatEl } from "../lib/text";
 import { cara } from "./cara";
 import { primers, type Curiositat, type FilaCuriositat } from "./curiositats";
 import { creditsRetrats, type Retrat } from "./fotos-wikidata";
@@ -53,8 +53,8 @@ const n = (v: number): string => v.toLocaleString("ca-ES", { maximumFractionDigi
  * que el bloc diu.
  */
 function peuWikidata(dades: FitxaCuriositatsWikidata, que: string): string {
-  return `<p class="nota peu-wikidata">${que} <b>segons Wikidata</b> (dades ${escape(dades.llicenciaDades)}), consultat el ${escape(
-    dataCurta(dades.consultat),
+  return `<p class="nota peu-wikidata">${que} <b>segons Wikidata</b> (dades ${escape(dades.llicenciaDades)}), ${escape(
+    consultatEl(dades.consultat),
   )}. Es pot comprovar i completar a <a href="${escape(dades.url)}" rel="noopener nofollow">l'element ${escape(dades.qidMunicipi)}</a>.</p>`;
 }
 

@@ -33,6 +33,16 @@ import { withRun } from "../lib/run";
  *     mida en el mateix període.
  */
 
+/**
+ * La frase que separa un buit d'un zero, tal com la llegeix el veí a «La
+ * lletra petita» del bloc de les escombraries. Abans hi deia «liquidacio:
+ * false», que és el nom del camp de la sèrie i no una frase: una pàgina que
+ * ensenya el seu JSON no està escrita per a ningú. S'exporta perquè la fitxa
+ * la pugui fer servir directament i no depengui de quan es va executar la J15.
+ */
+export const ZERO_I_BUIT =
+  "Un any sense dada vol dir que aquell exercici encara no s'ha liquidat i no en sabem res. Un import de 0 € vol dir que l'ajuntament ha presentat els comptes i no hi ha destinat cap euro.";
+
 /** Liquidació del pressupost per programes (CKAN de l'AOC). 4.644.984 files. */
 const LIQUIDACIO_PROGRAMES = "5b96829f-d724-4059-a38a-abf514830558";
 
@@ -851,8 +861,7 @@ export async function j15DespesaServeis(db: Db): Promise<void> {
           "Obligacions reconegudes netes, en euros corrents i sense descomptar la inflació. Els euros per habitant de cada exercici es divideixen pel padró d'aquell any.",
         // Aquesta nota va a la fitxa perquè qui la llegeixi no confongui les
         // dues coses; a la sèrie ja hi són separades pel camp `liquidacio`.
-        zeroIBuit:
-          "«liquidacio: false» vol dir que aquell exercici encara no s'ha liquidat i no en sabem res. Un import de 0 € vol dir que l'ajuntament ha presentat els comptes i no hi ha destinat cap euro.",
+        zeroIBuit: ZERO_I_BUIT,
       });
       run.rowsOut += 1;
     }

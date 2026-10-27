@@ -12,6 +12,15 @@ import {
   type TramesaAny,
   type TramesesDesades,
 } from "../jobs/j41-diners-generalitat";
+import { consultatEl, dataEscrita, delDia, elDia, elDiaAlPrincipi, isoDeData } from "../lib/text";
+
+/**
+ * El formatador de dates és el de la casa, a `lib/text.ts`. Vivia aquí i
+ * escrivia «09/10/2024», com les pantalles de l'inventari; ara la fitxa diu
+ * «9 d'octubre del 2024», com la resta de la web. Es reexporta perquè els
+ * altres generadors que l'importaven d'aquí continuïn funcionant.
+ */
+export { dataEscrita };
 
 /**
  * «Què rep de la Generalitat, i si li envia els comptes»: el bloc de la fitxa
@@ -29,7 +38,7 @@ import {
  *     Les anualitats futures porten l'etiqueta «programada», i el text diu que
  *     la font no explica mai si una obra s'ha acabat.
  *   · **Envia els comptes?** L'estat oficial de cada tramesa, any per any:
- *     «Tramès el dd/mm/aaaa», «No tramès» o «no consta». Sense colors: un
+ *     «Tramès el 9 d'octubre del 2024», «No tramès» o «no consta». Sense colors: un
  *     «No tramès» de l'any en curs pot ser que encara no toqui, i el text ho
  *     diu. L'adjectiu acumulat de l'inventari («Compleix») no es pinta.
  *   · **El que li deu la Generalitat.** La darrera instantània del que té
@@ -47,13 +56,6 @@ const escape = (text: string): string =>
 const enter = (n: number): string => n.toLocaleString("ca-ES", { maximumFractionDigits: 0 });
 const euros = (n: number): string => `${enter(n)}&nbsp;€`;
 const eurosOBuit = (n: number | null): string => (n === null ? `<span class="coop-buit">no consta</span>` : euros(n));
-
-/** «2024-10-09» → «09/10/2024», com ho escriu l'inventari a les seves pantalles. */
-export function dataEscrita(iso: string | null): string | null {
-  if (!iso) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : null;
-}
 
 /** Quants anys es veuen d'entrada a les taules llargues; la resta, plegats. */
 const ANYS_VISIBLES = 6;
@@ -89,7 +91,7 @@ export type ContextDiners = {
 /** El peu d'un apartat: la font, la llicència i la data de consulta. */
 function peuFont(font: FontDiners, extra = ""): string {
   return `<p class="peu-nota">Font: <a href="${escape(font.url)}" rel="noopener nofollow">${escape(font.organisme)}</a>,
-  «${escape(font.titol)}» (${escape(font.llicencia)}), consultat el ${escape(dataEscrita(font.consultat) ?? font.consultat)}.${extra}</p>`;
+  «${escape(font.titol)}» (${escape(font.llicencia)}), ${escape(consultatEl(font.consultat))}.${extra}</p>`;
 }
 
 /** Una taula de la casa, dins del contenidor que la fa lliscar a mòbil. */
@@ -325,18 +327,18 @@ export function combinaTrameses(economic: EstatDocument | null, administratiu: E
   if (!economic.trames && !administratiu.trames) return { trames: false, data: null, observacio };
   const enviat = economic.trames ? economic : administratiu;
   const enPart = `${economic.trames ? "les dades econòmiques" : "la documentació administrativa"}` +
-    `${enviat.data ? ` el ${dataEscrita(enviat.data)}` : ""}; ${economic.trames ? "la documentació administrativa" : "les dades econòmiques"}, no`;
+    `${enviat.data && isoDeData(enviat.data) ? ` ${elDia(enviat.data)}` : ""}; ${economic.trames ? "la documentació administrativa" : "les dades econòmiques"}, no`;
   return { trames: true, data: enviat.data, observacio, enPart };
 }
 
-/** Una cel·la de l'inventari: «Tramès el 09/10/2024», «No tramès» o «no consta». Sense colors. */
+/** Una cel·la de l'inventari: «Tramès el 9 d'octubre del 2024», «No tramès» o «no consta». Sense colors. */
 export function celDocument(estat: (EstatDocument & { enPart?: string }) | null): string {
   if (!estat) return `<td class="coop-text coop-buit">no consta</td>`;
   const obs = estat.observacio ? `<span class="coop-sota">${escape(estat.observacio)}</span>` : "";
   if (estat.enPart) return `<td class="coop-text">Tramès en part<span class="coop-sota">${escape(estat.enPart)}</span>${obs}</td>`;
   if (!estat.trames) return `<td class="coop-text">No tramès${obs}</td>`;
-  const data = dataEscrita(estat.data);
-  return `<td class="coop-text">${data ? `Tramès el ${data}` : "Tramès"}${obs}</td>`;
+  const data = estat.data && isoDeData(estat.data) ? elDia(estat.data) : null;
+  return `<td class="coop-text">${data ? `Tramès ${data}` : "Tramès"}${obs}</td>`;
 }
 
 function filaTramesa(t: TramesaAny): string {
@@ -369,12 +371,12 @@ export function seccioTrameses(trameses: TramesesDesades, font: FontDiners, s: S
   }
   const anys = [...trameses.anys].sort((a, b) => b.any - a.any);
   const files = anys.map((t) => ({ any: t.any, html: filaTramesa(t) }));
-  const actualitzat = dataEscrita(trameses.actualitzat);
+  const actualitzat = trameses.actualitzat && isoDeData(trameses.actualitzat) ? elDia(trameses.actualitzat) : null;
   return `<div class="coop-seccio">${titol}
   <p class="coop-frase">${introTrameses(s)}</p>
   ${ambPlegades("coop-trameses", ["Any", "Pressupost", "Liquidació", "Deute", "Compte general"], files)}
   <p class="nota">${escape(NOTA_TRAMESES)}</p>
-  ${peuFont(font, actualitzat ? ` Inventari actualitzat el ${actualitzat}.` : "")}</div>`;
+  ${peuFont(font, actualitzat ? ` Inventari actualitzat ${actualitzat}.` : "")}</div>`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -402,10 +404,13 @@ export function seccioPendents(pendents: PendentsDesats | null, font: FontDiners
   <p>No s'ha pogut llegir la relació de pagaments pendents de la Generalitat ${ambPreposicio("a", s)}: no consta.</p>
   ${peuFont(font)}</div>`;
   }
-  const data = dataEscrita(pendents.data) ?? pendents.data;
+  // «del 9 d'octubre…», «el 9 d'octubre…»; si la font no porta una data llegible, es diu tal com ve.
+  const llegible = isoDeData(pendents.data) !== null;
+  const delData = llegible ? delDia(pendents.data) : `del ${pendents.data}`;
+  const ElData = llegible ? elDiaAlPrincipi(pendents.data) : `El ${pendents.data}`;
   if (pendents.conceptes.length === 0) {
     return `<div class="coop-seccio">${titol}
-  <p>A la relació del ${data}, ${qui(s)} no hi surt: aquell dia la Generalitat no hi tenia cap pagament reconegut pendent.</p>
+  <p>A la relació ${delData}, ${qui(s)} no hi surt: aquell dia la Generalitat no hi tenia cap pagament reconegut pendent.</p>
   ${peuFont(font)}</div>`;
   }
   // Una sola font i un sol pagador: aquí sí que es pot fer el total.
@@ -416,10 +421,10 @@ export function seccioPendents(pendents: PendentsDesats | null, font: FontDiners
       `<td class="ara">${euros(c.import)}</td>${algunRetingut ? `<td class="coop-text">${c.retingut ? "Retingut" : ""}</td>` : ""}</tr>`,
   );
   return `<div class="coop-seccio">${titol}
-  <p class="coop-frase">El ${data} la Generalitat tenia reconeguts <b>${euros(total)}</b> ${ambPreposicio("a", s)} que encara no li havia pagat.</p>
+  <p class="coop-frase">${ElData} la Generalitat tenia reconeguts <b>${euros(total)}</b> ${ambPreposicio("a", s)} que encara no li havia pagat.</p>
   ${taula("coop-pendents", ["Concepte", "Exercici", "Pendent", ...(algunRetingut ? ["Estat"] : [])], files)}
   <p class="nota">${escape(NOTA_PENDENTS)}</p>
-  ${peuFont(font, ` Relació del ${data}: és una fotografia d'aquell dia, no una sèrie.`)}</div>`;
+  ${peuFont(font, ` Relació ${delData}: és una fotografia d'aquell dia, no una sèrie.`)}</div>`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

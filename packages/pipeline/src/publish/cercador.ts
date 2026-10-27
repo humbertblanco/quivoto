@@ -17,7 +17,7 @@ import { adrecaEns } from "./ens-tipus";
  * ## Set menes de resultat, no una
  *
  * Trobava municipis i prou. L'Observatori publica 947 municipis, 43 comarques,
- * 2.626 candidatures i 4.807 fitxes de persona, i buscar-hi el nom del propi
+ * 2.626 candidatures i més de 9.000 fitxes de persona, i buscar-hi el nom del propi
  * regidor no tornava res: la pàgina existia i no hi havia manera d'arribar-hi
  * si no era pel poble. Ara hi són totes sis, cadascuna amb la seva fila, i la
  * setena són les 4.400 persones que han tingut l'alcaldia des del 1979 i avui
@@ -59,9 +59,9 @@ import { adrecaEns } from "./ens-tipus";
  *
  * **No es baixa l'índex fins que no cal**, i quan cal es baixa en tres trossos.
  * Primer `cerca.json` (34 kB comprimits): els 947 municipis amb la seva
- * alcaldia, que és el que respon «i el meu poble?». Els electes —79 kB— vénen
- * darrere sols, quan el primer ja ha arribat, perquè qui escriu «rubi» no ha
- * d'esperar 4.807 regidors i 2.626 candidatures per veure el seu poble. I les
+ * alcaldia, que és el que respon «i el meu poble?». Els electes —uns 130 kB—
+ * vénen darrere sols, quan el primer ja ha arribat, perquè qui escriu «rubi»
+ * no ha d'esperar nou mil regidors i 2.626 candidatures per veure el seu poble. I les
  * alcaldies d'abans —`cerca-alcaldies.json`, tantes files com regidors— vénen
  * darrere dels electes, perquè són la pregunta que menys gent fa.
  *
@@ -409,23 +409,30 @@ export const CERCADOR_JS = `(function(){
   // amb guió, el primer clic o la primera lletra obren el diàleg amb aquest
   // text. No s'obre en rebre el focus perquè, en tancar el diàleg, el focus hi
   // torna i el tornaria a obrir.
-  var camps = document.querySelectorAll("[data-cerca-camp]");
-  for (var c = 0; c < camps.length; c++) {
-    (function(extern){
-      extern.addEventListener("click", function(){ obre(extern.value); });
-      extern.addEventListener("input", function(){ obre(extern.value); });
-      if (extern.form) extern.form.addEventListener("submit", function(e){ e.preventDefault(); obre(extern.value); });
-    })(camps[c]);
+  // El guió va just després de la capçalera, abans que el contingut de la
+  // pàgina existeixi: les caselles i els botons propis es lliguen quan el
+  // document ja és sencer, o tots els de dins del <main> es quedarien amagats.
+  function lligaPropis(){
+    var camps = document.querySelectorAll("[data-cerca-camp]");
+    for (var c = 0; c < camps.length; c++) {
+      (function(extern){
+        extern.addEventListener("click", function(){ obre(extern.value); });
+        extern.addEventListener("input", function(){ obre(extern.value); });
+        if (extern.form) extern.form.addEventListener("submit", function(e){ e.preventDefault(); obre(extern.value); });
+      })(camps[c]);
+    }
+    // Els botons que una pàgina posa dins del seu contingut —la portada en té
+    // un a la targeta de la fitxa: «Escriu el nom del teu poble»— neixen amb
+    // «hidden» i s'ensenyen aquí, per la mateixa regla que el de dalt: sense
+    // guió no hi ha cap control que no faci res.
+    var propis = document.querySelectorAll("[data-obre-cerca]");
+    for (var p = 0; p < propis.length; p++) {
+      propis[p].hidden = false;
+      propis[p].addEventListener("click", obre);
+    }
   }
-  // Els botons que una pàgina posa dins del seu contingut —la portada en té
-  // un a la targeta de la fitxa: «Escriu el nom del teu poble»— neixen amb
-  // «hidden» i s'ensenyen aquí, per la mateixa regla que el de dalt: sense
-  // guió no hi ha cap control que no faci res.
-  var propis = document.querySelectorAll("[data-obre-cerca]");
-  for (var p = 0; p < propis.length; p++) {
-    propis[p].hidden = false;
-    propis[p].addEventListener("click", obre);
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", lligaPropis);
+  else lligaPropis();
   camp.addEventListener("input", pinta);
   dialeg.addEventListener("keydown", function(e){
     if (e.key === "ArrowDown") { e.preventDefault(); mou(1); }

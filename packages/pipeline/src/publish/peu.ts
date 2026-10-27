@@ -191,11 +191,13 @@ export type XifresPeu = {
  * (`publish.ts` compta els fitxers de descàrrega; els altres tres surten de la
  * base). Va aquí perquè el peu funcioni sol a les proves i a les pàgines que
  * encara no li passen res, però la crida de debò ha de venir de `publish.ts`:
- * una xifra escrita a mà envelleix i aquesta pàgina en presumeix.
+ * una xifra escrita a mà envelleix i aquesta pàgina en presumeix. Els electes
+ * són 9.094 des que el cercador porta totes les regidories, no només les
+ * 4.807 que hi havia al principi.
  */
 export const XIFRES_PEU: XifresPeu = {
   municipis: 947,
-  electes: 4807,
+  electes: 9094,
   candidatures: 2626,
   fitxersDades: 1897,
 };

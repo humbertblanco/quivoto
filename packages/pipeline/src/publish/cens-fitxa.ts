@@ -4,6 +4,7 @@ import {
   type CensElectoralMetric,
   type EleccioCens,
 } from "../jobs/j36-cens-electoral";
+import { consultatEl } from "../lib/text";
 import { primers, type Curiositat, type FilaCuriosa, type FilaCuriositat } from "./curiositats";
 import { ambSigne, atributsEtiqueta, marquesEix, textEtiqueta, type DadaEtiqueta } from "./grafics";
 
@@ -82,7 +83,7 @@ const TERRA = ALT - MARGE.baix;
 
 /** La nota que porta cada punt: la font, tal com mana el portal, i quan s'ha consultat. */
 const notaFont = (dades: CensElectoralMetric): string =>
-  `Generalitat de Catalunya, processos electorals, consultat el ${dades.font.consultat}`;
+  `Generalitat de Catalunya, processos electorals, ${consultatEl(dades.font.consultat)}`;
 
 /**
  * L'etiqueta d'un punt, la mateixa per als dos dibuixos: la xifra principal
@@ -294,7 +295,7 @@ function peuFont(dades: CensElectoralMetric): string {
     : "";
   return `<p class="peu-nota">Font: <a href="${escape(dades.font.url)}" rel="noopener nofollow">${escape(dades.font.nom)}</a>,
   ${escape(dades.font.organisme)}, ${ELECCIONS_MUNICIPALS[0]!.any}-${ELECCIONS_MUNICIPALS[ELECCIONS_MUNICIPALS.length - 1]!.any},
-  consultat el ${escape(dades.font.consultat)}. La participació és votants sobre cens, calculada aquí.${grup}</p>`;
+  ${escape(consultatEl(dades.font.consultat))}. La participació és votants sobre cens, calculada aquí.${grup}</p>`;
 }
 
 /**
