@@ -60,11 +60,17 @@ export async function j2Results(db: Db): Promise<void> {
       });
       run.rowsIn = rows.length;
 
+      // El codi INE sempre amb cinc xifres. El dataset del 2019 porta dues
+      // files d'Olivella amb «8148» en comptes de «08148» —Cs, que hi va treure
+      // una regidoria, i la CUP—, i sense refer-lo el seu ple del 2019 quedava
+      // amb deu regidories en comptes d'onze i aquelles dues llistes sense
+      // candidatura on penjar les persones (J4). Comprovat el 27-10-2026.
       const byMunicipality = new Map<string, ResultRow[]>();
       for (const row of rows) {
-        const list = byMunicipality.get(row.territori_codi);
+        const ine5 = String(row.territori_codi ?? "").padStart(5, "0");
+        const list = byMunicipality.get(ine5);
         if (list) list.push(row);
-        else byMunicipality.set(row.territori_codi, [row]);
+        else byMunicipality.set(ine5, [row]);
       }
       run.say(`${rows.length} candidatures a ${byMunicipality.size} municipis`);
 
