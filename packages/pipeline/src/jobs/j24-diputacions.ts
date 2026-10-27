@@ -382,7 +382,7 @@ export type LecturaDiputacio = {
 const avui = (): string => new Date().toISOString().slice(0, 10);
 
 /** Girona i Tarragona: una taula de HTML amb l'import al costat del nom. */
-async function llegeixTaula(ens: string, run: Run): Promise<LecturaDiputacio | null> {
+export async function llegeixTaula(ens: string, run: Run): Promise<LecturaDiputacio | null> {
   const url = URL_ALTS_CARRECS[ens]!;
   const font: FontDiputacio = { nom: ens, url, format: "HTML", llicencia: LLICENCIA_SEUE, consultat: avui() };
   let html = "";
@@ -473,7 +473,7 @@ async function llegeixLleida(run: Run): Promise<LecturaDiputacio | null> {
  * mateixa i duplicar-lo voldria dir tenir dos llocs on arreglar-la el dia que
  * canviï. El que aquesta feina hi afegeix és la resta de Catalunya.
  */
-async function llegeixBarcelona(run: Run): Promise<LecturaDiputacio | null> {
+export async function llegeixBarcelona(run: Run): Promise<LecturaDiputacio | null> {
   const ens = "Diputació de Barcelona";
   const font: FontDiputacio = {
     nom: ens,

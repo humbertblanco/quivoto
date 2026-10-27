@@ -125,6 +125,16 @@ describe("seientsHemicicle", () => {
     expect(svg).toContain("<title>PSC: 7 de 21 regidories · vots: 12.004 · 15,7 %</title>");
   });
 
+  it("a les diputacions i als consells, l'etiqueta diu seients i no regidories", () => {
+    const unitat = { singular: "seient", plural: "seients" };
+    expect(etiquetaSeient({ nom: "ERC", regidories: 9, color: "#000" }, 27, null, unitat).valor).toBe("9 de 27 seients");
+    expect(etiquetaSeient({ nom: "ERC", regidories: 9, color: "#000" }, 27, "Pau Presas", unitat).extres).toEqual([
+      { etq: "seients", valor: "9 de 27" },
+    ]);
+    // Per defecte, com sempre: regidories.
+    expect(etiquetaSeient({ nom: "ERC", regidories: 9, color: "#000" }, 27).valor).toBe("9 de 27 regidories");
+  });
+
   it("sense vots no s'inventa cap línia de vots, i amb vots sense percentatge els diu sols", () => {
     expect(etiquetaSeient({ nom: "AM", regidories: 3, color: "#000", vots: null }, 5).extres).toBeNull();
     expect(etiquetaSeient({ nom: "AM", regidories: 3, color: "#000", vots: 0 }, 5).extres).toBeNull();

@@ -187,7 +187,20 @@ const percent = (n: number): string => `${n.toFixed(1).replace(".", ",")} %`;
  * com a línia de més («vots: 35.799 · 46,8 %»), perquè són el que l'hemicicle
  * no ensenya. L'ordre dels trossos és el de `textEtiqueta()`.
  */
-export function etiquetaSeient(grup: GrupHemicicle, total: number, persona?: string | null): DadaEtiqueta {
+/**
+ * La unitat amb què es compten els escons a l'etiqueta. Un ple municipal té
+ * regidories; una diputació o un consell comarcal, seients, i dir-hi
+ * «regidories» confon justament el que aquelles fitxes expliquen.
+ */
+export type UnitatSeients = { singular: string; plural: string };
+const REGIDORIES: UnitatSeients = { singular: "regidoria", plural: "regidories" };
+
+export function etiquetaSeient(
+  grup: GrupHemicicle,
+  total: number,
+  persona?: string | null,
+  unitat: UnitatSeients = REGIDORIES,
+): DadaEtiqueta {
   const recompte = `${grup.regidories} de ${total}`;
   const govern = grup.govern ? " · al govern" : "";
   const extres: { etq: string; valor: string }[] = [];
@@ -199,10 +212,10 @@ export function etiquetaSeient(grup: GrupHemicicle, total: number, persona?: str
   }
   // Amb persona, el recompte deixa de ser la dada i passa a línia de més; sense
   // persona ja és la dada, i repetir-lo sota seria dir-ho dues vegades.
-  if (persona) extres.push({ etq: "regidories", valor: recompte });
+  if (persona) extres.push({ etq: unitat.plural, valor: recompte });
   return {
     nom: persona || grup.nom,
-    valor: persona ? `${grup.nom}${govern}` : `${recompte} ${total === 1 ? "regidoria" : "regidories"}${govern}`,
+    valor: persona ? `${grup.nom}${govern}` : `${recompte} ${total === 1 ? unitat.singular : unitat.plural}${govern}`,
     extres: extres.length > 0 ? extres : null,
   };
 }
@@ -223,13 +236,18 @@ export function etiquetaSeient(grup: GrupHemicicle, total: number, persona?: str
  * volen dir que `total` i els grups no quadren, i qui crida ho ha de saber
  * abans d'arribar aquí.
  */
-export function seientsHemicicle(seats: readonly Seat[], grups: readonly GrupHemicicle[], total: number): string {
+export function seientsHemicicle(
+  seats: readonly Seat[],
+  grups: readonly GrupHemicicle[],
+  total: number,
+  unitat: UnitatSeients = REGIDORIES,
+): string {
   let cursor = 0;
   const cercles: string[] = [];
   for (const grup of grups) {
     for (let i = 0; i < grup.regidories && cursor < seats.length; i += 1, cursor += 1) {
       const seat = seats[cursor]!;
-      const dada = etiquetaSeient(grup, total, grup.persones?.[i]);
+      const dada = etiquetaSeient(grup, total, grup.persones?.[i], unitat);
       cercles.push(
         `<circle class="seient" cx="${seat.x}" cy="${seat.y}" r="${seat.r}" fill="${escape(grup.color)}" stroke="var(--ink)" stroke-width="1.5"${atributsEtiqueta(dada)}><title>${escape(textEtiqueta(dada))}</title></circle>`,
       );
