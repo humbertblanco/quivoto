@@ -35,7 +35,7 @@ import { cercador } from "./cercador";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { llistaOrdenada } from "./seo-ld";
-import { cohortHomogenia, extremsEmpatats } from "./contracte-metriques";
+import { ANY_MUNICIPALS, cohortHomogenia, extremsEmpatats, preuAiguaComparable } from "./contracte-metriques";
 import { curiositatsTerritori } from "./territori-fitxa";
 import { curiositatsWikidata } from "./wikidata-fitxa";
 import { curiositatsVehicles, esFlota } from "./vehicles-fitxa";
@@ -56,6 +56,7 @@ import {
   type EscalaRegle,
 } from "./grafics";
 import { codiPerAlNavegador } from "./comparador";
+import type { Els947Row } from "./els947";
 import { peu } from "./peu";
 import { RADIOGRAFIA_CSS } from "./estil";
 
@@ -105,7 +106,17 @@ export type RankingRow = {
   sa?: number | null;
   /** la darrera elecció en llista oberta o consell obert (J37), només als municipis que n'han tingut */
   lo?: ResumLlistesObertes | null;
-};
+} & Partial<Pick<Els947Row, CampsNous>>;
+
+/**
+ * Les xifres que fins ara només sortien a la fitxa i ara també fan rànquing
+ * (o curiositat). Els noms i el sentit de cada camp són els d'`Els947Row`, on
+ * hi ha la descripció de cadascun; aquí només es diu quins es fan servir.
+ */
+type CampsNous =
+  | "ne" | "vol" | "vola" | "vp" | "vpr" | "cfa" | "cfd" | "cpa" | "cra" | "vv"
+  | "uo" | "uon" | "uop" | "hut" | "huta" | "ll" | "lla" | "llv" | "llp"
+  | "pla" | "plas" | "plaa" | "hpo" | "hpon" | "hpop" | "mg" | "mgs" | "mgg" | "mgp" | "pag" | "o" | "oa";
 
 /**
  * Una mètrica comparable. `decimals` i `sufix` són els que fan servir alhora el
@@ -131,9 +142,191 @@ export type Metrica = {
    * amuntegades a l'esquerra.
    */
   escala?: EscalaRegle;
+  /**
+   * Quan la mètrica no arriba al 90 % per una raó que es pot dir.
+   *
+   * El llindar general és el 90 % dels municipis amb el mateix període. Hi ha
+   * xifres que no hi arribaran mai i no per cap forat: el lloguer només es
+   * publica on hi ha prou contractes, el vot perdut no quadra mai als
+   * municipis de llistes obertes, i un percentatge de licitacions sobre dues
+   * licitacions no és un percentatge. Aquestes mètriques baixen el llindar
+   * —mai per sota del que el `motiu` justifica— i la secció ho diu amb el
+   * recompte de debò: «hi surten 547 dels 947».
+   */
+  cobertura?: { minima: number; motiu: string };
+  /**
+   * El regle de dispersió el dibuixa el navegador. Les marques del regle són
+   * la meitat del pes de la pàgina —uns 150 kB per indicador—, i és un dibuix
+   * per al ratolí (`aria-hidden`): sense JavaScript queden les tres xifres de
+   * sota, el més baix, la mediana i el més alt, que són el que es llegeix.
+   */
+  diferit?: boolean;
+  /**
+   * Escriu, sota el mètode, la mediana de cada grup de mida. Per a les xifres
+   * que depenen tant de la mida que comparar-les amb tot Catalunya enganya:
+   * una sola oferta és habitual a un poble de 400 habitants i rara a una
+   * ciutat, i el lector ho ha de veure abans de mirar la llista.
+   */
+  perGrups?: boolean;
+  /**
+   * Una segona manera de triar dins del rànquing, a més de la mida: una
+   * categoria descriptiva de cada municipi (com es gestiona l'aigua, quina
+   * figura té el pla urbanístic). Va amb la mediana de cada categoria i no
+   * en fa cap judici: dir quina és més cara no diu per què.
+   */
+  filtre?: {
+    etiqueta: string;
+    categoria: (r: RankingRow) => string | null;
+    /** Les categories en l'ordre del desplegable, amb el nom que s'escriu. */
+    noms: Readonly<Record<string, string>>;
+  };
 };
 
 const finit = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/** El període d'una xifra de les municipals del 2023: «2023» quan la fila en té, res quan no. */
+const del2023 = (v: number | null | undefined): number | null => (finit(v) ? ANY_MUNICIPALS : null);
+
+/**
+ * Com es vota, qui pot votar i com es contracta: xifres que la fitxa ja
+ * ensenyava i que no tenien rànquing. Totes van amb el regle diferit (vegeu
+ * `diferit`): amb el regle escrit pel servidor, cada indicador hi sumaria 150 kB.
+ */
+const METRIQUES_POLITIQUES: readonly Metrica[] = [
+  {
+    id: "veins-voten", titol: "Veïns que poden votar a les municipals",
+    valor: (r) => r.vv, periode: (r) => del2023(r.vv),
+    decimals: 1, sufix: " %", diferit: true, perGrups: true,
+    font: "Generalitat de Catalunya · processos electorals, i Idescat · padró municipal",
+    metode: "Electors del cens de les municipals del 2023 sobre els habitants del padró a 1 de gener del 2023.",
+    cautela: "No és cap valoració. Hi voten les persones de nacionalitat espanyola i les de la Unió Europea —i d'uns quants països amb conveni— que s'han inscrit al cens; no hi voten els menors d'edat ni la resta de veïns estrangers. " +
+      "Per això surt baixa on hi viu molta gent estrangera o molt jove. Pot passar del 100 %: el padró i el cens es tanquen en dates diferents, i en un poble molt petit unes quantes altes basten.",
+  },
+  {
+    id: "fragmentacio", titol: "Fragmentació del ple",
+    valor: (r) => r.ne, periode: (r) => del2023(r.ne),
+    decimals: 2, sufix: "", diferit: true, perGrups: true,
+    font: "Generalitat de Catalunya · resultats de les municipals",
+    metode: "Nombre efectiu de partits (índex de Laakso-Taagepera) sobre les regidories del ple que va sortir de les municipals del 2023: " +
+      "1 vol dir que totes les regidories són d'una sola llista, i 3, un repartiment que equival a tres llistes iguals.",
+    cautela: "Mesura com de repartit és el ple, no com es governa. Un ple de cinc regidories no pot repartir-se tant com un de vint-i-cinc: compareu-lo amb els municipis de la mateixa mida.",
+  },
+  {
+    id: "volatilitat", titol: "Volatilitat electoral",
+    valor: (r) => r.vol, periode: (r) => (finit(r.vola) ? `${r.vola - 4}-${r.vola}` : null),
+    decimals: 1, sufix: "", diferit: true,
+    cobertura: {
+      minima: 0.8,
+      motiu: "Hi falten els municipis on el càlcul del 2019 al 2023 no és fiable perquè massa regidories són de llistes locals que canvien de nom d'una elecció a l'altra.",
+    },
+    font: "Consorci AOC · resultats municipals històrics",
+    metode: "Índex de Pedersen entre les municipals del 2019 i les del 2023, sobre les quotes de regidories: 0 vol dir un ple calcat a l'anterior i 100, que no en queda res.",
+    cautela: "Un ple que es mou molt no és ni millor ni pitjor que un que no es mou: pot ser una llista nova, una escissió o un canvi de nom. Als plens petits una sola regidoria mou molt l'índex.",
+  },
+  {
+    id: "vot-perdut", titol: "Vot sense representació",
+    valor: (r) => r.vp, periode: (r) => del2023(r.vp),
+    decimals: 1, sufix: " %", diferit: true,
+    cobertura: {
+      minima: 0.75,
+      motiu: "Hi falten sobretot els municipis de llistes obertes, fins a 250 habitants: allà els vots per candidatura de la font no quadren mai amb els emesos, i la xifra no es pot calcular sencera.",
+    },
+    font: "Generalitat de Catalunya · resultats de les municipals",
+    metode: "Part dels vots emesos el 2023 que no va arribar a cap regidoria: vots a llistes que no van treure cap escó, més nuls i blancs.",
+    cautela: "Depèn sobretot de quantes llistes es presenten i de la barrera del 5 %. No parla de cap govern: diu quanta gent va votar una opció que no és al ple.",
+  },
+  {
+    id: "ultima-regidoria", titol: "Vots que van decidir l'última regidoria",
+    valor: (r) => r.mg, periode: (r) => del2023(r.mg),
+    decimals: 0, sufix: " vots", escala: "log", diferit: true, perGrups: true,
+    cobertura: {
+      minima: 0.6,
+      motiu: "Hi falten els municipis on el recompte no reprodueix els escons oficials o va caldre un sorteig, i els de llista oberta sense el vot nominal de cada persona.",
+    },
+    font: "Generalitat de Catalunya · resultats de les municipals, i Ministeri de l'Interior per a les llistes obertes",
+    metode: "Quants vots de més li calien a la llista —o, en llista oberta, a la persona— que va quedar més a prop de prendre l'última regidoria del 2023, amb tota la resta igual. " +
+      "A baix de tot hi ha els plens que es van decidir per menys vots.",
+    cautela: "És aritmètica sobre els resultats oficials, no una predicció del 2027. Com més gran és el municipi, més vots calen per a una regidoria: compareu-lo amb els de la mateixa mida.",
+  },
+  {
+    id: "forca-alcaldia", titol: "Anys de la mateixa força a l'alcaldia",
+    valor: (r) => r.cfa, periode: (r) => (finit(r.cfa) && finit(r.cra) ? `fins al ${r.cra}` : null),
+    decimals: 0, sufix: " anys", diferit: true,
+    font: "Generalitat de Catalunya · historial d'alcaldies",
+    metode: "Anys seguits que la força que avui té l'alcaldia l'ha tinguda, comptats fins a l'any de referència. La força es reconeix per la família de les sigles, encara que canviï la persona.",
+    cautela: "Una ratxa llarga pot ser una majoria estable o la falta d'alternativa, i la xifra no ho distingeix. Del 2011 al 2023 la font no dona la data de la presa de possessió i l'inici de la ratxa és aproximat.",
+  },
+  {
+    id: "una-oferta", titol: "Licitacions amb una sola oferta",
+    valor: (r) => r.uo, periode: (r) => (finit(r.uo) ? r.uop : null),
+    decimals: 0, sufix: " %", diferit: true, perGrups: true,
+    cobertura: {
+      minima: 0.3,
+      motiu: "Només hi surten els municipis amb cinc licitacions o més que diguin quantes ofertes van rebre: sobre dues licitacions, un percentatge no vol dir res.",
+    },
+    font: "Plataforma de Serveis de Contractació Pública, via dades obertes de l'AOC",
+    metode: "De les licitacions adjudicades per l'ajuntament en el període indicat a dalt que diuen quantes ofertes van rebre, quina part en va rebre només una. Es compta tot el període junt, no any a any.",
+    cautela: "Una sola oferta no és cap irregularitat: als pobles petits sovint no hi ha més empreses que s'hi presentin, i depèn de què es contracta. Pesa tant la mida que cal mirar-lo amb els municipis de la mateixa mida.",
+  },
+];
+
+/** Pisos turístics, lloguer, habitatge protegit i planejament: la fitxa ho tenia, el rànquing no. */
+const METRIQUES_HABITATGE: readonly Metrica[] = [
+  {
+    id: "pisos-turistics", titol: "Pisos turístics per 100 habitants",
+    valor: (r) => r.hut, periode: (r) => (finit(r.hut) ? r.huta : null),
+    decimals: 2, sufix: "", diferit: true,
+    font: "Registre de Turisme de Catalunya · habitatges d'ús turístic",
+    metode: "HUT en alta al registre el dia de la consulta, per cada 100 habitants del padró.",
+    cautela: "Només els inscrits; als pobles petits pocs pisos mouen molt la taxa. El planejament el fa l'ajuntament; la llicència la regula el Decret llei 3/2023.",
+  },
+  {
+    id: "lloguer", titol: "Lloguer mitjà",
+    valor: (r) => r.ll, periode: (r) => (finit(r.ll) ? r.lla : null),
+    decimals: 0, sufix: " € al mes", diferit: true,
+    cobertura: {
+      minima: 0.4,
+      motiu: "Només hi surten els municipis amb prou contractes perquè l'Agència de l'Habitatge en publiqui el preu: als pobles petits sovint no n'hi ha prou.",
+    },
+    font: "Agència de l'Habitatge de Catalunya · fiances de lloguer",
+    metode: "Preu mitjà mensual dels contractes de lloguer amb fiança dipositada, de l'últim any publicat.",
+    cautela: "És la mitjana dels contractes nous de l'any, no el que paguen tots els llogaters, i depèn de quins pisos es lloguen. L'ajuntament hi té poques eines.",
+  },
+  {
+    id: "lloguer-canvi", titol: "Com ha canviat el lloguer des del 2023",
+    valor: (r) => r.llv, periode: (r) => (finit(r.llv) ? r.llp : null),
+    decimals: 1, sufix: " %", diferit: true,
+    cobertura: {
+      minima: 0.4,
+      motiu: "Només hi surten els municipis amb el preu publicat el 2023 i l'últim any: als pobles petits sovint no hi ha prou contractes.",
+    },
+    font: "Agència de l'Habitatge de Catalunya · fiances de lloguer",
+    metode: "Variació del preu mitjà del lloguer entre el 2023, el primer any del mandat, i l'últim any publicat.",
+    cautela: "Amb pocs contractes, uns quants pisos cars o barats mouen molt la mitjana. Depèn del mercat de la zona més que de cap decisió municipal.",
+  },
+  {
+    id: "habitatge-protegit", titol: "Habitatge protegit acabat des del 2023",
+    valor: (r) => r.hpo, periode: (r) => (finit(r.hpo) ? r.hpop : null),
+    decimals: 1, sufix: " per 1.000 hab.", diferit: true,
+    font: "Departament de Territori · habitatges amb protecció oficial iniciats i acabats",
+    metode: "Habitatges amb protecció oficial acabats des del 2023 fins al darrer any publicat, per cada 1.000 habitants del padró vigent.",
+    cautela: "Els promouen la Generalitat, els ajuntaments, cooperatives i empreses, i una sola promoció mou molt la xifra d'un poble petit. Zero vol dir que la font no en compta cap d'acabat aquests anys.",
+  },
+  {
+    id: "pla-urbanistic", titol: "Antiguitat del pla urbanístic",
+    valor: (r) => r.pla, periode: (r) => (finit(r.pla) ? r.plaa : null),
+    decimals: 0, sufix: " anys", diferit: true,
+    font: "Departament de Territori · Observatori del Territori",
+    metode: "Anys que fa que es va aprovar el pla urbanístic general vigent. Es pot triar per figura: el POUM és la d'ara; " +
+      "les normes subsidiàries (NNSS) i els altres plans generals són d'abans de la Llei d'urbanisme del 2002.",
+    cautela: "Un pla vell no és un pla dolent ni un de nou, un de bo: diu quan es va fer. Revisar-lo és car i llarg, i als pobles petits sovint no cal.",
+    filtre: {
+      etiqueta: "Figura",
+      categoria: (r) => (!finit(r.pla) ? null : r.plas === "POUM" ? "poum" : r.plas === "NNSS" ? "nnss" : "altres"),
+      noms: { poum: "POUM", nnss: "Normes subsidiàries", altres: "Altres figures" },
+    },
+  },
+];
 
 export const METRIQUES: readonly Metrica[] = [
   {
@@ -175,11 +368,19 @@ export const METRIQUES: readonly Metrica[] = [
     // tal com ve; al rànquing, «el més barat: 0,000 €» seria una comparació
     // falsa, i per això el zero es tracta com a absència. Decisió editorial
     // de l'1-09-2026.
-    valor: (r) => (finit(r.pa) && r.pa > 0 ? r.pa : null), periode: (r) => r.paa,
+    // La regla és `preuAiguaComparable()`, la mateixa que fan servir el mapa i el comparador.
+    valor: (r) => preuAiguaComparable(r.pa), periode: (r) => r.paa,
     decimals: 3, sufix: " €/m³",
     font: "Agència Catalana de l'Aigua · Observatori del preu de l'aigua",
-    metode: "Tram de subministrament domèstic, amb el mateix consum de referència per a tothom.",
-    cautela: "El preu no mesura la qualitat del servei: depèn dels costos físics de portar l'aigua i de com és l'estructura tarifària.",
+    metode: "Tram de subministrament domèstic, amb el mateix consum de referència per a tothom. " +
+      "Es pot triar per model de gestió: directa, quan presta el servei el mateix ajuntament o un ens seu, o indirecta, quan el presta una empresa per concessió o una societat mixta.",
+    cautela: "El preu no mesura la qualitat del servei: depèn dels costos físics de portar l'aigua i de com és l'estructura tarifària. " +
+      "Que un model surti més car o més barat no vol dir que el model en sigui la causa: canvien alhora la mida, l'orografia i d'on ve l'aigua.",
+    filtre: {
+      etiqueta: "Gestió",
+      categoria: (r) => (r.pag === "directa" || r.pag === "indirecta" ? r.pag : null),
+      noms: { directa: "Gestió directa", indirecta: "Gestió indirecta" },
+    },
   },
   {
     id: "ibi", titol: "Rebut mitjà d'IBI urbà",
@@ -220,6 +421,8 @@ export const METRIQUES: readonly Metrica[] = [
     metode: "Quantes vegades ha canviat la llista més votada, només als municipis amb dada a les dotze eleccions municipals.",
     cautela: "Compta canvis de sigles guanyadores: no necessàriament canvis d'alcaldia ni de bloc.",
   },
+  ...METRIQUES_POLITIQUES,
+  ...METRIQUES_HABITATGE,
 ];
 
 // ------------------------------------------------------------- preparació
@@ -259,7 +462,11 @@ export function preparaRanquings(rows: readonly RankingRow[]): RanquingPreparat[
   const perFila = buildPeerGroups(rows.map((r, id) => ({ id, population: r.p })));
   const index = new Map(rows.map((r, i) => [r, i]));
   return METRIQUES.flatMap((metrica) => {
-    const cohort = cohortHomogenia(rows, (r) => ({ valor: metrica.valor(r), periode: metrica.periode(r) }));
+    const cohort = cohortHomogenia(
+      rows,
+      (r) => ({ valor: metrica.valor(r), periode: metrica.periode(r) }),
+      metrica.cobertura?.minima ?? 0.9,
+    );
     if (!cohort) return [];
     const files = cohort.files.flatMap(({ fila, valor }) => {
       const grup = perFila.get(index.get(fila) ?? -1);
@@ -462,12 +669,100 @@ function regle(r: RanquingPreparat): string {
   }</figcaption>
   <div class="regle-dispersio" aria-hidden="true">${eix.linies}<i class="mig" style="--p:${on(mig)}%"${etiqueta(mediana)}></i>${marques}</div>
   ${eix.eix}
-  <ul class="extrems">
+  ${llistaExtrems(baix, mig, alt, fmt)}
+</figure>`;
+}
+
+/** El més baix, la mediana i el més alt: les tres xifres de sota el regle, que es llegeixen sense ell. */
+function llistaExtrems(baix: FilaRanquing, mig: number, alt: FilaRanquing, fmt: (v: number) => string): string {
+  return `<ul class="extrems">
     <li><span class="cap">El més baix</span>${fitxa(baix.fila)}<b>${escape(fmt(baix.valor))}</b></li>
     <li><span class="cap">La mediana</span><span class="secundari">el municipi del mig</span><b>${escape(fmt(mig))}</b></li>
     <li><span class="cap">El més alt</span>${fitxa(alt.fila)}<b>${escape(fmt(alt.valor))}</b></li>
-  </ul>
+  </ul>`;
+}
+
+/**
+ * El regle d'una mètrica `diferit`: el títol, la barra buida i les tres
+ * xifres. El navegador hi dibuixa les marques en arrencar amb la mateixa
+ * funció `regle()` que fa servir quan canvia l'àmbit; sense JavaScript queden
+ * les tres xifres, que és el que el regle diu en text. La barra va buida i no
+ * absent perquè la pàgina no salti quan s'omple.
+ */
+function regleDiferit(r: RanquingPreparat): string {
+  if (r.files.length < 4) return "";
+  const fmt = format(r.metrica);
+  const baix = r.files[r.files.length - 1]!;
+  const alt = r.files[0]!;
+  if (alt.valor === baix.valor) return "";
+  const mig = medianaDe(r.files.map((f) => f.valor));
+  return `<figure class="dispersio" data-diferit>
+  <figcaption class="titol">Del més baix al més alt <span class="secundari">${n(r.files.length)} municipis amb dada</span></figcaption>
+  <div class="regle-dispersio" aria-hidden="true"></div>
+  ${llistaExtrems(baix, mig, alt, fmt)}
 </figure>`;
+}
+
+/**
+ * Per què una mètrica té menys municipis que les altres, amb el recompte de
+ * debò. Només quan la mètrica ha baixat el llindar (`cobertura`) i en falta
+ * algun: si hi són tots, no cal dir res.
+ */
+function notaCobertura(r: RanquingPreparat): string {
+  const c = r.metrica.cobertura;
+  if (!c || r.observades >= r.total) return "";
+  return `<p class="cobertura">${escape(c.motiu)} Hi surten ${n(r.observades)} dels ${n(r.total)} municipis.</p>`;
+}
+
+/**
+ * Una frase de medianes: «fins a 100 habitants: 17 % (40)». Els grups amb
+ * menys de cinc municipis no hi surten, perquè la mediana de tres valors és
+ * un d'ells i no descriu el grup.
+ */
+function fraseMedianes(
+  titol: string,
+  parts: readonly { nom: string; valors: readonly number[] }[],
+  fmt: (v: number) => string,
+): string {
+  const escrites = parts
+    .filter((p) => p.valors.length >= 5)
+    .map((p) => `${p.nom}: ${fmt(medianaDe(p.valors))} (${n(p.valors.length)})`);
+  if (escrites.length < 2) return "";
+  return `<p class="per-grups"><b>${escape(titol)}</b> <span class="secundari">(entre parèntesis, quants municipis)</span>: ${escape(escrites.join(" · "))}.</p>`;
+}
+
+/** La mediana de cada grup de mida, del més petit al més gran, per a les mètriques `perGrups`. */
+function medianesPerGrup(r: RanquingPreparat, grups: readonly PeerGroup[]): string {
+  if (!r.metrica.perGrups) return "";
+  const parts = [...grups].reverse().map((g) => ({
+    nom: g.label,
+    valors: r.files.filter((f) => f.grup.key === g.key).map((f) => f.valor),
+  }));
+  return fraseMedianes("La mediana de cada mida", parts, format(r.metrica));
+}
+
+/** La mediana de cada categoria del filtre: descriu, no explica per què. */
+function medianesPerCategoria(r: RanquingPreparat): string {
+  const filtre = r.metrica.filtre;
+  if (!filtre) return "";
+  const parts = Object.entries(filtre.noms).map(([clau, nom]) => ({
+    nom,
+    valors: r.files.filter((f) => filtre.categoria(f.fila) === clau).map((f) => f.valor),
+  }));
+  return fraseMedianes(`La mediana per ${filtre.etiqueta.toLocaleLowerCase("ca")}`, parts, format(r.metrica));
+}
+
+/** El segon desplegable, quan la mètrica en té: les categories amb quants municipis hi ha a cadascuna. */
+function selectorFiltre(r: RanquingPreparat): string {
+  const filtre = r.metrica.filtre;
+  if (!filtre) return "";
+  const opcions = Object.entries(filtre.noms)
+    .map(([clau, nom]) => {
+      const quants = r.files.filter((f) => filtre.categoria(f.fila) === clau).length;
+      return quants > 0 ? `<option value="${escape(clau)}">${escape(nom)} (${n(quants)})</option>` : "";
+    })
+    .join("");
+  return `<label>${escape(filtre.etiqueta)} <select data-filtre><option value="">Totes</option>${opcions}</select></label>`;
 }
 
 /** Els `data-*` de l'etiqueta flotant i el `title=` amb la mateixa frase, per a quan no hi ha script. */
@@ -495,12 +790,17 @@ export const VISIBLES = 5;
  * la comarca, la posició de quants i com de lluny és de la mediana. El
  * navegador escriu la mateixa fila a `pinta()` quan canvia l'àmbit.
  */
-function filaHtml(f: FilaRanquing, pos: number, total: number, mediana: number, fmt: (v: number) => string): string {
+function filaHtml(
+  f: FilaRanquing, pos: number, total: number, mediana: number, fmt: (v: number) => string,
+  categoria: { etq: string; valor: string } | null = null,
+): string {
   const dada: DadaEtiqueta = {
     nom: f.fila.n,
     valor: fmt(f.valor),
     extres: [
       { etq: "comarca", valor: f.fila.c },
+      // La categoria del filtre (la gestió de l'aigua, la figura del pla), quan la mètrica en té.
+      ...(categoria ? [categoria] : []),
       { etq: `posició de ${n(total)}`, valor: ordinal(pos) },
       { etq: "respecte a la mediana", valor: ambSigne(f.valor - mediana, fmt) },
     ],
@@ -514,7 +814,12 @@ function seccio(r: RanquingPreparat, grups: readonly PeerGroup[]): string {
   const opcions = grups.map((g) => `<option value="${escape(g.key)}">${escape(g.label)}</option>`).join("");
   const mediana = medianaDe(r.files.map((f) => f.valor));
   const total = r.files.length;
-  const fila = (f: FilaRanquing, i: number): string => filaHtml(f, i + 1, total, mediana, fmt);
+  const filtre = m.filtre;
+  const categoriaDe = (f: FilaRanquing): { etq: string; valor: string } | null => {
+    const clau = filtre?.categoria(f.fila);
+    return filtre && clau ? { etq: filtre.etiqueta.toLocaleLowerCase("ca"), valor: filtre.noms[clau] ?? clau } : null;
+  };
+  const fila = (f: FilaRanquing, i: number): string => filaHtml(f, i + 1, total, mediana, fmt, categoriaDe(f));
   /*
    * Tres trossos d'una mateixa llista: els cinc de dalt, el mig fins a la
    * fila 40 (plegat) i els cinc de baix. Els de baix comencen on acaba el mig
@@ -532,9 +837,12 @@ function seccio(r: RanquingPreparat, grups: readonly PeerGroup[]): string {
   <p class="micro">${escape(r.periode)} · ${escape(m.font)}</p>
   <h2>${escape(m.titol)}</h2>
   <p class="entrada-bloc">${escape(m.metode)}</p>
-  ${regle(r)}
+  ${notaCobertura(r)}
+  ${m.diferit ? regleDiferit(r) : regle(r)}
+  ${medianesPerGrup(r, grups)}${medianesPerCategoria(r)}
   <div class="controls">
     <label>Àmbit <select data-ambit><option value="cat">Tot Catalunya</option>${opcions}</select></label>
+    ${selectorFiltre(r)}
     <label>Cerca <input data-cerca type="search" autocomplete="off" placeholder="Municipi o comarca"></label>
   </div>
   <ol class="llista-ranquing rq-dalt" data-dalt aria-label="Rànquing de ${titolLlista}: els de dalt">
@@ -572,7 +880,19 @@ function dadesJson(rows: readonly RankingRow[], preparats: readonly RanquingPrep
         d: r.metrica.decimals,
         s: r.metrica.sufix,
         e: r.metrica.escala ?? "lineal",
-        files: r.files.map((f) => [index.get(f.fila), f.valor]),
+        /*
+         * Amb filtre, cada fila porta un tercer element: la clau de la seva
+         * categoria (o `null`), i la mètrica, l'etiqueta i el nom de cada
+         * clau, perquè el navegador els escrigui a l'etiqueta de la fila.
+         */
+        ...(r.metrica.filtre
+          ? { fe: r.metrica.filtre.etiqueta.toLocaleLowerCase("ca"), fn: r.metrica.filtre.noms }
+          : {}),
+        files: r.files.map((f) =>
+          r.metrica.filtre
+            ? [index.get(f.fila), f.valor, r.metrica.filtre.categoria(f.fila)]
+            : [index.get(f.fila), f.valor],
+        ),
       },
     ]),
   );
@@ -635,6 +955,9 @@ const CSS = `${GRAFICS_CSS}${CURIOSITATS_CSS}
 .llista-ranquing[hidden]{display:none}
 @media (prefers-reduced-motion:reduce){.rq-obre::after{transition:none}}
 .ranquing .buit{color:var(--ink-suau);margin:var(--e2) 0 0}
+.ranquing .cobertura{max-width:70ch;font-size:.9rem;font-weight:700;margin:var(--e1) 0 0}
+.ranquing .per-grups{max-width:80ch;font-size:.86rem;color:var(--ink);margin:var(--e2) 0 0;overflow-wrap:anywhere}
+.ranquing .per-grups b{font-weight:800}
 .mes-fila{margin:var(--e2) 0 0;display:flex;gap:var(--e2);align-items:center;flex-wrap:wrap;color:var(--ink-suau);font-size:.9rem}
 .mes{font:inherit;font-weight:800;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:var(--r-max);
   padding:9px 18px;cursor:pointer;box-shadow:var(--ombra)}
@@ -778,11 +1101,13 @@ const JS = `<script>
   document.querySelectorAll(".ranquing").forEach((seccio) => {
     const m = dades.metriques[seccio.dataset.metrica];
     if (!m) return;
-    const files = m.files.map(([i, valor]) => {
+    const files = m.files.map(([i, valor, cat]) => {
       const [s, n, c, grup, cs] = dades.municipis[i];
-      return { s, n, c, cs, grup, valor, text: (n + " " + c).toLocaleLowerCase("ca") };
+      return { s, n, c, cs, grup, valor, cat: cat ?? null, text: (n + " " + c).toLocaleLowerCase("ca") };
     });
     const ambit = seccio.querySelector("[data-ambit]");
+    // El segon desplegable (la gestió de l'aigua, la figura del pla), si la mètrica en té.
+    const filtre = seccio.querySelector("[data-filtre]");
     const cerca = seccio.querySelector("[data-cerca]");
     const dalt = seccio.querySelector("[data-dalt]");
     const migLlista = seccio.querySelector("[data-mig]");
@@ -805,7 +1130,8 @@ const JS = `<script>
     const pinta = () => {
       const grup = ambit.value;
       const terme = cerca.value.trim().toLocaleLowerCase("ca");
-      const delAmbit = grup === "cat" ? files : files.filter((f) => f.grup === grup);
+      const categoria = filtre ? filtre.value : "";
+      const delAmbit = files.filter((f) => (grup === "cat" || f.grup === grup) && (!categoria || f.cat === categoria));
       // La posició és la de l'àmbit, no la de la cerca: qui busca «vall» ha de
       // veure que Matadepera és el primer de Catalunya, no el primer dels que
       // es diuen Vallès.
@@ -819,6 +1145,7 @@ const JS = `<script>
           valor: fmt(f.valor, m.d, m.s),
           extres: [
             { etq: "comarca", valor: f.c },
+            ...(m.fe && f.cat ? [{ etq: m.fe, valor: (m.fn && m.fn[f.cat]) || f.cat }] : []),
             { etq: "posició de " + fmt(delAmbit.length, 0, ""), valor: ordinal(f.pos) },
             { etq: "respecte a la mediana", valor: ambSigne(f.valor - mig, m.d, m.s) },
           ],
@@ -866,6 +1193,14 @@ const JS = `<script>
       if (figura) { figura.innerHTML = dibuix; figura.hidden = !dibuix; }
     };
     ambit.addEventListener("change", () => { visibles = PAS; pinta(); });
+    if (filtre) filtre.addEventListener("change", () => { visibles = PAS; pinta(); });
+    // Un regle diferit arriba amb la barra buida: es dibuixa ara, amb la
+    // mateixa funció que el refà quan canvia l'àmbit.
+    if (figura && figura.dataset && "diferit" in figura.dataset) {
+      const dibuix = regle(files, m.d, m.s, m.e || "lineal");
+      figura.innerHTML = dibuix;
+      figura.hidden = !dibuix;
+    }
     cerca.addEventListener("input", () => { visibles = PAS; pinta(); });
     mes.addEventListener("click", () => { visibles += PAS; pinta(); });
     // Sense canviar res, la pàgina ja és la que ha escrit el servidor: només cal

@@ -19,6 +19,11 @@ import type { VehiclesMetric } from "../jobs/j34-vehicles";
 import type { LlistesObertesMetric } from "../jobs/j37-llistes-obertes";
 import { adrecesDelPle, resumLlistesObertes, type ResumLlistesObertes } from "./llistes-obertes-fitxa";
 import type { CensElectoralMetric } from "../jobs/j36-cens-electoral";
+import {
+  antiguitatDelPla, censDeLesMunicipals, lloguerMitja, margeUltimEsco, modelGestioAigua, padroDeLAny,
+  partitsEfectius, pisosTuristicsPer100, protegitsAcabats, ratxaAlcaldia, unaSolaOferta, veinsQuePodenVotar,
+  volatilitatUltima, votPerdut2023, type ModelAigua,
+} from "./contracte-metriques";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
@@ -182,6 +187,39 @@ export type Els947Row = {
    * ha historial: `mapa-ara.ts` fa files a mà i no en porta.
    */
   tp?: TramCompacte[][] | null;
+  /*
+   * Les xifres que fins ara només sortien a la fitxa i que ara també ordenen
+   * el rànquing, pinten el mapa i, algunes, omplen el comparador. Cadascuna
+   * surt d'un lector de `contracte-metriques.ts`, que és on es decideix quan
+   * una dada és comparable; aquí només es copien. Totes opcionals pel mateix
+   * motiu que les de dalt: `mapa-ara.ts` fa files a mà.
+   */
+  /** partits efectius al ple del 2023 (Laakso-Taagepera sobre escons) */
+  ne?: number | null;
+  /** volatilitat de Pedersen de l'últim tram fiable, i l'any de la segona elecció del tram */
+  vol?: number | null; vola?: number | null;
+  /** vot sense representació el 2023 (%) i quantes regidories representaria */
+  vp?: number | null; vpr?: number | null;
+  /** anys seguits de la mateixa força a l'alcaldia, des de quin any, anys de la mateixa persona, i l'any de referència */
+  cfa?: number | null; cfd?: number | null; cpa?: number | null; cra?: number | null;
+  /** veïns del padró del 2023 que eren al cens de les municipals del 2023, en % */
+  vv?: number | null;
+  /** licitacions del mandat amb una sola oferta (%), quantes licitacions i de quins anys */
+  uo?: number | null; uon?: number | null; uop?: string | null;
+  /** habitatges d'ús turístic per 100 habitants, i any: del registre (J46) o, sense, del recompte del 2024 (J40) */
+  hut?: number | null; huta?: number | null;
+  /** lloguer mitjà mensual i any; variació des del 2023 (%) i de quin any a quin */
+  ll?: number | null; lla?: number | null; llv?: number | null; llp?: string | null;
+  /** anys del pla urbanístic general vigent, la seva sigla i l'any de la dada */
+  pla?: number | null; plas?: string | null; plaa?: number | null;
+  /** habitatges protegits acabats des del 2023 per 1.000 habitants, quants i de quins anys */
+  hpo?: number | null; hpon?: number | null; hpop?: string | null;
+  /** vots que van decidir l'última regidoria del 2023, el sistema i les sigles dels dos de la frontera */
+  mg?: number | null; mgs?: "dhondt" | "obertes" | null; mgg?: string | null; mgp?: string | null;
+  /** qui presta el subministrament d'aigua: «directa», «indirecta» o «noPrestat» */
+  pag?: ModelAigua | null;
+  /** la campanya del Síndic on consta el ple d'una sola candidatura (amb `o`) */
+  oa?: number | null;
 };
 
 /**
@@ -252,6 +290,22 @@ const KINDS_ELS947: string[] = [
   // El cens des del 1979: dotze eleccions per municipi, curtes. D'aquí en
   // surten vuit xifres per al rànquing i les curiositats.
   "censElectoral",
+  // Les que fins ara només llegia la fitxa. Totes són documents petits —la
+  // ratxa i la volatilitat, el vot perdut de tres eleccions, el resum de la
+  // contractació, l'urbanisme i el lloguer, els marges de l'última
+  // regidoria— i d'aquí en surt una xifra o dues de cadascuna per al
+  // rànquing, el mapa i les curiositats. «marges» pot no existir encara: el
+  // lector torna `null` i les peces que en depenen no surten.
+  "continuitat",
+  "votPerdut",
+  "contractacio",
+  "urbanismeHabitatge",
+  "habitatge",
+  "marges",
+  // El Registre de Turisme (J46), una foto del dia de la consulta: d'aquí en
+  // surt la ràtio de pisos turístics, que mana sobre el recompte del 2024 de
+  // «urbanismeHabitatge». És un document petit, de comptatges.
+  "establimentsTuristics",
 ];
 
 /**
@@ -326,6 +380,64 @@ export function lectorDe(own: Map<string, unknown> | undefined): {
  */
 export function clauCandidatura(municipalityId: number, sigles: string): string {
   return `${municipalityId}\u0000${sigles}`;
+}
+
+/**
+ * Les xifres noves d'una fila, llegides amb els lectors comuns.
+ *
+ * Separat de `loadEls947()` perquè es pugui provar sense base de dades: rep
+ * el mateix `llegeix` que la resta de la fila —el que peta si una mètrica no
+ * s'ha demanat— i els habitants del padró vigent, que és el denominador dels
+ * habitatges protegits. Cap càlcul nou: tot és dels lectors de
+ * `contracte-metriques.ts`, que són els mateixos que fa servir el comparador.
+ */
+export function xifresNoves(llegeix: (kind: string) => unknown, habitants: number | null): Partial<Els947Row> {
+  const continuitat = llegeix("continuitat");
+  const volatilitat = volatilitatUltima(continuitat);
+  const ratxa = ratxaAlcaldia(continuitat);
+  const votPerdut = votPerdut2023(llegeix("votPerdut"));
+  const veins = veinsQuePodenVotar(censDeLesMunicipals(llegeix("censElectoral")), padroDeLAny(llegeix("poblacio")));
+  const oferta = unaSolaOferta(llegeix("contractacio"));
+  const urbanisme = llegeix("urbanismeHabitatge");
+  const huts = pisosTuristicsPer100(urbanisme, llegeix("establimentsTuristics"));
+  const pla = antiguitatDelPla(urbanisme);
+  const protegits = protegitsAcabats(urbanisme, habitants);
+  const lloguer = lloguerMitja(llegeix("habitatge"));
+  const marge = margeUltimEsco(llegeix("marges"));
+  const campanya = (llegeix("singleList") as { campaign?: unknown } | undefined)?.campaign;
+  return {
+    ne: partitsEfectius(llegeix("government")),
+    vol: volatilitat?.index ?? null,
+    vola: volatilitat?.any ?? null,
+    vp: votPerdut?.pct ?? null,
+    vpr: votPerdut?.regidories ?? null,
+    cfa: ratxa?.forcaAnys ?? null,
+    cfd: ratxa?.forcaDesDe ?? null,
+    cpa: ratxa?.personaAnys ?? null,
+    cra: ratxa?.referencia ?? null,
+    vv: veins,
+    uo: oferta?.pct ?? null,
+    uon: oferta?.licitacions ?? null,
+    uop: oferta?.periode ?? null,
+    hut: huts?.valor ?? null,
+    huta: huts?.any ?? null,
+    ll: lloguer?.preu ?? null,
+    lla: lloguer?.any ?? null,
+    llv: lloguer?.variacio?.pct ?? null,
+    llp: lloguer?.variacio?.periode ?? null,
+    pla: pla?.anys ?? null,
+    plas: pla?.sigla ?? null,
+    plaa: pla?.any ?? null,
+    hpo: protegits?.perMil ?? null,
+    hpon: protegits?.acabats ?? null,
+    hpop: protegits?.periode ?? null,
+    mg: marge?.vots ?? null,
+    mgs: marge?.sistema ?? null,
+    mgg: marge?.guanyador ?? null,
+    mgp: marge?.perseguidor ?? null,
+    pag: modelGestioAigua(llegeix("preuAigua")),
+    oa: typeof campanya === "number" && Number.isFinite(campanya) ? campanya : null,
+  };
 }
 
 export async function loadEls947(db: Db): Promise<Els947Row[]> {
@@ -542,6 +654,7 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         partMinA: cens?.participacioMinima.any ?? null,
         // La tira d'alcaldies, del mateix historial que la fitxa del municipi.
         tp: mayors?.history?.length ? tiraCompacta(tiraDesDeHistorial(mayors as HistorialPerTira, m.name)) : null,
+        ...xifresNoves(llegeix, m.population ?? null),
       };
     })
     .sort((a, b) => b.p - a.p);

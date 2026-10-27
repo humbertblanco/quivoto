@@ -3,6 +3,7 @@ import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
   anysEscrits,
   escalaDomini,
+  filesNoves,
   marquesDe,
   marquesRodones,
   nivellsSenseSolapar,
@@ -393,7 +394,10 @@ function municipi(
       poblacio: 21_000, regidories: 21, participacio: 55, alternances: 1, deute: 400,
       deute_mandat: -20, estalvi: 6, saldo: 1, carrega: 5, execucio: 60, pmp: 30, ibi: 0.7,
       selectiva: null, dones: 45, transparencia: 70,
-      cost_govern: 9.2, preu_aigua: 0.82, rebut_ibi: 410, renda: 15_800, estrangera_pct: 12.5, ...valors,
+      cost_govern: 9.2, preu_aigua: 0.82, rebut_ibi: 410, renda: 15_800, estrangera_pct: 12.5,
+      veins_voten: 74.2, fragmentacio: 3.1, volatilitat: 18.4, vot_perdut: 6.6, ultima_regidoria: 212,
+      forca_alcaldia: 12, una_oferta: 38, lloguer: 1_010, lloguer_canvi: 9.4, pisos_turistics: 0.12,
+      habitatge_protegit: 1.8, pla_urbanistic: 24, ...valors,
     },
     percentils: { deute: 42 },
     textos: {
@@ -940,5 +944,50 @@ describe("la cara de la pàgina", () => {
     )["escales-cos"]!.innerHTML;
     expect(html).not.toMatch(/-0 %|−0 %/);
     expect(html).toContain(">0 %<");
+  });
+});
+
+describe("les files de vot, contractació i habitatge", () => {
+  it("surten dels lectors comuns, amb el peu que les sosté i sense inventar cap zero", () => {
+    const own = new Map<string, unknown>([
+      ["votPerdut", { darrera: "M20231", regidorsEquivalents: 1, eleccions: { M20231: { total: { pct: 6.6 } } } }],
+      ["contractacio", { finestra: { unaOfertaPct: 36, licitacionsAmbOfertes: 22 }, finestraDates: { desDe: "2025-01-01", finsA: "2026-09-30" } }],
+      ["habitatge", { preu: 792.5, darrerAny: 2025, mandat: { desDe: 2023, fins: 2025, percentual: 17.3 } }],
+      ["censElectoral", { eleccions: [{ any: 2023, cens: 9_559 }] }],
+      ["marges", { eleccions: [{ any: 2023, sistema: "dhondt", ultimEsco: { votsQueFaltaven: 7, guanyador: "Junts per Vic", perseguidor: "Ara Vic", siglaGuanyador: "JxVIC", siglaPerseguidor: "AVIC" } }] }],
+    ]);
+    const { valors, peus, anys } = filesNoves(own, 13_000, 12_848);
+    expect(valors).toMatchObject({ vot_perdut: 6.6, una_oferta: 36, lloguer: 792.5, lloguer_canvi: 17.3, veins_voten: 74.4, ultima_regidoria: 7 });
+    expect(peus).toMatchObject({
+      vot_perdut: "equival a 1 regidoria",
+      una_oferta: "sobre 22 licitacions, 2025-2026",
+      lloguer_canvi: "2023 → 2025",
+      ultima_regidoria: "per a JxVIC; la tenia a tocar AVIC",
+    });
+    expect(anys.lloguer).toBe(2025);
+    // El que no hi és queda buit, no a zero.
+    expect(valors.pisos_turistics).toBeNull();
+    expect(valors.habitatge_protegit).toBeNull();
+    expect(valors.fragmentacio).toBeNull();
+  });
+
+  it("els pisos turístics: mana el registre (J46) i, sense, el recompte de l'Observatori ho diu al peu", () => {
+    const urbanisme = { pisosTuristics: { any: 2024, hutsPer100: 0.05 } };
+    const registre = { dataConsulta: "2026-10-27", hutPer100Hab: 0.08 };
+    const amb = filesNoves(new Map<string, unknown>([["urbanismeHabitatge", urbanisme], ["establimentsTuristics", registre]]), 13_000, null);
+    expect(amb.valors.pisos_turistics).toBe(0.08);
+    expect(amb.anys.pisos_turistics).toBe(2026);
+    expect(amb.peus.pisos_turistics).toBeUndefined();
+    const sense = filesNoves(new Map<string, unknown>([["urbanismeHabitatge", urbanisme]]), 13_000, null);
+    expect(sense.valors.pisos_turistics).toBe(0.05);
+    expect(sense.anys.pisos_turistics).toBe(2024);
+    expect(sense.peus.pisos_turistics).toBe("recompte de l'Observatori del Territori");
+  });
+
+  it("les seccions i les files noves són a la pàgina amb el seu text de buit", () => {
+    const html = renderComparador([], "2026-10-27");
+    expect(html).toContain("L'habitatge");
+    expect(html).toContain("Licitacions amb una sola oferta");
+    expect(html).toContain("o no hi té cap tarifa de subministrament publicada");
   });
 });

@@ -847,3 +847,52 @@ describe("els colors de les escales", () => {
     expect(aigua.q).toBe("€/m³, consum de 12 m³ al mes · 2023-2024 · Font: Agència Catalana de l'Aigua");
   });
 });
+
+describe("les capes que fins ara només eren a la fitxa", () => {
+  const slugs = Object.keys(geometria.municipis);
+
+  it("un preu de l'aigua a zero va ratllat, com al rànquing i al comparador, i no com el més barat", () => {
+    const html = renderMapaCatalunya(
+      slugs.map((s, i) => fila(s, { pa: s === "barcelona" ? 0 : 1 + (i % 7) / 10, paa: 2025 })),
+      "2026-10-27",
+    );
+    const aigua = capesDe(html).find((c) => c.t.includes("costa l'aigua"))!;
+    expect(aigua.g.charAt(posicio("barcelona"))).toBe("x");
+    expect(textDe(aigua, posicio("barcelona"))).toBe("sense dada");
+    expect(aigua.n).toBe(946);
+  });
+
+  it("pinta les capes noves quan les files porten la dada, i no les ofereix quan no", () => {
+    const titols = [
+      "Quants veïns podien votar", "Com de repartit és el ple", "Quant es va moure el ple",
+      "Quants vots no van arribar al ple", "Per quants vots es va decidir", "Quants anys fa que mana",
+      "una sola oferta", "Qui presta el servei d'aigua", "Quants anys té el pla", "pisos turístics",
+      "Quant costa llogar", "Com ha canviat el lloguer", "habitatge protegit",
+    ];
+    const sense = renderMapaCatalunya(slugs.map((s) => fila(s)), "2026-10-27");
+    for (const t of titols) expect(capesDe(sense).some((c) => c.t.includes(t)), t).toBe(false);
+    const amb = renderMapaCatalunya(
+      slugs.map((s, i) =>
+        fila(s, {
+          vv: 60 + (i % 40), ne: 1 + (i % 5) / 2, vol: i % 50, vola: 2023, vp: i % 20, mg: 1 + i, cfa: i % 30,
+          uo: i % 60, uop: "2025-2026", pag: i % 2 ? "directa" : "indirecta", paa: 2025,
+          pla: i % 40, plas: "POUM", plaa: 2024, hut: i / 100, huta: 2024, ll: 500 + i, lla: 2025,
+          llv: (i % 21) - 10, llp: "2023-2025", hpo: i % 3, hpop: "2023-2025",
+        }),
+      ),
+      "2026-10-27",
+    );
+    for (const t of titols) expect(capesDe(amb).some((c) => c.t.includes(t)), t).toBe(true);
+    // La gestió de l'aigua és una categoria: dues etiquetes i cap mediana.
+    const gestio = capesDe(amb).find((c) => c.t.includes("Qui presta el servei d'aigua"))!;
+    expect(gestio.e).toEqual(["gestió directa", "gestió indirecta"]);
+    expect(gestio.d).toBeNull();
+    // La variació del lloguer porta el signe de debò.
+    const canvi = capesDe(amb).find((c) => c.t.includes("Com ha canviat el lloguer"))!;
+    expect(canvi.w!.some((t) => t.startsWith("−"))).toBe(true);
+    expect(canvi.w!.some((t) => t.startsWith("+"))).toBe(true);
+    // L'any de la contractació és la finestra sencera, no un any sol.
+    const oferta = capesDe(amb).find((c) => c.t.includes("una sola oferta"))!;
+    expect(oferta.a).toEqual(["2025-2026"]);
+  });
+});

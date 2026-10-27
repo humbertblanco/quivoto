@@ -32,6 +32,8 @@ import {
 } from "@quivoto/db";
 import { nomLlegible, normalizePersonName, slugify } from "../lib/text";
 import { enBlocs } from "./vots-partit";
+import { buildPeerGroups, medianOf } from "../derive/peers";
+import { ANY_MUNICIPALS } from "./contracte-metriques";
 
 const escape = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -56,6 +58,15 @@ export type FilaCuriositat = {
   f?: number | null;
   /** sou anual de l'alcaldia, només quan és un sou */
   sa?: number | null;
+  /** participació a les municipals del 2023, en percentatge */
+  pt?: number | null;
+  /** ple d'una sola candidatura segons el Síndic (1), i de quina campanya és la seva llista */
+  o?: 0 | 1;
+  oa?: number | null;
+  /** vots que van decidir l'última regidoria del 2023, i les sigles de qui la va treure i de qui la tenia a tocar */
+  mg?: number | null;
+  mgg?: string | null;
+  mgp?: string | null;
 };
 
 /** Un pas per l'alcaldia segons el registre de la Generalitat: el mandat, el nom i la presa de possessió. */
@@ -577,6 +588,86 @@ export function preparaCuriositats(files: readonly FilaCuriositat[], dades: Dade
         ],
         cobertura: `S'han mirat ${n(candidatures.length)} candidatures amb regidoria de ${n(tancades.length)} municipis${tancades.length < total ? ` dels ${n(total)}` : ""}: els de llistes tancades amb més de cinc regidories.`,
         cautela: "Als municipis de menys de 250 habitants es vota amb llistes obertes i el vot va a la persona, no a la llista: no hi entren. El preu en vots depèn de la mida del municipi, no de cap llista.",
+      });
+    }
+  }
+
+  // ---- les regidories que es van decidir per menys vots -----------------
+  {
+    // De la mètrica «marges» (`derive/marges.ts`). Mentre la derivació no
+    // s'hagi passat, cap fila porta `mg` i el fet no surt.
+    const ambMarge = files.filter((f) => typeof f.mg === "number" && Number.isFinite(f.mg));
+    if (ambMarge.length > 0) {
+      const LLINDAR = 10;
+      const justes = ambMarge.filter((f) => f.mg! < LLINDAR);
+      const menys = primers(ambMarge, (f) => f.mg!, (f) => f.n, 10, "min");
+      const vots = (v: number): string => `${n(v)} vot${v === 1 ? "" : "s"}`;
+      fets.push({
+        id: "ultima-regidoria",
+        titol: justes.length > 0
+          ? `${n(justes.length)} regidories es van decidir per menys de ${n(LLINDAR)} vots`
+          : "Les regidories que es van decidir per menys vots",
+        metode: "A cada municipi, quants vots de més li calien a la llista —o, en llista oberta, a la persona— que va quedar més a prop de prendre l'última regidoria del 2023, amb tota la resta igual.",
+        periode: String(ANY_MUNICIPALS),
+        font: "Generalitat de Catalunya · resultats de les municipals, i Ministeri de l'Interior per a les llistes obertes",
+        llistes: [{
+          cap: "Les que es van decidir per menys vots",
+          files: menys.files.map((f) => ({
+            municipi: municipi(f),
+            valor: vots(f.mg!),
+            ...(f.mgg && f.mgp ? { detall: `l'última va ser per a ${f.mgg}; la tenia a tocar ${f.mgp}` } : {}),
+          })),
+          empatats: menys.empatats,
+        }],
+        cobertura: sobre(ambMarge.length, "el repartiment de l'última regidoria del 2023", total),
+        cautela: "És aritmètica sobre els resultats oficials amb tota la resta igual: no és una predicció del 2027 ni diu que aquells vots hagin de canviar de mans. Als pobles petits hi ha menys vots en joc i els marges curts hi són més freqüents.",
+      });
+    }
+  }
+
+  // ---- la participació amb una sola llista i amb més d'una ---------------
+  {
+    /*
+     * Es compara dins de cada tram de població —els de la LOREG, ajuntats
+     * com a tot el lloc— perquè als pobles petits sempre vota més gent: la
+     * mitjana de tot Catalunya barrejaria la mida amb la papereta. Un ple
+     * que el Síndic compta d'una altra campanya no se sap si el 2023 tenia
+     * una llista o més, i no entra a cap dels dos costats.
+     */
+    const grups = buildPeerGroups(files.map((f, id) => ({ id, population: f.p })));
+    const perGrup = new Map<string, { etiqueta: string; sola: FilaCuriositat[]; mes: FilaCuriositat[] }>();
+    files.forEach((f, i) => {
+      const grup = grups.get(i);
+      if (!grup || typeof f.pt !== "number" || !Number.isFinite(f.pt)) return;
+      if (f.o === 1 && f.oa != null && f.oa !== ANY_MUNICIPALS) return;
+      const g = perGrup.get(grup.key) ?? { etiqueta: grup.label, sola: [], mes: [] };
+      (f.o === 1 ? g.sola : g.mes).push(f);
+      perGrup.set(grup.key, g);
+    });
+    const trams = [...perGrup.values()]
+      .filter((g) => g.sola.length >= 5 && g.mes.length >= 5)
+      .sort((a, b) => Math.min(...a.sola.map((f) => f.p)) - Math.min(...b.sola.map((f) => f.p)));
+    if (trams.length > 0) {
+      const pct = (v: number): string => `${n(v, 1)} %`;
+      const mediana = (fs: readonly FilaCuriositat[]): number => medianOf(fs.map((f) => f.pt!))!;
+      const sola = trams.reduce((s, g) => s + g.sola.length, 0);
+      const amb = trams.reduce((s, g) => s + g.sola.length + g.mes.length, 0);
+      fets.push({
+        id: "una-sola-llista",
+        titol: "La participació amb una sola llista i amb més d'una",
+        metode: "La participació a les municipals del 2023 als municipis on el Síndic de Greuges compta una sola candidatura, al costat de la dels municipis de la mateixa mida que en tenien més d'una. Es diu la mediana de cada grup, tram a tram.",
+        periode: String(ANY_MUNICIPALS),
+        font: "Generalitat de Catalunya · processos electorals, i Síndic de Greuges · plens sense oposició",
+        llistes: trams.map((g) => ({
+          cap: `${g.etiqueta}: ${pct(mediana(g.sola))} amb una sola llista i ${pct(mediana(g.mes))} amb més d'una`,
+          files: mesPoblats(g.sola, 5).map((f) => ({
+            municipi: municipi(f),
+            valor: `${pct(f.pt!)} de participació`,
+            detall: `una sola llista · ${n(f.p)} habitants`,
+          })),
+        })),
+        cobertura: `S'han mirat ${n(amb)} municipis${amb < total ? ` dels ${n(total)}` : ""}, ${n(sola)} d'ells amb una sola candidatura, als trams on hi ha com a mínim cinc municipis de cada mena. Els exemples són els més poblats de cada tram.`,
+        cautela: "Descriu una diferència, no n'explica la causa: on només es presenta una llista també hi poden pesar altres coses, com qui viu al poble o com està repartit el cens.",
       });
     }
   }

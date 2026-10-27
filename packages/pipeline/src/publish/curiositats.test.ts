@@ -380,3 +380,43 @@ describe("cada curiositat, plegada", () => {
     expect(CURIOSITATS_CSS).not.toContain("box-shadow");
   });
 });
+
+describe("les curiositats de l'última regidoria i de la llista única", () => {
+  it("compta les regidories decidides per menys de deu vots i ensenya les més justes amb qui les va treure", () => {
+    const amb = files().map((f, i) => ({ ...f, mg: [3, 1, 40, 9, 250, 12, 7, 1_200, 15, 9, 60, 2][i]!, mgg: "AAA", mgp: "BBB" }));
+    const fet = preparaCuriositats(amb, DADES_BUIDES).find((c) => c.id === "ultima-regidoria")!;
+    expect(fet.titol).toBe("6 regidories es van decidir per menys de 10 vots");
+    const llista = fet.llistes[0]!;
+    expect(llista.files[0]).toMatchObject({ valor: "1 vot", detall: "l'última va ser per a AAA; la tenia a tocar BBB" });
+    expect(llista.files.map((f) => f.valor).slice(0, 3)).toEqual(["1 vot", "2 vots", "3 vots"]);
+    expect(fet.cautela).toContain("no és una predicció del 2027");
+  });
+
+  it("sense la mètrica de marges, el fet no surt", () => {
+    expect(preparaCuriositats(files(), DADES_BUIDES).some((c) => c.id === "ultima-regidoria")).toBe(false);
+  });
+
+  it("compara la participació amb una sola llista i amb més d'una dins de cada tram, amb la mediana", () => {
+    // Vint pobles de fins a 100 habitants: deu amb una sola llista (participació 60-69) i deu amb més d'una (75-84).
+    const petits: FilaCuriositat[] = Array.from({ length: 20 }, (_, i) => ({
+      s: `p${i}`, n: `Poble ${i}`, c: "Pallars", p: 50 + i, o: i < 10 ? 1 : 0, oa: i < 10 ? 2023 : null,
+      pt: i < 10 ? 60 + i : 65 + i,
+    }));
+    const fet = preparaCuriositats(petits, DADES_BUIDES).find((c) => c.id === "una-sola-llista")!;
+    expect(fet.llistes).toHaveLength(1);
+    expect(fet.llistes[0]!.cap).toBe("fins a 100 habitants: 64,5 % amb una sola llista i 79,5 % amb més d'una");
+    expect(fet.llistes[0]!.files).toHaveLength(5);
+    expect(fet.cautela).toContain("no n'explica la causa");
+    // Un ple que el Síndic compta d'una altra campanya no entra a cap costat.
+    const altra = petits.map((f, i) => (i === 0 ? { ...f, oa: 2019 } : f));
+    expect(preparaCuriositats(altra, DADES_BUIDES).find((c) => c.id === "una-sola-llista")!.cobertura)
+      .toContain("9 d'ells amb una sola candidatura");
+  });
+
+  it("amb menys de cinc municipis d'una llista en un tram, el tram no surt", () => {
+    const pocs: FilaCuriositat[] = Array.from({ length: 20 }, (_, i) => ({
+      s: `p${i}`, n: `Poble ${i}`, c: "Pallars", p: 50 + i, o: i < 4 ? 1 : 0, pt: 70,
+    }));
+    expect(preparaCuriositats(pocs, DADES_BUIDES).some((c) => c.id === "una-sola-llista")).toBe(false);
+  });
+});

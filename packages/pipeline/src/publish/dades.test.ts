@@ -37,7 +37,7 @@ const fontsDocumentades = (esquema: string): Set<string> =>
 
 type Indicador = { clau: string; indicador: string; valor: unknown; unitat: string; any: number | null; font: string };
 type Municipi = {
-  enllacos: { idescat: string | null; idescat_ibi: string | null; ine: string | null };
+  enllacos: { idescat: string | null; idescat_ibi: string | null; ine: string | null; idescat_socioeconomia: string | null };
   ine: { citacio: string; actualitzat: string | null } | null;
   indicadors: Indicador[];
 };
@@ -409,12 +409,13 @@ describe("les files noves, sobre una base sembrada", () => {
       idescat: "https://www.idescat.cat/emex/?id=080018&lang=ca#t75",
       idescat_ibi: "https://www.idescat.cat/pub/?id=ibi&n=173&geo=mun:080018",
       ine: "https://www.ine.es/jaxiT3/Tabla.htm?t=30896",
+      idescat_socioeconomia: null,
     });
     expect(abrera.ine).toEqual({
       citacio: "Elaboración propia con datos extraídos del sitio web del INE: www.ine.es",
       actualitzat: "2025-11-26",
     });
-    expect(clot.enllacos).toEqual({ idescat: null, idescat_ibi: null, ine: null });
+    expect(clot.enllacos).toEqual({ idescat: null, idescat_ibi: null, ine: null, idescat_socioeconomia: null });
     expect(clot.ine).toBeNull();
   });
 

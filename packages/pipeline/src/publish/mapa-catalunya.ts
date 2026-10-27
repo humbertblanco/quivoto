@@ -8,9 +8,10 @@ import { MASCOTA_CSS, papereta } from "./mascota";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
-import { de } from "../lib/text";
+import { dataEscrita, de, elDia } from "../lib/text";
 import { atributsEtiqueta, GRAFICS_JS, type DadaEtiqueta } from "./grafics";
 import { buildPeerGroups } from "../derive/peers";
+import { preuAiguaComparable } from "./contracte-metriques";
 import {
   colorDe, etiquetesPct, graoDe, MARQUES, quintilsDe, rampaDe, siglesDe, type VotsPartit,
 } from "./vots-partit";
@@ -124,7 +125,7 @@ type Capa = {
    * capa no diu any, que és millor que dir-ne un que no és segur: el deute
    * és de «l'últim exercici liquidat» i aquest no és el mateix a tot arreu.
    */
-  any?: string | ((r: Els947Row) => number | null);
+  any?: string | ((r: Els947Row) => number | string | null);
   /**
    * Colors propis de la capa, un per graó, quan el que separa els municipis no
    * és una escala sinó una categoria (o, a les capes de xifres, la rampa del
@@ -283,6 +284,209 @@ const CAPA_PARTIT: Capa = {
  */
 const SI_O_NO = ["var(--paper-2)", "var(--coral)"];
 
+/** Una variació amb el signe de debò: «+12,3 %», «−4,0 %», «0,0 %». */
+const ambSignePct = (v: number): string => `${v > 0 ? "+" : v < 0 ? "−" : ""}${coma(Math.abs(v), 1)} %`;
+
+/** Els dos models de gestió de l'aigua, en dos blaus de la capa del preu: cap no és «el bo». */
+const BLAUS_AIGUA = rampaDe("#2F6FD6");
+
+/**
+ * Les capes que fins ara només eren a la fitxa: com es vota i qui pot votar,
+ * qui contracta amb una sola oferta, l'habitatge. Totes descriuen; cap no
+ * puntua cap govern, i les que depenen de la mida ho diuen al peu perquè la
+ * taca no es llegeixi sola. El color de cadascuna és a `TO_DE_CAPA`.
+ */
+const CAPES_NOVES: Capa[] = [
+  {
+    id: "veins-voten",
+    grup: "Com es vota",
+    unitat: "% del padró que és al cens",
+    font: "Generalitat de Catalunya i Idescat",
+    titol: "Quants veïns podien votar a les municipals del 2023",
+    boto: "Veïns que poden votar",
+    peu: `Electors del cens de les municipals del 2023 sobre els habitants del padró a 1 de gener del 2023.
+      Hi voten les persones de nacionalitat espanyola i les de la Unió Europea —i d'uns quants països amb
+      conveni— inscrites al cens; no hi voten els menors ni la resta de veïns estrangers. No és cap
+      valoració: diu qui viu al poble. Pot passar del 100 % perquè padró i cens es tanquen en dates diferents.`,
+    valor: (r) => r.vv ?? null,
+    any: "2023",
+    format: pct1,
+  },
+  {
+    id: "fragmentacio",
+    grup: "Com es vota",
+    unitat: "partits efectius al ple",
+    font: "Generalitat de Catalunya",
+    titol: "Com de repartit és el ple",
+    boto: "Fragmentació",
+    peu: `Nombre efectiu de partits (Laakso-Taagepera) sobre les regidories del 2023: 1 és un ple d'una
+      sola llista i, com més alt, més repartit. Un ple de cinc regidories no es pot repartir tant com un
+      de vint-i-cinc, i per això la taca segueix molt la mida del municipi.`,
+    valor: (r) => r.ne ?? null,
+    any: "2023",
+    format: (v) => coma(v, 2),
+  },
+  {
+    id: "volatilitat",
+    grup: "Com es vota",
+    unitat: "índex de Pedersen, de 0 a 100",
+    font: "Consorci AOC",
+    titol: "Quant es va moure el ple del 2019 al 2023",
+    boto: "Volatilitat",
+    peu: `Índex de Pedersen sobre les quotes de regidories entre dues eleccions: 0 és un ple calcat a
+      l'anterior i 100, que no en queda res. Només amb el càlcul fiable; on massa regidories són de
+      llistes locals que canvien de nom, el municipi va ratllat. Moure's molt no és ni bo ni dolent.`,
+    valor: (r) => (r.vola === 2023 ? r.vol ?? null : null),
+    any: "2019-2023",
+    format: (v) => coma(v, 1),
+  },
+  {
+    id: "vot-perdut",
+    grup: "Com es vota",
+    unitat: "% dels vots emesos",
+    font: "Generalitat de Catalunya",
+    titol: "Quants vots no van arribar al ple el 2023",
+    boto: "Vot sense representació",
+    peu: `Vots a llistes que no van treure cap regidoria, més nuls i blancs, sobre els vots emesos del 2023.
+      Depèn sobretot de quantes llistes es presenten i de la barrera del 5 %. Als municipis de llistes
+      obertes la font no quadra i no es pot calcular.`,
+    valor: (r) => r.vp ?? null,
+    any: "2023",
+    format: pct1,
+  },
+  {
+    id: "ultima-regidoria",
+    grup: "Com es vota",
+    unitat: "vots",
+    font: "Generalitat de Catalunya i Ministeri de l'Interior",
+    titol: "Per quants vots es va decidir l'última regidoria",
+    boto: "Última regidoria",
+    peu: `Quants vots de més li calien a qui va quedar més a prop de prendre l'última regidoria del 2023,
+      amb tota la resta igual. És aritmètica sobre els resultats oficials, no una predicció. Com més gran
+      el municipi, més vots calen: la taca segueix la mida, i la comparació justa és amb els de la seva.`,
+    valor: (r) => r.mg ?? null,
+    any: "2023",
+    format: (v) => `${milers(v)} vot${v === 1 ? "" : "s"}`,
+  },
+  {
+    id: "forca-alcaldia",
+    grup: "Qui governa",
+    unitat: "anys seguits",
+    quan: "comptats fins a la darrera actualització",
+    font: "Generalitat de Catalunya",
+    titol: "Quants anys fa que mana la mateixa força",
+    boto: "Anys de la mateixa força",
+    peu: `Anys seguits que la força que avui té l'alcaldia l'ha tinguda, encara que hagi canviat la
+      persona. Una ratxa llarga pot ser una majoria estable o la falta d'alternativa: la taca no ho
+      distingeix.`,
+    valor: (r) => r.cfa ?? null,
+    format: (v) => `${milers(v)} any${v === 1 ? "" : "s"}`,
+  },
+  {
+    id: "una-oferta",
+    grup: "Què fa i què costa l'ajuntament",
+    unitat: "% de licitacions",
+    font: "Plataforma de Serveis de Contractació Pública",
+    titol: "Quines licitacions van rebre una sola oferta",
+    boto: "Una sola oferta",
+    peu: `De les licitacions de l'ajuntament que diuen quantes ofertes van rebre, quina part en va rebre
+      només una. Només amb cinc licitacions o més; la resta va ratllada. No és cap irregularitat: als
+      pobles petits sovint no hi ha més empreses, i la xifra s'ha de llegir amb els de la mateixa mida.`,
+    valor: (r) => r.uo ?? null,
+    any: (r) => (r.uo == null ? null : r.uop ?? null),
+    format: pct,
+    cobertura: (n, total, mig) =>
+      `${n} dels ${total} municipis tenen prou licitacions per dir-ho. Al municipi del mig, ${mig}.`,
+  },
+  {
+    id: "gestio-aigua",
+    grup: "Què fa i què costa l'ajuntament",
+    font: "Agència Catalana de l'Aigua",
+    titol: "Qui presta el servei d'aigua",
+    boto: "Gestió de l'aigua",
+    peu: `Directa vol dir que presta el subministrament el mateix ajuntament o un ens seu; indirecta, que el
+      presta una empresa per concessió o una societat mixta. Segons l'Observatori del preu de l'aigua de
+      l'ACA. Cap dels dos models no és el bo: el mapa diu on hi ha cadascun.`,
+    valor: (r) => (r.pag === "directa" ? 0 : r.pag === "indirecta" ? 1 : null),
+    any: (r) => (r.pag === "directa" || r.pag === "indirecta" ? r.paa ?? null : null),
+    talls: [0.5],
+    etiquetes: ["gestió directa", "gestió indirecta"],
+    colors: [BLAUS_AIGUA.clar[1]!, BLAUS_AIGUA.clar[3]!],
+    colorsFosc: [BLAUS_AIGUA.fosc[1]!, BLAUS_AIGUA.fosc[3]!],
+    format: (v) => (v === 0 ? "gestió directa" : "gestió indirecta"),
+  },
+  {
+    id: "pla-urbanistic",
+    grup: "Què fa i què costa l'ajuntament",
+    unitat: "anys del pla vigent",
+    font: "Observatori del Territori",
+    titol: "Quants anys té el pla urbanístic",
+    boto: "Pla urbanístic",
+    peu: `Anys que fa que es va aprovar el pla urbanístic general vigent. El POUM és la figura d'ara; les
+      normes subsidiàries i els altres plans generals són d'abans del 2002. Un pla vell no és un pla
+      dolent: diu quan es va fer.`,
+    valor: (r) => r.pla ?? null,
+    any: (r) => (r.pla == null ? null : r.plaa ?? null),
+    format: (v) => `${milers(v)} any${v === 1 ? "" : "s"}`,
+    text: (r, v) => (v === null ? null : `${milers(v)} any${v === 1 ? "" : "s"}${r.plas ? ` (${r.plas})` : ""}`),
+  },
+  {
+    id: "pisos-turistics",
+    grup: "L'habitatge",
+    unitat: "per 100 habitants",
+    font: "Registre de Turisme de Catalunya",
+    titol: "Quants pisos turístics hi ha",
+    boto: "Pisos turístics",
+    peu: `Habitatges d'ús turístic en alta al Registre de Turisme de Catalunya el dia de la consulta, per cada
+      100 habitants del padró. Compta els inscrits, no els que funcionen sense registre, i depèn sobretot de
+      la costa i la muntanya.`,
+    valor: (r) => r.hut ?? null,
+    any: (r) => (r.hut == null ? null : r.huta ?? null),
+    format: (v) => coma(v, 2),
+  },
+  {
+    id: "lloguer",
+    grup: "L'habitatge",
+    unitat: "€ al mes",
+    font: "Agència de l'Habitatge de Catalunya",
+    titol: "Quant costa llogar un pis",
+    boto: "Lloguer",
+    peu: `Preu mitjà dels contractes de lloguer amb fiança dipositada de l'últim any publicat. Als pobles
+      petits sovint no hi ha prou contractes i el municipi va ratllat. És el preu dels contractes nous,
+      no el que paguen tots els llogaters.`,
+    valor: (r) => r.ll ?? null,
+    any: (r) => (r.ll == null ? null : r.lla ?? null),
+    format: (v) => `${milers(v)} €`,
+  },
+  {
+    id: "lloguer-canvi",
+    grup: "L'habitatge",
+    unitat: "% des del 2023",
+    font: "Agència de l'Habitatge de Catalunya",
+    titol: "Com ha canviat el lloguer des del 2023",
+    boto: "Canvi del lloguer",
+    peu: `Variació del preu mitjà del lloguer entre el 2023 i l'últim any publicat. Amb pocs contractes,
+      uns quants pisos mouen molt la mitjana; depèn del mercat de la zona més que de cap decisió municipal.`,
+    valor: (r) => r.llv ?? null,
+    any: (r) => (r.llv == null ? null : r.llp ?? null),
+    format: ambSignePct,
+  },
+  {
+    id: "habitatge-protegit",
+    grup: "L'habitatge",
+    unitat: "acabats per 1.000 habitants",
+    font: "Departament de Territori",
+    titol: "Quant habitatge protegit s'ha acabat des del 2023",
+    boto: "Habitatge protegit",
+    peu: `Habitatges amb protecció oficial acabats des del 2023 fins al darrer any publicat, per cada 1.000
+      habitants. Una sola promoció mou molt la xifra d'un poble petit, i zero vol dir que la font no en
+      compta cap d'acabat aquests anys.`,
+    valor: (r) => r.hpo ?? null,
+    any: (r) => (r.hpo == null ? null : r.hpop ?? null),
+    format: (v) => coma(v, 1),
+  },
+];
+
 const CAPES: Capa[] = [
   CAPA_PARTIT,
   {
@@ -391,8 +595,10 @@ const CAPES: Capa[] = [
     peu: `Preu del tram de subministrament per a un consum domèstic de 12 m³ al mes, segons
       l'Observatori del preu de l'aigua de l'ACA. És el tram comparable entre municipis: el cànon
       i el clavegueram no els fixa l'ajuntament i no hi entren.`,
-    valor: (r) => r.pa ?? null,
-    any: (r) => r.paa ?? null,
+    // Un zero no és un preu sinó un municipi sense tarifa publicada: la regla
+    // és `preuAiguaComparable()`, la mateixa del rànquing i del comparador.
+    valor: (r) => preuAiguaComparable(r.pa),
+    any: (r) => (preuAiguaComparable(r.pa) === null ? null : r.paa ?? null),
     format: (v) => `${coma(v, 2)} €/m³`,
   },
   {
@@ -489,6 +695,7 @@ const CAPES: Capa[] = [
     valor: (r) => r.sa ?? null,
     format: (v) => `${milers(v)} €`,
   },
+  ...CAPES_NOVES,
 ];
 
 /**
@@ -526,6 +733,20 @@ const TO_DE_CAPA: Readonly<Record<string, string>> = {
   alternances: "#5B6B8A",   // gris blau: alternança des del 1979
   deute: "#E2735A",         // coral: els diners, com fins ara
   "sou-alcaldia": "#C9932A",// daurat: el sou de l'alcaldia
+  // Les capes noves. Cap verd ni cap vermell, pel mateix motiu que la renda:
+  // un to que no vol dir res més que «aquesta capa».
+  "veins-voten": "#4A6FA5",        // blau acer: qui pot votar
+  fragmentacio: "#6B5B95",         // violeta gris: com de repartit és el ple
+  volatilitat: "#8C6D46",          // bru: quant es mou el ple
+  "vot-perdut": "#5E7A8A",         // pissarra: el vot que no arriba al ple
+  "ultima-regidoria": "#7A5C8C",   // pruna: els vots de l'última regidoria
+  "forca-alcaldia": "#56708C",     // blau gris: anys de la mateixa força
+  "una-oferta": "#A86B3C",         // coure: licitacions amb una sola oferta
+  "pla-urbanistic": "#7D6E57",     // terra: l'antiguitat del pla
+  "pisos-turistics": "#D08A3C",    // taronja: pisos turístics
+  lloguer: "#9C4F6E",              // vi: el lloguer
+  "lloguer-canvi": "#8E5A7A",      // malva: com ha canviat el lloguer
+  "habitatge-protegit": "#4F7C9E", // blau mitjà: habitatge protegit
 };
 for (const capa of CAPES) {
   const to = TO_DE_CAPA[capa.id];
@@ -1385,7 +1606,7 @@ ${cercador("../")}
     <a href="${escape(geometria.fontUrl)}" target="_blank" rel="noopener">Divisions administratives</a>
     de l'${escape(geometria.font.replace(/^Divisions administratives de l'/, ""))},
     sota <a href="${escape(geometria.llicenciaUrl)}" target="_blank" rel="noopener">${escape(geometria.llicencia)}</a>,
-    amb dades actualitzades el ${escape(geometria.actualitzat)}. Simplificats per pesar poc; per a
+    amb dades actualitzades ${escape(dataEscrita(geometria.actualitzat) ? elDia(geometria.actualitzat) : `el ${geometria.actualitzat}`)}. Simplificats per pesar poc; per a
     qualsevol ús on la frontera exacta importi, cal anar a l'original.</p>
     <p class="nota"><b>Un mapa de municipis sobrerepresenta el buit.</b> El Pallars Sobirà hi ocupa
     molta més taca que el Barcelonès i hi viu una fracció de la gent. Val per a totes les capes i

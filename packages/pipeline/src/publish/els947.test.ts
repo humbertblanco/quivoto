@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
+  xifresNoves,
   clauCandidatura,
   clauCerca,
   clausOrdre,
@@ -1122,5 +1123,45 @@ describe("la tira d'alcaldies a cada fila", () => {
     expect(perFila).toBeLessThan(60);
     const nomesAtributs = (html.match(/ data-t="[^"]*"/g) ?? []).join("").length / files947.filter((f) => f.tp).length;
     expect(nomesAtributs).toBeLessThan(28);
+  });
+});
+
+describe("les xifres noves de la fila", () => {
+  /** Les mètriques d'un municipi inventat, en la forma que les desen els jobs. */
+  const metriques = new Map<string, unknown>([
+    ["government", { effectiveParties: 2.43 }],
+    ["continuitat", { anyReferencia: 2026, partit: { anys: 15, desDeAny: 2011 }, persona: { anys: 7 }, volatilitat: { ultima: { de: 2019, a: 2023, index: 23.5, fiable: true } } }],
+    ["votPerdut", { darrera: "M20231", regidorsEquivalents: 1.1, eleccions: { M20231: { total: { pct: 6.6 } } } }],
+    ["censElectoral", { eleccions: [{ any: 2023, cens: 9_559 }] }],
+    ["poblacio", { indicadors: [{ clau: "padroHabitants", serie: [{ any: 2023, valor: 12_848 }] }] }],
+    ["contractacio", { finestra: { unaOfertaPct: 36, licitacionsAmbOfertes: 22 }, finestraDates: { desDe: "2025-01-01", finsA: "2026-09-30" } }],
+    ["urbanismeHabitatge", { pisosTuristics: { any: 2024, hutsPer100: 0.05 }, planejament: { any: 2024, antiguitat: 36, sigla: "PGO" }, protegit: { desDe2023: { des: 2023, fins: 2025, acabats: 0 } } }],
+    ["habitatge", { preu: 792.5, darrerAny: 2025, mandat: { desDe: 2023, fins: 2025, percentual: 17.3 } }],
+    ["preuAigua", { gestio: { subministrament: "Indirecta" } }],
+    ["singleList", { campaign: 2023 }],
+  ]);
+
+  it("les llegeix amb els lectors comuns i deixa a null el que no hi és", () => {
+    const { llegeix } = lectorDe(metriques);
+    const x = xifresNoves(llegeix, 13_227);
+    expect(x).toMatchObject({
+      ne: 2.43, vol: 23.5, vola: 2023, vp: 6.6, vpr: 1.1, cfa: 15, cfd: 2011, cpa: 7, cra: 2026,
+      vv: 74.4, uo: 36, uon: 22, uop: "2025-2026", hut: 0.05, huta: 2024, ll: 792.5, lla: 2025, llv: 17.3, llp: "2023-2025",
+      pla: 36, plas: "PGO", plaa: 2024, hpo: 0, hpon: 0, hpop: "2023-2025", pag: "indirecta", oa: 2023,
+    });
+    // «marges» encara no hi és: cap error, i el marge queda buit.
+    expect(x.mg).toBeNull();
+    expect(x.mgg).toBeNull();
+  });
+
+  it("els pisos turístics surten del registre viu (J46) quan n'hi ha, amb l'any de la consulta", () => {
+    const ambRegistre = new Map(metriques);
+    ambRegistre.set("establimentsTuristics", { dataConsulta: "2026-10-27", hutPer100Hab: 0.08 });
+    const x = xifresNoves(lectorDe(ambRegistre).llegeix, 13_227);
+    expect(x).toMatchObject({ hut: 0.08, huta: 2026 });
+  });
+
+  it("totes les mètriques que llegeix són a la consulta: si no, petaria a la primera fila", () => {
+    expect(() => xifresNoves(lectorDe(new Map()).llegeix, null)).not.toThrow();
   });
 });

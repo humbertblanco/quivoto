@@ -383,7 +383,7 @@ const nodeR = (fills: Record<string, NodeR> = {}): NodeR => {
 };
 
 /** Obre el guió de la pàgina amb una sola secció de mentida, la de la mètrica `id`. */
-function obreRanquings(html: string, id: string) {
+function obreRanquings(html: string, id: string, extra: { diferit?: boolean; filtre?: NodeR } = {}) {
   const de = nodeR();
   const calaix = nodeR({ ".rq-obre .secundari": de });
   const n = {
@@ -394,7 +394,10 @@ function obreRanquings(html: string, id: string) {
     "[data-ambit]": n.ambit, "[data-cerca]": n.cerca, "[data-dalt]": n.dalt, "[data-mig]": n.mig,
     "[data-baix]": n.baix, "[data-calaix]": n.calaix, "[data-obre]": n.obre, "[data-mes]": n.mes,
     "[data-buit]": n.buit, ".dispersio": n.figura, ".controls": n.controls,
+    ...(extra.filtre ? { "[data-filtre]": extra.filtre } : {}),
   });
+  // Un regle diferit arriba amb `data-diferit`, que al DOM de debò és `dataset.diferit = ""`.
+  if (extra.diferit) n.figura.dataset.diferit = "";
   seccio.dataset.metrica = id;
   const json = /<script type="application\/json" id="dades-ranquings">([\s\S]*?)<\/script>/.exec(html)![1]!;
   const inici = html.indexOf("<script>\n(() => {\n  const bloc");
@@ -481,5 +484,91 @@ describe("l'escala del regle als rànquings", () => {
   it("el JSON diu l'escala de cada mètrica perquè el navegador la refaci igual", () => {
     expect(html).toContain('"poblacio":{"d":0,"s":"","e":"log"');
     expect(html).toContain('"participacio":{"d":2,"s":"%","e":"lineal"');
+  });
+});
+
+// ─────────────────────── les xifres que fins ara només eren a la fitxa
+
+/**
+ * Els cent pobles de dalt, ara amb les xifres noves. El lloguer només el
+ * tenen la meitat i la contractació 45, que és el que passa de debò: són
+ * mètriques que no arriben mai al 90 % i que baixen el llindar dient per què.
+ */
+const ambNoves = (quants = 100): RankingRow[] =>
+  files(quants).map((r, i) => ({
+    ...r,
+    vv: 60 + (i % 40), ne: 1 + (i % 5) / 2, vol: i % 50, vola: 2023, vp: i % 20, mg: 1 + i, cfa: i % 30, cra: 2026,
+    uo: i < 45 ? i : null, uon: 10, uop: "2025-2026",
+    hut: i / 100, huta: 2024,
+    ll: i < 50 ? 500 + i : null, lla: 2025, llv: i < 50 ? i / 10 : null, llp: "2023-2025",
+    hpo: i % 3, hpop: "2023-2025",
+    pla: i % 40, plas: i % 2 ? "POUM" : "NNSS", plaa: 2024,
+    pag: i % 2 ? "directa" : "indirecta",
+  }));
+
+describe("els rànquings nous", () => {
+  const html = renderRanquings(ambNoves(), "2026-10-27");
+  const seccio = (id: string): string => {
+    const inici = html.indexOf(`<section class="bloc ranquing" id="${id}"`);
+    return html.slice(inici, html.indexOf("</section>", inici));
+  };
+
+  it("surten quan les files porten la dada, i no surten quan no la porten", () => {
+    const nous = [
+      "veins-voten", "fragmentacio", "volatilitat", "vot-perdut", "ultima-regidoria", "forca-alcaldia",
+      "una-oferta", "pisos-turistics", "lloguer", "lloguer-canvi", "habitatge-protegit", "pla-urbanistic",
+    ];
+    expect(ids(ambNoves())).toEqual(expect.arrayContaining(nous));
+    for (const id of nous) expect(ids(files())).not.toContain(id);
+  });
+
+  it("una mètrica amb llindar propi diu per què i quants en surten de debò", () => {
+    const lloguer = preparaRanquings(ambNoves()).find((r) => r.metrica.id === "lloguer")!;
+    expect(lloguer.files).toHaveLength(50);
+    expect(seccio("lloguer")).toContain("Hi surten 50 dels 100 municipis.");
+    expect(seccio("lloguer")).toContain("prou contractes");
+    // Per sota del seu llindar (el 40 %), no es publica.
+    const poques = ambNoves().map((r, i) => ({ ...r, ll: i < 30 ? r.ll : null }));
+    expect(ids(poques)).not.toContain("lloguer");
+    // Una mètrica amb tots els municipis no posa cap nota de cobertura.
+    expect(seccio("fragmentacio")).not.toContain('class="cobertura"');
+  });
+
+  it("el regle de les mètriques noves el dibuixa el navegador: el servidor només escriu les tres xifres", () => {
+    const s = seccio("fragmentacio");
+    expect(s).toContain('<figure class="dispersio" data-diferit>');
+    expect(s).not.toContain('<i class="marca"');
+    expect(s).toContain('<span class="cap">La mediana</span>');
+    const { n } = obreRanquings(html, "fragmentacio", { diferit: true });
+    expect(n.figura.innerHTML).toContain('<i class="marca"');
+    expect(n.figura.innerHTML).toContain("Del més baix al més alt");
+  });
+
+  it("les que depenen de la mida diuen la mediana de cada grup", () => {
+    expect(seccio("una-oferta")).toContain("La mediana de cada mida");
+    expect(seccio("volatilitat")).not.toContain("La mediana de cada mida");
+  });
+
+  it("el preu de l'aigua es pot triar per model de gestió, amb la mediana de cadascun i sense dir quin és millor", () => {
+    const s = seccio("aigua");
+    expect(s).toContain("<select data-filtre>");
+    expect(s).toContain('<option value="directa">Gestió directa (50)</option>');
+    expect(s).toContain("La mediana per gestió");
+    expect(s).toContain("no vol dir que el model en sigui la causa");
+    expect(html).toContain('"fe":"gestió"');
+  });
+
+  it("al navegador, el filtre de gestió deixa la llista només amb els d'aquell model", () => {
+    const filtre = nodeR();
+    const { n, pinta, posicions } = obreRanquings(html, "aigua", { filtre });
+    filtre.value = "directa";
+    pinta(filtre, "change");
+    expect(n.de.textContent).toBe(" de 50");
+    expect(posicions(n.dalt)).toEqual([1, 2, 3, 4, 5]);
+    expect(n.dalt.innerHTML).toContain("gestió¦Gestió directa");
+  });
+
+  it("la figura del pla urbanístic separa POUM, normes subsidiàries i la resta", () => {
+    expect(seccio("pla-urbanistic")).toContain('<option value="nnss">Normes subsidiàries (50)</option>');
   });
 });

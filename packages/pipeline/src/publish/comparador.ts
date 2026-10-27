@@ -3,6 +3,11 @@ import { electionParticipation, municipalities, municipalityMetrics, type Db } f
 import { tintaSobre } from "./contrast";
 import { partitDe } from "./sigla";
 import { carregaMetriques } from "./metriques";
+import {
+  antiguitatDelPla, censDeLesMunicipals, lloguerMitja, margeUltimEsco, modelGestioAigua, padroDeLAny,
+  partitsEfectius, pisosTuristicsPer100, preuAiguaComparable, protegitsAcabats, ratxaAlcaldia, unaSolaOferta,
+  veinsQuePodenVotar, volatilitatUltima, votPerdut2023,
+} from "./contracte-metriques";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, percentileOf } from "../derive/peers";
 import { RADIOGRAFIA_CSS } from "./estil";
@@ -128,12 +133,90 @@ const SECCIONS = [
   "Què es paga",
   "Com ha anat el mandat",
   "Com es governa",
+  // L'habitatge: el lloguer, els pisos turístics, el protegit i el pla. Va
+  // apart de «Com es governa» perquè gairebé res d'això no ho decideix el
+  // ple sol, i a sota de tot menys la seguretat, que encara ho decideix menys.
+  "L'habitatge",
   // Tanca la taula i no és dins de «Com es governa» a posta: la seguretat no
   // la decideix (gairebé gens) l'ajuntament —la policia és dels Mossos— i
   // barrejar-la amb la selectiva o la transparència la faria llegir com un
   // resultat de gestió, que és exactament el que no és.
   "La seguretat",
 ] as const;
+
+/**
+ * Com es vota al poble: xifres que la fitxa ja tenia i que ara també es
+ * comparen. Cap no té sentit de «millor»: un ple repartit o un de calcat, un
+ * vot que es mou o un que no, no són bons ni dolents. Es marquen els extrems
+ * sense jutjar-los (`neutre`) i el percentil és dins del grup de mida.
+ */
+const INDICADORS_VOT: readonly Indicador[] = [
+  {
+    clau: "fragmentacio", etiqueta: "Partits efectius al ple", seccio: "Qui mana", mena: "xifra", format: "nombre",
+    sentit: "neutre", percentil: true, font: "ntc4-rnwr",
+    nota: "Índex de Laakso-Taagepera sobre les regidories del 2023: 1 vol dir un ple d'una sola llista i, com més alt, més repartit. Mesura la fragmentació, no com es governa.",
+    absent: "No en tenim el repartiment de regidories.",
+  },
+  {
+    clau: "volatilitat", etiqueta: "Volatilitat del 2019 al 2023", seccio: "Qui mana", mena: "xifra", format: "nombre",
+    sentit: "neutre", percentil: true, font: "3539f7e6",
+    nota: "Índex de Pedersen sobre les quotes de regidories entre les municipals del 2019 i les del 2023: 0 és un ple calcat a l'anterior i 100, que no en queda res.",
+    absent: "El càlcul no és fiable: massa regidories són de llistes locals que canvien de nom.",
+  },
+  {
+    clau: "vot_perdut", etiqueta: "Vot sense representació el 2023", seccio: "Qui mana", mena: "xifra", format: "percent",
+    sentit: "neutre", percentil: true, font: "ntc4-rnwr",
+    nota: "Vots a llistes que no van treure cap regidoria, més nuls i blancs, sobre els vots emesos. Al peu, quantes regidories representaria.",
+    absent: "Els vots per candidatura de la font no quadren amb els emesos, com passa sempre a les llistes obertes.",
+  },
+  {
+    clau: "ultima_regidoria", etiqueta: "Vots que van decidir l'última regidoria", seccio: "Qui mana", mena: "xifra",
+    format: "nombre", sentit: "neutre", percentil: true, font: "ntc4-rnwr · Ministeri de l'Interior",
+    nota: "Quants vots de més li calien a qui va quedar més a prop de prendre l'última regidoria del 2023, amb tota la resta igual. Al peu, qui la va treure i qui la tenia a tocar. És aritmètica sobre els resultats oficials, no una predicció.",
+    absent: "No hem pogut reproduir el repartiment oficial, o no tenim el vot nominal de la llista oberta.",
+  },
+  {
+    clau: "forca_alcaldia", etiqueta: "Anys de la mateixa força a l'alcaldia", seccio: "Qui mana", mena: "xifra",
+    format: "nombre", sentit: "neutre", percentil: true, font: "historial d'alcaldies",
+    nota: "Anys seguits que la força que avui té l'alcaldia l'ha tinguda, encara que hagi canviat la persona. Al peu, quants en porta la persona.",
+    absent: "No en tenim l'historial d'alcaldies.",
+  },
+];
+
+/** L'habitatge, de les fonts de l'Agència de l'Habitatge i de l'Observatori del Territori. */
+const INDICADORS_HABITATGE: readonly Indicador[] = [
+  {
+    clau: "lloguer", etiqueta: "Lloguer mitjà", seccio: "L'habitatge", mena: "xifra", format: "euros",
+    sentit: "neutre", percentil: true, font: "Agència de l'Habitatge, fiances",
+    nota: "Preu mitjà mensual dels contractes de lloguer amb fiança dipositada, de l'últim any publicat. És el preu dels contractes nous, no el que paguen tots els llogaters.",
+    absent: "No hi ha prou contractes perquè l'Agència de l'Habitatge en publiqui el preu.",
+  },
+  {
+    clau: "lloguer_canvi", etiqueta: "Lloguer: del 2023 ençà", seccio: "L'habitatge", mena: "xifra",
+    format: "variacio-percent", sentit: "neutre", extrems: { alt: "la variació més alta", baix: "la variació més baixa" },
+    percentil: true, font: "Agència de l'Habitatge, fiances",
+    nota: "Variació del preu mitjà del lloguer entre el 2023 i l'últim any publicat, amb els anys al peu. Depèn del mercat de la zona més que de cap decisió municipal.",
+    absent: "No en tenim el preu del 2023 i de l'últim any.",
+  },
+  {
+    clau: "pisos_turistics", etiqueta: "Pisos turístics per 100 habitants", seccio: "L'habitatge", mena: "xifra",
+    format: "nombre", sentit: "neutre", percentil: true, font: "Registre de Turisme de Catalunya",
+    nota: "Habitatges d'ús turístic en alta al Registre de Turisme de Catalunya el dia de la consulta, per cada 100 habitants del padró. Compta els inscrits, no els que funcionen sense registre.",
+    absent: "No és al Registre de Turisme ni a l'Observatori del Territori.",
+  },
+  {
+    clau: "habitatge_protegit", etiqueta: "Habitatge protegit acabat des del 2023", seccio: "L'habitatge", mena: "xifra",
+    format: "per-mil", sentit: "neutre", percentil: true, font: "Departament de Territori, HPO",
+    nota: "Habitatges amb protecció oficial acabats des del 2023 fins al darrer any publicat, per cada 1.000 habitants; al peu, quants i de quins anys. Una sola promoció mou molt la xifra d'un poble petit.",
+    absent: "No en tenim la sèrie d'habitatge protegit.",
+  },
+  {
+    clau: "pla_urbanistic", etiqueta: "Anys del pla urbanístic", seccio: "L'habitatge", mena: "xifra",
+    format: "nombre", sentit: "cap", percentil: false, font: "Observatori del Territori",
+    nota: "Anys que fa que es va aprovar el pla urbanístic general vigent, amb la figura al peu: el POUM és la d'ara, les normes subsidiàries són d'abans del 2002. Un pla vell no és un pla dolent.",
+    absent: "No és a l'Observatori del Territori.",
+  },
+];
 
 /**
  * L'ordre d'aquesta llista és l'ordre de la taula, i les claus són les mateixes
@@ -173,6 +256,14 @@ const INDICADORS: readonly Indicador[] = [
     absent: "No en tenim el cens de població.",
   },
   {
+    // Com la població estrangera, sense marques: diu qui viu al poble, no
+    // cap resultat de ningú.
+    clau: "veins_voten", etiqueta: "Veïns que podien votar el 2023", seccio: "El poble", mena: "xifra",
+    format: "percent", sentit: "cap", percentil: true, font: "irrv-2mfc · Idescat, padró",
+    nota: "Electors del cens de les municipals del 2023 sobre els habitants del padró a 1 de gener del 2023. Hi voten les persones de nacionalitat espanyola i les de la Unió Europea —i d'uns quants països amb conveni— inscrites al cens; no hi voten els menors ni la resta de veïns estrangers. No és cap valoració, i pot passar del 100 % perquè padró i cens es tanquen en dates diferents.",
+    absent: "No en tenim el cens del 2023 o el padró del mateix any.",
+  },
+  {
     clau: "govern", etiqueta: "Qui governa", seccio: "Qui mana", mena: "text", format: "nombre",
     sentit: "cap", percentil: false, font: "6nei-4b44 · ntc4-rnwr",
     nota: "Les sigles de la candidatura que té l'alcaldia des del juny del 2023, amb el seu color, i el nom de qui l'ocupa. Van a dalt de tot perquè les xifres de sota no s'atribueixin a un govern desconegut.",
@@ -205,6 +296,7 @@ const INDICADORS: readonly Indicador[] = [
     nota: "Vegades que la força més votada ha canviat de família política a les municipals des del 1979. Zero vol dir que sempre ha guanyat la mateixa.",
     absent: "No en tenim la sèrie electoral des del 1979.",
   },
+  ...INDICADORS_VOT,
   {
     clau: "deute", etiqueta: "Deute per habitant", seccio: "Els comptes", mena: "xifra", format: "euros",
     sentit: "avall", percentil: true, font: "34db8dc5",
@@ -280,8 +372,8 @@ const INDICADORS: readonly Indicador[] = [
     // el total no inclou el clavegueram, i el cànon no és municipal.
     clau: "preu_aigua", etiqueta: "Preu de l'aigua, €/m³", seccio: "Què es paga", mena: "xifra", format: "euros-m3",
     sentit: "neutre", percentil: true, font: "ACA, Observatori del preu de l'aigua",
-    nota: "Preu del tram de subministrament d'aigua, en euros per metre cúbic, segons l'Observatori del preu de l'aigua de l'ACA. Es compara només el subministrament: el cànon no és municipal i el clavegueram no es calcula igual a tot arreu.",
-    absent: "No és a l'observatori del preu de l'aigua.",
+    nota: "Preu del tram de subministrament d'aigua, en euros per metre cúbic, segons l'Observatori del preu de l'aigua de l'ACA. Es compara només el subministrament: el cànon no és municipal i el clavegueram no es calcula igual a tot arreu. Al peu, el model de gestió: directa si el presta l'ajuntament o un ens seu, indirecta si el presta una empresa. Un preu zero vol dir que el municipi no hi té cap tarifa publicada, i surt com a absència, igual que al rànquing i al mapa.",
+    absent: "No és a l'observatori del preu de l'aigua, o no hi té cap tarifa de subministrament publicada.",
   },
   {
     // La columna de temps. La resta de la taula són nivells de l'últim any; això
@@ -318,6 +410,15 @@ const INDICADORS: readonly Indicador[] = [
     nota: "Apartats publicats dels que li tocarien, segons l'emplenament del portal de transparència que mesura el Consorci AOC.",
     absent: "No en tenim el mesurament de l'AOC.",
   },
+  {
+    // Sense veredicte: una sola oferta és habitual als pobles petits. El
+    // percentil és dins del grup de mida, que és on aquesta xifra diu alguna cosa.
+    clau: "una_oferta", etiqueta: "Licitacions amb una sola oferta", seccio: "Com es governa", mena: "xifra",
+    format: "percent", sentit: "neutre", percentil: true, font: "PSCP, via dades obertes de l'AOC",
+    nota: "De les licitacions adjudicades per l'ajuntament que diuen quantes ofertes van rebre, quina part en va rebre només una, sobre tot el període de la font junt. Al peu, sobre quantes licitacions. No és cap irregularitat: als pobles petits sovint no hi ha més empreses que s'hi presentin.",
+    absent: "Té menys de cinc licitacions amb el nombre d'ofertes informat: massa poques per fer-ne un percentatge.",
+  },
+  ...INDICADORS_HABITATGE,
   {
     // La seguretat tanca la taula sense marques ni percentil, i és a posta.
     // Sense marques perquè la policia aquí no és la municipal i més fets
@@ -645,6 +746,13 @@ type RebutIbiMetric = {
 const KINDS = [
   "government", "finances", "taxes", "parity", "transparency", "residus", "electoralHistory",
   "costGovern", "preuAigua", "rebutIbi",
+  // Documents petits d'on surten les files de vot, d'habitatge i de
+  // contractació. Es llegeixen amb els lectors de `contracte-metriques.ts`,
+  // els mateixos que fan servir el rànquing i el mapa.
+  "continuitat", "votPerdut", "contractacio", "urbanismeHabitatge", "habitatge", "marges", "censElectoral",
+  // El Registre de Turisme (J46): els pisos turístics d'avui, que manen sobre
+  // el recompte del 2024 que porta «urbanismeHabitatge».
+  "establimentsTuristics",
 ] as const;
 
 /** El mandat que la taula llegeix: el del govern d'ara. */
@@ -730,6 +838,7 @@ async function carregaProjectades(db: Db): Promise<{
   estrangera: Map<number, { valor: number; any: number | null }>;
   enllacIdescat: Map<number, string>;
   criminalitat: Map<number, ResumCriminalitat>;
+  padro2023: Map<number, number>;
 }> {
   const data = municipalityMetrics.data;
   const nombre = (valor: string | null): number | null => {
@@ -765,6 +874,23 @@ async function carregaProjectades(db: Db): Promise<{
     })
     .from(municipalityMetrics)
     .where(eq(municipalityMetrics.kind, "poblacioEnllacos"));
+
+  // Els habitants del padró del 2023, per al percentatge de veïns que podien
+  // votar: d'«indicadors» només la sèrie de «padroHabitants», i l'any es tria
+  // aquí amb el mateix lector que fa servir el rànquing.
+  const padroRows = await db
+    .select({
+      municipalityId: municipalityMetrics.municipalityId,
+      serie: sql<unknown>`(jsonb_path_query_first(${data}, '$.indicadors[*] ? (@.clau == "padroHabitants")'))->'serie'`,
+    })
+    .from(municipalityMetrics)
+    .where(eq(municipalityMetrics.kind, "poblacio"));
+  const padro2023 = new Map<number, number>();
+  for (const row of padroRows) {
+    const serie = typeof row.serie === "string" ? (JSON.parse(row.serie) as unknown) : row.serie;
+    const valor = padroDeLAny({ indicadors: [{ clau: "padroHabitants", serie }] });
+    if (valor !== null) padro2023.set(row.municipalityId, valor);
+  }
 
   const renda = new Map<number, { valor: number; any: number | null }>();
   for (const row of rendaRows) {
@@ -808,7 +934,7 @@ async function carregaProjectades(db: Db): Promise<{
       canviDesDe: nombre(row.canviDesDe),
     });
   }
-  return { renda, estrangera, enllacIdescat, criminalitat };
+  return { renda, estrangera, enllacIdescat, criminalitat, padro2023 };
 }
 
 /**
@@ -824,6 +950,75 @@ function recollidaSelectiva(data: unknown): number | null {
   // que és la manera més fàcil de publicar un forat sense adonar-se'n.
   const valor = (data as { taxaSelectiva?: unknown }).taxaSelectiva;
   return typeof valor === "number" && Number.isFinite(valor) ? valor : null;
+}
+
+/**
+ * Les files noves d'un municipi —vot, contractació, habitatge—, amb els peus
+ * i els anys que les sostenen.
+ *
+ * Separat de `loadComparador()` perquè es pugui provar sense base de dades.
+ * Tot ve dels lectors de `contracte-metriques.ts`: si una mètrica no hi és,
+ * la casella surt buida amb el seu `absent`, mai amb un zero.
+ */
+export function filesNoves(
+  own: ReadonlyMap<string, unknown> | undefined,
+  habitants: number | null,
+  padro2023: number | null,
+): { valors: Record<string, number | null>; peus: Record<string, string>; anys: Record<string, number> } {
+  const llegeix = (kind: string): unknown => own?.get(kind);
+  const n = (v: number): string => v.toLocaleString("ca-ES");
+  const continuitat = llegeix("continuitat");
+  const volatilitat = volatilitatUltima(continuitat);
+  const ratxa = ratxaAlcaldia(continuitat);
+  const votPerdut = votPerdut2023(llegeix("votPerdut"));
+  const marge = margeUltimEsco(llegeix("marges"));
+  const oferta = unaSolaOferta(llegeix("contractacio"));
+  const urbanisme = llegeix("urbanismeHabitatge");
+  const huts = pisosTuristicsPer100(urbanisme, llegeix("establimentsTuristics"));
+  const pla = antiguitatDelPla(urbanisme);
+  const protegits = protegitsAcabats(urbanisme, habitants);
+  const lloguer = lloguerMitja(llegeix("habitatge"));
+  const peus: Record<string, string> = {};
+  const anys: Record<string, number> = {};
+  // Sense registre, la xifra és el recompte de l'Observatori del Territori, i
+  // la fila ho diu: la font de la línia és la del registre.
+  if (huts?.font === "urbanisme") peus.pisos_turistics = "recompte de l'Observatori del Territori";
+  if (votPerdut?.regidories != null) {
+    const r = votPerdut.regidories;
+    peus.vot_perdut = `equival a ${n(r)} ${r === 1 ? "regidoria" : "regidories"}`;
+  }
+  if (marge?.guanyador && marge.perseguidor) {
+    peus.ultima_regidoria = `per a ${marge.guanyador}; la tenia a tocar ${marge.perseguidor}`;
+  }
+  if (ratxa?.personaAnys != null && ratxa.forcaAnys != null) {
+    peus.forca_alcaldia = `la persona d'ara, ${n(ratxa.personaAnys)} ${ratxa.personaAnys === 1 ? "any" : "anys"}`;
+  }
+  if (oferta) peus.una_oferta = `sobre ${n(oferta.licitacions)} licitacions${oferta.periode ? `, ${oferta.periode}` : ""}`;
+  if (lloguer?.variacio) peus.lloguer_canvi = lloguer.variacio.periode.replace("-", " → ");
+  if (protegits) peus.habitatge_protegit = `${n(protegits.acabats)} acabats, ${protegits.periode}`;
+  if (pla?.sigla) peus.pla_urbanistic = pla.sigla;
+  if (lloguer?.preu != null && lloguer.any != null) anys.lloguer = lloguer.any;
+  if (huts) anys.pisos_turistics = huts.any;
+  if (pla) anys.pla_urbanistic = pla.any;
+  return {
+    valors: {
+      veins_voten: veinsQuePodenVotar(censDeLesMunicipals(llegeix("censElectoral")), padro2023),
+      fragmentacio: partitsEfectius(llegeix("government")),
+      // Només el tram 2019-2023: un altre tram a la mateixa fila no es pot comparar.
+      volatilitat: volatilitat?.any === 2023 ? volatilitat.index : null,
+      vot_perdut: votPerdut?.pct ?? null,
+      ultima_regidoria: marge?.vots ?? null,
+      forca_alcaldia: ratxa?.forcaAnys ?? null,
+      una_oferta: oferta?.pct ?? null,
+      lloguer: lloguer?.preu ?? null,
+      lloguer_canvi: lloguer?.variacio?.pct ?? null,
+      pisos_turistics: huts?.valor ?? null,
+      habitatge_protegit: protegits?.perMil ?? null,
+      pla_urbanistic: pla?.anys ?? null,
+    },
+    peus,
+    anys,
+  };
 }
 
 export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
@@ -896,7 +1091,12 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
     const rebutMitja = rebut?.publicable && typeof rebut.rebutMitja === "number" ? rebut.rebutMitja : null;
     const rebutIbi = enllacIdescat ? rebutMitja : null;
     const estrangeraPct = enllacIdescat ? estrangera?.valor ?? null : null;
-    const preuAigua = aigua?.preu?.subministrament ?? null;
+    // Un zero no és un preu: és un municipi sense tarifa publicada. Abans
+    // passava tal qual i el comparador ensenyava «0,00 €/m³» on el rànquing i
+    // el mapa no ensenyen res; ara la regla és la mateixa als tres llocs.
+    const preuAigua = preuAiguaComparable(aigua?.preu?.subministrament);
+    const modelAigua = preuAigua === null ? null : modelGestioAigua(aigua);
+    const nous = filesNoves(own, m.population ?? null, projectades.padro2023.get(m.id) ?? null);
     // El preu és el de l'últim any del full de l'ACA o, si el municipi no hi
     // és aquell any, el de l'últim any que hi és: l'any de la xifra és el seu.
     const anyAigua = aigua?.serie?.at(-1)?.any ?? aigua?.darrerAny ?? null;
@@ -950,12 +1150,15 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
         estrangera_pct: estrangeraPct,
         fets_penals_per_mil: crim?.perMil ?? null,
         fets_canvi_mandat: crim?.canviPct ?? null,
+        ...nous.valors,
       },
       percentils: {},
       peus: {
         ...(mandat.peu ? { deute_mandat: mandat.peu } : {}),
         ...(cadastre ? { ibi: `última revisió cadastral: ${Math.round(cadastre)}` } : {}),
         ...(peuCrim ? { fets_canvi_mandat: peuCrim } : {}),
+        ...(modelAigua === "directa" || modelAigua === "indirecta" ? { preu_aigua: `gestió ${modelAigua}` } : {}),
+        ...nous.peus,
       },
       anys: {
         ...(costGovern !== null && cost?.darrer?.any ? { cost_govern: cost.darrer.any } : {}),
@@ -964,6 +1167,7 @@ export async function loadComparador(db: Db): Promise<ComparadorRow[]> {
         ...(renda?.any ? { renda: renda.any } : {}),
         ...(estrangeraPct !== null && estrangera?.any ? { estrangera_pct: estrangera.any } : {}),
         ...(crim && crim.perMil !== null && crim.any !== null ? { fets_penals_per_mil: crim.any } : {}),
+        ...nous.anys,
       },
       ...(enllacIdescat ? { enllacIdescat } : {}),
       textos: {

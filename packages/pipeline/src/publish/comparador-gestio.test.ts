@@ -170,6 +170,10 @@ const ESPLUGUES = fila(
     execucio: 38.4, pmp: 21, ibi: 0.83, selectiva: null, dones: 47.6, transparencia: 92,
     cost_govern: 8.4, preu_aigua: 0.9124, rebut_ibi: 512, renda: 16_240, estrangera_pct: 11.8,
     fets_penals_per_mil: 39.1, fets_canvi_mandat: 4.2,
+    // Les files de vot, contractació i habitatge (vegeu `filesNoves`).
+    veins_voten: 74.2, fragmentacio: 3.1, volatilitat: 18.4, vot_perdut: 6.6, ultima_regidoria: 212,
+    forca_alcaldia: 12, una_oferta: 38, lloguer: 1_010, lloguer_canvi: 9.4, pisos_turistics: 0.12,
+    habitatge_protegit: 1.8, pla_urbanistic: 24,
   },
   {
     govern: { principal: "PSC-CP", secundari: "Pilar Díaz Romero", color: "#d00c3c" },
@@ -189,6 +193,10 @@ const SANT_JUST = fila(
     execucio: 79.1, pmp: 44, ibi: 0.61, selectiva: null, dones: 52.3, transparencia: 78,
     cost_govern: 12.7, preu_aigua: 0.6412, rebut_ibi: 780, renda: 22_910, estrangera_pct: 7.3,
     fets_penals_per_mil: 51.8, fets_canvi_mandat: -1.4,
+    // Les files de vot, contractació i habitatge (vegeu `filesNoves`).
+    veins_voten: 74.2, fragmentacio: 3.1, volatilitat: 18.4, vot_perdut: 6.6, ultima_regidoria: 212,
+    forca_alcaldia: 12, una_oferta: 38, lloguer: 1_010, lloguer_canvi: 9.4, pisos_turistics: 0.12,
+    habitatge_protegit: 1.8, pla_urbanistic: 24,
   },
   {
     govern: { principal: "ERC-AM", secundari: "Nom Cognom Cognom", color: "#ffb232" },
@@ -210,6 +218,10 @@ const ABELLA = fila(
     cost_govern: 31.2, preu_aigua: null, rebut_ibi: null, renda: 11_800, estrangera_pct: 3.1,
     // El Ministeri no publica els municipis de menys de 20.000 habitants.
     fets_penals_per_mil: null, fets_canvi_mandat: null,
+    // Les files de vot, contractació i habitatge (vegeu `filesNoves`).
+    veins_voten: 74.2, fragmentacio: 3.1, volatilitat: 18.4, vot_perdut: 6.6, ultima_regidoria: 212,
+    forca_alcaldia: 12, una_oferta: 38, lloguer: 1_010, lloguer_canvi: 9.4, pisos_turistics: 0.12,
+    habitatge_protegit: 1.8, pla_urbanistic: 24,
   },
   {
     govern: { principal: "No consta", secundari: "" },
@@ -468,7 +480,7 @@ describe("la taula pintada al navegador", () => {
     expect(html).toContain("No en tenim la liquidació.");
     expect(html).toContain("No en tenim l&#039;ordenança fiscal.".replace("&#039;", "'"));
     expect(html).toContain("Encara no hi ha dos exercicis liquidats del mandat 2023-2027.");
-    expect(html).toContain("No és a l'observatori del preu de l'aigua.");
+    expect(html).toContain("No és a l'observatori del preu de l'aigua, o no hi té cap tarifa de subministrament publicada.");
     // El text vell no informava de res i és el que s'ha tret.
     expect(html).not.toContain(">sense dada<");
   });
@@ -494,7 +506,7 @@ describe("els avisos", () => {
     expect(nodes.buits!.hidden).toBe(false);
     // Abella no té deu xifres de comptes, dues de seguretat ni dues cel·les de
     // text; Esplugues les té totes.
-    expect(nodes.buits!.innerHTML).toContain("<b>14 caselles de 48</b> d'aquesta taula no tenen dada");
+    expect(nodes.buits!.innerHTML).toContain("<b>14 caselles de 72</b> d'aquesta taula no tenen dada");
     expect(nodes.buits!.innerHTML).toContain("No vol dir que la xifra sigui zero");
   });
 

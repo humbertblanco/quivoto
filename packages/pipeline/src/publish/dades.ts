@@ -12,6 +12,11 @@ import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg, ORGANITZACI
 import { catalegDeDades, conjuntDeDades } from "./seo-ld";
 import { SOURCES, type SourceKey } from "./source-registry";
 import { FONTS_CSS, renderSourcesList, writeSourceCatalogue, type PublishedField } from "./source-catalogue";
+import {
+  antiguitatDelPla, aturDarrerMes, censDeLesMunicipals, hutRegistrats, indicadorSocioeconomic, lloguerMitja,
+  margeUltimEsco, participacioAltraEleccio, pisosTuristicsPer100, reclamacionsGaip, taxaAturAproximada,
+  unaSolaOferta, veinsQuePodenVotar,
+} from "./contracte-metriques";
 
 /**
  * La descàrrega de dades.
@@ -48,7 +53,18 @@ type Camp = {
   propi?: boolean;
 };
 
-type Bloc = { titol: string; nota: string; camps: readonly Camp[] };
+type Bloc = {
+  titol: string;
+  nota: string;
+  camps: readonly Camp[];
+  /**
+   * Bloc afegit després de la primera versió del fitxer global. Les seves
+   * columnes van **al final** de `catalunya.csv`, darrere dels percentils, i
+   * no enmig: qui llegeix el fitxer per posició —un full de càlcul amb
+   * fórmules, un script que fa `fila[42]`— no ha de veure moure's res.
+   */
+  cua?: boolean;
+};
 
 /**
  * El catàleg de camps mana sobre tot: d'aquí surten les columnes del fitxer
@@ -360,6 +376,67 @@ const BLOCS: readonly Bloc[] = [
         descripcio: "Quants dels indicadors del fitxer global tenim per a aquest municipi. Sota el 60 % vol dir que la fitxa va coixa i cal dir-ho." },
     ],
   },
+  {
+    titol: "Altres eleccions i el darrer escó",
+    nota: "Com vota el municipi quan no tria el ple, per quants vots es va decidir l'última regidoria del 2023 i quina part dels veïns hi podia votar. Les tres xifres són context: cap no la decideix l'ajuntament.",
+    cua: true,
+    camps: [
+      { clau: "participacio_parlament_2024", etiqueta: "Participació al Parlament 2024", unitat: "%", font: "altresEleccions", global: true, propi: true,
+        descripcio: "Votants sobre cens a les eleccions al Parlament de Catalunya del 12 de maig del 2024, al municipi." },
+      { clau: "participacio_generals_2023", etiqueta: "Participació a les generals 2023", unitat: "%", font: "altresEleccions", global: true, propi: true,
+        descripcio: "Votants sobre cens a les eleccions al Congrés del 23 de juliol del 2023, al municipi." },
+      { clau: "participacio_europees_2024", etiqueta: "Participació a les europees 2024", unitat: "%", font: "altresEleccions", global: true, propi: true,
+        descripcio: "Votants sobre cens a les eleccions al Parlament Europeu del 9 de juny del 2024, al municipi." },
+      { clau: "marge_ultim_esco_vots", etiqueta: "Vots que van decidir l'última regidoria", unitat: "vots", font: "resultats", global: true, propi: true,
+        descripcio: "Els vots que li faltaven el 2023 a la llista —o, en llista oberta, a la persona— que tenia més a tocar l'última regidoria. És aritmètica sobre els resultats oficials amb tota la resta igual, no una predicció. Buit quan el recompte no reprodueix l'oficial o depèn d'un sorteig." },
+      { clau: "veins_poden_votar_pct", etiqueta: "Veïns que podien votar a les municipals", unitat: "%", font: "censElectoral", global: true, propi: true,
+        descripcio: "Cens electoral de les municipals del 2023 sobre els habitants del padró del 2023. Hi voten les persones de nacionalitat espanyola i de la UE inscrites; no hi voten els menors ni la resta de residents estrangers. Pot passar del 100 %: el padró és a 1 de gener i el cens es tanca uns mesos després." },
+    ],
+  },
+  {
+    titol: "Feina, renda i habitatge",
+    nota: "El context econòmic del municipi i el que passa amb l'habitatge. Cap d'aquestes xifres no és bona ni dolenta per a l'ajuntament: l'atur i la renda depenen sobretot de fora del ple, i els pisos turístics els regulen alhora la Generalitat i l'ajuntament.",
+    cua: true,
+    camps: [
+      { clau: "atur_registrat", etiqueta: "Atur registrat", unitat: "persones", font: "sepeAtur", global: true,
+        descripcio: "Persones inscrites com a demandants d'ocupació a l'atur el darrer mes que publica el SEPE. Un mes amb menys de cinc el SEPE no el dona, i aquí queda buit, no a zero. Origen de les dades: SEPE." },
+      { clau: "atur_registrat_mes", etiqueta: "Mes de l'atur registrat", unitat: "mes", font: "sepeAtur", global: true,
+        descripcio: "El mes a què es refereix l'atur registrat (`AAAA-MM`). És la data d'actualització que l'avís legal del SEPE obliga a citar amb la xifra." },
+      { clau: "taxa_atur_aproximada", etiqueta: "Taxa d'atur aproximada", unitat: "%", font: "sepeAtur", global: true, propi: true,
+        descripcio: "Atur registrat sobre atur registrat més afiliats a la Seguretat Social per residència, el mateix mes. **No és la taxa d'atur de l'EPA**, que no es publica per municipi: és una aproximació, i qui la publiqui ho ha de dir." },
+      { clau: "ist", etiqueta: "Índex socioeconòmic territorial", unitat: "índex Catalunya=100", font: "idescatSocioeconomia", global: true,
+        descripcio: "L'IST de l'Idescat, que combina ocupació, estudis, renda i immigració: 100 és la mitjana de Catalunya. L'any és el del període que declara l'Idescat. Si el torneu a publicar, porteu-vos l'enllaç `idescat_socioeconomia` de la capçalera del JSON." },
+      { clau: "irpf_base_declarant", etiqueta: "Base imposable de l'IRPF per declarant", unitat: "€", font: "idescatSocioeconomia", global: true,
+        descripcio: "Base imposable general i de l'estalvi de l'IRPF per declarant, segons l'Idescat a partir de l'Agència Tributària. Compta qui declara, no tothom qui hi viu." },
+      { clau: "hut", etiqueta: "Habitatges d'ús turístic", unitat: "habitatges", font: "registreTurisme", global: true,
+        descripcio: "Habitatges d'ús turístic (HUT) en alta al Registre de Turisme de Catalunya el dia de la consulta. Compta els inscrits, no els que funcionen sense registre. L'any és el de la consulta." },
+      { clau: "hut_per_100_hab", etiqueta: "Habitatges d'ús turístic per 100 habitants", unitat: "per 100 hab.", font: "registreTurisme", global: true, propi: true,
+        descripcio: "Els HUT en alta al registre el dia de la consulta, per cada 100 habitants del padró. Als municipis sense la dada del registre, el recompte del 2024 de l'Observatori del Territori, amb el seu any i la seva font a la fila. Als pobles petits pocs pisos mouen molt la taxa." },
+      { clau: "lloguer_canvi_mandat_pct", etiqueta: "Canvi del lloguer mitjà des del 2023", unitat: "%", font: "fiances", global: true, propi: true,
+        descripcio: "Variació del preu mitjà del lloguer entre el 2023 i el darrer any publicat. Depèn del mercat de la zona més que de cap decisió municipal." },
+      { clau: "pla_urbanistic_anys", etiqueta: "Antiguitat del pla urbanístic general", unitat: "anys", font: "observatoriTerritori", global: true,
+        descripcio: "Anys que fa que es va aprovar el pla urbanístic general vigent, tal com ho calcula l'Observatori del Territori. Diu quan es va aprovar, no si el pla és bo." },
+      { clau: "pla_urbanistic_figura", etiqueta: "Figura del pla urbanístic general", unitat: "", font: "observatoriTerritori",
+        descripcio: "La sigla de la figura: unes normes subsidiàries (`NNSS`) són la figura d'abans de la Llei d'urbanisme del 2002; un `POUM`, la d'ara." },
+      { clau: "una_sola_oferta_pct", etiqueta: "Licitacions amb una sola oferta", unitat: "%", font: "activitatAoc", global: true, propi: true,
+        descripcio: "Part de les licitacions del mandat a què només es va presentar una empresa. Només amb cinc licitacions amb ofertes o més: un 100 % sobre dues és una anècdota. L'any és el darrer de la finestra." },
+      { clau: "una_sola_oferta_licitacions", etiqueta: "Licitacions amb ofertes del mandat", unitat: "licitacions", font: "activitatAoc", global: true,
+        descripcio: "El denominador del percentatge anterior: quantes licitacions amb ofertes hi ha a la finestra." },
+    ],
+  },
+  {
+    titol: "Accés a la informació",
+    nota: "Les reclamacions que la Comissió de Garantia del Dret d'Accés a la Informació Pública (GAIP) ha resolt contra l'ajuntament. Una reclamació no és una sanció: és un veí que va demanar una informació i no la va tenir com volia. Zero és una dada.",
+    cua: true,
+    camps: [
+      { clau: "gaip_reclamacions_mandat", etiqueta: "Reclamacions a la GAIP aquest mandat", unitat: "reclamacions", font: "gaipResolucions", global: true,
+        descripcio: "Reclamacions contra l'ajuntament resoltes per la GAIP, presentades des del 17 de juny del 2023. Una ciutat rep moltes més sol·licituds que un poble: compareu-ho dins del grup." },
+      { clau: "gaip_estimades_mandat", etiqueta: "Reclamacions estimades aquest mandat", unitat: "reclamacions", font: "gaipResolucions", global: true,
+        descripcio: "De les d'aquest mandat, les que la GAIP va estimar del tot o en part: li va donar la raó, totalment o parcialment, a qui reclamava." },
+      { clau: "gaip_incompliments", etiqueta: "Incompliments de resolucions de la GAIP", unitat: "resolucions", font: "gaipIncompliments", global: true,
+        descripcio: "Resolucions de la GAIP que l'ajuntament no va complir després del requeriment, segons el registre d'incompliments que publica la GAIP. Són de tots els anys, no només d'aquest mandat." },
+    ],
+  },
 ];
 
 const CAMPS: readonly Camp[] = BLOCS.flatMap((bloc) => bloc.camps);
@@ -389,6 +466,15 @@ const PERCENTILS: readonly { clau: string; sobre: string; descripcio: string }[]
 ];
 
 const CAMPS_GLOBALS: readonly Camp[] = CAMPS.filter((camp) => camp.global);
+
+/**
+ * L'ordre de les columnes de `catalunya.csv`: la identitat, els indicadors de
+ * la primera versió, els percentils i, al final, els dels blocs afegits
+ * després (`Bloc.cua`). Un indicador nou s'hi afegeix sempre per la cua.
+ */
+const CLAUS_CUA = new Set(BLOCS.filter((bloc) => bloc.cua).flatMap((bloc) => bloc.camps.map((camp) => camp.clau)));
+const GLOBALS_INICIALS: readonly Camp[] = CAMPS_GLOBALS.filter((camp) => !CLAUS_CUA.has(camp.clau));
+const GLOBALS_CUA: readonly Camp[] = CAMPS_GLOBALS.filter((camp) => CLAUS_CUA.has(camp.clau));
 
 /** Columnes de `catalunya.csv`, perquè qui cridi `renderDadesIndex` pugui dir-ne el nombre. */
 export const CAMPS_CATALUNYA = IDENTITAT.length + CAMPS_GLOBALS.length + PERCENTILS.length;
@@ -430,6 +516,14 @@ type Fitxa = Pick<
   riquesa: RiquesaResum | null;
   criminalitat: CriminalitatResum | null;
   despesaProgrames: ProgramesResum | null;
+  /**
+   * Les mètriques que es llegeixen amb els lectors de `contracte-metriques.ts`
+   * —els mateixos del rànquing, el mapa i el comparador— tal com les desen els
+   * jobs: «altresEleccions», «socioeconomia», «gaip», «establimentsTuristics»,
+   * «marges», «urbanismeHabitatge», «censElectoral» i «contractacio». Van per
+   * `kind` i sense tipus perquè els lectors ja llegeixen a la defensiva.
+   */
+  metriques: ReadonlyMap<string, unknown>;
 };
 
 /*
@@ -445,6 +539,8 @@ type PoblacioResum = {
   estrangera: { valor: number | null; darrerAny: number | null; enllac: { href: string } | null } | null;
   /** El primer enllaç del municipi que l'API de l'Idescat ha donat, per si l'indicador no en porta. */
   enllacIdescat: string | null;
+  /** Els habitants del padró del 2023, el denominador dels veïns que podien votar a les municipals. */
+  padro2023: number | null;
 };
 
 /** La renda neta per persona de J23 i la taula provincial de l'INE d'on surt, amb la seva data. */
@@ -483,6 +579,8 @@ function afegeix(
   valor: Valor | null | undefined,
   any: number | null,
   etiqueta?: string,
+  /** La font de la fila quan no és la del camp: una xifra amb dues fonts possibles diu quina és. */
+  font?: ClauFont,
 ): void {
   if (valor === null || valor === undefined) return;
   if (typeof valor === "number" && !Number.isFinite(valor)) return;
@@ -495,7 +593,7 @@ function afegeix(
     valor: typeof valor === "number" ? Number(valor.toFixed(4)) : valor,
     unitat: camp.unitat,
     any,
-    font: FONTS[camp.font].id,
+    font: FONTS[font ?? camp.font].id,
   });
 }
 
@@ -747,6 +845,62 @@ function indicadorsDe(fitxa: Fitxa): Fila[] {
   afegeix(files, "actes_indexades", m.minutesCount, null);
   afegeix(files, "acta_ultima", m.minutesLastDate, null);
 
+  // --- els blocs afegits després: tot surt dels lectors de `contracte-metriques.ts`
+  const llegeix = (kind: string): unknown => fitxa.metriques.get(kind) ?? null;
+
+  // altres eleccions i el darrer escó
+  const altres = llegeix("altresEleccions");
+  for (const [clau, id] of [
+    ["participacio_parlament_2024", "A20241"], ["participacio_generals_2023", "G20231"], ["participacio_europees_2024", "E20241"],
+  ] as const) {
+    const p = participacioAltraEleccio(altres, id);
+    afegeix(files, clau, p?.pct, p?.any ?? null);
+  }
+  afegeix(files, "marge_ultim_esco_vots", margeUltimEsco(llegeix("marges"))?.vots, mandat);
+  afegeix(files, "veins_poden_votar_pct",
+    veinsQuePodenVotar(censDeLesMunicipals(llegeix("censElectoral")), fitxa.poblacio?.padro2023 ?? null), mandat);
+
+  // feina, renda i habitatge
+  const socio = llegeix("socioeconomia");
+  const atur = aturDarrerMes(socio);
+  if (atur) {
+    afegeix(files, "atur_registrat", atur.persones, atur.any);
+    afegeix(files, "atur_registrat_mes", atur.mes, atur.any);
+  }
+  const taxa = taxaAturAproximada(socio);
+  afegeix(files, "taxa_atur_aproximada", taxa?.pct, taxa?.any ?? null);
+  const ist = indicadorSocioeconomic(socio, "ist");
+  afegeix(files, "ist", ist?.valor, ist?.any ?? null);
+  const irpf = indicadorSocioeconomic(socio, "irpfBase");
+  afegeix(files, "irpf_base_declarant", irpf?.valor, irpf?.any ?? null);
+  const urbanisme = llegeix("urbanismeHabitatge");
+  const registre = llegeix("establimentsTuristics");
+  const huts = hutRegistrats(registre);
+  afegeix(files, "hut", huts?.hut, huts?.any ?? null);
+  // El registre (J46) mana; sense, el recompte del 2024 de l'Observatori del
+  // Territori, i la fila diu de quina font surt.
+  const hutRatio = pisosTuristicsPer100(urbanisme, registre);
+  afegeix(files, "hut_per_100_hab", hutRatio?.valor, hutRatio?.any ?? null, undefined,
+    hutRatio?.font === "urbanisme" ? "observatoriTerritori" : undefined);
+  const lloguer = lloguerMitja(fitxa.habitatge);
+  const lloguerFins = lloguer?.variacio ? Number(lloguer.variacio.periode.slice(-4)) : null;
+  afegeix(files, "lloguer_canvi_mandat_pct", lloguer?.variacio?.pct, lloguerFins);
+  const pla = antiguitatDelPla(urbanisme);
+  afegeix(files, "pla_urbanistic_anys", pla?.anys, pla?.any ?? null);
+  if (pla) afegeix(files, "pla_urbanistic_figura", pla.sigla, pla.any);
+  const oferta = unaSolaOferta(llegeix("contractacio"));
+  const ofertaFins = oferta?.periode ? Number(oferta.periode.slice(-4)) : null;
+  afegeix(files, "una_sola_oferta_pct", oferta?.pct, ofertaFins);
+  afegeix(files, "una_sola_oferta_licitacions", oferta?.licitacions, ofertaFins);
+
+  // accés a la informació: zero reclamacions és una dada i es publica
+  const gaip = reclamacionsGaip(llegeix("gaip"));
+  if (gaip) {
+    afegeix(files, "gaip_reclamacions_mandat", gaip.reclamacions, null);
+    afegeix(files, "gaip_estimades_mandat", gaip.estimades, null);
+    afegeix(files, "gaip_incompliments", gaip.incompliments, null);
+  }
+
   // --- vots i regidories de cada candidatura, a les tres últimes convocatòries.
   // És el detall que sosté l'hemicicle de la fitxa, i el format llarg l'aguanta
   // sense haver d'inventar una columna per sigla.
@@ -898,7 +1052,9 @@ una taula plena de columnes buides i diferents a cada fitxer; en format llarg
 informació, no un forat.
 
 El fitxer global, en canvi, ha de ser una graella per poder ordenar i filtrar:
-allà una dada que falta és una cel·la buida.
+allà una dada que falta és una cel·la buida. Les columnes noves s'hi afegeixen
+sempre **al final**, darrere dels percentils: les que ja hi eren no es mouen
+de lloc, i qui llegeix el fitxer per posició no ha de tocar res.
 
 ## El format dels CSV
 
@@ -982,15 +1138,20 @@ més, i per això van a la capçalera del JSON:
 "enllacos": {
   "idescat": "l'enllaç del municipi que ha donat l'API de l'Idescat, tal com l'ha donat",
   "idescat_ibi": "la pàgina de l'Idescat del rebut d'IBI d'aquest municipi",
-  "ine": "la taula provincial de l'ADRH d'on surt la renda"
+  "ine": "la taula provincial de l'ADRH d'on surt la renda",
+  "idescat_socioeconomia": "l'enllaç que l'API de l'Idescat ha donat per a l'IST i la base de l'IRPF"
 },
 "ine": { "citacio": "Elaboración propia con datos extraídos del sitio web del INE: www.ine.es", "actualitzat": "la data d'actualització de la taula, ISO" }
 \`\`\`
 
 Els enllaços van **tal com els han donat les fonts**: no en construïm cap.
-Si torneu a publicar \`poblacio_estrangera_pct\`, \`rebut_ibi_mitja\` o
-\`renda_neta_persona\`, porteu-vos l'enllaç i la citació amb la xifra. Els
-camps són \`null\` als municipis sense la dada.
+Si torneu a publicar \`poblacio_estrangera_pct\`, \`rebut_ibi_mitja\`,
+\`renda_neta_persona\`, \`ist\` o \`irpf_base_declarant\`, porteu-vos l'enllaç i la
+citació amb la xifra. Els camps són \`null\` als municipis sense la dada.
+
+L'atur registrat és del SEPE, que demana citar «Origen de los datos: SEPE» i
+la data de l'última actualització: és la columna \`atur_registrat_mes\`, que
+va sempre amb la xifra.
 
 ## Comparar sense fer trampa
 
@@ -1053,9 +1214,11 @@ seva llicència, que és la de la taula de dalt.
 - **Els càrrecs i els retrats** de la seu electrònica de cada ajuntament, el
   cartipàs, els organismes dependents i les ordenances. Són llistes amb noms i
   amb esquemes que canvien a cada seu, i no hi ha cap manera de comparar-les.
-- **Les mocions** dels plens i **la contractació** de la Plataforma de serveis
-  de contractació pública. Es llegeixen a la fitxa amb el context de cada
-  sessió i cada expedient; sense ell, una xifra sola diu més del que sabem.
+- **Les mocions** dels plens i **els contractes** de la Plataforma de serveis
+  de contractació pública, un per un. Es llegeixen a la fitxa amb el context
+  de cada sessió i cada expedient; sense ell, una xifra sola diu més del que
+  sabem. De la contractació només hi ha la part de licitacions amb una sola
+  oferta, i només on n'hi ha cinc o més.
 - **Cap dada que no puguem dir d'on surt.**
 `;
 }
@@ -1071,6 +1234,11 @@ const KINDS = [
   "results", "government", "parity", "mayors", "finances", "electoralHistory",
   "taxes", "transparency", "singleList", "revenue", "spending", "services", "councilChanges",
   "residus", "habitatge", "preuAigua", "rebutIbi", "costGovern", "amb", "continuitat", "votPerdut",
+  // Les que llegeixen els lectors comuns (`Fitxa.metriques`). Són documents
+  // petits —els mateixos que ja carreguen el rànquing i el comparador— i
+  // d'aquí en surten una xifra o dues de cadascun.
+  "altresEleccions", "socioeconomia", "gaip", "establimentsTuristics", "marges",
+  "urbanismeHabitatge", "censElectoral", "contractacio",
 ] as const;
 
 /**
@@ -1141,10 +1309,16 @@ async function carregaFitxes(db: Db): Promise<Fitxa[]> {
       municipalityId: municipalityMetrics.municipalityId,
       estrangera: sql<PoblacioResum["estrangera"]>`jsonb_path_query_first(${data}, '$.indicadors[*] ? (@.clau == "pctNacionalitatEstrangera")')`,
       enllacIdescat: sql<string | null>`${data}->'font'->'enllacosMunicipi'->0->>'href'`,
+      // El padró del 2023, i res més de la sèrie: és el que fa servir
+      // `padroDeLAny()` al rànquing, projectat aquí perquè la mètrica sencera
+      // no cap a la memòria del motor.
+      padro2023: sql<string | null>`jsonb_path_query_first(${data}, '$.indicadors[*] ? (@.clau == "padroHabitants").serie[*] ? (@.any == 2023).valor')#>>'{}'`,
     })
     .from(municipalityMetrics)
     .where(eq(municipalityMetrics.kind, "poblacio"))) {
-    poblacioPer.set(fila.municipalityId, { estrangera: fila.estrangera ?? null, enllacIdescat: fila.enllacIdescat });
+    poblacioPer.set(fila.municipalityId, {
+      estrangera: fila.estrangera ?? null, enllacIdescat: fila.enllacIdescat, padro2023: numero(fila.padro2023),
+    });
   }
 
   const riquesaPer = new Map<number, RiquesaResum>();
@@ -1227,6 +1401,7 @@ async function carregaFitxes(db: Db): Promise<Fitxa[]> {
       riquesa: riquesaPer.get(municipality.id) ?? null,
       criminalitat: criminalitatPer.get(municipality.id) ?? null,
       despesaProgrames: programesPer.get(municipality.id) ?? null,
+      metriques: own ?? new Map(),
       participation: participacioPer.get(municipality.id) ?? [],
       issues: incidenciesPer.get(municipality.id) ?? [],
       grup: grup ? { label: grup.label, size: grup.size } : null,
@@ -1247,7 +1422,7 @@ function numero(text: string | null): number | null {
  * columnes i no en guanya cap per això.
  */
 function obligacions(fitxa: Fitxa): {
-  enllacos: { idescat: string | null; idescat_ibi: string | null; ine: string | null };
+  enllacos: { idescat: string | null; idescat_ibi: string | null; ine: string | null; idescat_socioeconomia: string | null };
   ine: { citacio: string; actualitzat: string | null } | null;
 } {
   const poblacio = fitxa.poblacio;
@@ -1256,11 +1431,18 @@ function obligacions(fitxa: Fitxa): {
   // dos dígits de província del seu codi INE.
   const taula = fitxa.riquesa?.taules.find((t) => t.provincia === fitxa.municipality.ine5.slice(0, 2)) ?? null;
   const ambRenda = fitxa.riquesa?.valor != null;
+  // L'IST i la base de l'IRPF (J44) porten cadascun l'enllaç que l'API de
+  // l'Idescat va donar per al municipi; el primer que n'hi hagi, tal com ve.
+  const socio = fitxa.metriques.get("socioeconomia");
+  const enllacSocio = ["ist", "irpfBase"]
+    .map((clau) => indicadorSocioeconomic(socio, clau))
+    .find((i) => i?.enllac)?.enllac ?? null;
   return {
     enllacos: {
       idescat,
       idescat_ibi: fitxa.rebutIbi?.publicable ? fitxa.rebutIbi.font.url : null,
       ine: ambRenda ? (taula?.urlTaula ?? FONTS.ineAdrh.url) : null,
+      idescat_socioeconomia: enllacSocio,
     },
     ine: ambRenda
       ? { citacio: "Elaboración propia con datos extraídos del sitio web del INE: www.ine.es", actualitzat: taula?.actualitzada ?? null }
@@ -1382,8 +1564,9 @@ export async function writeDownloads(
 
   const columnes = [
     ...IDENTITAT.map((c) => c.clau),
-    ...CAMPS_GLOBALS.map((c) => c.clau),
+    ...GLOBALS_INICIALS.map((c) => c.clau),
     ...PERCENTILS.map((p) => p.clau),
+    ...GLOBALS_CUA.map((c) => c.clau),
   ];
   await desa(
     `${arrel}catalunya.csv`,
@@ -1413,6 +1596,10 @@ export async function writeDownloads(
     fets_penals_per_mil: ["interiorBalanc", "padroAoc"],
     cost_govern_habitant: ["liquidacioEconomica", "padroAoc"],
     despesa_programa: ["liquidacioProgrames", "padroAoc"],
+    taxa_atur_aproximada: ["sepeAtur", "idescatSocioeconomia"],
+    hut_per_100_hab: ["registreTurisme", "observatoriTerritori"],
+    veins_poden_votar_pct: ["censElectoral", "idescatSeries"],
+    gaip_incompliments: ["gaipIncompliments"],
   };
   const campsPublics: PublishedField[] = CAMPS.map((camp) => ({
     clau: camp.clau, etiqueta: camp.etiqueta, unitat: camp.unitat,
