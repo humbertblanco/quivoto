@@ -28,6 +28,12 @@ describe("registre de fonts", () => {
     for (let n = 1; n <= 30; n++) expect(jobs.has(`J${n}`), `falta J${n}`).toBe(true);
   });
 
+  it("documenta les fonts de les fitxes de diputacions i consells (J38 i J39)", () => {
+    const delJob = (job: string) => Object.values(SOURCES).filter(source => source.jobs.includes(job)).map(source => source.id);
+    expect(delJob("J38")).toEqual(expect.arrayContaining(["6nei-4b44", "nm3n-3vbj", "ehvx-5ty7", "2zbw-miu8", "81f18313", "5b96829f", "34db8dc5"]));
+    expect(delJob("J39")).toEqual(["s9xt-n979"]);
+  });
+
   it("llista cada font agrupada pel seu estat, amb la fitxa plegada", () => {
     const html = renderSourcesList();
     expect(html).toContain("Als fitxers descarregables");

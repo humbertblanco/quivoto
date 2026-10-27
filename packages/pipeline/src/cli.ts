@@ -35,6 +35,11 @@ import { j37LlistesObertes } from "./jobs/j37-llistes-obertes";
 import { j36CensElectoral } from "./jobs/j36-cens-electoral";
 import { j33MunicipiWikidata } from "./jobs/j33-municipi-wikidata";
 import { j32Territori } from "./jobs/j32-territori";
+import { j38EnsSupramunicipals } from "./jobs/j38-ens-supramunicipals";
+import { j39SubvencionsEns } from "./jobs/j39-subvencions-ens";
+import { j40UrbanismeHabitatge } from "./jobs/j40-urbanisme-habitatge";
+import { j41DinersGeneralitat } from "./jobs/j41-diners-generalitat";
+import { j42ServeisEns } from "./jobs/j42-serveis-ens";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
 import { deriveFinances } from "./derive/finances";
@@ -99,6 +104,25 @@ const COMMANDS = {
   // J32: superfície, altitud i gentilici, del mateix conjunt que J1. Una sola
   // consulta per als 947; va just després de J1 perquè en llegeix el padró.
   j32: j32Territori,
+  // J38 va a mà, després de J3 i de J24: les fitxes de les quatre diputacions i
+  // dels quaranta consells comarcals (ple, presidència, comptes del 2010 ençà i
+  // districtes), desades a la seu de cada ens. Una vintena de consultes
+  // agregades i les dues pàgines de diputació que ja llegeix J24. No és a `ORDER`.
+  j38: j38EnsSupramunicipals,
+  // J39 també a mà i després de J38: el que cada diputació i consell ha
+  // concedit als ajuntaments segons el RAISC, en consultes agregades. No és a `ORDER`.
+  j39: (db: Parameters<typeof j39SubvencionsEns>[0]) => j39SubvencionsEns(db),
+  // J40 a mà, després de J1: pla urbanístic vigent, pisos turístics, cost del
+  // lloguer sobre els ingressos, HPO del 2002 ençà i zona tensa. Tres conjunts
+  // de Socrata (~25.600 files); només llegeix la taula de municipis. No és a `ORDER`.
+  j40: j40UrbanismeHabitatge,
+  // J41 a mà i després de J1 (fa servir municipalities.codiEns): FCL, obres del
+  // PUOSC, trameses de comptes i el que deu la Generalitat, per municipi i per ens.
+  j41: (db: Parameters<typeof j41DinersGeneralitat>[0]) => j41DinersGeneralitat(db),
+  // J42 a mà, després de J38: serveis socials bàsics (persones ateses i SAD) dels
+  // consells i dels municipis que són àrea bàsica, i agregats de contractació de
+  // les 4 diputacions i els 40 consells. Consultes agregades, cap adjudicatari. No és a `ORDER`.
+  j42: (db: Parameters<typeof j42ServeisEns>[0]) => j42ServeisEns(db),
   derive: deriveMetrics,
   alcaldies: deriveMayorChanges,
   comptes: deriveFinances,
