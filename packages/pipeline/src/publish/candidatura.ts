@@ -15,6 +15,7 @@ import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { renderUllada, type Pastilla } from "./comarques";
+import type { MargesMetric } from "../derive/marges";
 
 /**
  * La pàgina d'**una candidatura a un municipi**.
@@ -165,6 +166,23 @@ export type CandidaturaData = {
    * comptes de deixar que la llista sembli que no en tenia.
    */
   capDeLlista: string | null;
+  /**
+   * Per quants vots es va decidir la seva última regidoria, de la mètrica
+   * `marges` (derive/marges.ts). `null` o absent si aquell municipi no en té:
+   * un recompte que no quadra amb l'oficial no en dona cap.
+   */
+  marges?: MargesCandidatura | null;
+};
+
+/** El tros de la mètrica `marges` del 2023 que parla d'aquesta candidatura. */
+export type MargesCandidatura = {
+  sistema: "dhondt" | "obertes";
+  votsPerUnaMes: number | null;
+  margeDePerdua: number | null;
+  /** Només si es va quedar sota el 5 %: amb regidories no pot passar, però la forma ho admet. */
+  llindar: { pct: number; votsQueFaltaven: number } | null;
+  /** Si es va endur l'última regidoria del ple, a qui li'n van faltar quants. */
+  ultimEsco: { perseguidor: string; votsQueFaltaven: number } | null;
 };
 
 // ------------------------------------------------------------------- format
@@ -488,6 +506,82 @@ function renderRecents(data: CandidaturaData): string {
  * «No consta» quan la font no diu de qui és l'alcaldia: un buit és un buit, i
  * un «no» seria afirmar que aquesta llista és a l'oposició.
  */
+/** «1 vot», «7 vots», «1.234 vots». */
+const vots = (n: number): string => `${number(n)} ${n === 1 ? "vot" : "vots"}`;
+
+/**
+ * Per quants vots es va decidir: una frase neutra sota el resultat, o `""`.
+ *
+ * Diu el que li faltava per a una regidoria més i el que podia perdre sense
+ * perdre'n cap, i si es va endur l'última del ple, per quant. Sempre amb la
+ * mateixa coda —tota la resta igual, no una predicció—, perquè «li van
+ * faltar set vots» no es llegeixi com «el 2027 en treurà una més».
+ */
+export function renderMargesCandidatura(data: Pick<CandidaturaData, "marges" | "sigles">): string {
+  const m = data.marges;
+  if (!m) return "";
+  const frases: string[] = [];
+  if (m.ultimEsco) {
+    frases.push(`Es va endur l'última regidoria del ple: a ${escape(m.ultimEsco.perseguidor)} li'n van faltar
+  ${vots(m.ultimEsco.votsQueFaltaven)}.`);
+  }
+  if (m.sistema === "dhondt") {
+    if (m.votsPerUnaMes !== null) frases.push(`Li van faltar <b>${vots(m.votsPerUnaMes)}</b> per a una regidoria més.`);
+    if (m.margeDePerdua !== null) {
+      frases.push(m.margeDePerdua === 0
+        ? "Amb un sol vot menys n'hauria perdut una."
+        : `Podia perdre'n ${number(m.margeDePerdua)} sense perdre cap regidoria.`);
+    }
+  } else {
+    if (m.votsPerUnaMes !== null) {
+      frases.push(`A la seva persona no elegida més votada li van faltar <b>${vots(m.votsPerUnaMes)}</b> per a una regidoria més.`);
+    }
+    if (m.margeDePerdua !== null) {
+      frases.push(m.margeDePerdua === 0
+        ? "La seva elegida amb menys vots no en podia perdre cap sense quedar-se fora."
+        : `La seva elegida amb menys vots en podia perdre ${number(m.margeDePerdua)} sense quedar-se fora.`);
+    }
+  }
+  if (m.llindar) {
+    frases.push(`Va quedar a ${vots(m.llindar.votsQueFaltaven)} del 5 % que obre el repartiment (en va treure el ${percent(m.llindar.pct)}).`);
+  }
+  if (frases.length === 0) return "";
+  return `<p class="nota">${frases.join(" ")} És aritmètica amb tota la resta igual, no una predicció.</p>`;
+}
+
+/**
+ * De la mètrica `marges` d'un municipi, el que toca a una candidatura del
+ * 2023. A les llistes tancades es lliga pel codi de la candidatura, que és el
+ * mateix dataset; a les obertes les candidatures vénen del Ministeri, amb un
+ * altre codi, i es lliguen per les sigles amb la clau dura. Si no lliga, res.
+ */
+export function margesDeCandidatura(
+  metrica: MargesMetric | null | undefined,
+  llista: { codi: string; sigles: string },
+): MargesCandidatura | null {
+  const e = metrica?.eleccions.find((x) => x.any === ANY_ELECCIO[ELECCIO]);
+  if (!e) return null;
+  const perCodi = e.sistema === "dhondt" ? e.llistes.find((l) => l.codi === llista.codi) : undefined;
+  const perSigles = e.llistes.filter((l) => clau(l.sigla) === clau(llista.sigles));
+  const propia = perCodi ?? (perSigles.length === 1 ? perSigles[0] : undefined);
+  if (!propia) return null;
+  const llindar = e.llindar.find((l) => l.codi === propia.codi) ?? null;
+  const u = e.ultimEsco;
+  const guanyaUltim = u !== null && (e.sistema === "dhondt"
+    ? clau(u.siglaGuanyador) === clau(propia.sigla) && u.guanyador === propia.nom
+    : clau(u.siglaGuanyador) === clau(propia.sigla) && clau(u.siglaPerseguidor) !== clau(propia.sigla));
+  return {
+    sistema: e.sistema,
+    votsPerUnaMes: propia.votsPerUnaMes,
+    margeDePerdua: propia.margeDePerdua,
+    llindar: llindar ? { pct: llindar.pct, votsQueFaltaven: llindar.votsQueFaltaven } : null,
+    // A les llistes obertes el perseguidor és una persona; a les tancades, una llista, i n'hi ha prou amb les sigles.
+    ultimEsco: guanyaUltim && u
+      ? { perseguidor: e.sistema === "obertes" ? u.perseguidor : u.siglaPerseguidor || u.perseguidor, votsQueFaltaven: u.votsQueFaltaven }
+      : null,
+  };
+}
+
 function ulladaCandidatura(data: CandidaturaData, oficials: ReadonlyMap<string, string>): string {
   const alcalde = data.mayorName ? nomPreferit(oficials, data.mayorName) : null;
   const ambMajoria = data.seats >= data.majority;
@@ -863,6 +957,7 @@ ${cercador("../../../")}
         data.winnerHasMajority ? ", i amb majoria absoluta" : ", però sense majoria absoluta"}.`
     : `Va guanyar <b>${escape(data.winnerSigles)}</b>, amb ${data.winnerSeats} ${data.winnerSeats === 1 ? "regidoria" : "regidories"}.`}
   El percentatge és sobre els vots a candidatures: no hi compten els nuls, i els blancs hi van a part.</p>
+  ${renderMargesCandidatura(data)}
 </section>
 
 ${data.recent.length > 0 ? `<section class="bloc">
@@ -1010,6 +1105,7 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
       sigles: candidatures.sigles, denominacio: candidatures.denominacio,
       agrupacioSigles: candidatures.agrupacioSigles, brandId: candidatures.brandId,
       color: candidatures.color, votes: electionResults.votes, seats: electionResults.seats,
+      codi: candidatures.candidaturaCodi,
     })
     .from(candidatures)
     .innerJoin(electionResults, eq(electionResults.candidatureId, candidatures.id))
@@ -1080,7 +1176,7 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
       kind: municipalityMetrics.kind, data: municipalityMetrics.data,
     })
     .from(municipalityMetrics)
-    .where(inArray(municipalityMetrics.kind, ["electoralHistory", "government", "carrecs"]));
+    .where(inArray(municipalityMetrics.kind, ["electoralHistory", "government", "carrecs", "marges"]));
 
   // ---- índexs auxiliars, tots per municipi
 
@@ -1108,6 +1204,7 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
     number,
     { carrecs: { nom: string; foto: string | null; fotoPetita: string | null }[] }
   >();
+  const margesPerMunicipi = new Map<number, MargesMetric>();
   // Amb un `else` genèric, qualsevol mètrica nova que s'afegís a la consulta
   // entraria com si fos la del govern. Cada tipus, al seu lloc.
   for (const metric of metriques) {
@@ -1115,6 +1212,8 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
       historyPerMunicipi.set(metric.municipalityId, metric.data as SerieMetrica);
     } else if (metric.kind === "government") {
       governPerMunicipi.set(metric.municipalityId, metric.data as GovernMetrica);
+    } else if (metric.kind === "marges") {
+      margesPerMunicipi.set(metric.municipalityId, metric.data as MargesMetric);
     } else if (metric.kind === "carrecs") {
       carrecsPerMunicipi.set(
         metric.municipalityId,
@@ -1352,6 +1451,7 @@ export async function loadCandidatures(db: Db): Promise<CandidaturaData[]> {
           })),
         nomsSeu,
         capDeLlista: llistaPerCandidatura.get(llista.id)?.cap ?? null,
+        marges: margesDeCandidatura(margesPerMunicipi.get(municipalityId), { codi: llista.codi, sigles: llista.sigles }),
       });
     }
   }

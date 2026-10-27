@@ -6,6 +6,8 @@ import {
 import { MUNICIPAL_ELECTIONS } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority, effectiveParties } from "@quivoto/shared-schemas/seats";
 import { matchMayorParty } from "./match-mayor";
+import { deriveMarges } from "./marges";
+import type { LlistesObertesMetric } from "../jobs/j37-llistes-obertes";
 import { withRun } from "../lib/run";
 
 /**
@@ -82,6 +84,35 @@ export async function deriveMetrics(db: Db): Promise<void> {
       const list = listsByMunicipality.get(r.municipalityId);
       if (list) list.push(r);
       else listsByMunicipality.set(r.municipalityId, [r]);
+    }
+
+    /*
+     * Les regidories del ple del 2023, tal com les va repartir aquella elecció
+     * (`council_terms.seats`, J2). No es pot fer servir `municipalities.
+     * councilSeats`: és la projecció per al 2027 amb el padró d'avui, i a
+     * una quarantena de municipis que han crescut (Barcelona, Vic, Roses…)
+     * ja no coincideix amb el ple que hi seu. Comparar-hi els electes del 2023
+     * marcava el ple de Barcelona com a incomplet amb «41 de 43».
+     */
+    const terms2023 = await db
+      .select({ municipalityId: councilTerms.municipalityId, seats: councilTerms.seats })
+      .from(councilTerms)
+      .where(eq(councilTerms.electionId, "M20231"));
+    const seats2023 = new Map(terms2023.map((t) => [t.municipalityId, t.seats]));
+
+    /*
+     * El vot nominal dels municipis de llista oberta (J37). El conjunt de
+     * candidatures de la Generalitat no hi porta la llista sencera —és el
+     * forat de 213 municipis de la nota de sota—, i el fitxer del Ministeri sí:
+     * cada persona amb el seu sexe i si va sortir elegida.
+     */
+    const obertes2023 = new Map<number, NonNullable<ReturnType<typeof eleccioOberta2023>>>();
+    for (const r of await db
+      .select({ municipalityId: municipalityMetrics.municipalityId, data: municipalityMetrics.data })
+      .from(municipalityMetrics)
+      .where(eq(municipalityMetrics.kind, "llistesObertes"))) {
+      const e = eleccioOberta2023(r.data as LlistesObertesMetric);
+      if (e) obertes2023.set(r.municipalityId, e);
     }
 
     let noGovernmentData = 0;
@@ -196,34 +227,58 @@ export async function deriveMetrics(db: Db): Promise<void> {
        * pitjor que no publicar-ne cap.
        */
       const lists = (listsByMunicipality.get(m.id) ?? []).filter((r) => r.electionId === "M20231");
-      if (lists.length > 0) {
+      const oberta = obertes2023.get(m.id) ?? null;
+      if (lists.length > 0 || oberta) {
         const titulars = lists.filter((r) => r.kind === "Titular");
         const women = (rows: typeof lists) => rows.filter((r) => r.sex === "D").length;
         const elected = lists.filter((r) => r.elected);
         const heads = lists.filter((r) => r.isHead);
-        const escons = m.councilSeats ?? 0;
-        const complet = escons > 0 && elected.length === escons;
+        // El ple que va sortir del 2023; la projecció del padró d'avui només si J2 no en té el mandat.
+        const escons = seats2023.get(m.id) ?? oberta?.regidors ?? m.councilSeats ?? 0;
+
+        let candidats = { total: titulars.length, dones: women(titulars) };
+        let electes = { total: elected.length, dones: women(elected) };
+        let font: "candidatures" | "llistesObertes" = "candidatures";
+        /*
+         * Als pobles de llista oberta on el conjunt de la Generalitat es queda
+         * curt, el vot nominal del Ministeri dona la llista sencera. Només s'hi
+         * canvia si quadra del tot —tantes persones elegides com regidories, i
+         * totes amb el sexe informat—: substituir un denominador dolent per un
+         * altre de dolent no arregla res.
+         */
+        const completCandidatures = escons > 0 && elected.length === escons;
+        if (!completCandidatures && oberta && oberta.elegits === escons && oberta.elegitsSenseSexe === 0) {
+          candidats = { total: oberta.candidats, dones: oberta.donesCandidates };
+          electes = { total: oberta.elegits, dones: oberta.donesElegides };
+          font = "llistesObertes";
+        }
+        const complet = escons > 0 && electes.total === escons;
         if (!complet) {
           await run.issue({
             kind: "llista_electes_incompleta",
             severity: "mitjana",
             municipalityId: m.id,
-            detail: { escons, electesAlConjunt: elected.length, filesAlConjunt: lists.length },
+            detail: {
+              escons, electesAlConjunt: elected.length, filesAlConjunt: lists.length,
+              electesVotNominal: oberta?.elegits ?? null,
+            },
           });
         }
         await upsert(db, m.id, "parity", {
-          candidates: titulars.length,
-          womenCandidates: women(titulars),
-          womenCandidatesPct: titulars.length === 0 ? null : Math.round((100 * women(titulars)) / titulars.length),
-          elected: elected.length,
-          womenElected: women(elected),
-          womenElectedPct: elected.length === 0 ? null : Math.round((100 * women(elected)) / elected.length),
+          candidates: candidats.total,
+          womenCandidates: candidats.dones,
+          womenCandidatesPct: candidats.total === 0 ? null : Math.round((100 * candidats.dones) / candidats.total),
+          elected: electes.total,
+          womenElected: electes.dones,
+          womenElectedPct: electes.total === 0 ? null : Math.round((100 * electes.dones) / electes.total),
           heads: heads.length,
           womenHeads: women(heads),
-          /** Regidories que hauria de tenir el ple, per poder jutjar el denominador. */
+          /** Regidories del ple del 2023, per poder jutjar el denominador. */
           expectedElected: escons,
           /** Cert només quan la font en dona tants d'electes com regidories té el ple. */
           complet,
+          /** D'on surten les persones: el conjunt de candidatures o el vot nominal del Ministeri (J37). */
+          font,
         });
       }
 
@@ -242,6 +297,30 @@ export async function deriveMetrics(db: Db): Promise<void> {
     }
     return { municipis: run.rowsOut, alcaldies_sense_lligar: noGovernmentData };
   });
+
+  // «L'últim regidor»: els marges de cada elecció, amb la seva pròpia execució registrada.
+  await deriveMarges(db);
+}
+
+/**
+ * Del vot nominal de J37, el que la paritat necessita de l'elecció del 2023:
+ * quantes persones (sense els suplents del 1979, que aquí no n'hi ha) i
+ * quantes dones, a la llista i entre les elegides. `null` si aquell municipi
+ * no va votar en llista oberta el 2023.
+ */
+function eleccioOberta2023(m: LlistesObertesMetric) {
+  const e = m.eleccions?.find((x) => x.any === 2023);
+  if (!e) return null;
+  const persones = e.candidats.filter((c) => !c.suplent);
+  const elegits = persones.filter((c) => c.elegit);
+  return {
+    regidors: e.regidors,
+    candidats: persones.length,
+    donesCandidates: persones.filter((c) => c.sexe === "D").length,
+    elegits: elegits.length,
+    donesElegides: elegits.filter((c) => c.sexe === "D").length,
+    elegitsSenseSexe: elegits.filter((c) => c.sexe === null).length,
+  };
 }
 
 async function upsert(db: Db, municipalityId: number, kind: string, data: unknown): Promise<void> {

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  assignaSlugs, clau, descripcioCandidatura, marcaAmbPagina, renderCandidatura, tintaSobre, titolCandidatura,
-  type CandidaturaData,
+  assignaSlugs, clau, descripcioCandidatura, marcaAmbPagina, margesDeCandidatura, renderCandidatura,
+  renderMargesCandidatura, tintaSobre, titolCandidatura, type CandidaturaData,
 } from "./candidatura";
+import { margesEleccioDHondt, type LlistaResultat } from "../derive/marges";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import { de } from "../lib/text";
 
@@ -610,5 +611,51 @@ describe("les dades estructurades de la candidatura", () => {
     expect(nivells.filter((n) => n === 1)).toHaveLength(1);
     expect(nivells[0]).toBe(1);
     for (let i = 1; i < nivells.length; i++) expect(nivells[i]).toBeLessThanOrEqual(nivells[i - 1]! + 1);
+  });
+});
+
+describe("per quants vots es va decidir (mètrica marges)", () => {
+  /** Vic 2023, de la fitxa publicada: a Ara Vic li'n van faltar set per a la tercera. */
+  const vic2023: LlistaResultat[] = [
+    { codi: "1", sigles: "CM", denominacio: "Junts per Vic - Compromís Municipal", votes: 4_029, seats: 8 },
+    { codi: "2", sigles: "ERC-AM", denominacio: null, votes: 1_973, seats: 3 },
+    { codi: "3", sigles: "CUP-AMUNT", denominacio: null, votes: 1_727, seats: 3 },
+    { codi: "4", sigles: "ARA VIC-ARA PL", denominacio: "Ara Vic - Pacte Local", votes: 1_504, seats: 2 },
+    { codi: "5", sigles: "PSC-CP", denominacio: null, votes: 1_282, seats: 2 },
+    { codi: "6", sigles: "SOMI", denominacio: null, votes: 1_194, seats: 2 },
+    { codi: "7", sigles: "VECP-C", denominacio: null, votes: 740, seats: 1 },
+  ];
+  const metrica = {
+    eleccions: [margesEleccioDHondt(2023, vic2023, vic2023.reduce((a, l) => a + l.votes, 0) + 372)!],
+  };
+
+  it("lliga la candidatura pel codi i diu el que li faltava i el que podia perdre", () => {
+    const ara = margesDeCandidatura(metrica, { codi: "4", sigles: "ARA VIC-ARA PL" })!;
+    expect(ara).toMatchObject({ sistema: "dhondt", votsPerUnaMes: 7, ultimEsco: null, llindar: null });
+    const html = renderMargesCandidatura({ sigles: "ARA VIC-ARA PL", marges: ara });
+    expect(html).toContain("Li van faltar <b>7 vots</b> per a una regidoria més.");
+    expect(html).toContain("no una predicció");
+  });
+
+  it("qui es va endur l'última regidoria ho diu, amb qui la tenia a tocar", () => {
+    const cm = margesDeCandidatura(metrica, { codi: "1", sigles: "CM" })!;
+    expect(cm.ultimEsco).toEqual({ perseguidor: "ARA VIC-ARA PL", votsQueFaltaven: 7 });
+    expect(renderMargesCandidatura({ sigles: "CM", marges: cm })).toContain("Es va endur l'última regidoria del ple");
+  });
+
+  it("sense mètrica, o sense l'elecció del 2023, no diu res", () => {
+    expect(margesDeCandidatura(null, { codi: "1", sigles: "CM" })).toBeNull();
+    expect(margesDeCandidatura({ eleccions: [{ ...metrica.eleccions[0]!, any: 2019 }] }, { codi: "1", sigles: "CM" })).toBeNull();
+    expect(renderMargesCandidatura({ sigles: "CM", marges: null })).toBe("");
+  });
+
+  it("surt a la pàgina, sota el resultat", () => {
+    const html = renderCandidatura(
+      mostra({ marges: { sistema: "dhondt", votsPerUnaMes: 312, margeDePerdua: 0, llindar: null, ultimEsco: null } }),
+      "2026-08-29",
+    );
+    expect(html).toContain("Li van faltar <b>312 vots</b> per a una regidoria més.");
+    expect(html).toContain("Amb un sol vot menys n'hauria perdut una.");
+    expect(html).not.toContain("Li van faltar <b>312 vots</b>".repeat(2));
   });
 });
