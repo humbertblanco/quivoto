@@ -6,7 +6,7 @@ import {
 import { BRANDS_BY_ID, PARTY_BRANDS, sameForce, siglesFamily } from "@quivoto/shared-schemas/brands";
 import { absoluteMajority } from "@quivoto/shared-schemas/seats";
 import { sobreColor } from "./contrast";
-import { renderCriminalitat, type GrupCriminalitat } from "./criminalitat";
+import { CRIMINALITAT_CSS, renderCriminalitat, type GrupCriminalitat } from "./criminalitat";
 import type { CriminalitatMetric } from "../jobs/j29-criminalitat";
 import type { MedianaGrup, MedianesMunicipi } from "./medianes";
 import {
@@ -15,7 +15,11 @@ import {
 } from "./grafics";
 import type { SeriesMunicipi } from "./series-grup";
 import type { Continuitat, PuntVolatilitat, VotPerdutElecció } from "../derive/trajectoria";
+import { mateixaPersona } from "../derive/trajectoria";
 import { hemicycle, seientsHemicicle } from "./hemicycle";
+import { TIRA_POBLE_CSS, tiraDelPoble, tiraDesDeHistorial } from "./tira-poble";
+import { INDICADORS_VEINS, VEINS_CSS, adjacenciaMunicipal, renderVeins, veinsAmbXifra, type IndicadorVeins } from "./veins";
+import type { Els947Row } from "./els947";
 import { renderTerritori } from "./territori-fitxa";
 import { WIKIDATA_FITXA_CSS, renderAgermanaments, renderNascuts } from "./wikidata-fitxa";
 import type { FitxaCuriositatsWikidata } from "../jobs/j33-municipi-wikidata";
@@ -25,13 +29,21 @@ import { LLISTES_OBERTES_CSS, adrecesDelPle, renderLlistesObertesBloc } from "./
 import type { LlistesObertesMetric } from "../jobs/j37-llistes-obertes";
 import { CENS_FITXA_CSS, renderCensBloc } from "./cens-fitxa";
 import type { CensElectoralMetric } from "../jobs/j36-cens-electoral";
+import type { UrbanismeHabitatgeMetric } from "../jobs/j40-urbanisme-habitatge";
+import { URBANISME_FITXA_CSS, TITOL_URBANISME, renderUrbanismeHabitatgeBloc } from "./urbanisme-fitxa";
+import type { DinersGeneralitat } from "../jobs/j41-diners-generalitat";
+import {
+  COOPERACIO_CSS, CURT_DINERS_GENERALITAT, TITOL_DINERS_GENERALITAT, llegeixDinersGeneralitat, renderDinersGeneralitatBloc,
+} from "./cooperacio-fitxa";
+import type { ServeisSocialsDesats } from "../jobs/j42-serveis-ens";
+import { SERVEIS_ENS_CSS, renderServeisSocialsMunicipi } from "./serveis-ens-fitxa";
 import type { TerritoriMetric } from "../jobs/j32-territori";
 import { icona } from "./icones";
 import { renderMapa, type PuntMapa } from "./mapa";
 import { assignaSlugs } from "./candidatura";
 import { adrecesRegidors, carrecCurt, frasesQueCaben, titolQueCap } from "./regidor";
 import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
-import { ajuntament, mateixQue } from "./seo-ld";
+import { GEO_CSS, ajuntamentLd, municipiLd, preguntesMunicipi, preguntesRapides } from "./seo-ld";
 import { esAlcaldia, resolAlcaldia } from "./alcaldia";
 import { adrecesAlcaldies, alcaldiesHistoriques } from "./alcaldia-historica";
 import { familiaDelPartit, motiuFinalEscrit, type PasAlcaldia } from "../derive/alcaldies";
@@ -43,12 +55,16 @@ import {
 import { SITE } from "./config";
 import { RADIOGRAFIA_CSS, senseComentaris } from "./estil";
 import { MASCOTA_CSS, papereta } from "./mascota";
+import { PAPERETA_POSTURES_CSS, vinyetaPapereta } from "./mascota-postures";
 import { capcalera, tipografia } from "./capcalera";
 import { credit, escutMunicipi, type ImatgesMunicipi } from "./escut";
 import { sigla } from "./sigla";
 import { cara } from "./cara";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
+import { adrecaEns, type DadesEns } from "./ens-tipus";
+import { esSeientSenseNom } from "../jobs/j38-ens-supramunicipals";
+import { SENSE_CONSELL } from "./comarques";
 
 /**
  * Radiografia d'un municipi: una pàgina feta només amb dades obertes i càlculs
@@ -1219,11 +1235,13 @@ function reglePercentatge(valor: number, mediana: number | null, etiqueta: boole
 function fraseMediana(valor: number, m: MedianaGrup | null, unitat: string, curta = false): string {
   if (!m) return "";
   const diferencia = Math.round(10 * (valor - m.mediana)) / 10;
+  // «La mediana» és el nom tècnic; a la frase s'hi diu «el municipi del mig»,
+  // que és el que és i s'entén sense haver fet estadística.
   const on = diferencia === 0
-    ? "just a la mediana"
-    : `${punts(diferencia)} ${unitat} ${diferencia > 0 ? "per sobre" : "per sota"} de la mediana`;
+    ? "igual que el municipi del mig"
+    : `${punts(diferencia)} ${unitat} ${diferencia > 0 ? "per sobre" : "per sota"} del municipi del mig`;
   if (curta) return `<span class="comparativa">${on} (${percent(m.mediana)})</span>`;
-  return `<span class="comparativa">${on} dels ${m.quants} municipis ${escape(m.etiqueta)}
+  return `<span class="comparativa">${on} dels ${m.quants} ${escape(m.etiqueta)}
     (${percent(m.mediana)})</span>`;
 }
 
@@ -1290,7 +1308,7 @@ function renderTurnout(
     dispersio = regleDispersio("On cau entre els de la seva mida, el 2023", marques, {
       format: (v) => percent(v),
       quants: `els ${m2023.quants} municipis ${m2023.etiqueta}`,
-      etiquetaMediana: "La mediana del grup",
+      etiquetaMediana: "El del mig (la mediana)",
       sotaMediana: "el municipi del mig",
     });
   }
@@ -1574,7 +1592,7 @@ function moneyRow(
   // «la mediana catalana» comparava un poble de 200 habitants amb Barcelona i
   // acabava dient el mateix a tothom d'una mateixa mida. Quan sabem amb qui
   // toca comparar, es diu.
-  const contra = grup === null ? "la mediana catalana" : `el que és habitual ${grup}`;
+  const contra = grup === null ? "del municipi del mig de Catalunya" : `del que és habitual ${grup}`;
   const comparison =
     ratio === null
       ? ""
@@ -1931,21 +1949,64 @@ const inicialsDe = (nom: string): string =>
  * forat que queda quan falta una foto, és una peça dissenyada. I qui llegeix
  * amb veu sent el nom i el càrrec de cadascú, que van dins de l'enllaç.
  */
+/**
+ * El nom que es veu sota la cara: el nom i el primer cognom.
+ *
+ * El nom sencer només era al `title`, i al mòbil no es veia mai: el ple era
+ * una filera de cares sense nom. Sencer no hi cap (la columna fa 60 px), i
+ * per això es treu l'última paraula quan n'hi ha tres o més, que en els noms
+ * d'aquí és el segon cognom: «Marta Farrés Falgueras» → «Marta Farrés»,
+ * «Josep Maria Pérez Garcia» → «Josep Maria Pérez». El CSS el talla a dues
+ * línies. El nom complet continua a l'enllaç i a la fitxa de la persona.
+ */
+function nomCurt(nom: string): string {
+  const paraules = nom.trim().split(/\s+/).filter(Boolean);
+  return (paraules.length >= 3 ? paraules.slice(0, -1) : paraules).join(" ");
+}
+
+/**
+ * La tinença d'alcaldia en curt: «Primer tinent d'alcalde de Cultura» →
+ * «1a tinença», «5aTta.Alcaldessa» → «5a tinença». Si no és una tinença,
+ * `null`. El càrrec sencer, tal com l'escriu la seu, és al `title` i a la
+ * fitxa; sota la cara només hi cap el que canvia el que vol dir la cara, i
+ * «Regidora de l'àrea de…» tallat a mitja paraula no deia res.
+ */
+function tinencaCurta(carrec: string | null): string | null {
+  if (!carrec) return null;
+  const net = normalize(carrec);
+  if (!/tinen(t|ta|ca)\b|tta\b|tte\b/.test(net)) return null;
+  const xifra = net.match(/(\d+)/)?.[1] ?? null;
+  const PARAULES: Record<string, number> = {
+    primer: 1, primera: 1, segon: 2, segona: 2, tercer: 3, tercera: 3, quart: 4, quarta: 4,
+    cinque: 5, cinquena: 5, sise: 6, sisena: 6, sete: 7, setena: 7, vuite: 8, vuitena: 8,
+    nove: 9, novena: 9, dese: 10, desena: 10,
+  };
+  const paraula = net.split(/\s+/).find((w) => PARAULES[w] !== undefined);
+  const n = xifra ? Number(xifra) : paraula ? PARAULES[paraula]! : null;
+  return n ? `${n}a tinença` : "tinença d'alcaldia";
+}
+
 function graellaDelPle(grups: readonly GrupPle[]): string {
   const bloc = (g: GrupPle): string => {
     const totGovern = g.alGovern === g.persones.length && g.alGovern > 0;
     const tint = sobreColor(g.color);
     const retrats = g.persones
       .map((p) => {
+        // Mentre la foto es carrega (va en mandrós), el cercle no queda blanc:
+        // a sota hi ha les inicials sobre el paper de la casa, com a la portada.
         const retrat = p.foto
-          ? `<img class="retrat" src="${escape(p.foto)}" alt="" loading="lazy" width="44" height="44">`
+          ? `<span class="fx-cara" data-ini="${escape(inicialsDe(p.nom))}"><img class="retrat" src="${escape(p.foto)}" alt="" loading="lazy" width="44" height="44"></span>`
           : `<span class="retrat inicials" style="--c:${tint.fons};--t:${tint.tinta}" aria-hidden="true">${escape(inicialsDe(p.nom))}</span>`;
         const titol = p.carrec ? `${p.nom} · ${p.carrec}` : p.nom;
         const classes = ["persona", p.alcaldia ? "alcaldia" : "", p.govern ? "govern" : ""].filter(Boolean).join(" ");
+        // A sota, el càrrec només de qui té l'alcaldia i de les tinences: és
+        // l'única informació que canvia el que vol dir la cara.
+        const carrecVisible = p.alcaldia ? p.carrec : tinencaCurta(p.carrec);
         // El nom va dins de l'enllaç, amagat als ulls: un enllaç que només és
-        // una cara no té nom per a qui llegeix amb veu.
-        return `<li class="${classes}"><a href="regidor/${escape(p.slug)}/" title="${escape(titol)}" aria-label="${escape(titol)}" data-tip="${escape(titol)}">${retrat}<span class="nomes-lectors">${escape(titol)}</span></a>${
-          p.ambCarrec && p.carrec ? `<span class="carrec">${escape(p.carrec)}</span>` : ""
+        // una cara no té nom per a qui llegeix amb veu. El nom curt de sota és
+        // per als ulls, i per això el lector de pantalla no el llegeix dues vegades.
+        return `<li class="${classes}"><a href="regidor/${escape(p.slug)}/" title="${escape(titol)}" aria-label="${escape(titol)}" data-tip="${escape(titol)}">${retrat}<span class="nomes-lectors">${escape(titol)}</span></a><span class="fx-nom" aria-hidden="true">${escape(nomCurt(p.nom))}</span>${
+          carrecVisible ? `<span class="carrec">${escape(carrecVisible)}</span>` : ""
         }</li>`;
       })
       .join("");
@@ -1958,6 +2019,56 @@ function graellaDelPle(grups: readonly GrupPle[]): string {
     </div>`;
   };
   return `<div class="ple-compacte">${grups.map(bloc).join("")}</div>`;
+}
+
+/**
+ * Qui és al govern segons la seu electrònica, llegit un sol cop.
+ *
+ * Ho necessiten dues peces que han de dir el mateix: el ple compacte, que
+ * pinta qui governa, i «En 30 segons», que diu amb qui. Si cadascuna tingués
+ * la seva còpia de la regla de les banderes incompletes, un dia una diria
+ * «coalició» i l'altra no.
+ */
+function lecturaDelGovern(
+  fitxa: FitxaCarrecs,
+  government: GovernmentMetric | null,
+  registre: readonly Councillor[],
+): {
+  grupDe: (c: CarrecSeue) => string | null;
+  govern: CarrecSeue[];
+  seientsAlcaldia: number | null;
+  banderesIncompletes: boolean;
+  grupsGovern: string[];
+} {
+  /*
+   * El grup de cada persona el diu la seu electrònica; quan no el diu (a
+   * Tarragona no en diu cap, i els 27 regidors sortien «Sense grup»), el
+   * registre electoral de la Generalitat sap amb quina llista va sortir
+   * elegida cadascú, i la llista és el grup mentre ningú no digui el contrari.
+   * Es busca pel nom normalitzat; qui no hi és, es queda sense grup de debò.
+   */
+  const siglesDelRegistre = new Map(
+    registre.map((c) => [normalizePersonName(c.name), c.sigles ?? c.groupName ?? null] as const),
+  );
+  const grupDe = (c: CarrecSeue): string | null =>
+    c.grup ?? siglesDelRegistre.get(normalizePersonName(c.nom)) ?? null;
+  /*
+   * Les banderes «equipGovern» de la seu electrònica no serveixen per comptar.
+   *
+   * A Sabadell només marquen l'alcaldessa, i la fitxa publicava «1 regidoria
+   * forma el govern de 27» quan en són 14: una cosa falsa dita amb una dada
+   * certa. J13 les posa totes a fals allà on la seu no ho diu. Per això, quan
+   * les banderes no arriben ni a les regidories que la mètrica del govern
+   * atribueix a l'alcaldia, es donen per incompletes: la frase es fa amb la
+   * mètrica —que sí que sap quantes en té— i les marques per persona no es
+   * pinten, perquè marcarien qui la seu ha marcat i no qui governa. El càrrec,
+   * llavors, només s'escriu sota de l'alcaldia.
+   */
+  const govern = fitxa.carrecs.filter((c) => c.equipGovern);
+  const seientsAlcaldia = government?.mayorSeats ?? null;
+  const banderesIncompletes = seientsAlcaldia !== null && govern.length < seientsAlcaldia;
+  const grupsGovern = [...new Set(govern.map((c) => grupDe(c)).filter((g): g is string => Boolean(g)))];
+  return { grupDe, govern, seientsAlcaldia, banderesIncompletes, grupsGovern };
 }
 
 /**
@@ -1974,36 +2085,14 @@ function renderPleCompacte(
   government: GovernmentMetric | null = null,
   registre: readonly Councillor[] = [],
 ): string {
-  /*
-   * El grup de cada persona el diu la seu electrònica; quan no el diu (a
-   * Tarragona no en diu cap, i els 27 regidors sortien «Sense grup»), el
-   * registre electoral de la Generalitat sap amb quina llista va sortir
-   * elegida cadascú, i la llista és el grup mentre ningú no digui el contrari.
-   * Es busca pel nom normalitzat; qui no hi és, es queda sense grup de debò.
-   */
-  const siglesDelRegistre = new Map(
-    registre.map((c) => [normalizePersonName(c.name), c.sigles ?? c.groupName ?? null] as const),
+  const { grupDe, govern, seientsAlcaldia, banderesIncompletes, grupsGovern } = lecturaDelGovern(
+    fitxa,
+    government,
+    registre,
   );
-  const grupDe = (c: CarrecSeue): string | null =>
-    c.grup ?? siglesDelRegistre.get(normalizePersonName(c.nom)) ?? null;
   // La mateixa funció que fa servir el generador de pàgines de regidor, sobre la
   // mateixa llista i en el mateix ordre: així l'enllaç sempre existeix.
   const adreces = adrecesRegidors(fitxa.carrecs);
-  /*
-   * Les banderes «equipGovern» de la seu electrònica no serveixen per comptar.
-   *
-   * A Sabadell només marquen l'alcaldessa, i la fitxa publicava «1 regidoria
-   * forma el govern de 27» quan en són 14: una cosa falsa dita amb una dada
-   * certa. J13 les posa totes a fals allà on la seu no ho diu. Per això, quan
-   * les banderes no arriben ni a les regidories que la mètrica del govern
-   * atribueix a l'alcaldia, es donen per incompletes: la frase es fa amb la
-   * mètrica —que sí que sap quantes en té— i les marques per persona no es
-   * pinten, perquè marcarien qui la seu ha marcat i no qui governa. El càrrec,
-   * llavors, només s'escriu sota de l'alcaldia.
-   */
-  const govern = fitxa.carrecs.filter((c) => c.equipGovern);
-  const seientsAlcaldia = government?.mayorSeats ?? null;
-  const banderesIncompletes = seientsAlcaldia !== null && govern.length < seientsAlcaldia;
   const esDelGovern = (c: CarrecSeue): boolean => c.equipGovern && !banderesIncompletes;
   const ambFoto = fitxa.ambFoto > 0;
 
@@ -2056,7 +2145,8 @@ function renderPleCompacte(
   // Qui forma el govern, que sovint no és un sol partit: de 453 municipis amb
   // la dada, 195 tenen regidors de més d'un grup a l'equip de govern. La fitxa
   // ho deia només a través de l'alcaldia, i això amagava totes les coalicions.
-  const grupsGovern = [...new Set(govern.map((c) => grupDe(c)).filter((g): g is string => Boolean(g)))];
+  // Els grups del govern els compta `lecturaDelGovern`, que és qui també els
+  // passa a «En 30 segons»: les dues frases han de dir la mateixa coalició.
   const siglesAlcaldia = government?.mayorSigles ?? government?.winnerSigles ?? null;
   const resumGovern =
     banderesIncompletes && government && siglesAlcaldia
@@ -2490,6 +2580,24 @@ export type RadiografiaData = {
   llistesObertes?: LlistesObertesMetric | null;
   /** El cens i la participació de les dotze municipals des del 1979 (J36). */
   censElectoral?: CensElectoralMetric | null;
+  /** El pla urbanístic, els pisos turístics, l'habitatge protegit i la zona tensa (J40). */
+  urbanismeHabitatge?: UrbanismeHabitatgeMetric | null;
+  /** El Fons de Cooperació Local, les obres del PUOSC, els pendents i les trameses de comptes (J41). */
+  dinersGeneralitat?: DinersGeneralitat | null;
+  /**
+   * Les persones ateses pels serveis socials bàsics (J42, kind
+   * `serveisSocialsBasics`). Només la tenen els 67 municipis que són àrea
+   * bàsica de serveis socials pròpia —els de més de 20.000 habitants—; als
+   * altres, els serveis socials els presta el consell comarcal i la xifra viu a
+   * la seva fitxa, no aquí.
+   */
+  serveisSocials?: ServeisSocialsDesats | null;
+  /**
+   * L'element de Wikidata del municipi i el seu article de la Viquipèdia (J20,
+   * kind `wikidata`), aparellats pel codi INE i mai pel nom. Només van al
+   * `sameAs` del JSON-LD del municipi: la fitxa no n'ensenya res més.
+   */
+  wikidata?: { qid: string; url: string; viquipedia: string | null } | null;
   participation: (typeof electionParticipation.$inferSelect)[];
   /** Incidències obertes que afecten aquest municipi, si n'hi ha. */
   issues: { kind: string; severity: string; entity: string | null; detail: unknown }[];
@@ -2633,13 +2741,13 @@ const signeDe = (n: number): string => (n > 0 ? "+" : n < 0 ? "−" : "");
 type RanquingId = "poblacio" | "participacio" | "renda" | "selectiva" | "aigua" | "ibi" | "alternances";
 
 /**
- * «entre els 947 →»: l'enllaç petit d'una xifra cap al rànquing on surt la
+ * «entre els 947»: l'enllaç petit d'una xifra cap al rànquing on surt la
  * mateixa xifra de tots els municipis. Va al costat de la comparació amb els
  * de la seva mida, no en lloc seu: la comparació de grup diu si és normal, i
  * el rànquing diu on cau entre tots.
  */
 const entreEls947 = (id: RanquingId): string =>
-  `<a class="entre-947" href="${BASE}ranquings/#${id}">entre els 947 →</a>`;
+  `<a class="entre-947" href="${BASE}ranquings/#${id}">entre els 947</a>`;
 
 /**
  * L'enllaç de l'Idescat d'una xifra, tal com el dona l'API.
@@ -2699,9 +2807,20 @@ function canviAmbGrup(mandat: Variacio, grup: MandatGrup | null | undefined, uni
  * xifra gran que té al costat, i barrejar-ho faria llegir pendents que no hi
  * són. Per això tampoc no comparteix escala amb la línia del costat.
  */
+//
+// Sota la línia hi van el primer any i l'últim, i al costat de l'últim, la
+// xifra a què arriba: una línia sense cap valor escrit no es pot llegir sense
+// buscar la xifra gran, i a les fitxes amb tres espurnes seguides no sempre és
+// al costat.
 function sparkline(
   serie: readonly { any: number; valor: number | null }[],
   format: (valor: number) => string,
+  /**
+   * La xifra final en curt, per a l'etiqueta de sota la línia («2025: 12,3 €»).
+   * Si no es diu, la mateixa de `format`; només cal quan aquella porta una
+   * cua que no hi cap («12,3 € per habitant»).
+   */
+  curt: (valor: number) => string = format,
 ): string {
   const punts = serie.filter((p): p is { any: number; valor: number } => p.valor !== null);
   // Amb menys de tres punts no hi ha cap forma per ensenyar: hi hauria una
@@ -2734,7 +2853,7 @@ function sparkline(
          quina alçada va. -->
     <b class="ara" style="--y:${(((y(ultim.valor) + 2) / (H + 4)) * 100).toFixed(1)}%" aria-hidden="true"></b>
     </span>
-    <i aria-hidden="true"><b>${primer.any}</b><b>${ultim.any}</b></i>
+    <i aria-hidden="true"><b>${primer.any}</b><b>${ultim.any}: ${escape(curt(ultim.valor))}</b></i>
   </span>`;
 }
 
@@ -3487,7 +3606,16 @@ export function renderSous(
   diputacions: SousDiputacionsMetric | null = null,
   consells: SousConsellsMetric | null = null,
 ): string {
+  /*
+   * `parts` és el que queda a la vista i `detall`, el que va plegat a «Més
+   * detall». Era el segon bloc més llarg de la fitxa (més de tres mil píxels al
+   * mòbil): a la vista hi queden les xifres del que costa el govern, que és la
+   * resposta al títol; què publica l'ajuntament de cada regidoria i qui té un
+   * segon càrrec són el detall, sencer i a un toc.
+   */
   const parts: string[] = [];
+  const detall: string[] = [];
+  const queHiHa: string[] = [];
 
   // ---- 1. El que hi dedica l'ajuntament, i el sou de l'alcaldia ----------
   const darrer = cost?.darrer ?? null;
@@ -3497,17 +3625,17 @@ export function renderSous(
   if (cost && darrer?.organs) {
     const grup = cost.grup?.etiqueta ?? null;
     const medianes = cost.medianesGrup ?? cost.medianes;
-    const contra = grup === null ? "la mediana catalana" : `la mediana dels municipis ${grup}`;
+    const contra = grup === null ? "del municipi del mig de Catalunya" : `del municipi del mig dels municipis ${grup}`;
     const compara = (valor: number | null, mediana: number | null): string => {
       if (valor === null || mediana === null || mediana <= 0) return "";
       const ratio = valor / mediana;
       const classe = ratio > 1.15 ? " mes" : ratio < 0.85 ? " menys" : "";
       const text =
         ratio > 1.15
-          ? `${Math.round(100 * ratio - 100)} % per sobre de ${contra}`
+          ? `${Math.round(100 * ratio - 100)} % per sobre ${contra}`
           : ratio < 0.85
-            ? `${Math.round(100 - 100 * ratio)} % per sota de ${contra}`
-            : `a tocar de ${contra}`;
+            ? `${Math.round(100 - 100 * ratio)} % per sota ${contra}`
+            : `a tocar ${contra}`;
       return `<span class="comparativa${classe}">${escape(text)}</span>`;
     };
     quants =
@@ -3518,6 +3646,7 @@ export function renderSous(
     const linia = sparkline(
       cost.serie.filter((a) => !a.parcial).map((a) => ({ any: a.any, valor: a.organs?.perHabitant ?? null })),
       (v) => `${decimal(v, 1)} € per habitant`,
+      (v) => `${decimal(v, 1)} €`,
     );
     mandat = cost.mandat
       ? `<p class="apart">Del ${cost.mandat.de} al ${cost.mandat.a}, el que l'ajuntament hi dedica ha passat de
@@ -3569,8 +3698,8 @@ export function renderSous(
         }</span>
         ${
           mediana !== null && mediana > 0
-            ? `<span class="comparativa">la mediana de les ${number(retribucions!.catalunya.alcaldiesAmbSou)} alcaldies catalanes
-               amb sou és ${eurosSencers(mediana)}</span>`
+            ? `<span class="comparativa">entre les ${number(retribucions!.catalunya.alcaldiesAmbSou)} alcaldies catalanes
+               amb sou, la del mig cobra ${eurosSencers(mediana)}</span>`
             : ""
         }
       </li>`);
@@ -3614,8 +3743,8 @@ export function renderSous(
     parts.push(`${targetes.length > 0 ? `<ul class="preus">${targetes.join("")}</ul>` : ""}
     ${quants}
     ${mandat}
-    ${souLinia}
-    <details class="nota"><summary>La lletra petita</summary>${cost ? escape(cost.advertiment) : ""}${fontMinisteri}</details>`);
+    ${souLinia}`);
+    detall.push(`<details class="nota"><summary>La lletra petita</summary>${cost ? escape(cost.advertiment) : ""}${fontMinisteri}</details>`);
   }
 
   // ---- 2. Què publica aquest ajuntament ----------------------------------
@@ -3664,7 +3793,8 @@ export function renderSous(
                electrònica i no s'han pogut mirar.</p>`
             : ""
         }`;
-    parts.push(`<h3>Què en publica l'ajuntament</h3>
+    queHiHa.push("què en publica l'ajuntament");
+    detall.push(`<h3>Què en publica l'ajuntament</h3>
     <p>Aquí no hi ha cap import, i no és un descuit.</p>
     ${cos}
     <p class="avis-dada">${escape(t.advertiment)}</p>
@@ -3822,7 +3952,8 @@ export function renderSous(
         <span class="altres">${ens}</span>
       </li>`;
     };
-    parts.push(`<h3>Qui té un càrrec en un altre ens</h3>
+    queHiHa.push("qui té un càrrec en un altre ens");
+    detall.push(`<h3>Qui té un càrrec en un altre ens</h3>
     <p>${
       ambAltres.length === 1
         ? "Una persona del ple"
@@ -3853,7 +3984,10 @@ export function renderSous(
     }</details>`);
   }
 
-  return parts.join("\n");
+  // Sense xifres del cost no hi ha res a resumir: el detall va a la vista,
+  // perquè plegar-ho tot deixaria el bloc amb un títol i un botó.
+  if (parts.length === 0) return detall.join("\n");
+  return [...parts, mesDetall(detall.join("\n"), [...queHiHa, "la lletra petita"])].join("\n");
 }
 
 /**
@@ -3904,8 +4038,8 @@ export function renderContractacio(c: ContractacioMetric | null): string {
   if (c.volumPerHabitant !== null && c.ultimAnyComplet !== null) {
     const contra =
       comp && comp.medianaVolum !== null
-        ? `<span class="comparativa">la mediana dels ${number(comp.municipisVolum)} municipis
-           ${escape(comp.grup)} és ${eurosSencers(comp.medianaVolum)}</span>`
+        ? `<span class="comparativa">entre els ${number(comp.municipisVolum)} municipis
+           ${escape(comp.grup)}, el del mig: ${eurosSencers(comp.medianaVolum)}</span>`
         : "";
     targetes.push(`<li>
       <span class="etq">Per habitant, el ${c.ultimAnyComplet}</span>
@@ -3922,8 +4056,8 @@ export function renderContractacio(c: ContractacioMetric | null): string {
       <span class="etq">Licitacions amb una sola oferta</span>
       <span class="gran">${percent(c.finestra.unaOfertaPct!)}</span>
       ${reglePercentatge(c.finestra.unaOfertaPct!, comp.medianaUnaOferta, true)}
-      <span class="comparativa">la mediana dels ${number(comp.municipisUnaOferta)} municipis
-      ${escape(comp.grup)} és ${percent(comp.medianaUnaOferta!)}</span>
+      <span class="comparativa">entre els ${number(comp.municipisUnaOferta)} municipis
+      ${escape(comp.grup)}, el del mig: ${percent(comp.medianaUnaOferta!)}</span>
       <span class="sub">sobre ${number(c.finestra.licitacionsAmbOfertes)} licitacions amb el nombre d'ofertes informat</span>
     </li>`);
   } else if (c.finestra.licitacions > 0) {
@@ -4456,9 +4590,9 @@ function renderMandat(data: RadiografiaData): string {
     "Recollida selectiva": "residus",
     "Preu de l'aigua": "medi ambient",
     "Rebut mitjà d'IBI": "fiscalitat",
-    "Deute per habitant": "fiscalitat",
+    "Deute per habitant": "deute public",
     "Preu del lloguer": "habitatge",
-    "Gent que hi viu": "serveis socials",
+    "Gent que hi viu": "habitants",
   };
   const fila = (f: Fila): string => {
     const m = f.mandat!;
@@ -4482,7 +4616,8 @@ function renderMandat(data: RadiografiaData): string {
           ? `<span class="del-grup">als ${f.grupPct.municipis} de la seva mida,
              ${signe(f.grupPct.mediana)}${decimal(Math.abs(f.grupPct.mediana), 1)} %</span>`
           : `<span class="del-grup">sense comparació de grup</span>`;
-    const dibuix = icona(TEMA_MANDAT[f.etiqueta] ?? "");
+    // Muda: l'etiqueta del costat ja diu el mateix, i llegida dues vegades entrebanca.
+    const dibuix = icona(TEMA_MANDAT[f.etiqueta] ?? "", true);
     return `<li${sentit.trim() ? ` class="${sentit.trim()}"` : ""}>
       ${dibuix ? `<span class="tema" aria-hidden="true">${dibuix}</span>` : '<span class="tema"></span>'}
       <span class="etq">${escape(f.etiqueta)}</span>
@@ -4611,6 +4746,164 @@ function renderComQueda(comparacio: readonly PeerComparison[], grup: { label: st
 }
 
 /**
+ * «En 30 segons»: el poble explicat en quatre o cinc frases, abans de cap xifra.
+ *
+ * La fitxa fa quaranta mil píxels al mòbil i les respostes que la majoria de
+ * gent hi ve a buscar —qui mana, si pot fer-ho sol, si l'ajuntament deu molt,
+ * si la gent hi vota— eren escampades en quatre blocs diferents. Aquí hi van
+ * dites com les diria un veí, just sota la portada.
+ *
+ * **Cap frase no és nova.** Totes surten de dades que la pàgina ja ensenya més
+ * avall, calculades allà mateix: la ratxa de `continuitat`, la mètrica del
+ * govern, el deute de `finances`, la despesa liquidada i la participació del
+ * 2023. I cada frase **desapareix sencera** quan li falta la dada: mai no es
+ * completa amb un «no consta» enmig ni amb un any deduït. Amb menys de dues
+ * frases el bloc no surt, perquè una frase sola ja la diu la portada.
+ *
+ * La comparació és sempre amb «el municipi del mig» dels de la seva mida (la
+ * mediana del grup, dita en planer) i mai amb un adjectiu: deure més que el
+ * del mig no és ni bo ni dolent, i la frase no ho insinua.
+ */
+export function renderEn30Segons(
+  data: RadiografiaData,
+  ctx: {
+    /** Qui té l'alcaldia, tal com l'ha resolta `resolAlcaldia`. */
+    alcaldia?: { nom: string | null } | null;
+    medianes?: MedianesMunicipi;
+    colorPer?: (sigles: string | null) => string;
+    /**
+     * Les sigles de la candidatura d'un grup del ple de la seu electrònica
+     * («Grup Municipal d'ERC» → «ERC-AM»), quan es poden saber. Sense això la
+     * coalició es diu pel nombre de grups i no pel nom.
+     */
+    siglesDelGrup?: (grup: string) => string | null;
+  } = {},
+): string {
+  const frases: string[] = [];
+  const government = data.government;
+  const colorPer = ctx.colorPer;
+  const pastilla = (sigles: string): string =>
+    colorPer ? sigla(sigles, { base: BASE, color: colorPer(sigles) }) : `<b>${escape(sigles)}</b>`;
+  const siglesAlcaldia = government?.mayorSigles ?? null;
+
+  // ---- 1. Qui mana i des de quan -------------------------------------------
+  // La persona i la força, cadascuna amb el seu «des de» només quan la ratxa
+  // es pot afirmar: una ratxa amb legislatures sense alcalde registrat, o
+  // aturada perquè no se sap de quin partit era el pas anterior, no diu des de
+  // quan mana ningú.
+  const fiable = (r: { forats: readonly string[]; aturadaPerDesconegut?: boolean } | null | undefined): boolean =>
+    Boolean(r) && r!.forats.length === 0 && r!.aturadaPerDesconegut !== true;
+  const nom = ctx.alcaldia?.nom ? nomLlegible(ctx.alcaldia.nom) : null;
+  const persona = data.continuitat?.persona ?? null;
+  const anyPersona =
+    nom && persona && fiable(persona) && mateixaPersona(persona.nom, nom)
+      ? persona.desDeAny
+      : nom
+        ? (() => {
+            // Sense ratxa, el relleu a mig mandat diu des de quan hi és qui hi és.
+            const desDe = relleuDelMandat(data.mayors, nom)?.desDe ?? null;
+            return desDe ? Number(desDe.slice(0, 4)) : null;
+          })()
+        : null;
+  const partit = data.continuitat?.partit ?? null;
+  const anyPartit =
+    partit && fiable(partit) && partit.legislatures > 1 && (!siglesAlcaldia || !partit.sigles || sameForce(partit.sigles, siglesAlcaldia))
+      ? partit.desDeAny
+      : null;
+  if (nom) {
+    const desDe = anyPersona ? ` des del ${anyPersona}` : "";
+    const amb = siglesAlcaldia ? `, amb ${pastilla(siglesAlcaldia)}` : "";
+    const forca =
+      anyPartit !== null && (anyPersona === null || anyPartit < anyPersona)
+        ? `, i el seu partit hi mana des del ${anyPartit}`
+        : "";
+    frases.push(`<b>${escape(nom)}</b> té l'alcaldia${desDe}${amb}${forca}.`);
+  } else if (siglesAlcaldia && anyPartit !== null) {
+    frases.push(`${pastilla(siglesAlcaldia)} té l'alcaldia des del ${anyPartit}.`);
+  }
+
+  // ---- 2. Si té majoria, i amb qui governa ---------------------------------
+  // La coalició només es diu quan la seu electrònica marca el govern sencer
+  // (`lecturaDelGovern`): amb les banderes incompletes no se sap qui hi és.
+  const lectura = data.carrecs && data.carrecs.carrecs.length > 0
+    ? lecturaDelGovern(data.carrecs, government, data.councillors)
+    : null;
+  const grupsGovern = lectura && !lectura.banderesIncompletes && lectura.govern.length > 0 ? lectura.grupsGovern : null;
+  let coalicio = "";
+  if (grupsGovern && grupsGovern.length > 1) {
+    const sigles = grupsGovern.map((g) => ctx.siglesDelGrup?.(g) ?? null);
+    const socis = sigles.filter((s): s is string => s !== null && !(siglesAlcaldia && sameForce(s, siglesAlcaldia)));
+    coalicio =
+      sigles.every((s) => s !== null) && socis.length > 0
+        ? `governa en coalició amb ${socis.map(pastilla).reduce((a, b, i, tots) => (i === tots.length - 1 ? `${a} i ${b}` : `${a}, ${b}`))}`
+        : `governa en coalició de ${number(grupsGovern.length)} grups`;
+  } else if (grupsGovern && grupsGovern.length === 1) {
+    coalicio = "governa sola";
+  }
+  if (government) {
+    const seients = government.mayorSeats;
+    const total = government.totalSeats;
+    if (seients !== null && total > 0 && government.winnerGoverns !== false && seients >= government.majority) {
+      frases.push(`La seva llista té <b>${number(seients)} de les ${number(total)}</b> regidories: majoria absoluta, i pot aprovar les coses sense els vots de ningú més.`);
+    } else if (seients !== null && total > 0) {
+      frases.push(`La seva llista té <b>${number(seients)} de les ${number(total)}</b> regidories, i la majoria absoluta és de ${number(government.majority)}${
+        coalicio === "governa sola" ? ": governa sola, en minoria" : coalicio ? `: ${coalicio}` : ""
+      }.`);
+    } else if (coalicio && coalicio !== "governa sola") {
+      frases.push(`${coalicio[0]!.toUpperCase()}${coalicio.slice(1)}.`);
+    }
+  }
+
+  // ---- 3. El deute, contra el municipi del mig -----------------------------
+  const comptes = data.finances;
+  const deute = comptes?.indicators.find((i) => i.key === "deute-habitant") ?? null;
+  if (comptes && deute && deute.value !== null) {
+    const c = comptes.comparison.find((x) => x.key === "deute-habitant") ?? null;
+    const delMig =
+      c && c.median !== null
+        ? `; el municipi del mig dels ${c.groupSize > 0 ? `${number(c.groupSize)} ` : ""}de la seva mida en deu ${formatValue(c.median, deute.unit)}`
+        : "";
+    frases.push(`L'ajuntament deu <b>${formatValue(deute.value, deute.unit)}</b> per habitant (${comptes.year})${delMig}.`);
+  }
+
+  // ---- 4. El que gasta, contra el mateix municipi del mig ------------------
+  const gasta = despesaPerHabitant(data.despesaProgrames, data.spending);
+  if (gasta) {
+    const ref = gasta.referencia;
+    frases.push(`Gasta <b>${number(Math.round(gasta.perHabitant))} €</b> per habitant l'any (liquidat el ${gasta.any})${
+      ref ? `; el municipi del mig de la seva mida, ${number(Math.round(ref.mediana))} €` : ""
+    }.`);
+  }
+
+  // ---- 5. Qui hi va anar a votar -------------------------------------------
+  const votar = data.participation.find((r) => r.electionId === "M20231");
+  if (votar?.censusSize && votar.voters !== null && votar.voters !== undefined) {
+    const pct = (100 * votar.voters) / votar.censusSize;
+    const m = ctx.medianes?.participacio["M20231"] ?? null;
+    frases.push(`Al maig del 2023 hi va anar a votar el <b>${percent(pct)}</b> del cens${
+      m ? `; al municipi del mig de la seva mida, el ${percent(m.mediana)}` : ""
+    }.`);
+  }
+
+  if (frases.length < 2) return "";
+  // El relleu a mig mandat el diu la papereta, i només aquí: és un fet que
+  // canvia com s'han de llegir les frases de dalt (qui té l'alcaldia avui no
+  // és qui va sortir del ple del 2023), i una vinyeta per bloc com a molt.
+  const relleu = data.mayors?.currentTermChange
+    ? vinyetaPapereta("canviMigMandat", "En aquest mandat hi ha hagut un relleu a l'alcaldia.", {
+        enllac: { href: "#alcaldies", text: "Qui hi havia abans" },
+      })
+    : "";
+  return `<section class="fx-30" aria-labelledby="fx-30-titol">
+  <h2 id="fx-30-titol">En 30 segons</h2>
+  <ul>
+    ${frases.map((f) => `<li>${f}</li>`).join("\n    ")}
+  </ul>
+  ${relleu}
+</section>`;
+}
+
+/**
  * El poble en cinc xifres, abans de l'índex.
  *
  * La fitxa fa 28.000 píxels i 5.700 paraules. Qui l'obre per saber com està el
@@ -4713,7 +5006,7 @@ function renderUllada(
               ? "entre els que més deuen dels de la seva mida"
               : `més que ${Math.round(p / 10)} de cada 10 dels de la seva mida`,
       on: "#comptes",
-      tema: "fiscalitat",
+      tema: "deute public",
       etiqueta: {
         nom: "Deu per habitant",
         any: comptes.year,
@@ -4841,7 +5134,7 @@ function renderUllada(
         // `data-valor`; el `title` és la mateixa frase per a qui no té script.
         p.etiqueta ? `${atributsEtiqueta(p.etiqueta)} title="${escape(textEtiqueta(p.etiqueta))}"` : ""
       }>
-      <span class="dibuix" aria-hidden="true">${icona(p.tema)}</span>
+      <span class="dibuix" aria-hidden="true">${icona(p.tema, true)}</span>
       <span class="etq">${escape(p.etq)}</span>
       <span class="xifra">${p.xifra}</span>
       ${
@@ -4945,13 +5238,34 @@ function posicioEntre(percentil: number, dels: string): string {
  * alt que el 100 %» seria fals: allà es diu que és el més alt del grup.
  */
 function fraseComparat(percentil: number, quants: number | null, mediana: string): string {
-  const dels = quants === null ? "dels municipis de la seva mida" : `dels ${number(quants)} municipis de la seva mida`;
-  return `${posicioEntre(percentil, dels)} · mediana ${mediana}`;
+  return `${posicioDe(percentil, quants)} · el del mig, ${mediana}`;
 }
 
-/** La mateixa posició en curt, per a l'etiqueta del punt: «més baix que el 60 % de 24». */
+/**
+ * La posició comptada en municipis: «més alt que 13 de 24».
+ *
+ * «Més alt que el 56 % dels 24 municipis de la seva mida» repetit deu vegades
+ * era una frase de tècnic, i el denominador ja el diu una vegada l'entrada del
+ * bloc. Comptat en municipis s'entén sense saber què és un percentil. El
+ * percentil de les feines és de rang mitjà (el municipi compta mig per sota
+ * d'ell mateix), i per això se'n treu el mig abans d'arrodonir: el 14è de 24
+ * té un percentil 56 i en deixa 13 per sota. Mai no pot deixar-ne per sota
+ * tants com en té el grup, perquè ell n'és un. Sense el recompte del grup es
+ * diu en tant per cent, com abans.
+ */
+function posicioDe(percentil: number, quants: number | null): string {
+  if (quants === null || quants < 2) return posicioEntre(percentil, "dels de la seva mida");
+  const q = number(quants);
+  if (percentil >= 100) return `el més alt dels ${q}`;
+  if (percentil <= 0) return `el més baix dels ${q}`;
+  if (percentil === 50) return `just al mig dels ${q}`;
+  const per = (p: number): number => Math.max(1, Math.min(quants - 1, Math.round((p * quants) / 100 - 0.5)));
+  return percentil > 50 ? `més alt que ${number(per(percentil))} de ${q}` : `més baix que ${number(per(100 - percentil))} de ${q}`;
+}
+
+/** La mateixa posició, per a l'etiqueta del punt: és la mateixa frase que la fila. */
 const posicioCurta = (percentil: number, quants: number | null): string =>
-  posicioEntre(percentil, quants === null ? "del grup" : `de ${number(quants)}`);
+  quants === null ? posicioEntre(percentil, "del grup") : posicioDe(percentil, quants);
 
 /** El més baix i el més alt d'un grup del qual tenim tots els valors. */
 function extremsDe(grup: MedianaGrup | null): { minim: number; maxim: number } | null {
@@ -5112,13 +5426,63 @@ function grupComparat(data: RadiografiaData, medianes?: MedianesMunicipi): { eti
   return p ? { etiqueta: p.etiqueta, mida: p.quants } : null;
 }
 
-export function renderComparat(data: RadiografiaData, medianes?: MedianesMunicipi): string {
+/**
+ * «Els teus veïns»: el mateix poble comparat amb els que toquen de terme, no
+ * amb els de la seva mida. És la comparació que la gent fa de debò («a Sant
+ * Just paguen menys d'IBI?») i la idea de marca, el veïnat, feta literal.
+ *
+ * Tres xifres —el deute, l'IBI i la participació— i una tria entre elles feta
+ * amb tres botons de ràdio i CSS: sense JavaScript funciona igual, i amb el
+ * teclat es canvia amb les fletxes com qualsevol grup de ràdio. Els panells
+ * són germans dels botons (i no fills d'un `:has()`), de manera que també va
+ * als navegadors que encara no el tenen. Els veïns són els mateixos per a les
+ * tres: o hi són tots tres panells o no n'hi ha cap (Llívia no en té cap).
+ *
+ * La xifra de cada veí surt de la seva fila d'`els947`, que és la mateixa que
+ * publica el web per als 947: la fitxa no torna a la base de dades.
+ */
+export function renderVeinsTria(slug: string, nom: string, files947: readonly Els947Row[] | undefined): string {
+  if (!files947 || files947.length === 0) return "";
+  const propi = files947.find((r) => r.s === slug) ?? null;
+  const tria: { id: string; etq: string; indicador: IndicadorVeins }[] = [
+    { id: "deute", etq: "deute", indicador: INDICADORS_VEINS.deute },
+    { id: "ibi", etq: "IBI", indicador: INDICADORS_VEINS.ibi },
+    { id: "participacio", etq: "participació", indicador: INDICADORS_VEINS.participacio },
+  ];
+  const adjacencia = adjacenciaMunicipal();
+  const panells = tria.map((t) => {
+    const sel = veinsAmbXifra(slug, adjacencia, files947, t.indicador);
+    return {
+      ...t,
+      html: renderVeins(
+        { slug, nom, valor: propi ? t.indicador.valor(propi) : undefined },
+        sel.veins,
+        t.indicador,
+        { total: sel.total },
+      ),
+    };
+  });
+  if (panells.every((p) => p.html === "")) return "";
+  return `<div class="fx-veins">
+  ${panells
+    .map((p, i) => `<input class="fx-veins-ra" type="radio" name="fx-veins" id="fx-veins-${p.id}" value="${p.id}"${i === 0 ? " checked" : ""}>`)
+    .join("\n  ")}
+  <p class="fx-veins-tria"><span>Compara els veïns per</span>${panells
+    .map((p) => `<label for="fx-veins-${p.id}">${escape(p.etq)}</label>`)
+    .join("")}</p>
+  ${panells.map((p) => `<div class="fx-veins-panell fx-veins-${p.id}">${p.html}</div>`).join("\n  ")}
+</div>`;
+}
+
+export function renderComparat(data: RadiografiaData, medianes?: MedianesMunicipi, veins = ""): string {
   const files = filesComparat(data, medianes);
   const ambPosicio = files.filter((f) => f.valor !== null && f.percentil !== null && f.mediana !== null);
   const grup = grupComparat(data, medianes);
   // Amb menys de tres posicions no hi ha resum: hi ha dues xifres, i ja les
   // diuen els seus blocs. I sense grup no se sap amb qui es compara.
-  if (ambPosicio.length < 3 || !grup) return "";
+  // Sense prou posicions no hi ha bloc, però els veïns, si n'hi ha, hi van
+  // igualment: no depenen del grup de mida.
+  if (ambPosicio.length < 3 || !grup) return veins;
 
   const fila = (f: FilaComparat): string => {
     const anyIFont = [
@@ -5171,15 +5535,35 @@ export function renderComparat(data: RadiografiaData, medianes?: MedianesMunicip
       <span class="frase">${escape(fraseComparat(f.percentil, f.quants, mediana))}</span></li>`;
   };
 
+  /*
+   * Quatre files a la vista i la resta plegades. Les de dalt són les primeres
+   * que tenen posició, en l'ordre fix de la llista: una fila «sense dada» a la
+   * vista ocupava lloc per dir que no hi ha res. Les plegades mantenen el
+   * mateix ordre, i el compte del botó és el de la llista sencera, de manera
+   * que dues fitxes es continuen llegint de costat.
+   */
+  const ambPunt = (f: FilaComparat): boolean => f.valor !== null && f.percentil !== null && f.mediana !== null;
+  const visibles = files.filter(ambPunt).slice(0, 4);
+  const plegades = files.filter((f) => !visibles.includes(f));
   return `<section class="bloc comparat" id="comparat">
   <h2>On cau entre els seus</h2>
-  <p class="entrada-bloc">Comparat amb els <b>${number(grup.mida)} municipis ${escape(grup.etiqueta)}</b>, que és el que
-  vol dir «els seus» a tota la fitxa. Cada barra va del municipi més baix del grup al més alt; la ratlla del mig
-  és la mediana i el punt de coral, aquest municipi.</p>
-  <p class="comparat-llegenda" aria-hidden="true"><span>el més baix del grup</span><span>la mediana</span><span>el més alt</span></p>
+  <p class="entrada-bloc">Entre els <b>${number(grup.mida)} municipis de la seva mida</b> (${escape(grup.etiqueta)}), que és el
+  que vol dir «els seus» a tota la fitxa. Cada barra va del municipi més baix del grup al més alt; la ratlla és
+  el municipi del mig (la mediana) i el punt de coral, aquest municipi.</p>
+  <p class="comparat-llegenda" aria-hidden="true"><span>el més baix del grup</span><span>el del mig</span><span>el més alt</span></p>
   <ol class="comparat-files">
-    ${files.map(fila).join("\n    ")}
+    ${visibles.map(fila).join("\n    ")}
   </ol>
+  ${
+    plegades.length === 0
+      ? ""
+      : `<details class="fx-mes comparat-mes"><summary>Veure'n les ${number(files.length)}</summary>
+  <ol class="comparat-files" start="${visibles.length + 1}">
+    ${plegades.map(fila).join("\n    ")}
+  </ol>
+  </details>`
+  }
+  ${veins}
   <p class="nota oberta">Les barres diuen on cau, no cap veredicte: un deute alt pot ser una piscina nova, i un
   rebut alt, un servei més. Cada fila porta al bloc que ho explica. Per triar les xifres i els municipis
   hi ha el <a href="${BASE}comparador/?m=${escape(data.municipality.slug)}">comparador</a>, i per veure
@@ -5220,6 +5604,13 @@ export function renderComparat(data: RadiografiaData, medianes?: MedianesMunicip
  * cap `try` ni cap avís —si el navegador no té `IntersectionObserver`, la
  * primera línia no troba res i la resta no s'executa— i per això la pàgina
  * continua sent un fitxer autònom que es pot obrir des de qualsevol lloc.
+ *
+ * Des que la fitxa va per capítols, l'índex agrupa els enllaços sota el nom de
+ * cada capítol (`grupIndex`). El seguidor no en sap res: continua mirant els
+ * `a[href^='#']` de l'índex, i els noms dels capítols no són enllaços. Només en
+ * fan ús la barra «Ets a», que copia l'índex amb els capítols i escriu el del
+ * bloc que es llegeix davant del seu nom, i el rail, que si no hi cap sencer
+ * es desplaça sol fins a l'enllaç marcat.
  */
 const SEGUIDOR_INDEX = `<script>
 (function(){
@@ -5242,9 +5633,84 @@ const SEGUIDOR_INDEX = `<script>
     // Entre dues seccions indexades n'hi ha que no ho són: allà no es desmarca
     // res, perquè apagar-ho tot mentre es llegeix faria pampallugues.
     if (!tria || tria === actual) return;
-    if (actual) per.get(actual).removeAttribute("aria-current");
+    if (actual) {
+      per.get(actual).removeAttribute("aria-current");
+      if (copies.get(per.get(actual))) copies.get(per.get(actual)).removeAttribute("aria-current");
+    }
     actual = tria;
-    if (actual) per.get(actual).setAttribute("aria-current", "true");
+    if (actual) {
+      per.get(actual).setAttribute("aria-current", "true");
+      if (copies.get(per.get(actual))) copies.get(per.get(actual)).setAttribute("aria-current", "true");
+      posaNom(per.get(actual));
+      alaVista(per.get(actual));
+    }
+  }
+  var indexNav = document.querySelector("nav.index");
+  // Al rail de l'escriptori, amb els capítols, l'índex pot ser més alt que la
+  // pantalla i té el seu propi desplaçament: l'enllaç marcat s'hi porta a la
+  // vista. Només es mou l'índex, mai la pàgina (res de scrollIntoView, que al
+  // mòbil, amb l'índex ja passat, faria tornar la pàgina amunt).
+  function alaVista(a){
+    if (!indexNav || indexNav.scrollHeight <= indexNav.clientHeight + 1) return;
+    var n = indexNav.getBoundingClientRect(), r = a.getBoundingClientRect();
+    if (r.top < n.top + 24) indexNav.scrollTop -= n.top + 24 - r.top;
+    else if (r.bottom > n.bottom - 24) indexNav.scrollTop += r.bottom - n.bottom + 24;
+  }
+  // La barra «Ets a» del mòbil (vegeu \`barraEtsA\`): el mateix seguidor la
+  // manté, i les seves entrades són còpies de les de l'índex, de manera que no
+  // hi ha dues llistes que es puguin desquadrar. Sense barra a la pàgina, res.
+  var barra = document.querySelector("[data-fx-ets]"), copies = new Map(), posaNom = function(){};
+  if (barra) {
+    var boto = barra.querySelector("button"), llista = barra.querySelector(".fx-ets-llista"),
+        on = barra.querySelector("[data-fx-ets-on]");
+    // Es copia l'índex sencer, capítols inclosos, i després s'aparella cada
+    // enllaç amb la seva còpia per ordre: les dues llistes tenen els mateixos
+    // enllaços en el mateix ordre perquè una és la fotocòpia de l'altra.
+    if (indexNav) {
+      for (var f = indexNav.firstElementChild; f; f = f.nextElementSibling) llista.appendChild(f.cloneNode(true));
+    } else {
+      enllacos.forEach(function(a){ llista.appendChild(a.cloneNode(true)); });
+    }
+    var copiats = llista.querySelectorAll("a[href^='#']");
+    enllacos.forEach(function(a, i){
+      if (!copiats[i]) return;
+      copiats[i].removeAttribute("aria-current");
+      copies.set(a, copiats[i]);
+    });
+    // «Ets a: Els diners · Què paga la gent»: el capítol davant del bloc, que
+    // és el que diu a quina altura de la fitxa s'és.
+    posaNom = function(a){
+      var grup = a.closest ? a.closest("[data-fx-capitol]") : null;
+      on.textContent = "Ets a: " + (grup ? grup.getAttribute("data-fx-capitol") + " · " : "");
+      var b = document.createElement("b");
+      b.textContent = a.textContent.trim();
+      on.appendChild(b);
+    };
+    var obre = function(){
+      llista.hidden = false;
+      boto.setAttribute("aria-expanded", "true");
+      var ara = llista.querySelector("[aria-current]") || llista.querySelector("a");
+      if (ara) ara.focus();
+    };
+    var tanca = function(retorna){
+      if (llista.hidden) return;
+      llista.hidden = true;
+      boto.setAttribute("aria-expanded", "false");
+      if (retorna) boto.focus();
+    };
+    boto.addEventListener("click", function(){
+      if (llista.hidden) obre(); else tanca(false);
+    });
+    llista.addEventListener("click", function(e){ if (e.target.closest("a")) tanca(false); });
+    barra.addEventListener("keydown", function(e){ if (e.key === "Escape") tanca(true); });
+    // La barra només baixa quan l'índex de pastilles ja ha quedat enrere: mentre
+    // es veu, ja fa la mateixa feina i dues llistes a la vegada sobren.
+    if (indexNav) new IntersectionObserver(function(es){
+      var e = es[0], passat = !e.isIntersecting && e.boundingClientRect.top < 0;
+      barra.classList.toggle("fx-avall", passat);
+      if (!passat) tanca(false);
+    }).observe(indexNav);
+    barra.classList.add("fx-viu");
   }
   var mira = new IntersectionObserver(function(entrades){
     entrades.forEach(function(e){
@@ -5258,6 +5724,266 @@ const SEGUIDOR_INDEX = `<script>
   seccions.forEach(function(s){ mira.observe(s); });
 })();
 </script>`;
+
+/**
+ * La barra «Ets a: <secció> ▾» del mòbil.
+ *
+ * A partir de 1.180 px l'índex és un rail fix a l'esquerra i sempre se sap on
+ * ets. Per sota, l'índex és una filera de pastilles que surt un cop, a quatre
+ * mil píxels del capdamunt, i un cop passada ja no hi és: en una fitxa de
+ * quaranta pantalles, qui llegeix al telèfon no sabia mai on era ni com saltar
+ * a un altre bloc. Aquesta barra és el rail del mòbil: diu la secció que
+ * s'està llegint i, en tocar-la, obre la llista sencera.
+ *
+ * Tres decisions que la fan innòcua:
+ *
+ *   · **És fixa i no ocupa lloc al document.** Baixa per sobre del contingut
+ *     quan l'índex de pastilles ha quedat enrere, i no empeny res: cap salt de
+ *     maquetació en aparèixer ni en desaparèixer.
+ *   · **Sense JavaScript no existeix.** El CSS l'amaga fins que el guió li posa
+ *     la classe `fx-viu`, i llavors la pàgina és la de sempre, amb el
+ *     `nav.index` que porta a tots els blocs. La llista la omple el guió amb
+ *     còpies dels enllaços de l'índex: una sola font, cap desquadrament.
+ *   · **Es fa servir amb el teclat.** És un `<button>` amb `aria-expanded`, la
+ *     llista rep el focus en obrir-se i Esc la tanca i torna al botó.
+ */
+function barraEtsA(): string {
+  return `<div class="fx-ets" data-fx-ets>
+  <button type="button" class="fx-ets-boto" aria-expanded="false" aria-controls="fx-ets-llista">
+    <span class="fx-ets-on" data-fx-ets-on>Seccions d'aquesta pàgina</span><span class="fx-ets-obre" aria-hidden="true">▾</span>
+  </button>
+  <nav class="fx-ets-llista" id="fx-ets-llista" aria-label="Salta a una secció" hidden></nav>
+</div>`;
+}
+
+/**
+ * Obre els «Més detall» que amaguen el lloc on porta un enllaç.
+ *
+ * Els blocs llargs pleguen la segona meitat dins d'un `<details>`, i dins hi
+ * queden àncores que altres pàgines enllacen: `#alcaldies` (la portada, la
+ * pàgina de trajectòria), `#trajectoria`. Chrome i Firefox ja obren el
+ * `<details>` quan s'hi arriba per l'adreça o amb el «cerca a la pàgina»;
+ * Safari, no. Aquest guió fa el mateix a tots: en carregar i a cada canvi
+ * d'àncora, si el destí és dins d'un plegat, l'obre i hi porta. Sense guió,
+ * l'enllaç porta al bloc i el «Més detall» és a la vista, a un toc.
+ */
+const OBRE_DETALL_JS = `<script>
+(function(){
+  function obre(){
+    var id = decodeURIComponent(location.hash.slice(1));
+    if (!id) return;
+    var desti = document.getElementById(id);
+    if (!desti || !desti.closest || !desti.closest("details:not([open])")) return;
+    for (var d = desti.parentElement; d; d = d.parentElement) if (d.tagName === "DETAILS") d.open = true;
+    desti.scrollIntoView();
+  }
+  window.addEventListener("hashchange", obre);
+  obre();
+})();
+</script>`;
+
+/**
+ * Plega la part secundària d'un bloc dins d'un «Més detall».
+ *
+ * Cada bloc llarg es queda amb el títol, la frase que respon la pregunta i el
+ * gràfic principal a la vista; les taules de suport, les notes i la lletra
+ * petita van aquí dins. `que` diu en dues o tres paraules què hi ha, perquè
+ * un «Més detall» a seques no diu si val la pena obrir-lo.
+ *
+ * El text plegat continua sent a la pàgina: els cercadors l'indexen, el
+ * «cerca a la pàgina» del navegador l'hi troba (i Chrome i Firefox l'obren
+ * sols), i `OBRE_DETALL_JS` l'obre quan un enllaç hi porta.
+ */
+function mesDetall(cos: string, que: readonly string[] = []): string {
+  if (cos.trim() === "") return "";
+  return `<details class="fx-mes"><summary>Més detall${
+    que.length > 0 ? ` <span class="fx-mes-que">${que.map(escape).join(" · ")}</span>` : ""
+  }</summary>
+  ${cos}
+</details>`;
+}
+
+/**
+ * Separa la «lletra petita» final d'un tros de bloc, per plegar-la a part.
+ *
+ * Les peces de la fitxa (`renderPleCompacte`, `renderRevenue`…) acaben amb el
+ * seu `<details class="nota">`, i és la part que ha d'anar a «Més detall»
+ * mentre la resta es queda a la vista. Es busca el ÚLTIM `<details class="nota">`
+ * de primer nivell i només si tanca el tros: si n'hi ha un al mig, no es toca,
+ * perquè llavors no és la lletra petita del final sinó una part del contingut.
+ * La comptabilitat de `<details>` oberts i tancats és el que permet que la
+ * lletra petita en porti un a dins sense partir-la pel lloc equivocat.
+ */
+function treuLletraPetita(html: string): { cos: string; lletra: string } {
+  const net = html.trimEnd();
+  const marca = '<details class="nota">';
+  let on = net.lastIndexOf(marca);
+  while (on >= 0) {
+    // Del candidat al final hi ha d'haver exactament un <details> obert i tancat
+    // al nivell de dalt, i ha d'acabar just al final del tros.
+    let fondaria = 0;
+    let fi = -1;
+    const re = /<details\b|<\/details>/g;
+    re.lastIndex = on;
+    for (let m = re.exec(net); m; m = re.exec(net)) {
+      fondaria += m[0] === "</details>" ? -1 : 1;
+      if (fondaria === 0) {
+        fi = m.index + m[0].length;
+        break;
+      }
+    }
+    if (fi === net.length) return { cos: net.slice(0, on).trimEnd(), lletra: net.slice(on) };
+    on = on === 0 ? -1 : net.lastIndexOf(marca, on - 1);
+  }
+  return { cos: html, lletra: "" };
+}
+
+/**
+ * El CSS de les peces noves de la fitxa municipal: «En 30 segons», la barra
+ * «Ets a» del mòbil, els «Més detall», els noms del ple compacte, la
+ * miniatura del mapa al mòbil, les franges dels capítols i l'índex agrupat
+ * per capítols.
+ *
+ * Viu aquí i no a `estil.ts` perquè només el fa servir aquesta pàgina, i amb
+ * el prefix `fx-` perquè cap classe no pugui xocar amb les compartides (el peu
+ * de la web, les pastilles). Fa servir els tokens de la casa i res més.
+ */
+const FITXA_CSS = senseComentaris(`
+/* En 30 segons: frases, no targetes. Un filet de color a l'esquerra i prou. */
+.fx-30{margin:var(--e4) 0 0;padding:var(--e3) var(--e3) var(--e3) calc(var(--e3) + 2px);
+  border-left:6px solid var(--menta);background:var(--paper-2);border-radius:0 var(--r-m) var(--r-m) 0}
+.fx-30 h2{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.01em;margin:0 0 var(--e2)}
+.fx-30 ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.fx-30 li{font-size:1rem;line-height:1.45;max-width:70ch}
+.fx-30 li .sigla{vertical-align:baseline}
+
+/* Més detall: el resum ja s'ha dit; això és per a qui en vol més. */
+.fx-mes{margin:var(--e3) 0 0;border-top:1.5px solid var(--vora)}
+.fx-mes > summary{cursor:pointer;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;min-height:44px;
+  padding:12px 0 6px;font-family:var(--display);font-weight:900;font-size:1rem;list-style:none}
+.fx-mes > summary::-webkit-details-marker{display:none}
+.fx-mes > summary::before{content:"+";display:inline-grid;place-items:center;width:22px;height:22px;flex:none;
+  border:2px solid var(--ink);border-radius:50%;font:900 .9rem/1 var(--text);align-self:center}
+.fx-mes[open] > summary::before{content:"−"}
+.fx-mes > summary:focus-visible{outline:3px solid var(--coral);outline-offset:2px;border-radius:4px}
+.fx-mes-que{font-family:var(--text);font-weight:700;font-size:.8rem;color:var(--ink-suau)}
+.fx-mes > :not(summary):first-of-type{margin-top:var(--e2)}
+
+/* La barra «Ets a» del mòbil. Fixa, per sobre de tot, i fora del flux. */
+.fx-ets{display:none}
+@media (max-width:1179px){
+  .fx-ets.fx-viu{display:block;position:fixed;top:0;left:0;right:0;z-index:30;background:var(--paper);
+    border-bottom:2.5px solid var(--ink);transform:translateY(-105%);visibility:hidden;
+    transition:transform .18s ease,visibility 0s linear .18s}
+  .fx-ets.fx-viu.fx-avall{transform:none;visibility:visible;transition:transform .18s ease}
+  [id]{scroll-margin-top:60px}
+}
+@media (prefers-reduced-motion:reduce){.fx-ets.fx-viu,.fx-ets.fx-viu.fx-avall{transition:none}}
+.fx-ets-boto{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+  max-width:var(--ample);margin:0 auto;min-height:44px;padding:0 16px;border:0;background:none;color:var(--ink);
+  font:800 .86rem/1.2 var(--text);text-align:left;cursor:pointer}
+.fx-ets-on{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx-ets-on b{font-family:var(--display);font-weight:900}
+.fx-ets-obre{flex:none;font-size:1rem}
+.fx-ets-boto[aria-expanded="true"] .fx-ets-obre{transform:rotate(180deg)}
+.fx-ets-boto:focus-visible{outline:3px solid var(--coral);outline-offset:-3px}
+.fx-ets-llista{max-width:var(--ample);margin:0 auto;max-height:calc(100vh - 48px);overflow:auto;
+  padding:0 16px 12px;border-top:1.5px solid var(--vora);overscroll-behavior:contain}
+.fx-ets-llista a{display:flex;align-items:center;min-height:44px;font-weight:800;font-size:.92rem;
+  text-decoration:none;border-bottom:1px solid var(--vora)}
+.fx-ets-llista a[aria-current]{color:var(--coral-text);text-decoration:underline;text-decoration-thickness:2.5px;
+  text-underline-offset:5px}
+.fx-ets-llista a:focus-visible{outline:3px solid var(--coral);outline-offset:-3px}
+
+/* El ple compacte: el nom curt a la vista, i les inicials mentre la foto arriba. */
+.retrats .fx-nom{font-size:.66rem;line-height:1.2;font-weight:700;text-align:center;max-width:100%;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word}
+.retrats .alcaldia .fx-nom{font-weight:900}
+.fx-cara{position:relative;display:inline-block;border-radius:50%;background:var(--paper-2);line-height:0}
+.fx-cara::before{content:attr(data-ini);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font:900 .74rem/1 var(--display);color:var(--ink-suau)}
+.fx-cara .retrat{position:relative;background:transparent}
+
+/* Els teus veïns: la tria entre tres xifres, amb ràdios i CSS. */
+.fx-veins{margin:var(--e4) 0 0;padding-top:var(--e3);border-top:1.5px solid var(--vora)}
+.fx-veins-ra{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.fx-veins-tria{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 var(--e1);font-size:.84rem;font-weight:700}
+.fx-veins-tria span{color:var(--ink-suau);margin-right:4px}
+.fx-veins-tria label{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;cursor:pointer;font-weight:800;
+  text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px;text-decoration-color:var(--vora)}
+.fx-veins-panell{display:none}
+.fx-veins-panell .vn{margin-top:0}
+#fx-veins-deute:checked ~ .fx-veins-deute,#fx-veins-ibi:checked ~ .fx-veins-ibi,
+#fx-veins-participacio:checked ~ .fx-veins-participacio{display:block}
+#fx-veins-deute:checked ~ .fx-veins-tria label[for="fx-veins-deute"],
+#fx-veins-ibi:checked ~ .fx-veins-tria label[for="fx-veins-ibi"],
+#fx-veins-participacio:checked ~ .fx-veins-tria label[for="fx-veins-participacio"]{
+  color:var(--coral-text);text-decoration-color:currentColor;text-decoration-thickness:2.5px}
+#fx-veins-deute:focus-visible ~ .fx-veins-tria label[for="fx-veins-deute"],
+#fx-veins-ibi:focus-visible ~ .fx-veins-tria label[for="fx-veins-ibi"],
+#fx-veins-participacio:focus-visible ~ .fx-veins-tria label[for="fx-veins-participacio"]{
+  outline:3px solid var(--coral);outline-offset:2px;border-radius:4px}
+
+/* La tira del poble a la portada. */
+.fx-tira{margin:var(--e3) 0 0;min-width:0}
+.fx-tira-etq{margin:0;font-size:.8rem;font-weight:800;color:var(--ink-suau)}
+
+/* La portada al mòbil: el mapa, miniatura al costat de la línia de dades. La
+   línia de dades és sempre la tercera peça (rètol, títol, dades), i per això
+   la fila es pot dir pel número. Sense mapa (classe «amb-mapa» absent), la
+   portada és la de sempre i la línia de dades fa tota l'amplada. */
+@media (max-width:819px){
+  .portada.amb-mapa{display:grid;grid-template-columns:minmax(0,1fr) 120px;column-gap:var(--e2);align-items:start}
+  .portada.amb-mapa > *{grid-column:1 / -1;min-width:0}
+  .portada.amb-mapa > .entrada{grid-column:1;grid-row:3}
+  .portada.amb-mapa > .on-es{grid-column:2;grid-row:3;margin:0;max-width:120px;width:120px;align-self:center}
+  .portada.amb-mapa > .on-es figcaption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+}
+
+/* La franja que obre cada capítol: quieta, el nom en gran i els blocs que hi
+   ha. Un punt del color del capítol (marca, no veredicte) i prou; el bloc que
+   la segueix no porta la ratlla de dalt, perquè la franja ja fa de separació. */
+.fx-cap{margin:var(--e4) 0 0;padding:var(--e3);background:var(--paper-2);border:1.5px solid var(--vora);border-radius:var(--r-m)}
+.fx-cap-nom{display:flex;align-items:center;gap:12px;margin:0;font-family:var(--display);font-weight:900;
+  font-size:clamp(1.55rem,6vw,2.1rem);line-height:1.05;letter-spacing:-.025em}
+.fx-cap-nom::before{content:"";flex:none;width:16px;height:16px;border-radius:50%;background:var(--fx-c);border:2px solid var(--ink)}
+.fx-cap-qui-mana{--fx-c:var(--lavanda)}
+.fx-cap-diners{--fx-c:var(--presec)}
+.fx-cap-poble{--fx-c:var(--menta)}
+.fx-cap-fonts{--fx-c:var(--coral)}
+.fx-cap-que{margin:6px 0 0;max-width:60ch;color:var(--ink-suau);font-size:.98rem;line-height:1.45}
+.fx-cap-blocs{list-style:none;margin:var(--e1) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:0 var(--e2)}
+.fx-cap-blocs a{display:inline-flex;align-items:center;min-height:44px;font-weight:800;font-size:.9rem;
+  text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px;text-decoration-color:var(--vora)}
+.fx-cap-blocs a:hover{text-decoration-color:currentColor}
+.fx-cap + .bloc{border-top:0}
+@media (max-width:1179px){.fx-cap-primer .fx-cap-blocs{display:none}}
+
+/* L'índex per capítols. Al mòbil, una fila de pastilles per capítol que es
+   desplaça de costat: quatre files curtes en lloc d'un núvol de mitja pantalla.
+   Al rail, el nom de cada capítol sobre els seus blocs, i el rail es desplaça
+   sol si no hi cap (el guió hi porta l'enllaç marcat). */
+.fx-idx-grup{min-width:0}
+.fx-idx-nom{margin:0;font-family:var(--display);font-weight:900;font-size:.92rem;letter-spacing:-.01em}
+@media (max-width:1179px){
+  nav.index .fx-idx-grup{flex:1 1 100%;margin-top:var(--e1)}
+  nav.index .fx-idx-nom{margin:0 0 6px}
+  nav.index .fx-idx-blocs{display:flex;gap:0 18px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:thin;overscroll-behavior-x:contain}
+  nav.index .fx-idx-blocs a{flex:none;white-space:nowrap}
+  nav.index .fx-idx-blocs a:focus-visible{outline-offset:-4px}
+}
+@media (min-width:1180px){
+  nav.index{flex-wrap:nowrap;max-height:calc(100vh - 2 * var(--e3));overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+  nav.index > *{flex:none}
+  nav.index .fx-idx-nom{margin:var(--e2) 0 2px;padding-left:14px;font-size:.8rem;color:var(--ink-suau)}
+  nav.index .fx-idx-blocs{display:flex;flex-direction:column}
+  nav.index .fx-idx-blocs a{padding-top:6px;padding-bottom:6px}
+  nav.index a:focus-visible{outline-offset:-3px}
+}
+/* La mateixa agrupació dins la llista de la barra «Ets a». */
+.fx-ets-llista .fx-idx-nom{margin:var(--e2) 0 0;font-size:.82rem;color:var(--ink-suau)}
+.fx-ets-llista .fx-idx-blocs{display:block}
+`);
 
 /**
  * Dones i homes: el denominador ha de ser el ple.
@@ -5311,6 +6037,186 @@ function renderParitat(paritat: ParityMetric, medianes?: MedianesMunicipi): stri
   } La llei electoral demana llistes equilibrades —ni més d'un 60 % ni
   menys d'un 40 % de cap sexe—, i això és de les llistes, no del resultat.</details>`;
 }
+
+// ------------------------------------------------- per sobre de l'ajuntament
+
+/**
+ * El consell comarcal i la diputació d'un municipi, trets de la llista de
+ * `loadEns`.
+ *
+ * Es busquen pel municipi mateix (`municipis` de cada ens), que és el que diu
+ * el registre, i el consell, si no hi és, per la comarca: un municipi pot no
+ * sortir a la llista d'un ens per un buit de la font i continuar sent de la
+ * seva comarca. És la mateixa pregunta que respon `ensDeMunicipi` del
+ * carregador; aquí es fa amb el que ja arriba a la pàgina perquè la fitxa no
+ * depengui de res més.
+ */
+export function ensDelMunicipi(
+  ens: readonly DadesEns[],
+  slug: string,
+  comarca: string | null,
+): { consell: DadesEns | null; diputacio: DadesEns | null } {
+  const hiEs = (e: DadesEns): boolean => e.municipis.some((x) => x.slug === slug);
+  const slugComarca = comarca ? slugify(comarca) : null;
+  const consell =
+    ens.find((e) => e.tipus === "consell" && hiEs(e)) ??
+    (slugComarca ? ens.find((e) => e.tipus === "consell" && (e.comarca?.slug ?? e.slug) === slugComarca) : undefined) ??
+    null;
+  const diputacio = ens.find((e) => e.tipus === "diputacio" && hiEs(e)) ?? null;
+  return { consell, diputacio };
+}
+
+/** «12,3 €/hab.»: amb un decimal per sota de cent, que és on el decimal diu alguna cosa. */
+const eurosPerHabitant = (n: number): string =>
+  `${n.toLocaleString("ca-ES", { maximumFractionDigits: n < 100 ? 1 : 0 })} €/hab.`;
+
+/**
+ * El que un ens va concedir a l'ajuntament, segons el RAISC, en una frase.
+ *
+ * L'any és el més recent que té import d'aquest municipi, i es diu: no es
+ * pot llegir «li va concedir» sense saber quan. A J39, «res registrat» és un
+ * `null` i no un zero: un buit (`null` a tots els anys) no surt, perquè no és
+ * cap «no li va concedir res». Un 0 de debò només apareix quan les
+ * concessions i els reintegraments d'aquell any s'anul·len entre ells, i
+ * s'escriu així, amb el motiu al costat: llegit a seques semblaria que l'ens
+ * no li va donar res, i no és el que diu la font. **Mai no se suma amb el que
+ * doni l'altre ens**: cada ens té la seva frase.
+ */
+function concessioDe(e: DadesEns, slug: string, poblacio: number | null): string {
+  const s = e.subvencions;
+  const fila = s?.perMunicipi.find((p) => p.slug === slug);
+  if (!s || !fila) return "";
+  let i = fila.imports.length - 1;
+  while (i >= 0 && (fila.imports[i] === null || fila.imports[i] === undefined)) i -= 1;
+  const any = s.anys[i];
+  const import_ = i >= 0 ? fila.imports[i] : null;
+  if (import_ === null || import_ === undefined || any === undefined) return "";
+  const qui = e.tipus === "diputacio" ? "La Diputació" : "El Consell";
+  const font = `<span class="ens-font">Font: ${
+    s.font.url ? `<a href="${escape(s.font.url)}" rel="noopener nofollow">${escape(s.font.nom)}</a>` : escape(s.font.nom)
+  }, concessions a l'ajuntament el ${any}.</span>`;
+  if (import_ === 0) {
+    return `<p>${qui}: <b>0 €</b> el ${any}, perquè les concessions i els reintegraments d'aquell any
+    s'anul·len entre ells. ${font}</p>`;
+  }
+  const habitants = fila.poblacio ?? poblacio;
+  const perHab = habitants && habitants > 0 ? ` (${eurosPerHabitant(import_ / habitants)})` : "";
+  return `<p>${qui} li va concedir <b>${eurosSencers(import_)}</b> el ${any}${perHab}. ${font}</p>`;
+}
+
+/**
+ * Qui del ple d'aquest municipi seu a l'ens, amb el nom enllaçat a la seva
+ * fitxa si és únic.
+ *
+ * El «ningú d'aquí no hi seu» només s'escriu quan es pot afirmar: quan el
+ * recompte de l'ens per a aquest municipi és un 0 de debò (`MunicipiEns.membres`).
+ * Si és `null` és que a algun membre de l'ens no se li sap el municipi, i
+ * potser és d'aquí: llavors la frase no surt, que és el que toca amb un buit.
+ */
+function delPleALens(e: DadesEns, slug: string, municipi: string): string {
+  const seus = e.membres.filter((x) => x.municipi?.slug === slug);
+  if (seus.length === 0) {
+    const recompte = e.municipis.find((x) => x.slug === slug)?.membres;
+    return recompte === 0 ? `<p>Cap regidor ni regidora ${de(escape(municipi))} no hi seu.</p>` : "";
+  }
+  const noms = seus
+    .map((x) => {
+      // Un escó que la font dona amb partit i sense nom (`NOM_NO_PUBLICAT` de
+      // la J38) es diu pel que és, i el partit ja va al nom.
+      if (esSeientSenseNom(x.nom)) {
+        return `<li>Seient de ${escape(x.partit ?? "partit no conegut")} <span class="ens-detall">la font no en dona el nom</span></li>`;
+      }
+      // `adreca` és relativa a `m/<slug>/`, que és on és aquesta pàgina.
+      const nom = x.adreca ? `<a href="${escape(x.adreca)}">${escape(x.nom)}</a>` : escape(x.nom);
+      const detall = [x.carrec, x.partit].filter((t): t is string => !!t && t.trim() !== "").map(escape).join(", ");
+      return `<li>${nom}${detall ? ` <span class="ens-detall">${detall}</span>` : ""}</li>`;
+    })
+    .join("");
+  return `<p>${seus.length === 1 ? "Hi seu una persona" : `Hi seuen ${seus.length} persones`} del ple ${de(escape(municipi))}:</p>
+  <ul class="ens-membres">${noms}</ul>`;
+}
+
+/**
+ * «Per sobre de l'ajuntament»: el consell comarcal i la diputació del poble.
+ *
+ * Són els dos governs que no surten a la papereta i que reparteixen diners i
+ * serveis entre els ajuntaments. El bloc diu quins són (amb la seva fitxa),
+ * qui del ple d'aquí hi seu i què li han concedit, cada ens per separat.
+ *
+ * Sense `ens` (o amb la llista buida) torna una cadena buida, la secció no
+ * existeix i la fitxa queda exactament com era, índex inclòs.
+ */
+export function renderPerSobre(
+  ens: readonly DadesEns[] | undefined,
+  municipi: { slug: string; name: string; comarca: string | null; population: number | null },
+): string {
+  if (!ens || ens.length === 0) return "";
+  const { consell, diputacio } = ensDelMunicipi(ens, municipi.slug, municipi.comarca);
+  const slugComarca = municipi.comarca ? slugify(municipi.comarca) : null;
+  const senseConsell = slugComarca ? SENSE_CONSELL[slugComarca] : undefined;
+  if (!consell && !diputacio && !senseConsell) return "";
+
+  // La icona de cada pis (la diputació, el consell) va muda al costat del nom:
+  // el nom ja diu què és.
+  const targeta = (e: DadesEns, avis = ""): string => `<div class="ens-pis">
+    <h3>${icona(e.tipus === "diputacio" ? "diputacio" : "consell comarcal", true)}<a href="${BASE}${escape(adrecaEns(e.tipus, e.slug))}">${escape(e.nom)}</a></h3>
+    ${avis}
+    <p class="ens-detall">${number(e.seients)} escons${
+      e.presidencia ? ` · ${escape(e.presidencia.carrec)}: ${escape(e.presidencia.nom)}` : ""
+    }</p>
+    ${delPleALens(e, municipi.slug, municipi.name)}
+    ${concessioDe(e, municipi.slug, municipi.population)}
+  </div>`;
+
+  /*
+   * El Lluçanès és comarca des del 2023 però encara no té consell: els
+   * regidors que els seus municipis van elegir aquell any van entrar al
+   * Consell Comarcal d'Osona, que és on segueixen. Dir «no té consell» a
+   * seques seria fals per a qui hi viu: el consell que li toca avui és el
+   * d'Osona, i es diu amb la seva fitxa si la tenim.
+   */
+  const osona =
+    slugComarca === "llucanes"
+      ? (consell ??
+        ens.find((e) => e.tipus === "consell" && (e.comarca?.slug ?? e.slug) === "osona") ??
+        null)
+      : null;
+  const avisLlucanes = (enllac: string): string =>
+    `<p>El Lluçanès encara no té consell comarcal propi; els regidors elegits el 2023 en aquests
+    municipis van entrar al ${enllac}.</p>`;
+  const pisos = [
+    slugComarca === "llucanes"
+      ? osona
+        ? targeta(osona, avisLlucanes(`<a href="${BASE}${escape(adrecaEns(osona.tipus, osona.slug))}">${escape(osona.nom)}</a>`))
+        : `<div class="ens-pis"><h3>${icona("consell comarcal", true)}Consell comarcal</h3>${avisLlucanes("Consell Comarcal d'Osona")}</div>`
+      : consell
+      ? targeta(consell)
+      : senseConsell
+        ? `<div class="ens-pis"><h3>${icona("consell comarcal", true)}Consell comarcal</h3><p>${senseConsell}</p></div>`
+        : "",
+    diputacio ? targeta(diputacio) : "",
+  ].filter(Boolean);
+
+  return `<p class="entrada-bloc">Dos governs més fan feina per a ${escape(municipi.name)} i no surten a la
+  papereta: el consell comarcal i la diputació. Els formen regidors, i els escons es reparteixen
+  segons els vots de les municipals.</p>
+  <div class="ens-pisos">${pisos.join("")}</div>
+  <p class="nota">Cada import és el d'un sol ens i d'un sol any: no se sumen mai entre ells.</p>`;
+}
+
+/** Només per a la secció «Per sobre de l'ajuntament», i només quan surt. */
+const PER_SOBRE_CSS = `
+.ens-pisos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:var(--e2)}
+.ens-pis{border:2px solid var(--ink);border-radius:var(--r-m);padding:var(--e2);background:var(--paper-2)}
+.ens-pis h3{margin:0 0 4px;font-size:1.05rem;display:flex;align-items:center;gap:10px}
+.ens-pis h3 .icona{width:32px;height:32px;flex:0 0 auto}
+.ens-pis h3 a{font-weight:900}
+.ens-pis .ens-detall{color:var(--ink-suau);font-size:.85rem}
+.ens-pis p{margin:var(--e1) 0 0}
+.ens-membres{margin:4px 0 0;padding-left:1.1em}
+.ens-membres a{font-weight:800}
+.ens-font{display:block;font-size:.8rem;color:var(--ink-suau)}
+`;
 
 /**
  * On continua la fitxa: la comarca, l'AMB si hi és, les preguntes o la prova,
@@ -5379,7 +6285,7 @@ export function renderJoc(
   const tires: string[] = [];
 
   if (totalSeats > 0) {
-    tires.push(tira({ etq: "Regidories en joc", xifra: number(totalSeats), peu: "es reparteixen el 23 de maig del 2027" }));
+    tires.push(tira({ etq: "Regidories", xifra: number(totalSeats), peu: "es voten el maig del 2027" }));
     tires.push(tira({ etq: "En calen", xifra: number(majority), peu: "per governar sense pactar amb ningú" }));
   }
 
@@ -5453,6 +6359,111 @@ export function renderJoc(
 }
 
 /**
+ * El bloc «Quanta gent atenen els serveis socials», amb el tros que en fa la
+ * J42 per als municipis que són àrea bàsica de serveis socials.
+ *
+ * `renderServeisSocialsMunicipi` fa un tros autònom —el seu `<section>` i un
+ * subtítol amb la mateixa pregunta— perquè es pugui posar a qualsevol pàgina.
+ * Aquí el registre de seccions ja posa l'embolcall i l'h2, i deixar-li els seus
+ * faria una secció dins d'una secció amb el títol dit dues vegades seguides.
+ * Per això se li treuen, com es fa amb els blocs de Wikidata. Si un dia el tros
+ * canvia de forma i la substitució no lliga, el bloc surt igualment: amb el
+ * títol repetit, que és lleig però no amaga res.
+ *
+ * Sense fila (els 880 municipis que no són àrea bàsica pròpia) o amb una fila
+ * d'una forma que no és la de la J42, torna buit i el bloc no existeix: als
+ * pobles petits els serveis socials els presta el consell comarcal, i aquest
+ * bloc no ha de fer veure que el municipi no en té.
+ */
+function cosDeServeisSocials(
+  dades: ServeisSocialsDesats | null | undefined,
+  poblacio: number | null,
+  anyPoblacio: number | null,
+): string {
+  if (!dades || !Array.isArray(dades.anys)) return "";
+  const tros = renderServeisSocialsMunicipi(dades, { poblacio, anyPoblacio });
+  if (tros.trim() === "") return "";
+  const obertura = /^\s*<section class="srv srv-municipi">\s*<h3 class="srv-sub">[^<]*<\/h3>/;
+  // L'obertura i el tancament es canvien junts o no es canvia res: un
+  // `<section>` tancat amb un `</div>` trencaria la resta de la pàgina.
+  if (!obertura.test(tros) || !/<\/section>\s*$/.test(tros)) return tros;
+  return tros.replace(obertura, '<div class="srv fx-srv">').replace(/<\/section>\s*$/, "</div>");
+}
+
+/**
+ * Els quatre capítols de la fitxa.
+ *
+ * La fitxa d'una ciutat gran feia quaranta pantalles al mòbil amb una vintena
+ * de blocs seguits, tots amb el mateix pes, i qui hi entrava per saber una cosa
+ * no sabia a quina altura buscar-la. Els blocs no canvien: s'agrupen en quatre
+ * preguntes que un veí sí que es fa —qui mana, què fa amb els diners, com és el
+ * poble i d'on surt tot plegat— i cada capítol s'anuncia amb una franja que diu
+ * què hi ha a dins i hi porta.
+ *
+ * L'ordre d'aquesta llista és l'ordre de la pàgina. Dins de cada capítol, els
+ * blocs van en l'ordre en què són al registre de `renderRadiografia`.
+ *
+ * Els ids dels blocs no canvien, i per això cap enllaç d'una altra pàgina
+ * (`#alcaldies`, `#diners`, `#seguretat`…) no es trenca. La franja de cada
+ * capítol porta el seu propi id (`cap-<id>`), per si un dia algú hi vol enllaçar.
+ */
+export const CAPITOLS_FITXA = [
+  { id: "qui-mana", nom: "Qui mana", que: "Qui governa l'ajuntament, com hi va arribar i qui el va votar." },
+  { id: "diners", nom: "Els diners", que: "Què gasta l'ajuntament, d'on li arriben els diners i què et toca pagar a tu." },
+  { id: "poble", nom: "Com és el poble", que: "Qui hi viu, com s'hi viu i què hi passa." },
+  { id: "fonts", nom: "D'on surt", que: "Què en sabem i què no, i d'on surt cada xifra." },
+] as const;
+
+type CapitolId = (typeof CAPITOLS_FITXA)[number]["id"];
+
+/**
+ * La franja que obre un capítol: el nom, una frase que diu què s'hi trobarà i
+ * els blocs que té, enllaçats.
+ *
+ * No és un h2: els blocs ja ho són, i un capítol amb el mateix encapçalament
+ * competiria amb ells en lloc d'agrupar-los. És una franja quieta, el nom en
+ * gran i res més que la distingeixi d'un bloc, sense números de capítol (no
+ * són passos d'una seqüència) ni etiquetes en majúscules.
+ *
+ * La primera franja va just després de l'índex, que ja diu els mateixos blocs:
+ * al mòbil la llista de la primera s'amaga (vegeu `FITXA_CSS`) per no repetir
+ * dues vegades seguides els mateixos enllaços. Al rail de l'escriptori
+ * l'índex és a l'esquerra i la franja es queda sencera.
+ */
+function franjaCapitol(
+  capitol: (typeof CAPITOLS_FITXA)[number],
+  blocs: readonly Pick<Seccio, "id" | "titol" | "curt">[],
+  primer: boolean,
+): string {
+  return `<div class="fx-cap fx-cap-${capitol.id}${primer ? " fx-cap-primer" : ""}" id="cap-${capitol.id}">
+  <p class="fx-cap-nom">${escape(capitol.nom)}</p>
+  <p class="fx-cap-que">${escape(capitol.que)}</p>
+  <ul class="fx-cap-blocs" aria-label="${escape(`Què hi ha a «${capitol.nom}»`)}">
+    ${blocs.map((b) => `<li><a href="#${b.id}">${escape(b.curt ?? b.titol)}</a></li>`).join("\n    ")}
+  </ul>
+</div>`;
+}
+
+/**
+ * Un capítol a l'índex: el nom, que no és cap enllaç, i els seus blocs.
+ *
+ * El nom no enllaça la franja a posta. Tot el que llegeix l'índex —el
+ * seguidor que marca on ets, la barra «Ets a» i els resultats «Bloc» del
+ * cercador— ho fa amb `.index a[href^='#']`, i una franja de quatre ratlles
+ * marcada com a «secció que es llegeix» faria pampallugues a cada canvi de
+ * capítol. El nom es diu amb `data-fx-capitol`, que és d'on la barra «Ets a»
+ * treu el capítol que posa davant del bloc.
+ */
+function grupIndex(capitol: (typeof CAPITOLS_FITXA)[number], enllacos: readonly string[]): string {
+  return `<div class="fx-idx-grup" data-fx-capitol="${escape(capitol.nom)}">
+    <p class="fx-idx-nom">${escape(capitol.nom)}</p>
+    <div class="fx-idx-blocs">
+    ${enllacos.join("\n    ")}
+    </div>
+  </div>`;
+}
+
+/**
  * Una secció de la fitxa: el que cal per escriure-la al cos i a l'índex.
  *
  * L'índex lateral i el cos surten de la mateixa llista i de cap altre lloc.
@@ -5464,6 +6475,11 @@ export function renderJoc(
 type Seccio = {
   id: string;
   titol: string;
+  /**
+   * El capítol on va. Obligatori: un bloc que no digués on va no sortiria a
+   * cap capítol, ni al cos ni a l'índex, i val més que el compilador ho digui.
+   */
+  capitol: CapitolId;
   /** L'etiqueta de l'índex, quan el títol és massa llarg per a una pastilla. */
   curt?: string;
   /** El tema de la icona que encapçala el títol, si en porta. */
@@ -5545,39 +6561,6 @@ export function descripcioMunicipi(
 }
 
 /**
- * El municipi en JSON-LD: un `City` amb la comarca que el conté, les
- * coordenades quan les tenim i la població com a propietat afegida
- * (schema.org no en defineix cap de pròpia per a un lloc).
- */
-function municipiJsonLd(
-  m: RadiografiaData["municipality"],
-  url: string,
-  punt: { lat: number; lon: number } | null,
-  /**
-   * La imatge social de la fitxa i l'element de Wikidata del municipi, quan
-   * la fitxa l'ensenya (el peu «segons Wikidata» dels agermanaments o dels
-   * nascuts hi enllaça); sense cap bloc que el citi, no hi va.
-   */
-  extres: { imatge?: string | null; wikidata?: string | null } = {},
-): Record<string, unknown> {
-  return {
-    "@type": "City",
-    "@id": `${url}#municipi`,
-    name: m.name,
-    url,
-    image: extres.imatge ?? undefined,
-    sameAs: mateixQue(extres.wikidata),
-    containedInPlace: m.comarca
-      ? { "@type": "AdministrativeArea", name: m.comarca, url: `${SITE}/observatori/c/${slugify(m.comarca)}/` }
-      : undefined,
-    geo: punt ? { "@type": "GeoCoordinates", latitude: punt.lat, longitude: punt.lon } : undefined,
-    additionalProperty: m.population
-      ? [{ "@type": "PropertyValue", name: "population", value: m.population, unitText: "habitants" }]
-      : undefined,
-  };
-}
-
-/**
  * Les coordenades del municipi: les de la base, i si no hi són, les del punt
  * del mapa de Catalunya que la fitxa ja dibuixa. Una que no sigui un nombre
  * no s'escriu: val més cap `geo` que un de fals.
@@ -5588,6 +6571,57 @@ function coordenades(m: RadiografiaData["municipality"], mapa: readonly PuntMapa
   if (m.lat != null && m.lon != null && Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
   const punt = mapa.find((p) => p.slug === m.slug);
   return punt && Number.isFinite(punt.lat) && Number.isFinite(punt.lon) ? { lat: punt.lat, lon: punt.lon } : null;
+}
+
+/**
+ * La data més nova de les dades que ensenya la fitxa, per al `dateModified` i
+ * l'`article:modified_time` del cap.
+ *
+ * Fins ara hi anava la data de generació (`generatedAt`), que és just el que
+ * `seo.ts` demana de no fer: la fitxa es torna a generar cada vegada que es
+ * publica, i dir que és d'avui cada vegada és el senyal de frescor fals que els
+ * cercadors aprenen a ignorar. La data de generació ja surt al peu.
+ *
+ * La fitxa no té una sola data de les dades: cada mètrica ve d'una feina i
+ * d'una font diferents. Però les feines que consulten una font hi deixen el dia
+ * de la consulta en un camp `consultat` (`AAAA-MM-DD`): la J14 i la J22 amb els
+ * sous, la J24 i la J30 amb les diputacions i els consells, la J28 amb els
+ * retrats, la J32 amb el territori, la J36 amb el cens, la J37, la J40… És la
+ * mateixa data que les fitxes dels ens fan servir (`DadesEns.consultat`), i
+ * aquí es pren la més nova de totes les que porta la fitxa.
+ *
+ * Per què recórrer la fitxa sencera i no una llista de mètriques: una mètrica
+ * nova amb el seu `consultat` hi entra sola, sense que ningú se n'hagi de
+ * recordar. Són unes quantes desenes de milers de nodes com a molt per fitxa, i
+ * es fa un sol cop per pàgina.
+ *
+ * És una cota per sota i no la data exacta: una mètrica que no porta data de
+ * consulta (els resultats electorals, la liquidació) pot ser més nova. Però
+ * així la pàgina mai no es diu més fresca del que és. Només compten els valors
+ * que comencen per una data ISO; un `consultat` escrit en lletra no s'endevina.
+ * Sense cap data així, `null`, i el cap no porta data de modificació: millor
+ * cap data que una d'inventada.
+ */
+export function dataDeLesDades(data: RadiografiaData): string | null {
+  let mesNova: string | null = null;
+  const pendents: unknown[] = [data];
+  while (pendents.length > 0) {
+    const node = pendents.pop();
+    if (node === null || typeof node !== "object") continue;
+    if (Array.isArray(node)) {
+      for (const fill of node) pendents.push(fill);
+      continue;
+    }
+    for (const [clau, valor] of Object.entries(node)) {
+      if (clau === "consultat" && typeof valor === "string" && /^\d{4}-\d{2}-\d{2}/.test(valor)) {
+        const dia = valor.slice(0, 10);
+        if (mesNova === null || dia > mesNova) mesNova = dia;
+      } else if (valor !== null && typeof valor === "object") {
+        pendents.push(valor);
+      }
+    }
+  }
+  return mesNova;
 }
 
 /**
@@ -5607,8 +6641,24 @@ export function renderRadiografia(
    * el bloc surt igualment, amb la frase del rànquing i sense la mediana.
    */
   seguretat?: { grup: GrupCriminalitat | null; coberts: number | null } | null,
+  /**
+   * Les fitxes de diputacions i consells (`loadEns`), per al bloc «Per sobre
+   * de l'ajuntament». Sense, el bloc no surt i la fitxa queda com era.
+   */
+  ens?: readonly DadesEns[],
+  /**
+   * Les files d'`els947` dels 947 municipis, per al bloc «Els teus veïns»: la
+   * xifra de cada veí surt de la seva fila. Sense, el bloc no surt.
+   */
+  files947?: readonly Els947Row[],
 ): string {
   const m = data.municipality;
+  const perSobre = renderPerSobre(ens, {
+    slug: m.slug,
+    name: m.name,
+    comarca: m.comarca ?? null,
+    population: m.population ?? null,
+  });
   const current = data.results.M20231;
   const government = data.government;
   const totalSeats = current?.seats ?? m.councilSeats ?? 0;
@@ -5705,8 +6755,10 @@ export function renderRadiografia(
     // d'igual enllaçarien totes dues a la primera i la segona pàgina no
     // l'enllaçaria ningú.
     renderLegend(current.candidatures, slugDeCandidatura(current.candidatures))
-  }
-  <details class="nota"><summary>La lletra petita</summary>Calen <b>${majority}</b> regidories de ${totalSeats} per aprovar-hi res tot sol.
+  }`
+    : "";
+  const pleLletra = current
+    ? `<details class="nota"><summary>La lletra petita</summary>Calen <b>${majority}</b> regidories de ${totalSeats} per aprovar-hi res tot sol.
   L'índex de fragmentació que hi havia aquí (partits efectius) s'ha tret: l'hemicicle ja ho ensenya
   i es pot comptar amb els dits, i el número obligava a explicar-lo cada vegada.</details>`
     : "";
@@ -5743,21 +6795,44 @@ export function renderRadiografia(
   de grup no n'informem perquè la font escriu les mateixes sigles de maneres diferents.</p>`
       : "";
 
-  // Qui mana, i com hi va arribar: el ple d'avui, qui hi seu, les alcaldies des
+  // El ple, i com s'hi va arribar: el ple d'avui, qui hi seu, les alcaldies des
   // del 1979 i quant fa que mana el mateix. Eren cinc seccions per a la mateixa
   // pregunta; les àncores es queden als subtítols perquè els enllaços vells
   // —el cercador, la pàgina de trajectòria— continuïn arribant-hi.
-  const quiMana = [
+  //
+  // És el bloc més llarg de la fitxa (més de quatre mil píxels al mòbil), i per
+  // això a la vista només hi queda la resposta: l'hemicicle i qui seu al ple.
+  // La història —les alcaldies des del 1979, quant fa que mana el mateix, qui
+  // ha entrat a mig mandat— i la lletra petita van plegades a «Més detall».
+  // Les àncores dels subtítols plegats continuen funcionant: `OBRE_DETALL_JS`
+  // obre el plegat quan un enllaç hi porta.
+  const regidorsPeces = treuLletraPetita(regidors);
+  const quiManaVisible = [
     ple,
-    regidors ? `<h3 class="subtitol${ple ? "" : " primer"}" id="regidors">Qui seu al ple</h3>${regidors}` : "",
-    alcaldies ? `<h3 class="subtitol${ple || regidors ? "" : " primer"}" id="alcaldies">Les alcaldies des del 1979</h3>${alcaldies}` : "",
-    trajectoria
-      ? `<h3 class="subtitol${ple || regidors || alcaldies ? "" : " primer"}" id="trajectoria">Quant fa que mana el mateix</h3>${trajectoria}`
-      : "",
+    regidors ? `<h3 class="subtitol${ple ? "" : " primer"}" id="regidors">Qui seu al ple</h3>${regidorsPeces.cos}` : "",
+  ].filter((t) => t !== "");
+  const quiManaDetall = [
+    alcaldies ? `<h3 class="subtitol" id="alcaldies">Les alcaldies des del 1979</h3>${alcaldies}` : "",
+    trajectoria ? `<h3 class="subtitol" id="trajectoria">Quant fa que mana el mateix</h3>${trajectoria}` : "",
     moviments,
-  ]
-    .filter((t) => t !== "")
-    .join("\n  ");
+    pleLletra,
+    regidorsPeces.lletra,
+  ].filter((t) => t !== "");
+  const quiMana =
+    quiManaVisible.length === 0
+      ? // Sense ple ni regidors no hi ha res a resumir: la resta va a la vista.
+        quiManaDetall.join("\n  ")
+      : [
+          ...quiManaVisible,
+          mesDetall(quiManaDetall.join("\n  "), [
+            ...(alcaldies ? ["les alcaldies des del 1979"] : []),
+            ...(trajectoria ? ["quant fa que mana el mateix"] : []),
+            ...(moviments ? ["qui ha entrat a mig mandat"] : []),
+            "la lletra petita",
+          ]),
+        ]
+          .filter((t) => t !== "")
+          .join("\n  ");
 
   // Què ha fet aquest govern amb els comptes: el balanç del mandat, com queda
   // respecte dels seus i el deute any a any. Eren tres blocs —«Balanç»,
@@ -5779,11 +6854,28 @@ export function renderRadiografia(
   // l'índex sempre n'ha dit «Els diners» i és una sola pregunta amb dues
   // meitats. Junts, i cada meitat amb el seu subtítol. Quants són va primer:
   // és el total que les dues llistes reparteixen.
+  //
+  // A la vista hi queden les tres respostes —quant, d'on i on— amb les seves
+  // xifres i barres; les notes de mètode i les tres lletres petites van
+  // plegades a «Més detall» al final del bloc. Les notes que diuen un buit
+  // (un exercici sense liquidar, una comparació que no tenim) no es pleguen
+  // mai: un buit es diu on es veu.
   const ambDiners = Boolean(quantGasta || data.revenue || data.spending);
+  const gastaPeces = treuLletraPetita(quantGasta);
+  const ingressosPeces = treuLletraPetita(data.revenue ? renderRevenue(data.revenue) : "");
+  // La nota que explica per què els ingressos es comparen amb tot Catalunya és
+  // de mètode, no de dada: plegada amb la resta.
+  const notaIngressos = ingressosPeces.cos.match(/<p class="nota oberta">[\s\S]*?<\/p>/)?.[0] ?? "";
+  const ingressosVisibles = notaIngressos ? ingressosPeces.cos.replace(notaIngressos, "") : ingressosPeces.cos;
+  const despesaPeces = treuLletraPetita(data.spending ? renderSpending(data.spending) : "");
+  const dinersDetall = [notaIngressos, gastaPeces.lletra, ingressosPeces.lletra, despesaPeces.lletra]
+    .filter((t) => t !== "")
+    .join("\n  ");
   const diners = ambDiners
-    ? `${quantGasta ? `<h3 class="subtitol primer">Quant gasta en total</h3>${quantGasta}` : ""}
-  ${data.revenue ? `<h3 class="subtitol${quantGasta ? "" : " primer"}">D'on surten</h3>${renderRevenue(data.revenue)}` : ""}
-  ${data.spending ? `<h3 class="subtitol">On van</h3>${renderSpending(data.spending)}` : ""}
+    ? `${quantGasta ? `<h3 class="subtitol primer">Quant gasta en total</h3>${gastaPeces.cos}` : ""}
+  ${data.revenue ? `<h3 class="subtitol${quantGasta ? "" : " primer"}">D'on surten</h3>${ingressosVisibles}` : ""}
+  ${data.spending ? `<h3 class="subtitol">On van</h3>${despesaPeces.cos}` : ""}
+  ${mesDetall(dinersDetall, ["com es compara", "la lletra petita"])}
   ${
     // La liquidació per programes de l'AOC arriba a municipis on la de la
     // Generalitat no hi és. Quan passa, la fitxa ja pot dir quant gasta
@@ -5867,12 +6959,19 @@ export function renderRadiografia(
     html.replace(/^\s*<section[^>]*>\s*<h2>[^<]*<\/h2>/, "").replace(/<\/section>\s*$/, "");
   const agermanaments = cosDeSeccio(renderAgermanaments(data.curiositatsWikidata));
   const nascuts = cosDeSeccio(renderNascuts(data.curiositatsWikidata));
+  const serveisSocials = cosDeServeisSocials(data.serveisSocials, m.population ?? null, m.populationYear ?? null);
 
   const papers = renderPapers(data.cartipas, data.ordenances, data.organismes);
   const detall = data.transparency?.detail ?? [];
   const transparencia =
     data.transparency && detall.length > 0 ? renderTransparencyDetail(detall, data.transparency) : "";
-  const dades = `<p>${coverageText}</p>
+  // «Un buit és un buit», dit per la papereta un sol cop, al bloc que explica
+  // què en sabem: és la regla que fa que cap «no consta» de la fitxa sigui un zero.
+  const dades = `${vinyetaPapereta(
+    "noConsta",
+    "Un buit és un buit: quan una font no publica una dada, aquí hi diu «no consta», i mai no hi posem un zero.",
+  )}
+  <p>${coverageText}</p>
   ${notable.length > 0
     ? `<p class="avis-dades"><b>Hi ha ${notable.length === 1 ? "una cosa" : `${notable.length} coses`} que no ens quadra${notable.length === 1 ? "" : "n"} d'aquest municipi:</b>
        ${notable.map((i) => escape(ISSUE_TEXT[i.kind]!)).join("; ")}.
@@ -5948,6 +7047,15 @@ export function renderRadiografia(
     ${data.despesaProgrames ? `<li>Despesa liquidada per programes: ${escape(data.despesaProgrames.font.organisme)},
       <code>${escape(data.despesaProgrames.font.dataset)}</code>.</li>` : ""}
     ${
+      // Les fonts del bloc de serveis socials, només on el bloc surt: les cita
+      // la mateixa fila de la J42, amb el seu enllaç.
+      serveisSocials && data.serveisSocials
+        ? `<li>Serveis socials bàsics: ${data.serveisSocials.fonts
+            .map((f) => `<a href="${escape(f.url)}" rel="noopener nofollow">${escape(f.nom)}</a>`)
+            .join("; ")}.</li>`
+        : ""
+    }
+    ${
       // El crèdit de l'escut va aquí i no al costat del titular: la llicència
       // demana els quatre elements —què és, qui, quina llicència i on és
       // l'original— i al costat d'un escut de 44 px matarien el nom del poble.
@@ -5957,42 +7065,136 @@ export function renderRadiografia(
   <details class="nota"><summary>La lletra petita</summary>Els càlculs derivats —qui governa contra qui va guanyar, els canvis d'alcaldia a mig mandat,
   la fragmentació i la paritat— són nostres i es poden reproduir amb el codi del projecte.</details>`;
 
+  // Les preguntes ràpides: el que la fitxa ja diu (la mateixa alcaldia que la
+  // portada, la mateixa majoria que la descripció), escrit com ho preguntaria
+  // algú, amb la font i la data al costat. Les respostes que depenen del dia
+  // —quan són les properes eleccions— necessiten una data ISO; sense, el bloc
+  // no surt, que és millor que una data inventada.
+  const consultatIso = /^\d{4}-\d{2}-\d{2}/.test(data.generatedAt) ? data.generatedAt.slice(0, 10) : null;
+  const siglesGovern = government?.mayorSigles ?? government?.winnerSigles ?? null;
+  const vot2023 = data.participation.find((p) => p.electionId === "M20231") ?? null;
+  const rapides =
+    consultatIso === null
+      ? { html: "", cos: "", jsonLd: null }
+      : preguntesRapides(
+          preguntesMunicipi({
+            municipi: m.name,
+            alcaldia: alcaldia.nom
+              ? {
+                  nom: nomLlegible(alcaldia.nom),
+                  carrec: alcaldia.carrec && esAlcaldia(alcaldia.carrec.carrec) ? carrecCurt(alcaldia.carrec.carrec) : null,
+                  sigles: government?.mayorSigles ?? null,
+                  url: alcaldia.adreca ? `${url}${alcaldia.adreca}` : null,
+                }
+              : null,
+            govern:
+              government && siglesGovern
+                ? {
+                    sigles: siglesGovern,
+                    regidories: government.mayorSeats,
+                    // La mateixa regla que `descripcioMunicipi`: la majoria de qui governa.
+                    majoriaAbsoluta:
+                      government.mayorSeats !== null
+                        ? government.mayorSeats >= government.majority
+                        : government.winnerGoverns !== false
+                          ? government.winnerHasMajority
+                          : null,
+                    mesVotada: government.winnerSigles,
+                  }
+                : null,
+            // En un consell obert no hi ha ple de regidories que comptar.
+            ple:
+              government && government.totalSeats > 0 && !/consell obert/i.test(m.electoralSystem)
+                ? { regidories: government.totalSeats, majoria: government.majority }
+                : null,
+            participacio:
+              vot2023 && vot2023.voters !== null && vot2023.censusSize !== null
+                ? { any: 2023, votants: vot2023.voters, cens: vot2023.censusSize }
+                : null,
+            habitants: m.population ? { valor: m.population, any: m.populationYear ?? null } : null,
+            consultat: consultatIso,
+          }),
+          url,
+        );
+
+  // El registre va per capítols (`CAPITOLS_FITXA`) i, dins de cada capítol, en
+  // l'ordre de la pàgina. L'etiqueta curta del ple i la dels diners ja no és
+  // «Qui mana» ni «Els diners»: ara són els noms dels capítols, i a l'índex
+  // sortien repetits l'un sota l'altre. Pel mateix motiu el títol del primer
+  // bloc ja no comença per «Qui mana»: la franja del capítol, just a sobre, ja
+  // ho diu, i la frase sortia dues vegades seguides.
+  //
+  // Les etiquetes curtes de l'índex s'han d'entendre soles, fora del bloc:
+  // «Per sobre» i «Com ha anat» no deien de què parlaven fins que hi entraves.
+  // Ara diuen la cosa: la diputació i el consell, el mandat.
   const seccions: Seccio[] = (
     [
-      { id: "ple", titol: "Qui mana, i com hi va arribar", curt: "Qui mana", icona: "el ple", html: quiMana },
-      { id: "comptes", titol: "Què ha fet aquest govern amb els comptes", curt: "Els comptes", html: comptes },
+      // ---- Qui mana: el ple, qui hi ha per sobre, com ha anat el mandat i el vot.
+      { id: "ple", capitol: "qui-mana", titol: "El ple, i com s'hi va arribar", curt: "El ple", icona: "el ple", html: quiMana },
+      // Just després de qui mana a l'ajuntament, qui mana un pis més amunt.
+      { id: "per-sobre", capitol: "qui-mana", titol: "Per sobre de l'ajuntament", curt: "Diputació i consell", html: perSobre },
       {
         id: "mandat",
-        titol: "Com ha anat aquests quatre anys",
-        curt: "Com ha anat",
+        capitol: "qui-mana",
+        titol: "Com han anat aquests quatre anys",
+        curt: "El mandat",
         html: mandat
           ? `<p class="entrada-bloc">El que ha canviat des del començament del mandat, i el mateix canvi
   als municipis de la seva mida.</p>
   ${mandat}`
           : "",
       },
+      { id: "historia", capitol: "qui-mana", titol: "El ple, elecció a elecció", curt: "Elecció a elecció", html: historia },
       {
-        // Mai buida: els 877 municipis que el Ministeri no publica hi veuen el
-        // buit dit clar, i tots hi llegeixen que la policia no és municipal.
-        id: "seguretat",
-        titol: "Com ha anat la seguretat",
-        curt: "Seguretat",
-        html: renderCriminalitat(data.criminalitat, {
-          grup: seguretat?.grup ?? null,
-          poblacio: m.population,
-          coberts: seguretat?.coberts ?? null,
-        }),
+        // Només als municipis que han votat en llista oberta o consell obert
+        // alguna vegada: el bloc torna buit a la resta i el registre no el
+        // publica. Els noms enllacen la fitxa de regidor calculada sobre la
+        // mateixa llista que el generador de pàgines (la seu si hi és, si no
+        // el registre), perquè l'enllaç existeixi.
+        id: "llistes-obertes",
+        capitol: "qui-mana",
+        titol: "Aquí es vota persones",
+        curt: "Es vota persones",
+        html: renderLlistesObertesBloc(
+          data.llistesObertes ?? null,
+          adrecesDelPle(data.carrecs?.carrecs?.length ? data.carrecs.carrecs : data.councillors.map((c) => ({ nom: c.name }))),
+        ),
       },
-      { id: "vehicles", titol: "Quants vehicles hi ha", curt: "Vehicles", html: renderVehiclesBloc(data.vehicles ?? null) },
+      // Dones i homes va amb qui mana i no amb com és el poble: no parla del
+      // padró sinó de les llistes, dels caps de llista i de qui seu al ple.
+      { id: "dones-i-homes", capitol: "qui-mana", titol: "Dones i homes", html: donesIHomes },
+      { id: "participacio", capitol: "qui-mana", titol: "Qui hi va anar a votar", curt: "Participació", icona: "participació", html: participacio },
+      // Mai buit: sense J36 executat diu que no hi ha dada, que no és un zero.
+      { id: "cens", capitol: "qui-mana", titol: "El cens i la participació des del 1979", curt: "Cens des del 1979", html: renderCensBloc(data.censElectoral ?? null) },
+      // Al final de «Qui mana»: gairebé totes les preguntes són d'aquest
+      // capítol (l'alcaldia, qui governa, el ple, les eleccions, el vot).
+      { id: "preguntes-rapides", capitol: "qui-mana", titol: "Preguntes ràpides", classe: "geo-preguntes", html: rapides.cos },
+      // ---- Els diners: els comptes del mandat, el pressupost, el que paga la gent i el que costa el govern.
+      { id: "comptes", capitol: "diners", titol: "Què ha fet aquest govern amb els comptes", curt: "Els comptes", html: comptes },
       {
         id: "diners",
+        capitol: "diners",
         titol: ambDiners ? "Els diners: quants són, d'on surten i on van" : "D'on surten i on van els diners",
-        curt: "Els diners",
+        curt: "Quant gasta",
         icona: ambDiners ? "fiscalitat" : undefined,
         html: diners,
       },
       {
+        // Just després dels diners de l'ajuntament, els que li arriben de la
+        // Generalitat. Mai no se sumen amb els de la diputació i el consell
+        // (RAISC) de «Per sobre de l'ajuntament»: són pagadors diferents.
+        id: "diners-generalitat",
+        capitol: "diners",
+        titol: TITOL_DINERS_GENERALITAT,
+        curt: CURT_DINERS_GENERALITAT,
+        html: renderDinersGeneralitatBloc(data.dinersGeneralitat ?? null, {
+          habitants: m.population ?? null,
+          anyPadro: m.populationYear ?? null,
+        }),
+      },
+      {
         id: "que-paga",
+        capitol: "diners",
         titol: "Què paga la gent",
         icona: "fiscalitat",
         html: quePaga
@@ -6003,6 +7205,7 @@ export function renderRadiografia(
       },
       {
         id: "sous",
+        capitol: "diners",
         titol: "Què costa el govern, i què se'n pot saber",
         curt: "Què costa el govern",
         icona: "fiscalitat",
@@ -6015,6 +7218,7 @@ export function renderRadiografia(
       },
       {
         id: "contractacio",
+        capitol: "diners",
         titol: "Què contracta, i amb quanta competència",
         curt: "Què contracta",
         html: contractacio
@@ -6025,41 +7229,60 @@ export function renderRadiografia(
       },
       {
         id: "escombraries",
+        capitol: "diners",
         titol: "Les escombraries: el que costen i el que se'n recull",
         curt: "Les escombraries",
         icona: "residus",
         html: escombraries,
       },
-      { id: "historia", titol: "El ple, elecció a elecció", curt: "Elecció a elecció", html: historia },
+      // ---- Com és el poble: qui hi viu, les cases, els serveis i el que hi passa.
+      { id: "qui-hi-viu", capitol: "poble", titol: "Qui hi viu", icona: "habitants", html: quiHiViu },
+      // Just després de qui hi viu, on viu: el pla urbanístic, els pisos
+      // turístics i l'habitatge protegit. Mai buit: sense J40 diu el buit.
       {
-        // Només als municipis que han votat en llista oberta o consell obert
-        // alguna vegada: el bloc torna buit a la resta i el registre no el
-        // publica. Els noms enllacen la fitxa de regidor calculada sobre la
-        // mateixa llista que el generador de pàgines (la seu si hi és, si no
-        // el registre), perquè l'enllaç existeixi.
-        id: "llistes-obertes",
-        titol: "Aquí es vota persones",
-        curt: "Es vota persones",
-        html: renderLlistesObertesBloc(
-          data.llistesObertes ?? null,
-          adrecesDelPle(data.carrecs?.carrecs?.length ? data.carrecs.carrecs : data.councillors.map((c) => ({ nom: c.name }))),
-        ),
+        id: "urbanisme",
+        capitol: "poble",
+        titol: TITOL_URBANISME,
+        curt: "La casa",
+        html: renderUrbanismeHabitatgeBloc(data.urbanismeHabitatge ?? null, { nom: m.name }),
       },
-      { id: "participacio", titol: "Qui hi va anar a votar", curt: "Participació", icona: "participació", html: participacio },
-      // Mai buit: sense J36 executat diu que no hi ha dada, que no és un zero.
-      { id: "cens", titol: "El cens i la participació des del 1979", curt: "Cens des del 1979", html: renderCensBloc(data.censElectoral ?? null) },
-      { id: "qui-hi-viu", titol: "Qui hi viu", icona: "serveis socials", html: quiHiViu },
-      { id: "dones-i-homes", titol: "Dones i homes", html: donesIHomes },
-      { id: "agermanaments", titol: "Agermanaments", html: agermanaments },
-      { id: "nascuts", titol: "Nascuts aquí, segons Wikidata", curt: "Nascuts aquí", html: nascuts },
+      // Només als 67 municipis que són àrea bàsica de serveis socials pròpia
+      // (J42): a la resta torna buit i el registre no el publica, perquè allà
+      // els serveis socials els presta el consell comarcal.
+      {
+        id: "serveis-socials",
+        capitol: "poble",
+        titol: "Quanta gent atenen els serveis socials",
+        curt: "Serveis socials",
+        html: serveisSocials,
+      },
+      {
+        // Mai buida: els 877 municipis que el Ministeri no publica hi veuen el
+        // buit dit clar, i tots hi llegeixen que la policia no és municipal.
+        id: "seguretat",
+        capitol: "poble",
+        titol: "Com ha anat la seguretat",
+        curt: "Seguretat",
+        html: renderCriminalitat(data.criminalitat, {
+          grup: seguretat?.grup ?? null,
+          poblacio: m.population,
+          coberts: seguretat?.coberts ?? null,
+        }),
+      },
+      { id: "vehicles", capitol: "poble", titol: "Quants vehicles hi ha", curt: "Vehicles", html: renderVehiclesBloc(data.vehicles ?? null) },
+      { id: "agermanaments", capitol: "poble", titol: "Agermanaments", html: agermanaments },
+      { id: "nascuts", capitol: "poble", titol: "Nascuts aquí, segons Wikidata", curt: "Nascuts aquí", html: nascuts },
+      // ---- D'on surt: què en sabem i les fonts.
       {
         id: "dades",
+        capitol: "fonts",
         titol: "Què en sabem i què no",
         curt: "Què en sabem",
         classe: `cobertura cobertura-${coverageLevel}`,
         html: dades,
       },
-      { id: "fonts", titol: "D'on surt tot això", classe: "fonts", alIndex: false, html: fonts },
+      // Fora de l'índex, com sempre; la franja del capítol sí que hi porta.
+      { id: "fonts", capitol: "fonts", titol: "D'on surt tot això", curt: "Les fonts", classe: "fonts", alIndex: false, html: fonts },
     ] satisfies Seccio[]
   ).filter((seccio) => seccio.html.trim() !== "");
 
@@ -6068,24 +7291,38 @@ export function renderRadiografia(
   // «On cau entre els seus» viu abans de l'índex, entre l'ullada i la banda
   // del 23-M, però és un bloc amb id com els altres i l'índex hi ha de portar:
   // va el primer, que és on és a la pàgina.
-  const comparat = renderComparat(data, medianes);
+  const veins = renderVeinsTria(m.slug, m.name, files947);
+  const comparat = renderComparat(data, medianes, veins);
+
+  // Els capítols que tenen algun bloc, cadascun amb els seus. Es reparteixen
+  // pel camp `capitol` i no per la posició al registre: un bloc nou posat on
+  // no toca continua anant al seu capítol, i cap capítol no surt partit en dos.
+  const capitols = CAPITOLS_FITXA.map((capitol) => ({
+    capitol,
+    blocs: seccions.filter((seccio) => seccio.capitol === capitol.id),
+  })).filter((c) => c.blocs.length > 0);
+
+  const enllacIndex = (seccio: Seccio): string => `<a href="#${seccio.id}">${escape(seccio.curt ?? seccio.titol)}</a>`;
+  // «On cau entre els seus» va el primer i fora de tot capítol: és part del
+  // resum que hi ha abans de l'índex, com l'ullada i «En 30 segons».
   const index = [
     ...(comparat === "" ? [] : ['<a href="#comparat">On cau entre els seus</a>']),
-    ...seccions
-      .filter((seccio) => seccio.alIndex !== false)
-      .map((seccio) => `<a href="#${seccio.id}">${escape(seccio.curt ?? seccio.titol)}</a>`),
+    ...capitols.flatMap(({ capitol, blocs }) => {
+      const enllacos = blocs.filter((seccio) => seccio.alIndex !== false).map(enllacIndex);
+      return enllacos.length === 0 ? [] : [grupIndex(capitol, enllacos)];
+    }),
   ].join("\n  ");
-  const cos = seccions
-    .map(
-      (seccio) => `<section class="bloc${seccio.classe ? ` ${seccio.classe}` : ""}" id="${seccio.id}">
+
+  const seccioHtml = (seccio: Seccio): string => `<section class="bloc${seccio.classe ? ` ${seccio.classe}` : ""}" id="${seccio.id}">
   ${
     seccio.icona
-      ? `<h2 class="amb-icona">${icona(seccio.icona)}<span>${escape(seccio.titol)}</span></h2>`
+      ? `<h2 class="amb-icona">${icona(seccio.icona, true)}<span>${escape(seccio.titol)}</span></h2>`
       : `<h2>${escape(seccio.titol)}</h2>`
   }
   ${seccio.html}
-</section>`,
-    )
+</section>`;
+  const cos = capitols
+    .map(({ capitol, blocs }, i) => [franjaCapitol(capitol, blocs, i === 0), ...blocs.map(seccioHtml)].join("\n\n"))
     .join("\n\n");
 
   return `<!doctype html>
@@ -6099,18 +7336,31 @@ ${capSeo({
   url,
   imatge: `${SITE}/observatori/og/${m.slug}.png`,
   tipus: "article",
+  // La data de les dades i no la de la generació, que seo.ts demana de no
+  // passar-hi: la més nova de les consultes a les fonts que porta la fitxa
+  // (vegeu `dataDeLesDades`). Sense cap, el cap no en porta.
+  dataModificacio: dataDeLesDades(data),
   jsonLd: [
     fil,
-    municipiJsonLd(m, url, coordenades(m, mapa), {
+    // El municipi amb els `@id` del graf (`ID.municipi`), el codi INE i, quan
+    // la J20 l'ha aparellat pel codi INE, l'element de Wikidata i la Viquipèdia.
+    municipiLd({
+      slug: m.slug,
+      nom: m.name,
+      comarca: m.comarca ? { slug: slugify(m.comarca), nom: m.comarca } : null,
+      punt: coordenades(m, mapa),
+      habitants: m.population,
+      ine: m.ine5,
+      wikidata: data.wikidata?.qid ?? null,
+      viquipedia: data.wikidata?.viquipedia ?? null,
       imatge: `${SITE}/observatori/og/${m.slug}.png`,
-      wikidata: agermanaments !== "" || nascuts !== "" ? (data.curiositatsWikidata?.url ?? null) : null,
     }),
     // L'ajuntament, amb la mateixa alcaldia que la portada i la descripció:
     // el càrrec curt («alcalde», «alcaldessa») quan la seu el diu, i
     // «alcaldia» a seques quan només tenim el nom del registre.
-    ajuntament(
+    ajuntamentLd(
+      m.slug,
       m.name,
-      url,
       alcaldia.nom
         ? {
             nom: nomLlegible(alcaldia.nom),
@@ -6119,10 +7369,13 @@ ${capSeo({
           }
         : null,
     ),
+    // Les preguntes ràpides, que diuen el mateix que el bloc visible: sense
+    // bloc, cap FAQPage (`preguntesRapides` torna `null`).
+    ...(rapides.jsonLd ? [rapides.jsonLd] : []),
   ],
 })}
 ${tipografia(BASE)}
-<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}${WIKIDATA_FITXA_CSS}${CENS_FITXA_CSS}${LLISTES_OBERTES_CSS}</style>
+<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}${WIKIDATA_FITXA_CSS}${CENS_FITXA_CSS}${LLISTES_OBERTES_CSS}${perSobre ? PER_SOBRE_CSS : ""}${senseComentaris(CRIMINALITAT_CSS)}${senseComentaris(TIRA_POBLE_CSS)}${senseComentaris(PAPERETA_POSTURES_CSS)}${veins ? senseComentaris(VEINS_CSS) : ""}${senseComentaris(URBANISME_FITXA_CSS)}${senseComentaris(COOPERACIO_CSS)}${serveisSocials ? senseComentaris(SERVEIS_ENS_CSS) : ""}${rapides.cos ? senseComentaris(GEO_CSS) : ""}${FITXA_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -6132,7 +7385,7 @@ ${cercador(BASE)}
 
 <main id="contingut">
 
-<section class="portada">
+<section class="portada${mapa.length > 0 ? " amb-mapa" : ""}">
   ${
     // La comarca porta a la seva pàgina, amb el mateix camí que fa servir
     // «On continua» al final de la fitxa (`pastillesContext`): era l'única
@@ -6150,7 +7403,12 @@ ${cercador(BASE)}
   }
   <p class="entrada">
     ${renderTerritori({ habitants: m.population, superficie: data.territori?.superficie?.valor ?? null, altitud: data.territori?.altitud?.valor ?? null, densitat: data.territori?.densitat?.valor ?? null, gentilici: data.territori?.gentilici ?? null }) || `${number(m.population ?? 0)} habitants`} · ${totalSeats} regidories al ple ·
-    ${m.electoralSystem === "llistes tancades" ? "llistes tancades" : escape(m.electoralSystem)}
+    ${
+      // «Llistes tancades» és el nom tècnic, i un veí no sap què vol dir:
+      // es diu què vol dir. Els altres sistemes (llista oberta, consell
+      // obert) ja s'expliquen sols, i a més tenen el seu bloc a la fitxa.
+      m.electoralSystem === "llistes tancades" ? "es vota una llista sencera, no persones" : escape(m.electoralSystem)
+    }
   </p>
   ${resum ? `<p class="resum">${resum}</p>` : ""}
   ${
@@ -6186,6 +7444,26 @@ ${cercador(BASE)}
       : ""
   }
   ${
+    /*
+     * La tira del poble: qui ha tingut l'alcaldia de cada mandat des del 1979,
+     * un tram per persona amb el color de la seva força (marca de dada) i una
+     * osca als relleus de mig mandat. Va sota la targeta de l'alcaldia, a
+     * totes les amplades: al mòbil és el dibuix de la portada, en lloc del
+     * mapa gros, i diu més del poble que on és. Sense historial no surt: una
+     * tira tota en blanc diria «no consta» dotze vegades.
+     */
+    data.mayors && data.mayors.history.length > 0
+      ? `<div class="fx-tira">
+    <p class="fx-tira-etq"><a href="#alcaldies">Qui ha tingut l'alcaldia</a>, mandat a mandat</p>
+    ${tiraDelPoble(tiraDesDeHistorial(data.mayors, m.name), { mida: "gran" })}
+  </div>`
+      : ""
+  }
+  ${
+    // El mapa, al mòbil, és una miniatura de 120 px al costat de la línia de
+    // dades (vegeu FITXA_CSS): a mida sencera es menjava la primera pantalla
+    // per dir només on és el poble. A partir de 820 px torna a la columna
+    // del costat, com sempre.
     mapa.length > 0
       ? `<figure class="on-es">
       ${renderMapa(mapa, { amplada: 300, destacat: m.slug, descripcio: `Mapa de Catalunya amb ${m.name} destacat` })}
@@ -6194,6 +7472,17 @@ ${cercador(BASE)}
       : ""
   }
 </section>
+
+${
+  // El resum en frases va just sota la portada i abans de cap xifra: és el
+  // que respon «què he de saber d'aquest poble» a qui no baixarà més avall.
+  renderEn30Segons(data, {
+    alcaldia,
+    medianes,
+    colorPer: colorPerGrup,
+    siglesDelGrup: (grup) => candidaturaDelGrup(grup)?.sigles ?? null,
+  })
+}
 
 ${renderUllada(data, medianes, colorPerGrup)}
 
@@ -6204,6 +7493,7 @@ ${joc}
 <nav class="index" aria-label="Seccions d'aquesta pàgina">
   ${index}
 </nav>
+${barraEtsA()}
 ${"" /* Aquest </nav> hi faltava, i no era un detall de validador: sense ell tota
   la resta de la pàgina quedava dins d'un contenidor flex amb wrap, i cada secció
   hi entrava com a element flexible amb min-width:auto. El resultat era que la
@@ -6212,10 +7502,19 @@ ${"" /* Aquest </nav> hi faltava, i no era un detall de validador: sense ell tot
 
 ${cos}
 
+${
+  // La papereta tanca la fitxa i proposa el pas següent: el comparador, que
+  // llegeix el municipi de partida del paràmetre «m».
+  vinyetaPapereta("final", "Has arribat al final.", {
+    enllac: { href: `${BASE}comparador/?m=${m.slug}`, text: "El comparem amb un altre poble?" },
+  })
+}
+
 </main>
 ${peu(BASE, data.generatedAt)}
 
 ${SEGUIDOR_INDEX}
+${OBRE_DETALL_JS}
 ${GRAFICS_JS}
 </body>
 </html>`;
@@ -6283,6 +7582,16 @@ export async function loadRadiografia(db: Db, slug: string, generatedAt: string)
     vehicles: (byKind.get("vehicles") ?? null) as VehiclesMetric | null,
     llistesObertes: (byKind.get("llistesObertes") ?? null) as LlistesObertesMetric | null,
     censElectoral: (byKind.get("censElectoral") ?? null) as CensElectoralMetric | null,
+    urbanismeHabitatge: (byKind.get("urbanismeHabitatge") ?? null) as UrbanismeHabitatgeMetric | null,
+    // L'adaptador comprova la forma: una fila d'una versió vella de J41 surt
+    // com a `null` («no consta») i no com un bloc trencat.
+    dinersGeneralitat: llegeixDinersGeneralitat(byKind.get("dinersGeneralitat") ?? null),
+    // Només els municipis que són àrea bàsica de serveis socials en tenen fila;
+    // la resta queda a `null` i la fitxa no hi fa cap bloc.
+    serveisSocials: (byKind.get("serveisSocialsBasics") ?? null) as ServeisSocialsDesats | null,
+    // La fila sencera de la J20 porta més camps (imatges, OSM…); la fitxa només
+    // en llegeix el QID, l'adreça i la Viquipèdia per al JSON-LD.
+    wikidata: (byKind.get("wikidata") ?? null) as { qid: string; url: string; viquipedia: string | null } | null,
     councillors: await db
       .select({
         name: people.fullName,

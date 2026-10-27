@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CRIMINALITAT_CSS,
   mitjanesPerGrup,
   ordinal,
   renderCriminalitat,
@@ -256,7 +257,32 @@ describe("renderCriminalitat", () => {
     // L'espurna no substitueix la xifra: la frase continua sent el primer que es llegeix.
     expect(llarga.trimStart().startsWith("<p class=\"entrada-bloc\">El 2025")).toBe(true);
     expect(llarga).toContain("10.700 fets");
+    // Sota l'espurna, el primer any, l'últim i la xifra a què arriba.
+    expect(llarga).toContain('<p class="crim-anys" aria-hidden="true"><span>2018</span><span>2025: 10.700 fets</span></p>');
     expect(renderCriminalitat(metrica())).not.toContain("serie-espurna");
+  });
+
+  it("la taula té classe pròpia i cada xifra porta la seva etiqueta per al mòbil, sense fletxa d'«abans → ara»", () => {
+    const grup: GrupCriminalitat = { nom: "de més de 50.000 habitants", quants: 23, medianaPerMil: { total: 55.5 } };
+    const ambGrup = renderCriminalitat(metrica(), { grup });
+    expect(ambGrup).toContain('<table class="balanc criminalitat crim-taula">');
+    expect(ambGrup).toContain('<td class="ara" data-etq="2025">');
+    expect(ambGrup).toContain('data-etq="per 1.000 hab."');
+    expect(ambGrup).toContain('<td class="canvi" data-etq="des del 2023">');
+    expect(ambGrup).toContain('<td class="crim-grup" data-etq="el del mig, per 1.000 hab.">55,5</td>');
+    // Cap cel·la amb la classe que el balanç del mandat fa servir per a «abans →».
+    expect(ambGrup).not.toContain('class="abans"');
+    // Tota cel·la de dades de la taula compacta porta etiqueta, i el CSS del
+    // mòbil la pinta. (La sèrie any a any, plegada, és una altra taula.)
+    const taula = ambGrup.slice(ambGrup.indexOf("crim-taula"), ambGrup.indexOf("</table>", ambGrup.indexOf("crim-taula")));
+    const cels = taula.match(/<td\b[^>]*>/g) ?? [];
+    expect(cels.length).toBeGreaterThan(0);
+    for (const cel of cels) expect(cel).toContain("data-etq=");
+    expect(CRIMINALITAT_CSS).toContain("td::before{content:attr(data-etq)");
+    expect(CRIMINALITAT_CSS).not.toContain("→");
+    // La frase diu «el municipi del mig» i no «la mediana».
+    expect(ambGrup).toContain("el municipi del mig en té 55,5");
+    expect(ambGrup).not.toMatch(/la mediana és|en una mediana/);
   });
 
   it("un any que falta al mig de l'espurna és un forat dibuixat, no un pendent inventat", () => {

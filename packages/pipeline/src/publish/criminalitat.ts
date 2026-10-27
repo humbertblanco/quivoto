@@ -108,7 +108,12 @@ function espurnaTotal(metric: CriminalitatMetric): string {
   if (serie.length < ANYS_PER_ESPURNA) return "";
   const esperats: number[] = [];
   for (let any = serie[0]!.any; any <= metric.darrerAny; any += 1) esperats.push(any);
-  return serieTemporal(
+  // L'espurna no té eixos, i sense cap any escrit no se sabia de quan a quan
+  // anava: a sota hi va el primer any, l'últim i la xifra a què arriba. És
+  // per als ulls (la gràfica ja porta la sèrie sencera per a qui llegeix amb veu).
+  const ultim = serie[serie.length - 1]!;
+  const anys = `<p class="crim-anys" aria-hidden="true"><span>${serie[0]!.any}</span><span>${ultim.any}: ${enter(ultim.fets)} fets</span></p>`;
+  return `${serieTemporal(
     serie.map((p) => ({ any: p.any, valor: p.fets })),
     {
       titol: "Fets penals coneguts, any a any",
@@ -116,7 +121,7 @@ function espurnaTotal(metric: CriminalitatMetric): string {
       mida: "espurna",
       anysEsperats: esperats,
     },
-  );
+  )}${anys}`;
 }
 
 /**
@@ -136,16 +141,31 @@ function frasePosicio(metric: CriminalitatMetric, grup: GrupCriminalitat | null 
   if (grup && mediana !== undefined) {
     trossos.push(
       grup.quants
-        ? `entre els ${enter(grup.quants)} de la seva mida amb dada (${escape(grup.nom)}) la mediana és ${decimal(mediana)}`
-        : `els de la seva mida (${escape(grup.nom)}) es mouen en una mediana de ${decimal(mediana)}`,
+        ? `entre els ${enter(grup.quants)} de la seva mida amb dada (${escape(grup.nom)}), el municipi del mig en té ${decimal(mediana)}`
+        : `entre els de la seva mida (${escape(grup.nom)}), el municipi del mig en té ${decimal(mediana)}`,
     );
   }
   if (trossos.length === 0) return "";
   return `<p class="entrada-bloc">${trossos.join("; ")}.</p>`;
 }
 
-/** La taula compacta: l'últim any, la taxa, el canvi des del 2023 i la mediana del grup. */
+/**
+ * La taula compacta: l'últim any, la taxa, el canvi des del 2023 i el
+ * municipi del mig del grup.
+ *
+ * Té classe pròpia (`crim-taula`) i cada cel·la porta la seva etiqueta a
+ * `data-etq`. Al mòbil la capçalera no hi cap, i la taula es converteix en
+ * fitxes on cada xifra porta escrit què és: abans reaprofitava el format de
+ * «abans → ara» del balanç del mandat, que amagava la capçalera i hi afegia
+ * una fletxa, i en sortia «3.637 · 43,9 · −226 · 53,7 →» sense manera de
+ * saber què era cada número. Les etiquetes són les mateixes paraules de la
+ * capçalera, de manera que les dues lectures diuen el mateix.
+ */
 function taulaTipus(metric: CriminalitatMetric, grup: GrupCriminalitat | null | undefined): string {
+  const etqAny = String(metric.darrerAny);
+  const etqTaxa = "per 1.000 hab.";
+  const etqCanvi = `des del ${metric.mandat.desDe}`;
+  const etqGrup = "el del mig, per 1.000 hab.";
   const files = [metric.total, ...metric.tipus.filter((t) => t.fitxa)]
     .map((tipus) => {
       const fets = tipus.serie.find((p) => p.any === metric.darrerAny)?.fets;
@@ -154,20 +174,44 @@ function taulaTipus(metric: CriminalitatMetric, grup: GrupCriminalitat | null | 
       const mediana = grup?.medianaPerMil[tipus.clau];
       return `<tr>
       <th scope="row">${escape(tipus.nom)}</th>
-      <td class="ara">${enter(fets)}</td>
-      <td>${taxa === null ? "—" : decimal(taxa)}</td>
-      <td class="canvi">${canviCel(tipus.canviMandat)}</td>
-      ${grup ? `<td class="abans">${mediana === undefined ? "—" : decimal(mediana)}</td>` : ""}
+      <td class="ara" data-etq="${escape(etqAny)}">${enter(fets)}</td>
+      <td data-etq="${escape(etqTaxa)}">${taxa === null ? "—" : decimal(taxa)}</td>
+      <td class="canvi" data-etq="${escape(etqCanvi)}">${canviCel(tipus.canviMandat)}</td>
+      ${grup ? `<td class="crim-grup" data-etq="${escape(etqGrup)}">${mediana === undefined ? "—" : decimal(mediana)}</td>` : ""}
     </tr>`;
     })
     .join("");
-  return `<div class="taula-envolta"><table class="balanc criminalitat">
-  <thead><tr><th>Tipus de fet</th><th>${metric.darrerAny}</th><th>per 1.000 hab.</th><th>des del ${metric.mandat.desDe}</th>${
-    grup ? `<th>els de la seva mida</th>` : ""
+  return `<div class="taula-envolta"><table class="balanc criminalitat crim-taula">
+  <thead><tr><th>Tipus de fet</th><th>${escape(etqAny)}</th><th>${escape(etqTaxa)}</th><th>${escape(etqCanvi)}</th>${
+    grup ? `<th title="La mediana dels municipis de la seva mida amb dada">els de la seva mida (el del mig)</th>` : ""
   }</tr></thead>
   <tbody>${files}</tbody>
   </table></div>`;
 }
+
+/**
+ * El CSS de la taula de seguretat, que la fitxa afegeix al seu full.
+ *
+ * Al mòbil cada fila és una fitxa: el tipus de fet a dalt i les xifres en
+ * dues columnes, cadascuna amb la seva etiqueta (`data-etq`). Els selectors
+ * porten `.balanc.crim-taula … td` perquè han de guanyar les regles generals
+ * de `.balanc` (el sagnat de les xifres i el `nowrap` del canvi), que tenen
+ * més pes que una classe sola. Cap fletxa de «abans → ara»: aquí no n'hi ha.
+ */
+export const CRIMINALITAT_CSS = `
+.crim-taula .crim-grup{color:var(--ink-suau)}
+.crim-anys{display:flex;justify-content:space-between;gap:8px;max-width:160px;margin:2px 0 0;
+  font-size:.66rem;font-weight:800;color:var(--ink-suau);font-variant-numeric:tabular-nums}
+@media (max-width:560px){
+  .crim-taula thead{display:none}
+  .crim-taula tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;padding:12px 0;
+    border-bottom:1px solid var(--vora)}
+  .balanc.crim-taula tbody th{grid-column:1/-1;border:0;padding:0}
+  .balanc.crim-taula tbody td{border:0;padding:0;text-align:left;white-space:normal;display:block}
+  .balanc.crim-taula tbody td::before{content:attr(data-etq);display:block;margin-bottom:2px;
+    font:700 .7rem/1.2 var(--text);color:var(--ink-suau)}
+}
+`;
 
 /** El desplegable amb la sèrie sencera, any a any i tipus a tipus. */
 function taulaSerie(metric: CriminalitatMetric): string {

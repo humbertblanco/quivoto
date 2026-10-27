@@ -3,9 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  CAPITOLS_FITXA,
   colorDeCandidatura,
   descripcioMunicipi,
   pastillesContext,
+  renderEn30Segons,
   renderEscombraries,
   renderQuantGasta,
   renderQuePaga,
@@ -13,14 +15,21 @@ import {
   renderComparat,
   renderContractacio,
   renderPapers,
+  renderPerSobre,
   renderRadiografia,
+  dataDeLesDades,
   renderSous,
   renderTrajectoria,
+  renderVeinsTria,
   titolMunicipi,
   type RadiografiaData,
 } from "./radiografia";
+import { adjacenciaMunicipal } from "./veins";
+import type { Els947Row } from "./els947";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
+import { ensDeProva, membreDeProva } from "./ens-prova-enllacos";
 import { RADIOGRAFIA_CSS } from "./estil";
+import { FONT_SSB_PERSONES, type ServeisSocialsDesats } from "../jobs/j42-serveis-ens";
 import {
   LLICENCIA_INTERIOR, NOTA_COMPETENCIES, NOTA_FETS_CONEGUTS, NOTA_LLINDAR,
 } from "../jobs/j29-criminalitat";
@@ -763,7 +772,7 @@ describe("la renda: on cau el poble, dit en paraules", () => {
     expect(html).toContain("el 214è de 927 municipis amb dada");
     expect(html).toContain("INE, 2023");
     // I el lloc porta a la llista sencera: el rànquing de la renda dels 947.
-    expect(html).toContain('<a class="entre-947" href="../../ranquings/#renda">entre els 947 →</a>');
+    expect(html).toContain('<a class="entre-947" href="../../ranquings/#renda">entre els 947</a>');
     expect(html).toContain("Un ajuntament no decideix quant guanya la gent que hi viu");
     // L'espurna dibuixa la sèrie, i la lletra petita diu el que no es veu a la
     // xifra: que la sèrie s'atura l'any de les eleccions, i qui tapa els buits.
@@ -865,7 +874,8 @@ describe("els diners: el total i el repartiment, al mateix bloc", () => {
     const html = renderRadiografia(fitxa({ spending: gasta() }));
     expect(html).toContain('id="diners"');
     expect(html).toContain("Quant gasta en total");
-    expect(html).toContain('<a href="#diners">Els diners</a>');
+    // «Els diners» ara és el nom del capítol; el bloc, a l'índex, és «Quant gasta».
+    expect(html).toContain('<a href="#diners">Quant gasta</a>');
     // Una sola vegada: abans la comparació del total vivia al mig de la llista
     // de partides i es llegia com una partida més.
     expect(html.split("Gastant com ells").length - 1).toBe(1);
@@ -1187,6 +1197,22 @@ describe("què costa el govern, i què se'n pot saber", () => {
     expect(renderSous(null, null, null)).toBe("");
   });
 
+  it("les xifres del cost queden a la vista, i què en publica i els segons càrrecs, a «Més detall»", () => {
+    const html = renderSous(cost(), transparencia(), acumulats());
+    const plegat = html.indexOf('<details class="fx-mes">');
+    expect(plegat).toBeGreaterThan(0);
+    // La resposta al títol, abans del plegat.
+    expect(html.indexOf("1.210.000 €")).toBeLessThan(plegat);
+    // El detall, dins: què publica, qui té un altre càrrec, i la lletra petita.
+    const detall = html.slice(plegat);
+    expect(detall).toContain("<summary>Més detall <span class=\"fx-mes-que\">què en publica l'ajuntament · qui té un càrrec en un altre ens · la lletra petita</span></summary>");
+    expect(detall).toContain("<h3>Què en publica l'ajuntament</h3>");
+    expect(detall).toContain("<h3>Qui té un càrrec en un altre ens</h3>");
+    expect(html.slice(0, plegat)).not.toContain("La lletra petita");
+    // Sense xifres del cost no es plega res: un bloc amb un títol i un botó no diu res.
+    expect(renderSous(null, transparencia(), null)).not.toContain("fx-mes");
+  });
+
   it("publica el que hi dedica l'ajuntament, per habitant i per regidoria", () => {
     const html = renderSous(cost(), null, null);
     expect(html).toContain("1.210.000 €");
@@ -1440,7 +1466,8 @@ describe("què contracta, i amb quanta competència", () => {
     expect(html).toContain("25.500.000 €");
     expect(html).toContain("602 contractes");
     expect(html).toContain("82 €");
-    expect(html).toContain("la mediana dels 22 municipis");
+    expect(html).toContain("entre els 22 municipis");
+    expect(html).toContain("el del mig:");
     expect(html).toContain("74 €");
   });
 
@@ -1932,8 +1959,8 @@ describe("la mediana del grup", () => {
     expect(html).toContain("60,0 %");
     // La diferència va en punts, no en percentatge del percentatge: de 51,5 a
     // 60,0 són 8,5 punts, i mai «un 16 % més».
-    expect(html).toContain("+8,5 punts per sobre de la mediana");
-    expect(html).toContain("24 municipis de més de 50.000 habitants");
+    expect(html).toContain("+8,5 punts per sobre del municipi del mig");
+    expect(html).toContain("del municipi del mig dels 24 de més de 50.000 habitants");
     expect(html).toContain("(51,5 %)");
   });
 
@@ -2081,12 +2108,13 @@ describe("el registre de seccions", () => {
     const ids = seccions(html);
     for (const id of ["regidors", "alcaldies", "trajectoria", "moviments", "impostos", "joc"]) expect(ids, id).not.toContain(id);
     // «On cau entre els seus» va abans de l'índex i és el primer bloc amb id;
-    // el primer de després de l'índex continua sent «Qui mana».
+    // el primer de després de l'índex continua sent «Qui mana», que a l'índex
+    // es diu «El ple» perquè «Qui mana» és el nom del seu capítol.
     expect(ids.slice(0, 2)).toEqual(["comparat", "ple"]);
-    expect(html).toContain('<a href="#ple">Qui mana</a>');
+    expect(html).toContain('<a href="#ple">El ple</a>');
     const on = html.indexOf('id="ple"');
     const bloc = html.slice(on, html.indexOf("<section", on));
-    expect(bloc).toContain("Qui mana, i com hi va arribar");
+    expect(bloc).toContain("El ple, i com s'hi va arribar");
     expect(bloc).toContain('class="hemicicle"');
     expect(bloc).toMatch(/<h3 class="subtitol[^"]*" id="alcaldies">Les alcaldies des del 1979<\/h3>/);
     expect(bloc).toContain('<table class="alcaldies">');
@@ -2138,15 +2166,28 @@ describe("el registre de seccions", () => {
     expect(taula).toMatch(/<span class="cara-alcaldia inicials petita" style="--mida:28px;--c:#[0-9a-fA-F]{6};--t:#[0-9a-fA-F]{6}" aria-hidden="true">MF<\/span>Marta Farrés Falgueras/);
   });
 
-  it("l'ordre és el de la fitxa: qui mana, els comptes, els diners, el vot, la gent", () => {
+  it("l'ordre és el dels capítols: qui mana, els diners, com és el poble i d'on surt", () => {
     const html = renderRadiografia(fitxa({ finances: finances(), participation: [{ electionId: "M20231", censusSize: 1000, voters: 600, blankVotes: 5 }] as unknown as RadiografiaData["participation"] }));
     const ids = seccions(html);
     const pos = (id: string): number => ids.indexOf(id);
-    expect(pos("comptes")).toBeLessThan(pos("mandat"));
-    expect(pos("mandat")).toBeLessThan(pos("diners"));
+    // Cap comparació no ha de passar per un bloc que no hi és (-1 < tot).
+    for (const id of ["mandat", "participacio", "cens", "comptes", "diners", "que-paga", "escombraries", "qui-hi-viu", "urbanisme", "seguretat", "vehicles", "dades", "fonts"]) {
+      expect(ids, id).toContain(id);
+    }
+    // Qui mana: el mandat i el vot hi van, abans de cap xifra de diners.
+    expect(pos("mandat")).toBeLessThan(pos("comptes"));
+    expect(pos("participacio")).toBeLessThan(pos("comptes"));
+    expect(pos("cens")).toBeLessThan(pos("comptes"));
+    // Els diners: els comptes del mandat, el pressupost, el que paga la gent i les escombraries.
+    expect(pos("comptes")).toBeLessThan(pos("diners"));
     expect(pos("diners")).toBeLessThan(pos("que-paga"));
-    expect(pos("escombraries")).toBeLessThan(pos("participacio"));
-    expect(pos("participacio")).toBeLessThan(pos("qui-hi-viu"));
+    expect(pos("que-paga")).toBeLessThan(pos("escombraries"));
+    // Com és el poble, després dels diners: qui hi viu el primer.
+    expect(pos("escombraries")).toBeLessThan(pos("qui-hi-viu"));
+    expect(pos("qui-hi-viu")).toBeLessThan(pos("urbanisme"));
+    expect(pos("urbanisme")).toBeLessThan(pos("seguretat"));
+    // I al final, d'on surt.
+    expect(pos("vehicles")).toBeLessThan(pos("dades"));
     expect(pos("dades")).toBeLessThan(pos("fonts"));
   });
 
@@ -2232,6 +2273,8 @@ describe("qui seu al ple: el recompte del govern", () => {
       .find((o) => o["@type"] === "GovernmentOrganization")!;
     expect(ajuntament.employee).toEqual({
       "@type": "Person",
+      // L'`@id` de la persona és el de la seva fitxa: el graf la reconeix a totes les pàgines.
+      "@id": "https://quivoto.cat/observatori/m/sabadell/regidor/marta-farres-falgueras/#persona",
       name: "Marta Farrés Falgueras",
       jobTitle: "Alcaldessa de Sabadell",
       url: "https://quivoto.cat/observatori/m/sabadell/regidor/marta-farres-falgueras/",
@@ -2266,8 +2309,8 @@ describe("qui seu al ple: el recompte del govern", () => {
     expect(portada).not.toContain("Pol Gibert");
     expect(html).toMatch(/<li class="persona alcaldia[^"]*"><a href="regidor\/marta-farres-falgueras\//);
     expect(html).not.toMatch(/<li class="persona alcaldia[^"]*"><a href="regidor\/pol-gibert-horcas\//);
-    // El tinent és al govern i porta el càrrec escrit, però no és l'alcaldia.
-    expect(html).toContain('<span class="carrec">Primer tinent d\'alcalde</span>');
+    // El tinent porta la tinença escrita en curt, però no és l'alcaldia.
+    expect(html).toContain('<span class="carrec">1a tinença</span>');
   });
 
   it("sense llista a la seu, l'alcaldia surt del registre pel nom oficial i porta a la seva fitxa", () => {
@@ -2352,8 +2395,8 @@ describe("qui seu al ple: el recompte del govern", () => {
     const html = renderRadiografia(fitxa({ carrecs: carrecs(), government: govern(14) }));
     const on = html.indexOf('id="ple"');
     const bloc = html.slice(on, html.indexOf("<section", on));
-    expect(html).toContain('<a href="#ple">Qui mana</a>');
-    expect(html).toContain("Qui mana, i com hi va arribar");
+    expect(html).toContain('<a href="#ple">El ple</a>');
+    expect(html).toContain("El ple, i com s'hi va arribar");
     expect(bloc).toMatch(/<h3 class="subtitol[^"]*" id="regidors">Qui seu al ple<\/h3>/);
     expect(bloc.match(/<li class="persona[^"]*"><a href="regidor\//g)?.length).toBe(3);
     expect(bloc).toContain('title="Marta Farrés Falgueras · Alcaldessa"');
@@ -2714,7 +2757,7 @@ describe("la banda «Què t'hi jugues»", () => {
     expect(b).toContain('class="papereta"');
     expect(b).toContain("Què t'hi jugues el 23 de maig del 2027");
     const etiquetes = [...b.matchAll(/<span class="etq">([^<]+)<\/span>/g)].map((m) => m[1]);
-    expect(etiquetes).toEqual(["Regidories en joc", "En calen", "Les té", "Canvis de mans des del 1979"]);
+    expect(etiquetes).toEqual(["Regidories", "En calen", "Les té", "Canvis de mans des del 1979"]);
     expect(b).toContain('<span class="xifra">27</span>');
     expect(b).toContain('<span class="xifra">14</span>');
     expect(b).toContain('href="../../partit/psc/"');
@@ -2898,10 +2941,10 @@ describe("la portada: la cara de l'alcaldia, la comarca i «entre els 947»", ()
     expect(html).toContain('<a href="../../c/valles-occidental/"><b>Vallès Occidental</b>');
   });
 
-  it("l'ullada porta «entre els 947 →» al rànquing només on n'hi ha: IBI i participació, i mai despesa ni deute", () => {
+  it("l'ullada porta «entre els 947» al rànquing només on n'hi ha: IBI i participació, i mai despesa ni deute", () => {
     const participacio = [{ electionId: "M20231", censusSize: 1000, voters: 600, blankVotes: 5 }] as unknown as RadiografiaData["participation"];
     const u = ullada(renderRadiografia(fitxa({ finances: finances(), government: govern(), spending: gasta(), participation: participacio })));
-    const enllacos = [...u.matchAll(/<a class="entre-947" href="([^"]+)">entre els 947 →<\/a>/g)].map((m) => m[1]);
+    const enllacos = [...u.matchAll(/<a class="entre-947" href="([^"]+)">entre els 947<\/a>/g)].map((m) => m[1]);
     expect(enllacos).toEqual(["../../ranquings/#ibi", "../../ranquings/#participacio"]);
     // Fora de la tessel·la, que ja és un enllaç: mai un <a> dins d'un <a>.
     expect(u).toMatch(/<\/a><a class="entre-947" href="\.\.\/\.\.\/ranquings\/#ibi">/);
@@ -2930,7 +2973,7 @@ describe("la portada: la cara de l'alcaldia, la comarca i «entre els 947»", ()
     const history = { series: [], elections: 12, firstYear: 1979, alternances: 2 } as unknown as RadiografiaData["history"];
     const html = renderRadiografia(fitxa({ history }));
     expect(html).toContain('Canvis de mans des del 1979');
-    expect(html).toContain('en 12 eleccions · <a class="entre-947" href="../../ranquings/#alternances">entre els 947 →</a>');
+    expect(html).toContain('en 12 eleccions · <a class="entre-947" href="../../ranquings/#alternances">entre els 947</a>');
   });
 });
 
@@ -3023,7 +3066,9 @@ describe("on cau entre els seus", () => {
 
   it("diu amb qui es compara i enllaça el comparador i els rànquings", () => {
     const b = bloc(completa());
-    expect(b).toContain("Comparat amb els <b>23 municipis de més de 50.000 habitants</b>");
+    // El denominador es diu un sol cop, a l'entrada; les files ja no el repeteixen.
+    expect(b).toContain("Entre els <b>23 municipis de la seva mida</b> (de més de 50.000 habitants)");
+    expect(b.match(/municipis de la seva mida/g)?.length).toBe(1);
     expect(b).toContain('href="../../comparador/?m=sabadell"');
     expect(b).toContain('href="../../ranquings/"');
   });
@@ -3048,23 +3093,24 @@ describe("on cau entre els seus", () => {
     ]);
   });
 
-  it("cada xifra porta el valor en gros, l'any i la font, i la frase diu la posició i la mediana", () => {
+  it("cada xifra porta el valor en gros, l'any i la font, i la frase diu la posició comptada i el del mig", () => {
     const b = bloc(completa());
     // El deute: percentil 40 vol dir que el 60 % del grup deu més que ell.
     expect(b).toContain('<span class="xifra">450 €</span>');
-    expect(b).toContain("més baix que el 60 % dels 23 municipis de la seva mida · mediana 520 €");
+    // El 60 % de 23, sense el mig que el municipi compta per sota d'ell mateix: 13.
+    expect(b).toContain("més baix que 13 de 23 · el del mig, 520 €");
     // L'IBI, de l'Idescat, amb l'enllaç que la llicència obliga.
     expect(b).toContain("362 €");
-    expect(b).toContain("més alt que el 58 % dels 23 municipis de la seva mida · mediana 348 €");
+    expect(b).toContain("més alt que 13 de 23 · el del mig, 348 €");
     expect(b).toContain('2025 · <a href="https://www.idescat.cat/emex/?id=081871#h173" rel="noopener nofollow">Idescat</a>');
     // L'aigua, en euros per metre cúbic amb dos decimals.
     expect(b).toContain("1,50 €/m³");
-    expect(b).toContain("mediana 1,61 €/m³");
+    expect(b).toContain("el del mig, 1,61 €/m³");
     // La participació contra la mediana dels seus, en punts de percentatge.
     expect(b).toContain("60,0 %");
-    expect(b).toContain("més alt que el 88 % dels 24 municipis de la seva mida · mediana 51,5 %");
+    expect(b).toContain("més alt que 21 de 24 · el del mig, 51,5 %");
     // La renda: just al mig, i dit que no ho decideix l'ajuntament.
-    expect(b).toContain("just al mig dels 23 municipis de la seva mida · mediana 14.500 €");
+    expect(b).toContain("just al mig dels 23 · el del mig, 14.500 €");
     expect(b).toContain("2023 · INE · no ho decideix l'ajuntament");
   });
 
@@ -3089,17 +3135,17 @@ describe("on cau entre els seus", () => {
     // El percentil 40 cau al 40,6 % del recorregut (del 3 al 97, amb el 50 al mig).
     expect(b).toContain('style="--p:40.6%"');
     expect(b).toContain(
-      'title="Deute per habitant: 2025 · 450 € · mediana dels seus: 520 € · posició: més baix que el 60 % de 23 (font: AOC, 2025)"',
+      'title="Deute per habitant: 2025 · 450 € · mediana dels seus: 520 € · posició: més baix que 13 de 23 (font: AOC, 2025)"',
     );
     expect(b.match(/<i class="mig"><\/i>/g)?.length).toBe(punts.length);
   });
 
   it("l'etiqueta de cada punt diu la posició en curt i d'on surt, i els extrems del grup quan els sap", () => {
     const b = bloc(completa());
-    // La posició, curta: «de 23» i no «dels 23 municipis de la seva mida».
-    expect(b).toContain('data-extres="posició¦més baix que el 60 % de 23" data-nota="font: AOC, 2025"');
-    expect(b).toContain('data-extres="posició¦més alt que el 58 % de 23" data-nota="font: Idescat, 2025"');
-    expect(b).toContain('data-extres="posició¦just al mig de 23" data-nota="font: INE, 2023"');
+    // La posició, comptada en municipis com a la fila: «13 de 23».
+    expect(b).toContain('data-extres="posició¦més baix que 13 de 23" data-nota="font: AOC, 2025"');
+    expect(b).toContain('data-extres="posició¦més alt que 13 de 23" data-nota="font: Idescat, 2025"');
+    expect(b).toContain('data-extres="posició¦just al mig dels 23" data-nota="font: INE, 2023"');
     // Sense quants, «del grup»; i mai cap veredicte.
     expect(b).toContain('data-extres="posició¦més alt que el 70 % del grup" data-nota="font: ARC, 2024"');
     expect(b.match(/data-extres="[^"]*"/g)!.join(" ")).not.toMatch(/millor|pitjor/);
@@ -3114,7 +3160,7 @@ describe("on cau entre els seus", () => {
       },
     );
     expect(bloc(ambValors)).toContain(
-      'data-extres="posició¦més alt que el 88 % de 24‖el més baix del grup¦41,2 %‖el més alt del grup¦71,4 %" data-nota="font: Generalitat, 2023"',
+      'data-extres="posició¦més alt que 21 de 24‖el més baix del grup¦41,2 %‖el més alt del grup¦71,4 %" data-nota="font: Generalitat, 2023"',
     );
     // Cap punt no passa de quatre línies de més.
     for (const extres of bloc(ambValors).match(/data-extres="([^"]*)"/g) ?? []) {
@@ -3124,7 +3170,7 @@ describe("on cau entre els seus", () => {
 
   it("als extrems l'etiqueta diu «el més alt de 23», com la frase", () => {
     const b = renderComparat(fitxa({ rebutIbi: ibi({ comparacio: { grup: { clau: "gran", etiqueta: "de més de 50.000 habitants", mida: 23, ambDada: 23 }, percentil: 100, mediana: 348.2 } }) }));
-    expect(b).toContain('data-extres="posició¦el més alt de 23"');
+    expect(b).toContain('data-extres="posició¦el més alt dels 23"');
   });
 
   it("sense dada, la fila diu «sense dada» i no s'inventa cap posició", () => {
@@ -3154,7 +3200,7 @@ describe("on cau entre els seus", () => {
 
   it("als extrems no diu «més alt que el 100 %»: diu el més alt del grup", () => {
     const b = renderComparat(fitxa({ rebutIbi: ibi({ comparacio: { grup: { clau: "gran", etiqueta: "de més de 50.000 habitants", mida: 23, ambDada: 23 }, percentil: 100, mediana: 348.2 } }) }));
-    expect(b).toContain("el més alt dels 23 municipis de la seva mida · mediana 348 €");
+    expect(b).toContain("el més alt dels 23 · el del mig, 348 €");
     expect(b).not.toContain("100 %");
   });
 
@@ -3266,8 +3312,11 @@ describe("el cap SEO de la fitxa municipal", () => {
     expect(ciutat?.name).toBe("Sabadell");
     expect(ciutat?.url).toBe("https://quivoto.cat/observatori/m/sabadell/");
     expect(ciutat?.containedInPlace).toEqual({
-      "@type": "AdministrativeArea", name: "Vallès Occidental", url: "https://quivoto.cat/observatori/c/valles-occidental/",
+      "@type": "AdministrativeArea", "@id": "https://quivoto.cat/observatori/c/valles-occidental/#comarca",
+      name: "Vallès Occidental", url: "https://quivoto.cat/observatori/c/valles-occidental/",
     });
+    // El node del municipi té l'`@id` del graf i el codi INE quan la base el té.
+    expect(ciutat?.["@id"]).toBe("https://quivoto.cat/observatori/m/sabadell/#municipi");
     expect(ciutat?.additionalProperty).toEqual([
       { "@type": "PropertyValue", name: "population", value: CENS_2025, unitText: "habitants" },
     ]);
@@ -3283,7 +3332,7 @@ describe("el cap SEO de la fitxa municipal", () => {
     expect(ajuntament?.["@type"]).toBe("GovernmentOrganization");
     expect(ajuntament?.name).toBe("Ajuntament de Sabadell");
     expect(ajuntament?.url).toBe("https://quivoto.cat/observatori/m/sabadell/");
-    expect(ajuntament?.areaServed).toEqual({ "@id": "https://quivoto.cat/observatori/m/sabadell/#municipi" });
+    expect(ajuntament?.areaServed).toEqual({ "@type": "City", "@id": "https://quivoto.cat/observatori/m/sabadell/#municipi", name: "Sabadell" });
     // Només el nom del registre, sense fitxa de la persona: el càrrec és «alcaldia» i no hi ha `url`.
     expect(ajuntament?.employee).toEqual({ "@type": "Person", name: "Marta Farrés Falgueras", jobTitle: "Alcaldia de Sabadell" });
     // Sense govern conegut, cap persona: no s'inventa cap alcaldia.
@@ -3416,5 +3465,801 @@ describe("aquí es vota persones (J37)", () => {
     expect(amb).toContain('<a href="regidor/nil-anselmo-serres/">Nil Anselmo Serres</a>');
     expect(amb).toContain("Jordi Codina Ventura");
     expect(amb).toContain(".llo-taula");
+  });
+});
+
+describe("per sobre de l'ajuntament: el consell i la diputació", () => {
+  const municipiEns = (slug: string, nom: string) => ({ slug, nom, comarca: null, poblacio: null, membres: 0 });
+  const consell = ensDeProva({
+    nom: "Consell Comarcal del Vallès Occidental",
+    slug: "valles-occidental",
+    comarca: { slug: "valles-occidental", nom: "Vallès Occidental" },
+    seients: 33,
+    municipis: [municipiEns("sabadell", "Sabadell"), municipiEns("terrassa", "Terrassa")],
+    membres: [
+      membreDeProva({ nom: "Marta Farrés", carrec: "Consellera", partit: "PSC", municipi: { slug: "sabadell", nom: "Sabadell" }, adreca: "regidor/marta-farres/" }),
+      membreDeProva({ nom: "Pere Soler", carrec: "Conseller", partit: "ERC", municipi: { slug: "sabadell", nom: "Sabadell" }, adreca: null }),
+      membreDeProva({ nom: "Jordi Ballart", carrec: "President", municipi: { slug: "terrassa", nom: "Terrassa" } }),
+    ],
+    subvencions: {
+      anys: [2024, 2025],
+      perMunicipi: [{ slug: "sabadell", nom: "Sabadell", poblacio: 200_000, imports: [100_000, 250_000] }],
+      convocatories: [],
+      agenciesExcloses: [],
+      concessionsEns: null,
+      noPublicable: null,
+      font: { nom: "RAISC (s9xt-n979)", url: "https://analisi.transparenciacatalunya.cat/d/s9xt-n979", llicencia: null, consultat: null },
+    },
+  });
+  const diputacio = ensDeProva({
+    tipus: "diputacio",
+    seients: 51,
+    municipis: [municipiEns("sabadell", "Sabadell")],
+    subvencions: {
+      anys: [2024, 2025],
+      perMunicipi: [{ slug: "sabadell", nom: "Sabadell", poblacio: 200_000, imports: [3_000_000, null] }],
+      convocatories: [],
+      agenciesExcloses: [],
+      concessionsEns: null,
+      noPublicable: null,
+      font: { nom: "RAISC (s9xt-n979)", url: "https://analisi.transparenciacatalunya.cat/d/s9xt-n979", llicencia: null, consultat: null },
+    },
+  });
+
+  it("sense ens, la fitxa queda exactament com era, índex inclòs", () => {
+    const sense = renderRadiografia(fitxa());
+    expect(renderRadiografia(fitxa(), [], new Map(), undefined, undefined, undefined, undefined)).toBe(sense);
+    expect(renderRadiografia(fitxa(), [], new Map(), undefined, undefined, undefined, [])).toBe(sense);
+    expect(sense).not.toContain('id="per-sobre"');
+  });
+
+  it("amb ens, és una secció de l'índex just després de «Qui mana»", () => {
+    const html = renderRadiografia(fitxa(), [], new Map(), undefined, undefined, undefined, [consell, diputacio]);
+    expect(html).toContain('<a href="#per-sobre">Diputació i consell</a>');
+    expect(html).toContain('id="per-sobre"');
+    const ple = html.indexOf('<section class="bloc" id="ple"');
+    if (ple !== -1) expect(html.indexOf('id="per-sobre"')).toBeGreaterThan(ple);
+  });
+
+  it("enllaça les dues fitxes i diu qui del ple hi seu, amb fitxa només si és única", () => {
+    const html = renderPerSobre([consell, diputacio], { slug: "sabadell", name: "Sabadell", comarca: "Vallès Occidental", population: 216_000 });
+    expect(html).toContain('href="../../c/valles-occidental/consell/"');
+    expect(html).toContain('href="../../diputacio/barcelona/"');
+    expect(html).toContain("Hi seuen 2 persones del ple de Sabadell");
+    expect(html).toContain('<a href="regidor/marta-farres/">Marta Farrés</a>');
+    expect(html).toContain("<li>Pere Soler <span");
+    // El de Terrassa no és d'aquest ple.
+    expect(html).not.toContain("Jordi Ballart");
+  });
+
+  it("cada ens diu el seu import amb l'any i la font, i no se sumen mai", () => {
+    const html = renderPerSobre([consell, diputacio], { slug: "sabadell", name: "Sabadell", comarca: "Vallès Occidental", population: 216_000 });
+    expect(html).toContain("El Consell li va concedir <b>250.000 €</b> el 2025 (1,3 €/hab.)");
+    // La Diputació no té dada del 2025: es diu la del 2024, amb el seu any.
+    expect(html).toContain("La Diputació li va concedir <b>3.000.000 €</b> el 2024 (15 €/hab.)");
+    expect(html).toContain("concessions a l'ajuntament el 2025");
+    expect(html).toContain("RAISC (s9xt-n979)");
+    expect(html).not.toContain("3.250.000");
+    expect(html).not.toContain("3.100.000");
+  });
+
+  it("al Barcelonès diu que no hi ha consell comarcal, i la diputació hi continua", () => {
+    const html = renderPerSobre(
+      [{ ...diputacio, municipis: [municipiEns("badalona", "Badalona")] }],
+      { slug: "badalona", name: "Badalona", comarca: "Barcelonès", population: 225_000 },
+    );
+    expect(html).toContain("no té consell comarcal des del 2019");
+    expect(html).toContain('href="../../diputacio/barcelona/"');
+  });
+
+  it("sense cap ens que el contingui, no hi ha secció", () => {
+    expect(renderPerSobre([consell], { slug: "alins", name: "Alins", comarca: "Pallars Sobirà", population: 280 })).toBe("");
+    expect(renderPerSobre(undefined, { slug: "sabadell", name: "Sabadell", comarca: null, population: null })).toBe("");
+  });
+
+  it("«ningú d'aquí no hi seu» només quan el recompte és un 0 de debò, no quan és un buit", () => {
+    const sabadell = { slug: "sabadell", name: "Sabadell", comarca: "Vallès Occidental", population: 216_000 };
+    const senseNingu = { ...consell, membres: consell.membres.filter((m) => m.municipi?.slug !== "sabadell") };
+    // Recompte 0: tots els membres de l'ens tenen municipi i cap no és d'aquí.
+    expect(renderPerSobre([senseNingu], sabadell)).toContain("Cap regidor ni regidora de Sabadell no hi seu.");
+    // Recompte null: algun membre no té municipi conegut, i potser és d'aquí.
+    const buit = { ...senseNingu, municipis: senseNingu.municipis.map((m) => ({ ...m, membres: null })) };
+    expect(renderPerSobre([buit], sabadell)).not.toContain("no hi seu");
+  });
+
+  it("un import 0 diu que concessions i reintegraments s'anul·len, mai «no li va concedir res»", () => {
+    const zero = {
+      ...consell,
+      subvencions: { ...consell.subvencions!, perMunicipi: [{ slug: "sabadell", nom: "Sabadell", poblacio: 200_000, imports: [100_000, 0] }] },
+    };
+    const html = renderPerSobre([zero], { slug: "sabadell", name: "Sabadell", comarca: "Vallès Occidental", population: 216_000 });
+    expect(html).toContain("<b>0 €</b> el 2025");
+    expect(html).toContain("concessions i els reintegraments");
+    expect(html).not.toContain("no li va concedir");
+  });
+
+  it("al Lluçanès diu que els seus regidors van entrar al Consell Comarcal d'Osona, i l'enllaça si el té", () => {
+    const osona = ensDeProva({
+      nom: "Consell Comarcal d'Osona", slug: "osona", comarca: { slug: "osona", nom: "Osona" }, seients: 33,
+      municipis: [municipiEns("vic", "Vic")], membres: [],
+    });
+    const prats = { slug: "prats-de-llucanes", name: "Prats de Lluçanès", comarca: "Lluçanès", population: 2_700 };
+    const amb = renderPerSobre([osona, { ...diputacio, municipis: [municipiEns("prats-de-llucanes", "Prats de Lluçanès")] }], prats);
+    expect(amb).toContain("El Lluçanès encara no té consell comarcal propi");
+    expect(amb).toContain("van entrar al <a href=\"../../c/osona/consell/\">Consell Comarcal d'Osona</a>");
+    expect(amb).not.toContain("una mancomunitat");
+    const sense = renderPerSobre([{ ...diputacio, municipis: [municipiEns("prats-de-llucanes", "Prats de Lluçanès")] }], prats);
+    expect(sense).toContain("van entrar al Consell Comarcal d'Osona");
+  });
+});
+
+describe("la fitxa en curt: «En 30 segons», la barra «Ets a» i els «Més detall»", () => {
+  const participacio = [{ electionId: "M20231", censusSize: 1000, voters: 600, blankVotes: 5 }] as unknown as RadiografiaData["participation"];
+  const medianes = {
+    participacio: { M20231: { mediana: 51.5, quants: 24, etiqueta: "de més de 50.000 habitants", percentil: 88, valors: [] } },
+    donesAlPle: null,
+  };
+  const ratxa = (desDeAny: number, legislatures: number) => ({
+    desDeLegislatura: `${desDeAny}-${desDeAny + 4}`, desDeAny, desDe: null, anys: 2026 - desDeAny, legislatures,
+    aproximat: false, ininterromput: false, forats: [] as string[], aturadaPerDesconegut: false,
+  });
+  const continuitat = {
+    partit: { ...ratxa(2011, 4), sigles: "PSC-CP", familia: "psc" },
+    persona: { ...ratxa(2019, 2), nom: "MARTA FARRÉS FALGUERAS" },
+    personesDiferents: 6, forcesDiferents: 3, legislatures: 12, primeraLegislatura: "1979-1983", alternances: 2, alternancesDetall: [],
+    volatilitat: { font: "", serie: [], ultima: null, mitjana: null, trams: 0, tramsFiables: 0, comparacio: null },
+  } as unknown as RadiografiaData["continuitat"];
+  const frases = (html: string): string[] => {
+    const on = html.indexOf('<section class="fx-30"');
+    if (on < 0) return [];
+    const bloc = html.slice(on, html.indexOf("</section>", on));
+    return [...bloc.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => m[1]!);
+  };
+  const alcaldia = { nom: "Marta Farrés Falgueras" };
+
+  it("amb totes les dades, cinc frases: qui mana i des de quan, la majoria, el deute, la despesa i el vot", () => {
+    const html = renderEn30Segons(
+      fitxa({ finances: finances(), government: govern(), participation: participacio, continuitat }),
+      { alcaldia, medianes },
+    );
+    const f = frases(html);
+    expect(f).toHaveLength(5);
+    expect(f[0]).toContain("<b>Marta Farrés Falgueras</b> té l'alcaldia des del 2019");
+    expect(f[0]).toContain("i el seu partit hi mana des del 2011");
+    expect(f[1]).toContain("<b>14 de les 27</b> regidories: majoria absoluta");
+    expect(f[2]).toBe("L'ajuntament deu <b>450 €</b> per habitant (2025); el municipi del mig dels 23 de la seva mida en deu 520 €.");
+    expect(f[3]).toMatch(/^Gasta <b>[\d.]+ €<\/b> per habitant l'any \(liquidat el \d{4}\)/);
+    expect(f[4]).toBe("Al maig del 2023 hi va anar a votar el <b>60,0 %</b> del cens; al municipi del mig de la seva mida, el 51,5 %.");
+    // Cap veredicte, i cap «mediana» a la vista.
+    expect(html).not.toMatch(/millor|pitjor|mediana/);
+  });
+
+  it("cada frase cau sencera quan li falta la dada, i no se n'inventa cap tros", () => {
+    // Sense ratxes: el nom sense «des del».
+    const senseRatxa = frases(renderEn30Segons(fitxa({ government: govern(), participation: participacio }), { alcaldia }));
+    expect(senseRatxa[0]).toContain("té l'alcaldia, amb");
+    expect(senseRatxa.join(" ")).not.toContain("des del");
+    // Sense mediana de participació: la xifra sola, sense «municipi del mig».
+    expect(senseRatxa.at(-1)).toBe("Al maig del 2023 hi va anar a votar el <b>60,0 %</b> del cens.");
+    // Sense comptes no hi ha frase del deute.
+    expect(senseRatxa.join(" ")).not.toContain("deu");
+    // Una ratxa amb legislatures sense alcalde registrat no diu des de quan.
+    const ambForats = {
+      ...continuitat!,
+      partit: { ...continuitat!.partit!, forats: ["1995-1999"] },
+      persona: { ...continuitat!.persona!, forats: ["1995-1999"] },
+    } as RadiografiaData["continuitat"];
+    expect(frases(renderEn30Segons(fitxa({ government: govern(), continuitat: ambForats, participation: participacio }), { alcaldia }))[0])
+      .not.toContain("des del");
+    // Sense alcaldia ni govern, no hi ha cap frase de qui mana.
+    const nomesXifres = frases(renderEn30Segons(fitxa({ finances: finances(), participation: participacio })));
+    expect(nomesXifres.join(" ")).not.toContain("alcaldia");
+    expect(nomesXifres.join(" ")).not.toContain("regidories");
+  });
+
+  it("amb menys de dues frases no hi ha bloc, i a la fitxa va just sota la portada", () => {
+    expect(renderEn30Segons(fitxa())).toBe("");
+    expect(renderEn30Segons(fitxa({ despesaProgrames: null }))).toBe("");
+    const html = renderRadiografia(fitxa({ finances: finances(), government: govern(), participation: participacio }));
+    const portada = html.indexOf("</section>", html.indexOf('<section class="portada"'));
+    const bloc = html.indexOf('<section class="fx-30"');
+    expect(bloc).toBeGreaterThan(portada);
+    expect(bloc).toBeLessThan(html.indexOf('<section class="ullada'));
+    expect(html).toContain('<h2 id="fx-30-titol">En 30 segons</h2>');
+  });
+
+  it("sense majoria, diu les regidories, la majoria que cal i amb qui governa quan la seu ho diu sencer", () => {
+    const carrec = (nom: string, carrec: string, grup: string, equipGovern: boolean) => ({ nom, carrec, grup, equipGovern, foto: null, fotoPetita: null, fitxa: null });
+    const carrecs = {
+      font: "seu-e", url: "https://seu-e.cat", slug: "sabadell", descarregat: "29 d'agost del 2026", totalCarrecs: 4, ambFoto: 0, cobertura: "completa",
+      carrecs: [
+        carrec("Marta Farrés Falgueras", "Alcaldessa", "Grup Municipal del PSC", true),
+        carrec("Pol Gibert Horcas", "Primer tinent d'alcalde", "Grup Municipal del PSC", true),
+        carrec("Lluís Matas Ferrer", "Segon tinent d'alcalde", "Grup Municipal d'ERC", true),
+        carrec("Anna Roca Vidal", "Regidora", "Grup Municipal de Junts", false),
+      ],
+    } as unknown as RadiografiaData["carrecs"];
+    const g = govern({ mayorSeats: 2, winnerSeats: 2, winnerHasMajority: false });
+    const f = frases(renderEn30Segons(fitxa({ government: g, carrecs }), {
+      alcaldia,
+      siglesDelGrup: (grup) => (/PSC/.test(grup) ? "PSC-CP" : /ERC/.test(grup) ? "ERC-AM" : null),
+    }));
+    expect(f[1]).toContain("<b>2 de les 27</b> regidories, i la majoria absoluta és de 14: governa en coalició amb");
+    expect(f[1]).toContain("ERC-AM");
+    // Si un grup no es pot posar amb sigles, es diu quants són, no quins.
+    const f2 = frases(renderEn30Segons(fitxa({ government: g, carrecs }), { alcaldia }));
+    expect(f2[1]).toContain("governa en coalició de 2 grups");
+  });
+
+  it("la barra «Ets a» del mòbil: un botó amb la llista plegada, que sense guió no existeix", () => {
+    const html = renderRadiografia(fitxa({ finances: finances() }));
+    expect(html).toContain('<div class="fx-ets" data-fx-ets>');
+    expect(html).toContain('<button type="button" class="fx-ets-boto" aria-expanded="false" aria-controls="fx-ets-llista">');
+    expect(html).toContain('<nav class="fx-ets-llista" id="fx-ets-llista" aria-label="Salta a una secció" hidden></nav>');
+    // Va just després de l'índex de pastilles, que continua sent el de sempre.
+    expect(html.indexOf("data-fx-ets")).toBeGreaterThan(html.indexOf('<nav class="index"'));
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    // Amagada per defecte; només la mostra el guió (fx-viu), i només per sota del rail.
+    expect(css).toContain(".fx-ets{display:none}");
+    expect(css).toContain("@media (max-width:1179px){");
+    expect(css).toContain(".fx-ets.fx-viu{display:block;position:fixed");
+    expect(css).toMatch(/@media \(prefers-reduced-motion:reduce\)\{\.fx-ets\.fx-viu,\.fx-ets\.fx-viu\.fx-avall\{transition:none\}\}/);
+    // El mateix seguidor de l'índex la manté: copia els enllaços i hi posa el nom.
+    expect(html).toContain('querySelector("[data-fx-ets]")');
+    expect(html).toContain('barra.classList.add("fx-viu")');
+    expect(html).toContain('e.key === "Escape"');
+  });
+
+  it("els blocs llargs pleguen el detall a «Més detall», i un guió l'obre quan un enllaç hi porta", () => {
+    const mayors: NonNullable<RadiografiaData["mayors"]> = {
+      history: [{ term: "2023-2027", name: "MARTA FARRÉS FALGUERAS", partyRaw: "PSC-CP", tookOfficeOn: "2023-06-17" }],
+      changes: [], currentTermChange: null, distinctPeople: 1,
+    };
+    const html = renderRadiografia(
+      fitxa({
+        government: govern(), mayors,
+        results: { M20231: { totalVotes: 90_000, seats: 27, candidatures: [{ sigles: "PSC-CP", brandId: "psc", color: null, votes: 40_000, seats: 14, share: 44.4 }] } },
+      }),
+    );
+    const on = html.indexOf('id="ple"');
+    const bloc = html.slice(on, html.indexOf("<section", on));
+    const plegat = bloc.indexOf('<details class="fx-mes">');
+    expect(plegat).toBeGreaterThan(0);
+    // L'hemicicle, a la vista; les alcaldies i la lletra petita, plegades.
+    expect(bloc.indexOf('class="hemicicle"')).toBeLessThan(plegat);
+    expect(bloc.indexOf('id="alcaldies"')).toBeGreaterThan(plegat);
+    expect(bloc.slice(0, plegat)).not.toContain("La lletra petita");
+    expect(bloc).toContain('<span class="fx-mes-que">les alcaldies des del 1979 · la lletra petita</span>');
+    // L'àncora plegada s'obre sola en arribar-hi.
+    expect(html).toContain('desti.closest("details:not([open])")');
+    expect(html).toContain('window.addEventListener("hashchange", obre)');
+  });
+
+  it("els diners: les tres respostes a la vista i la lletra petita plegada al final", () => {
+    const html = renderRadiografia(fitxa({ spending: gasta() }));
+    const on = html.indexOf('id="diners"');
+    const bloc = html.slice(on, html.indexOf("<section", on));
+    const plegat = bloc.indexOf('<details class="fx-mes">');
+    expect(plegat).toBeGreaterThan(bloc.indexOf("Quant gasta en total"));
+    expect(plegat).toBeGreaterThan(bloc.indexOf("On van"));
+    expect(bloc.slice(0, plegat)).not.toContain("La lletra petita");
+    expect(bloc.slice(plegat)).toContain("La lletra petita");
+  });
+});
+
+describe("on cau entre els seus: quatre files a la vista i la resta plegades", () => {
+  it("quatre files amb posició a la vista, i «Veure'n les 10» amb les altres, sense perdre cap fila", () => {
+    const participacio = [{ electionId: "M20231", censusSize: 1000, voters: 600, blankVotes: 5 }] as unknown as RadiografiaData["participation"];
+    const b = renderComparat(fitxa({ finances: finances(), participation: participacio }), {
+      participacio: { M20231: { mediana: 51.5, quants: 24, etiqueta: "de més de 50.000 habitants", percentil: 88, valors: [] } },
+      donesAlPle: null,
+    });
+    const plegat = b.indexOf('<details class="fx-mes comparat-mes"><summary>Veure\'n les 10</summary>');
+    expect(plegat).toBeGreaterThan(0);
+    const visibles = b.slice(0, plegat).match(/<li[ >]/g) ?? [];
+    expect(visibles).toHaveLength(4);
+    // Les de dalt tenen totes punt; les plegades continuen numerades on toca.
+    expect(b.slice(0, plegat).match(/<b class="punt"/g)).toHaveLength(4);
+    expect(b).toContain('<ol class="comparat-files" start="5">');
+    expect(b.match(/<li[ >]/g)).toHaveLength(10);
+    // El denominador, un sol cop, a l'entrada.
+    expect(b).toContain("Entre els <b>23 municipis de la seva mida</b>");
+    expect(b).toContain('<span>el del mig</span>');
+  });
+});
+
+describe("el ple compacte: el nom a la vista i el càrrec només de qui mana", () => {
+  const carrec = (nom: string, c: string, grup: string, fotoPetita: string | null = null) =>
+    ({ nom, carrec: c, grup, equipGovern: true, foto: null, fotoPetita, fitxa: null });
+  const html = renderRadiografia(fitxa({
+    government: govern({ mayorSeats: 1 }),
+    carrecs: {
+      font: "seu-e", url: "https://seu-e.cat", slug: "sabadell", descarregat: "29 d'agost del 2026", totalCarrecs: 4, ambFoto: 1, cobertura: "completa",
+      carrecs: [
+        carrec("Marta Farrés Falgueras", "Alcaldessa", "Grup Municipal del PSC", "https://seu-e.cat/foto.jpg"),
+        carrec("Pol Gibert Horcas", "Quart Tinent d'Alcalde i regidor de Cultura", "Grup Municipal del PSC"),
+        carrec("Joan Tinença Curta", "5aTta.Alcaldessa", "Grup Municipal del PSC"),
+        carrec("Josep Maria Pérez Garcia", "Regidor de l'àrea de Promoció Econòmica", "Grup Municipal del PSC"),
+      ],
+    } as unknown as RadiografiaData["carrecs"],
+  }));
+  const on = html.indexOf('<div class="ple-compacte">');
+  const ple = html.slice(on, html.indexOf("</ul>", on));
+
+  it("cada cara porta el nom i el primer cognom a sota", () => {
+    expect(ple).toContain('<span class="fx-nom" aria-hidden="true">Marta Farrés</span>');
+    expect(ple).toContain('<span class="fx-nom" aria-hidden="true">Josep Maria Pérez</span>');
+    // El nom sencer continua a l'enllaç, per a qui llegeix amb veu.
+    expect(ple).toContain('aria-label="Marta Farrés Falgueras · Alcaldessa"');
+  });
+
+  it("el càrrec només de l'alcaldia i de les tinences, en curt", () => {
+    expect(ple).toContain('<span class="carrec">Alcaldessa</span>');
+    expect(ple).toContain('<span class="carrec">4a tinença</span>');
+    expect(ple).toContain('<span class="carrec">5a tinença</span>');
+    expect(ple).not.toContain('<span class="carrec">Regidor');
+  });
+
+  it("mentre la foto es carrega, les inicials sobre el paper", () => {
+    expect(ple).toContain('<span class="fx-cara" data-ini="MF"><img class="retrat" src="https://seu-e.cat/foto.jpg"');
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css).toContain(".fx-cara{position:relative;display:inline-block;border-radius:50%;background:var(--paper-2)");
+    expect(css).toContain(".fx-cara::before{content:attr(data-ini)");
+  });
+});
+
+describe("la portada: la tira del poble, el mapa petit i el text planer", () => {
+  it("la tira surt amb l'historial d'alcaldies, i no surt sense", () => {
+    const mayors: NonNullable<RadiografiaData["mayors"]> = {
+      history: [{ term: "2023-2027", name: "MARTA FARRÉS FALGUERAS", partyRaw: "PSC-CP", tookOfficeOn: "2023-06-17" }],
+      changes: [], currentTermChange: null, distinctPeople: 1,
+    };
+    const amb = renderRadiografia(fitxa({ mayors }));
+    const portada = amb.slice(amb.indexOf('<section class="portada"'), amb.indexOf("</section>", amb.indexOf('<section class="portada"')));
+    expect(portada).toContain('<figure class="tp tp-gran">');
+    expect(portada).toContain('<a href="#alcaldies">Qui ha tingut l\'alcaldia</a>');
+    expect(amb).toContain(".tp-gran .tp-franja{");
+    expect(renderRadiografia(fitxa())).not.toContain('class="tp tp-gran"');
+  });
+
+  it("al mòbil el mapa és una miniatura de 120 px al costat de la línia de dades", () => {
+    const html = renderRadiografia(fitxa());
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css).toContain("@media (max-width:819px){");
+    expect(css).toContain(".portada.amb-mapa > .on-es{grid-column:2;grid-row:3;margin:0;max-width:120px;width:120px;align-self:center}");
+    // Sense mapa, la portada no es parteix en dues columnes.
+    expect(html).toContain('<section class="portada">');
+    const ambMapa = renderRadiografia(fitxa(), [{ slug: "sabadell", nom: "Sabadell", lat: 41.548, lon: 2.107 }, { slug: "vic", nom: "Vic", lat: 41.93, lon: 2.254 }]);
+    expect(ambMapa).toContain('<section class="portada amb-mapa">');
+  });
+
+  it("«llistes tancades» es diu en planer, i les regidories es voten el maig del 2027", () => {
+    const html = renderRadiografia(fitxa({ government: govern() }), [], new Map(), undefined);
+    const entrada = html.slice(html.indexOf('<p class="entrada">'), html.indexOf("</p>", html.indexOf('<p class="entrada">')));
+    expect(entrada).toContain("es vota una llista sencera, no persones");
+    expect(entrada).not.toContain("llistes tancades");
+    expect(html).not.toContain("en joc el 23-M");
+  });
+
+  it("les espurnes porten el primer any, l'últim i la xifra a què arriben", () => {
+    const html = renderQuantGasta(despesa(), null);
+    expect(html).toMatch(/<i aria-hidden="true"><b>\d{4}<\/b><b>\d{4}: [\d.]+ €<\/b><\/i>/);
+  });
+});
+
+describe("la papereta, una vegada per bloc com a molt", () => {
+  it("tanca la fitxa amb el comparador, i explica el buit a «Què en sabem»", () => {
+    const html = renderRadiografia(fitxa());
+    expect(html).toContain('<div class="pap-vinyeta pap-v-final" role="note">');
+    expect(html).toContain('<a href="../../comparador/?m=sabadell">El comparem amb un altre poble?</a>');
+    expect(html.indexOf("pap-v-final")).toBeLessThan(html.indexOf("</main>"));
+    const on = html.indexOf('id="dades"');
+    const dades = html.slice(on, html.indexOf("</section>", on));
+    expect(dades).toContain('<div class="pap-vinyeta pap-v-noConsta" role="note">');
+    expect(dades).toContain("Un buit és un buit");
+    expect(html).toContain(".pap-vinyeta{");
+  });
+
+  it("el relleu a mig mandat el diu a «En 30 segons», i només si n'hi ha", () => {
+    const participacio = [{ electionId: "M20231", censusSize: 1000, voters: 600, blankVotes: 5 }] as unknown as RadiografiaData["participation"];
+    const mayors = {
+      history: [{ term: "2023-2027", name: "MARTA FARRÉS FALGUERAS", partyRaw: "PSC-CP", tookOfficeOn: "2025-02-01" }],
+      changes: [], currentTermChange: { term: "2023-2027", mayors: [] }, distinctPeople: 2,
+    } as unknown as RadiografiaData["mayors"];
+    const amb = renderEn30Segons(fitxa({ finances: finances(), government: govern(), participation: participacio, mayors }), { alcaldia: { nom: "Marta Farrés Falgueras" } });
+    expect(amb).toContain("pap-v-canviMigMandat");
+    expect(amb.match(/pap-vinyeta/g)).toHaveLength(1);
+    expect(renderEn30Segons(fitxa({ finances: finances(), government: govern(), participation: participacio }))).not.toContain("pap-vinyeta");
+  });
+});
+
+describe("els teus veïns", () => {
+  const veinsSabadell = adjacenciaMunicipal().get("sabadell") ?? [];
+  const fila = (s: string, n: string, p: number, d: number | null, ibi: number | null, pt: number | null) =>
+    ({ s, n, p, d, ibi, ibia: ibi === null ? null : 2025, pt }) as unknown as Els947Row;
+  const files947 = [
+    fila("sabadell", "Sabadell", 220_000, 450, 362, 55.3),
+    ...veinsSabadell.map((s, i) => fila(s, `Veí ${i + 1}`, i === 0 ? 99_999 : 10_000 + i, i === 0 ? null : 300 + i, 300 + i, 50 + i)),
+  ];
+
+  it("són tres panells —deute, IBI i participació— amb una tria de ràdios que va sense guió", () => {
+    expect(veinsSabadell.length).toBeGreaterThan(2);
+    const html = renderVeinsTria("sabadell", "Sabadell", files947);
+    expect(html).toContain('<input class="fx-veins-ra" type="radio" name="fx-veins" id="fx-veins-deute" value="deute" checked>');
+    expect(html).toContain('<label for="fx-veins-ibi">IBI</label>');
+    expect(html).toContain('<div class="fx-veins-panell fx-veins-participacio">');
+    expect(html.match(/<section class="vn"/g)).toHaveLength(3);
+    // La xifra del poble mateix, perquè hi hagi contra què comparar.
+    expect(html).toContain("A Sabadell, 450 €.");
+    // Un veí sense dada diu «no consta», mai zero.
+    expect(html).toContain('<span class="vn-xifra vn-buit">no consta</span>');
+  });
+
+  it("sense files o sense veïns no hi ha res, i a la fitxa va dins d'«On cau entre els seus»", () => {
+    expect(renderVeinsTria("sabadell", "Sabadell", undefined)).toBe("");
+    expect(renderVeinsTria("sabadell", "Sabadell", [])).toBe("");
+    expect(renderVeinsTria("no-existeix", "Enlloc", files947)).toBe("");
+    const html = renderRadiografia(fitxa(), [], new Map(), undefined, undefined, undefined, undefined, files947);
+    const on = html.indexOf('id="comparat"');
+    const bloc = html.slice(on, html.indexOf('<p class="nota oberta">Les barres', on));
+    expect(bloc).toContain('<div class="fx-veins">');
+    expect(html).toContain(".vn-fila{");
+    expect(renderRadiografia(fitxa())).not.toContain('class="fx-veins-ra"');
+  });
+});
+
+describe("els blocs nous de la casa i de la Generalitat", () => {
+  it("surten sempre, a l'índex i després de «Què paga la gent» i dels diners, i sense dades diuen el buit", () => {
+    const html = renderRadiografia(fitxa({ spending: gasta() }));
+    expect(html).toContain('<a href="#urbanisme">La casa</a>');
+    expect(html).toContain('<a href="#diners-generalitat">La Generalitat</a>');
+    const diners = html.indexOf('<section class="bloc" id="diners"');
+    const generalitat = html.indexOf('id="diners-generalitat"');
+    const quePaga = html.indexOf('id="que-paga"');
+    const urbanisme = html.indexOf('id="urbanisme"');
+    expect(generalitat).toBeGreaterThan(diners);
+    expect(quePaga).toBeGreaterThan(generalitat);
+    expect(urbanisme).toBeGreaterThan(quePaga);
+    expect(html.slice(urbanisme, html.indexOf("</section>", urbanisme))).toContain("No consta cap dada d'urbanisme");
+    expect(html.slice(generalitat, html.indexOf("</section>", generalitat))).toContain("No consta, que no vol dir zero.");
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css).toContain(".urb-apartats{");
+    expect(css).not.toContain("/*");
+  });
+});
+
+/**
+ * Els quatre capítols de la fitxa: cada bloc a un de sol, l'índex agrupat igual
+ * que el cos, i els ids de sempre perquè cap enllaç vell no es trenqui.
+ */
+describe("els capítols: qui mana, els diners, com és el poble i d'on surt", () => {
+  // On va cada bloc. És la decisió que es prova: si algú en mou un, aquesta
+  // llista l'ha de moure amb ell, i el canvi es veu a la revisió.
+  const ON_VA: Record<string, string> = {
+    ple: "qui-mana", "per-sobre": "qui-mana", mandat: "qui-mana", historia: "qui-mana",
+    "llistes-obertes": "qui-mana", "dones-i-homes": "qui-mana", participacio: "qui-mana", cens: "qui-mana",
+    "preguntes-rapides": "qui-mana",
+    comptes: "diners", diners: "diners", "diners-generalitat": "diners", "que-paga": "diners",
+    sous: "diners", contractacio: "diners", escombraries: "diners",
+    "qui-hi-viu": "poble", urbanisme: "poble", "serveis-socials": "poble", seguretat: "poble",
+    vehicles: "poble", agermanaments: "poble", nascuts: "poble",
+    dades: "fonts", fonts: "fonts",
+  };
+  const serveis: ServeisSocialsDesats = {
+    codiEns: "0818740009", nom: "Sabadell",
+    anys: [2022, 2023, 2024].map((any, i) => ({
+      any, persones: 9_000 + i * 500, sadSocial: { persones: null, hores: null }, sadDependencia: { persones: null, hores: null },
+      gestor: null, zeroLlegitComBuit: false, codiNoQuadra: false,
+    })),
+    fonts: [{ ...FONT_SSB_PERSONES, consultat: "2026-10-27" }],
+  };
+  const mayors: NonNullable<RadiografiaData["mayors"]> = {
+    history: [{ term: "2023-2027", name: "MARTA FARRÉS FALGUERAS", partyRaw: "PSC-CP", tookOfficeOn: "2023-06-17" }],
+    changes: [], currentTermChange: null, distinctPeople: 1,
+  };
+  const consell = ensDeProva({
+    nom: "Consell Comarcal del Vallès Occidental", slug: "valles-occidental",
+    comarca: { slug: "valles-occidental", nom: "Vallès Occidental" },
+    municipis: [{ slug: "sabadell", nom: "Sabadell", comarca: null, poblacio: null, membres: 0 }],
+  });
+  const plena = () =>
+    renderRadiografia(
+      fitxa({
+        finances: finances(), government: govern(), mayors, spending: gasta(), taxes: taxes(), serveisSocials: serveis,
+        generatedAt: "2026-10-27",
+        results: { M20231: { totalVotes: 90_000, seats: 27, candidatures: [{ sigles: "PSC-CP", brandId: "psc", color: null, votes: 40_000, seats: 14, share: 44.4 }] } },
+        participation: [{ electionId: "M20231", censusSize: 1000, voters: 600, blankVotes: 5 }] as unknown as RadiografiaData["participation"],
+        parity: { candidates: 297, womenCandidates: 144, womenCandidatesPct: 48, elected: 27, womenElected: 14, womenElectedPct: 52, heads: 11, womenHeads: 5, expectedElected: 27, complet: true },
+      }),
+      [], new Map(), undefined, undefined, undefined, [consell],
+    );
+
+  /** El cos de després de l'índex, llegit en ordre: cada franja obre un capítol i els blocs hi van a dins. */
+  const cos = (html: string) => {
+    const on = html.indexOf('<nav class="index"');
+    const resta = html.slice(html.indexOf("</nav>", on));
+    const capitols: string[] = [];
+    const dels = new Map<string, string>();
+    const repetits: string[] = [];
+    const orfes: string[] = [];
+    let capitol: string | null = null;
+    for (const p of resta.matchAll(/<div class="fx-cap fx-cap-([a-z-]+)[^"]*" id="cap-([a-z-]+)">|<section class="bloc[^"]*" id="([^"]+)"/g)) {
+      if (p[1]) {
+        expect(p[2]).toBe(p[1]);
+        capitol = p[1];
+        capitols.push(p[1]);
+      } else if (capitol === null) orfes.push(p[3]!);
+      else if (dels.has(p[3]!)) repetits.push(p[3]!);
+      else dels.set(p[3]!, capitol);
+    }
+    return { capitols, dels, repetits, orfes };
+  };
+  /** Els grups de l'índex: el nom del capítol i els blocs que hi porta. */
+  const grups = (html: string) => {
+    const on = html.indexOf('<nav class="index"');
+    const nav = html.slice(on, html.indexOf("</nav>", on));
+    return {
+      nav,
+      grups: [...nav.matchAll(/<div class="fx-idx-grup" data-fx-capitol="([^"]+)">([\s\S]*?)<\/div>\s*<\/div>/g)].map((g) => ({
+        nom: g[1]!,
+        ids: [...g[2]!.matchAll(/href="#([^"]+)"/g)].map((a) => a[1]!),
+      })),
+    };
+  };
+
+  it("cada bloc és a un sol capítol, i els capítols van en ordre i sencers", () => {
+    const { capitols, dels, repetits, orfes } = cos(plena());
+    expect(capitols).toEqual(["qui-mana", "diners", "poble", "fonts"]);
+    expect(repetits).toEqual([]);
+    // Cap bloc de després de l'índex no queda fora de capítol.
+    expect(orfes).toEqual([]);
+    for (const [id, capitol] of dels) expect(capitol, id).toBe(ON_VA[id]);
+    // La fitxa de prova té prou blocs perquè la prova digui alguna cosa.
+    expect(dels.size).toBeGreaterThanOrEqual(19);
+  });
+
+  it("els ids de sempre no canvien, i les franges no en roben cap", () => {
+    const html = plena();
+    const ids = [...html.matchAll(/<section class="bloc[^"]*" id="([^"]+)"/g)].map((m) => m[1]!);
+    for (const id of [
+      "ple", "per-sobre", "mandat", "participacio", "cens", "preguntes-rapides", "dones-i-homes", "comptes", "diners", "diners-generalitat",
+      "que-paga", "escombraries", "qui-hi-viu", "urbanisme", "serveis-socials", "seguretat", "vehicles", "dades", "fonts",
+    ]) expect(ids, id).toContain(id);
+    // Les franges porten el seu propi id, que no és el de cap bloc.
+    for (const c of CAPITOLS_FITXA) expect(ids).not.toContain(`cap-${c.id}`);
+    expect(html).toContain('<div class="fx-cap fx-cap-qui-mana fx-cap-primer" id="cap-qui-mana">');
+  });
+
+  it("l'índex va agrupat per capítols, amb els mateixos blocs que el cos i els noms sense enllaç", () => {
+    const html = plena();
+    const { dels } = cos(html);
+    const { nav, grups: g } = grups(html);
+    expect(g.map((x) => x.nom)).toEqual(CAPITOLS_FITXA.map((c) => c.nom));
+    for (const [i, grup] of g.entries()) {
+      const delCapitol = [...dels].filter(([, c]) => c === CAPITOLS_FITXA[i]!.id).map(([id]) => id);
+      // Les fonts són al cos però no a l'índex, com sempre.
+      expect(grup.ids, grup.nom).toEqual(delCapitol.filter((id) => id !== "fonts"));
+    }
+    // El nom del capítol és text, no un enllaç: res de l'índex porta a una franja.
+    expect(nav).not.toContain('href="#cap-');
+    expect(nav).toContain('<p class="fx-idx-nom">Qui mana</p>');
+    // «Qui mana» i «Els diners» són capítols, i els blocs ja no es diuen igual.
+    expect(nav).toContain('<a href="#ple">El ple</a>');
+    expect(nav).toContain('<a href="#diners">Quant gasta</a>');
+    expect(nav).not.toContain(">Qui mana</a>");
+    expect(nav).not.toContain(">Els diners</a>");
+  });
+
+  /*
+   * La franja «Qui mana» va just a sobre del primer bloc: si el títol del bloc
+   * també comença per «Qui mana», la frase surt dues vegades seguides. I les
+   * etiquetes de l'índex s'han d'entendre soles, fora del bloc.
+   */
+  it("el primer bloc no repeteix el nom del capítol, i les etiquetes de l'índex diuen de què parlen", () => {
+    const html = plena();
+    const on = html.indexOf('id="cap-qui-mana"');
+    const primerTitol = html.slice(html.indexOf("<h2", on), html.indexOf("</h2>", on));
+    expect(primerTitol).toContain("El ple, i com s'hi va arribar");
+    expect(primerTitol).not.toContain("Qui mana");
+    const { nav } = grups(html);
+    expect(nav).toContain('<a href="#mandat">El mandat</a>');
+    expect(nav).not.toContain(">Com ha anat</a>");
+    expect(nav).not.toContain(">Per sobre</a>");
+    expect(html).toContain("Com han anat aquests quatre anys");
+  });
+
+  it("la franja de cada capítol porta als seus blocs, sense ser un h2 ni repetir l'índex al mòbil", () => {
+    const html = plena();
+    const { dels } = cos(html);
+    for (const c of CAPITOLS_FITXA) {
+      const on = html.indexOf(`id="cap-${c.id}"`);
+      const franja = html.slice(on, html.indexOf("</div>", on));
+      expect(franja).toContain(`<p class="fx-cap-nom">${c.nom}</p>`);
+      expect(franja).not.toMatch(/<h[1-6]/);
+      const enllacos = [...franja.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]!);
+      // Aquí sí que hi ha les fonts: la franja diu tot el que té el capítol.
+      expect(enllacos, c.id).toEqual([...dels].filter(([, k]) => k === c.id).map(([id]) => id));
+    }
+    expect(html).toContain('<a href="#fonts">Les fonts</a>');
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    // La primera franja va just sota l'índex: al mòbil, la seva llista no surt.
+    expect(css).toContain("@media (max-width:1179px){.fx-cap-primer .fx-cap-blocs{display:none}}");
+    expect(css).toContain(".fx-cap + .bloc{border-top:0}");
+    // L'índex del mòbil, una fila per capítol que es desplaça de costat sense moure la pàgina.
+    expect(css).toMatch(/nav\.index \.fx-idx-blocs\{display:flex;gap:0 18px;overflow-x:auto/);
+    expect(css).toContain("nav.index .fx-idx-grup{flex:1 1 100%;margin-top:var(--e1)}");
+  });
+
+  it("la barra «Ets a» copia l'índex amb els capítols i diu el capítol davant del bloc", () => {
+    const html = plena();
+    expect(html).toContain("indexNav.firstElementChild");
+    expect(html).toContain('a.closest("[data-fx-capitol]")');
+    expect(html).toContain('grup.getAttribute("data-fx-capitol") + " · "');
+    // El rail es desplaça ell sol, mai la pàgina.
+    expect(html).toContain("indexNav.scrollTop");
+    const seguidor = html.slice(html.indexOf("var enllacos = document.querySelectorAll"));
+    expect(seguidor.slice(0, seguidor.indexOf("</script>"))).not.toContain(".scrollIntoView(");
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css).toContain(".fx-ets-llista .fx-idx-nom{");
+    // Amb alçada màxima, la columna no es pot partir en dues (el `flex-wrap` de la filera del mòbil).
+    expect(css).toContain("nav.index{flex-wrap:nowrap;max-height:calc(100vh - 2 * var(--e3));overflow-y:auto");
+  });
+
+  it("una fitxa amb pocs blocs només mostra els capítols que en tenen", () => {
+    // La fitxa mínima: sense ple, sense comptes; «Qui mana» encara hi és pel cens.
+    const html = renderRadiografia(fitxa({ poblacio: null, residus: null, preuAigua: null, rebutIbi: null, despesaProgrames: null }));
+    const { capitols, orfes } = cos(html);
+    expect(orfes).toEqual([]);
+    expect(capitols[0]).toBe("qui-mana");
+    expect(capitols.at(-1)).toBe("fonts");
+    expect(new Set(capitols).size).toBe(capitols.length);
+  });
+});
+
+describe("quanta gent atenen els serveis socials (J42)", () => {
+  const serveis = (persones: (number | null)[]): ServeisSocialsDesats => ({
+    codiEns: "0818740009", nom: "Sabadell",
+    anys: persones.map((p, i) => ({
+      any: 2018 + i, persones: p, sadSocial: { persones: 120, hores: 4_000 }, sadDependencia: { persones: 300, hores: 9_000 },
+      gestor: null, zeroLlegitComBuit: false, codiNoQuadra: false,
+    })),
+    fonts: [{ ...FONT_SSB_PERSONES, consultat: "2026-10-27" }],
+  });
+  const bloc = (html: string): string => {
+    const on = html.indexOf('id="serveis-socials"');
+    return on < 0 ? "" : html.slice(on, html.indexOf("</section>", on));
+  };
+
+  it("sense fila no hi ha bloc, ni entrada a l'índex, ni el seu CSS", () => {
+    const html = renderRadiografia(fitxa());
+    expect(html).not.toContain('id="serveis-socials"');
+    expect(html).not.toContain('href="#serveis-socials"');
+    expect(html).not.toContain(".srv-taula{");
+    expect(html).not.toContain("Serveis socials bàsics:");
+  });
+
+  it("amb fila, és un bloc de «Com és el poble» amb la xifra de l'últim any i la proporció del padró", () => {
+    const html = renderRadiografia(fitxa({ serveisSocials: serveis([8_000, null, 9_100, 10_097, 10_200, 11_000, null]) }));
+    expect(html).toContain('<a href="#serveis-socials">Serveis socials</a>');
+    const b = bloc(html);
+    expect(b).toContain("<h2>Quanta gent atenen els serveis socials</h2>");
+    // El títol, un sol cop: el subtítol del tros de la J42 se li treu.
+    expect(b.split("Quanta gent atenen els serveis socials").length - 1).toBe(1);
+    // I cap secció dins de la secció.
+    expect(b.slice(b.indexOf("</h2>"))).not.toContain("<section");
+    expect(b).toContain('<div class="srv fx-srv">');
+    // L'últim any amb persones és el 2023 (el 2024 no consta, i no és un zero).
+    expect(b).toContain("El 2023 hi");
+    expect(b).toContain("<b>11.000 persones</b>");
+    expect(b).toContain("Són unes 5 de cada 100 habitants");
+    expect(b).toContain("no consta");
+    // Va al capítol del poble, després de la casa i abans de la seguretat.
+    const urbanisme = html.indexOf('id="urbanisme"');
+    const ss = html.indexOf('id="serveis-socials"');
+    expect(ss).toBeGreaterThan(urbanisme);
+    expect(ss).toBeLessThan(html.indexOf('id="seguretat"'));
+    expect(ss).toBeGreaterThan(html.indexOf('id="cap-poble"'));
+    // El seu CSS i la seva font, a la pàgina.
+    expect(html).toContain(".srv-taula{");
+    const fonts = html.slice(html.indexOf('id="fonts"'));
+    expect(fonts).toContain("Serveis socials bàsics:");
+    expect(fonts).toContain("https://analisi.transparenciacatalunya.cat/d/fvnd-jbxf");
+  });
+
+  it("sense cap any amb persones, o amb una fila d'una altra forma, no hi ha bloc", () => {
+    expect(renderRadiografia(fitxa({ serveisSocials: serveis([null, null]) }))).not.toContain('id="serveis-socials"');
+    const vella = { codiEns: "0818740009", nom: "Sabadell", persones: 10_000 } as unknown as ServeisSocialsDesats;
+    expect(renderRadiografia(fitxa({ serveisSocials: vella }))).not.toContain('id="serveis-socials"');
+  });
+});
+
+describe("el graf i les preguntes ràpides (seo-ld)", () => {
+  const jsonLd = (html: string): Record<string, unknown>[] =>
+    [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]!) as Record<string, unknown>);
+  const amb = (over: Partial<RadiografiaData> = {}) => {
+    const base = fitxa();
+    return renderRadiografia(
+      fitxa({
+        generatedAt: "2026-10-27", government: govern(),
+        municipality: { ...base.municipality, ine5: "08187", populationYear: 2025 } as RadiografiaData["municipality"],
+        participation: [{ electionId: "M20231", censusSize: 170_000, voters: 94_000, blankVotes: 1_000 }] as unknown as RadiografiaData["participation"],
+        ...over,
+      }),
+    );
+  };
+
+  it("el municipi porta el codi INE i, amb la J20, Wikidata i la Viquipèdia com a sameAs", () => {
+    const ciutat = jsonLd(amb({ wikidata: { qid: "Q15495", url: "https://www.wikidata.org/wiki/Q15495", viquipedia: "https://ca.wikipedia.org/wiki/Sabadell" } }))
+      .find((o) => o["@type"] === "City")!;
+    expect(ciutat.sameAs).toEqual(["https://www.wikidata.org/wiki/Q15495", "https://ca.wikipedia.org/wiki/Sabadell"]);
+    expect(ciutat.identifier).toEqual({ "@type": "PropertyValue", propertyID: "INE", value: "08187" });
+    // Sense fila de la J20, cap sameAs inventat.
+    expect(jsonLd(amb()).find((o) => o["@type"] === "City")).not.toHaveProperty("sameAs");
+  });
+
+  it("les preguntes ràpides tanquen «Qui mana», amb el seu FAQPage i el seu CSS", () => {
+    const html = amb();
+    expect(html).toContain('<section class="bloc geo-preguntes" id="preguntes-rapides">');
+    expect(html).toContain('<a href="#preguntes-rapides">Preguntes ràpides</a>');
+    const on = html.indexOf('id="preguntes-rapides"');
+    expect(on).toBeGreaterThan(html.indexOf('id="cens"'));
+    expect(on).toBeLessThan(html.indexOf('id="cap-diners"'));
+    expect(html).toContain("<dt class=\"geo-pregunta\">Quin partit governa Sabadell?</dt>");
+    expect(html).toContain("hi van votar 94.000 de les 170.000 persones del cens electoral");
+    const faq = jsonLd(html).find((o) => o["@type"] === "FAQPage")!;
+    const preguntes = (faq.mainEntity as { name: string }[]).map((q) => q.name);
+    expect(preguntes).toContain("Quin partit governa Sabadell?");
+    // Cada pregunta del JSON-LD és a la pàgina.
+    for (const p of preguntes) expect(html).toContain(`<dt class="geo-pregunta">${p}</dt>`);
+    expect(html.slice(html.indexOf("<style>"), html.indexOf("</style>"))).toContain(".geo-llista .geo-parell{");
+    // La data de generació no va al cap: no és la de les dades, i cap mètrica
+    // d'aquesta fitxa no porta el dia que es va consultar la font.
+    expect(html).not.toContain("article:modified_time");
+  });
+
+  it("sense una data ISO no hi ha preguntes (ni FAQPage, ni CSS, ni data de modificació)", () => {
+    const html = renderRadiografia(fitxa({ government: govern() }));
+    expect(html).not.toContain('id="preguntes-rapides"');
+    expect(jsonLd(html).some((o) => o["@type"] === "FAQPage")).toBe(false);
+    expect(html).not.toContain(".geo-llista");
+    expect(html).not.toContain("article:modified_time");
+  });
+
+  /*
+   * La data de modificació és la de les dades, no la de la publicació (vegeu
+   * `dataModificacio` a seo.ts): la més nova de les consultes a les fonts que
+   * porta la fitxa. La de generació només surt al peu.
+   */
+  it("la data de modificació és la consulta més nova d'una font de la fitxa, no la publicació", () => {
+    const ambConsulta = amb({
+      serveisSocials: {
+        codiEns: "0818740009", nom: "Sabadell",
+        anys: [2023, 2024].map((any) => ({
+          any, persones: 9_000, sadSocial: { persones: null, hores: null }, sadDependencia: { persones: null, hores: null },
+          gestor: null, zeroLlegitComBuit: false, codiNoQuadra: false,
+        })),
+        fonts: [{ ...FONT_SSB_PERSONES, consultat: "2026-09-14" }],
+      },
+    });
+    expect(ambConsulta).toContain('<meta property="article:modified_time" content="2026-09-14">');
+    expect(ambConsulta).toContain('"dateModified":"2026-09-14"');
+    expect(ambConsulta).not.toContain('content="2026-10-27">');
+  });
+
+  it("dataDeLesDades pren la més nova, a qualsevol fondària, i només si és una data ISO", () => {
+    const dades = fitxa({
+      generatedAt: "2026-10-27",
+      sousConsells: { catalunya: { consultat: "2026-08-31" }, persones: [{ consell: { font: { consultat: "2026-09-02T08:00:00Z" } } }] },
+      territori: { consultat: "27 d'octubre del 2026" },
+    } as unknown as Partial<RadiografiaData>);
+    expect(dataDeLesDades(dades)).toBe("2026-09-02");
+    expect(dataDeLesDades(fitxa({ generatedAt: "2026-10-27" }))).toBeNull();
+  });
+
+  it("en un consell obert no es pregunta quants regidors té el ple", () => {
+    const base = fitxa();
+    const html = amb({ municipality: { ...base.municipality, electoralSystem: "consell obert", populationYear: 2025 } as RadiografiaData["municipality"] });
+    expect(html).toContain('id="preguntes-rapides"');
+    expect(html).not.toContain("Quants regidors té l'Ajuntament");
   });
 });

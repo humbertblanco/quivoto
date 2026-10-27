@@ -41,6 +41,14 @@ export type OpcionsCara = {
  * La cara com a HTML: `<img>` amb el retrat, o un `<span>` amb les inicials.
  * És decorativa (`alt=""`, `aria-hidden`): el nom va sempre al costat, com a
  * text, i és el text el que enllaça.
+ *
+ * El retrat és un `<img>` sol, sense res al voltant, i ha de continuar sent-ho:
+ * les pàgines el posen directament dins d'un enllaç o d'una graella
+ * (`.partit-llocs li > .cara-alcaldia`), i la fitxa del regidor (`caraAmbInicials`)
+ * ja hi apila a sota les inicials d'aquesta mateixa funció. Si aquí s'hi afegís
+ * una segona capa d'inicials, allà en sortirien dues. Per això el «mentre
+ * carrega» no és HTML sinó el fons de `img.cara-alcaldia` a `estil.ts`: una
+ * silueta en comptes d'un cercle blanc buit, que la foto tapa quan arriba.
  */
 export function cara(nom: string, foto: string | null | undefined, opcions: OpcionsCara = {}): string {
   const mida = opcions.mida ?? 52;
