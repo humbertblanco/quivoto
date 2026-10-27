@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  candidatura2023De, llistesDe, mandatsDe, nomAssistent, semblaUnNom, souDelAjuntamentDe,
+  candidatura2023De, eleccionsConegudes, llistesDe, mandatsDe, nomAssistent, semblaUnNom, souDelAjuntamentDe,
   souDelConsellDe, votsPerGrupDe, type Candidatura2023, type HistorialMunicipi, type LlistaAnada,
 } from "./publish";
 import type { Grup } from "./posicions";
@@ -163,6 +163,8 @@ describe("souDelAjuntamentDe", () => {
 describe("mandatsDe", () => {
   const historial = (canvis: Partial<HistorialMunicipi> = {}): HistorialMunicipi => ({
     eleccions: [2015, 2019, 2023],
+    incompletes: [],
+    electesIncomplets: [],
     mandats: new Map([
       ["tres seguits", [2015, 2019, 2023]],
       ["dos seguits", [2019, 2023]],
@@ -174,6 +176,8 @@ describe("mandatsDe", () => {
     candidatures: new Map(),
     ...canvis,
   });
+  /** Una municipal on falta una llista que va treure regidories: hi falta gent de llistes i d'electes. */
+  const faltaUnElecte = (anys: number[]): Partial<HistorialMunicipi> => ({ incompletes: anys, electesIncomplets: anys });
 
   it("compta els mandats i sap si són seguits i des de quan", () => {
     expect(mandatsDe(historial(), "Tres Seguits")).toEqual({
@@ -199,6 +203,90 @@ describe("mandatsDe", () => {
     expect(mandatsDe(historial(), "Ja No Hi Es")).toBe(null);
     expect(mandatsDe(historial(), "Ningú")).toBe(null);
   });
+
+  /**
+   * El cas de Jaume Collboni, fet fixture: regidor de Barcelona des del 2015,
+   * però les llistes del PSC del 2015 i del 2019 no havien lligat mai amb la
+   * candidatura dels vots (J4) i el registre només el tenia elegit el 2023.
+   * Amb aquelles municipals incompletes, la fitxa deia «elegit per primera
+   * vegada el 2023»; ara el silenci d'una municipal incompleta no s'hi llegeix.
+   */
+  it("d'una municipal incompleta no se'n llegeix cap absència", () => {
+    const barcelona = historial({
+      incompletes: [2015, 2019],
+      electesIncomplets: [2015, 2019],
+      mandats: new Map([["jaume collboni cuadrado", [2023]]]),
+      llistes: new Map([["jaume collboni cuadrado", [2023]]]),
+    });
+    expect(mandatsDe(barcelona, "Jaume Collboni Cuadrado")).toBe(null);
+    // Amb només el 2015 incomplet, el 2019 i el 2023 sí que es poden dir.
+    const nomes2015 = historial(faltaUnElecte([2015]));
+    expect(mandatsDe(nomes2015, "Nomes Ara")).toMatchObject({
+      quants: 1, primer: 2023, iniciConegut: true, cobertesDesDe: 2015, llistesSenseEntrar: [2015, 2019],
+    });
+    expect(mandatsDe(nomes2015, "Dos Seguits")).toMatchObject({
+      quants: 2, seguits: true, iniciConegut: false, cobertesDesDe: 2019,
+    });
+  });
+
+  it("el que hi consta d'una municipal incompleta sí que compta", () => {
+    // Com a la base: qui ha estat elegit un any també hi consta a les llistes.
+    const llistes = new Map([
+      ["tres seguits", [2015, 2019, 2023]],
+      ["dos seguits", [2019, 2023]],
+      ["amb forat", [2015, 2023]],
+      ["x", [2019]],
+    ]);
+    // La llista de «Tres Seguits» del 2019 hi és: la seva elecció és certa
+    // encara que d'aquell any hi faltin altres llistes.
+    expect(mandatsDe(historial({ ...faltaUnElecte([2019]), llistes }), "Tres Seguits")).toMatchObject({
+      quants: 3, seguits: true, cobertesDesDe: 2015,
+    });
+    // Un forat en una municipal incompleta talla el tram: no es diu «el 2015
+    // i el 2023» si el 2019 no se sap.
+    expect(mandatsDe(historial({ ...faltaUnElecte([2019]), llistes }), "Amb Forat")).toBe(null);
+    // L'última municipal incompleta: de qui hi consta es diu, de qui no, res.
+    expect(mandatsDe(historial({ ...faltaUnElecte([2023]), llistes }), "Dos Seguits")).toMatchObject({ quants: 2 });
+    expect(eleccionsConegudes(historial({ ...faltaUnElecte([2023]), llistes }), "x")).toEqual([]);
+  });
+
+  it("una llista de zero regidories que falta no fa callar els mandats", () => {
+    // Barcelona 2019: el Partit Llibertari no lliga entre els dos datasets,
+    // però tots els electes del 2019 hi són. Qui és nou el 2023 ho és.
+    const senseUnaLlistaBuida = historial({ incompletes: [2019], electesIncomplets: [] });
+    expect(mandatsDe(senseUnaLlistaBuida, "Nomes Ara")).toMatchObject({ quants: 1, cobertesDesDe: 2015 });
+    expect(eleccionsConegudes(senseUnaLlistaBuida, "nomes ara", "electes")).toEqual([2015, 2019, 2023]);
+    expect(eleccionsConegudes(senseUnaLlistaBuida, "ningu")).toEqual([2023]);
+  });
+
+  it("un nom que surt dues vegades el mateix any no és una persona sola", () => {
+    const repetit = historial({
+      candidatures: new Map([["dos seguits", [
+        { any: 2023, sigles: "A", posicio: 1, capDeLlista: true, elegit: true },
+        { any: 2023, sigles: "B", posicio: 3, capDeLlista: false, elegit: false },
+      ]]]),
+    });
+    expect(mandatsDe(repetit, "Dos Seguits")).toBe(null);
+  });
+});
+
+describe("eleccionsConegudes", () => {
+  const base = (incompletes: number[], hiConsta: number[]): HistorialMunicipi => ({
+    eleccions: [2015, 2019, 2023],
+    incompletes,
+    electesIncomplets: incompletes,
+    mandats: new Map(),
+    llistes: new Map([["anna", hiConsta]]),
+    candidatures: new Map(),
+  });
+
+  it("és el tram final de municipals completes o on la persona consta", () => {
+    expect(eleccionsConegudes(base([], []), "anna")).toEqual([2015, 2019, 2023]);
+    expect(eleccionsConegudes(base([2019], [2023]), "anna")).toEqual([2023]);
+    expect(eleccionsConegudes(base([2019], [2019, 2023]), "anna")).toEqual([2015, 2019, 2023]);
+    expect(eleccionsConegudes(base([2015], []), "anna")).toEqual([2019, 2023]);
+    expect(eleccionsConegudes(base([2023], []), "anna")).toEqual([]);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -212,6 +300,8 @@ describe("llistesDe", () => {
   });
   const historial = (canvis: Partial<HistorialMunicipi> = {}): HistorialMunicipi => ({
     eleccions: [2015, 2019, 2023],
+    incompletes: [],
+    electesIncomplets: [],
     mandats: new Map(),
     llistes: new Map(),
     candidatures: new Map([
@@ -238,6 +328,16 @@ describe("llistesDe", () => {
 
   it("dues anades el mateix any són dues persones amb el mateix nom: no es diu res", () => {
     expect(llistesDe(historial(), "Nom Repetit")).toBe(null);
+  });
+
+  it("només les anades de municipals d'on es pot parlar d'ella", () => {
+    const llistes = new Map([["maria roig", [2015, 2023]]]);
+    // Amb el 2019 incomplet i sense ella, «2015 · 2023» faria creure que el
+    // 2019 no hi va anar: el tram es queda en el 2023 i, sol, no es diu.
+    expect(llistesDe(historial({ incompletes: [2019], llistes }), "Maria Roig")).toBe(null);
+    // Amb el 2015 incomplet però amb ella a dins, el 2015 se sap igualment.
+    const anades = llistesDe(historial({ incompletes: [2015], llistes }), "Maria Roig");
+    expect(anades?.map((a) => a.any)).toEqual([2015, 2023]);
   });
 });
 

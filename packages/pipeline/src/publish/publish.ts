@@ -19,6 +19,10 @@ import { portaNoIndex } from "./seo";
 import { loadComarques, renderComarca } from "./comarques";
 import { renderComarquesIndex, type ComarcaFila } from "./comarques-index";
 import { loadAmb, renderAmb } from "./amb";
+import { loadEns } from "./ens-dades";
+import { renderEns } from "./ens";
+import { renderEnsIndex } from "./ens-index";
+import { adrecaEns, type DadesEns } from "./ens-tipus";
 import { loadTrajectoriaElectes, renderTrajectoriaElectes } from "./trajectoria-electes";
 import { loadComparador, renderComparador } from "./comparador";
 import { renderDadesIndex, writeDownloads } from "./dades";
@@ -30,6 +34,7 @@ import type { CriminalitatMetric } from "../jobs/j29-criminalitat";
 import { KIND as KIND_TRAJECTORIA, type FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
 import { ELECCIO as ELECCIO_CAPS, KIND as KIND_CAPS, type FitxaCapsDeLlista } from "../jobs/j27-caps-de-llista";
 import { writeOgImages } from "./og";
+import { escriuVeins } from "./veins";
 import type { PuntMapa } from "./mapa";
 import { carregaPreguntes, renderIndexPreguntes, renderPreguntes } from "./preguntes";
 import { renderProva } from "./prova";
@@ -188,9 +193,34 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     await mkdir(`${OUT_DIR}../mapa`, { recursive: true });
     await writeFile(`${OUT_DIR}../mapa/index.html`, renderMapaCatalunya(carregats, generatedAt, await loadVotsPartit(db)), "utf8");
     run.say(`mapa de Catalunya amb ${carregats.length} municipis`);
+    /*
+     * Les diputacions i els consells comarcals (J38), carregats un sol cop i
+     * abans de cap pàgina que en parli.
+     *
+     * Van aquí, abans del cercador, del bucle dels municipis i de les comarques,
+     * per dues raons. La primera és que no només tenen fitxa pròpia: la fitxa de cada
+     * municipi diu a quina diputació i a quin consell pertany, la de cada
+     * comarca enllaça el seu consell i la de cada persona del ple diu si també
+     * hi seu. Totes aquestes pàgines reben la mateixa llista, que és l'única
+     * manera que el que diu una fitxa i el que diu l'altra no divergeixin. La
+     * segona és la de sempre amb PGlite: la lectura es fa amb el motor acabat
+     * d'obrir, i no al final d'una sessió de milers de pàgines.
+     *
+     * Si la J38 no ha corregut mai, la llista és buida i tot continua: les
+     * fitxes que l'haurien d'enllaçar callen, i les de l'ens no s'escriuen.
+     */
+    const ensSupramunicipals: readonly DadesEns[] = await loadEns(db);
+    const quantesDiputacions = ensSupramunicipals.filter((e) => e.tipus === "diputacio").length;
+    const quantsConsells = ensSupramunicipals.filter((e) => e.tipus === "consell").length;
+    run.say(
+      ensSupramunicipals.length > 0
+        ? `ens supramunicipals: ${quantesDiputacions} diputacions i ${quantsConsells} consells comarcals`
+        : "sense ens supramunicipals: cap diputació ni consell desat (falta J38)",
+    );
+
     // L'índex del cercador, al costat del mapa i pel mateix motiu: es fa amb
     // la consulta dels 947 acabada de llegir i no la torna a demanar.
-    const quants = await escriuCerca(carregats, `${OUT_DIR}../cerca.json`);
+    const quants = await escriuCerca(carregats, `${OUT_DIR}../cerca.json`, ensSupramunicipals);
     run.say(`índex de cerca amb ${quants} municipis`);
     // El cercador mateix —guió, full i diàleg— com a fitxers a /assets/, per a la landing.
     await escriuCercadorCompartit(`${OUT_DIR}../../assets/`);
@@ -214,6 +244,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     const exalcaldies = await escriuCercaAlcaldies(db, carregats, `${OUT_DIR}../cerca-alcaldies.json`);
     run.say(`índex d'alcaldies amb ${exalcaldies} persones que han tingut l'alcaldia i avui no seuen al ple`);
 
+
     // El peu de cada pàgina ensenya el que s'ha comptat en aquesta publicació i
     // no una xifra escrita a mà que envelleix sola. Va aquí perquè la primera
     // pàgina que s'escriu ja el porti bo.
@@ -225,10 +256,19 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     });
     // Les mateixes xifres, en un fitxer, perquè la landing (que es genera a
     // part, amb `tools/build_landing.py`) escrigui el mateix peu sense copiar
-    // cap número a mà.
+    // cap número a mà. Les diputacions i els consells hi van com a `null` si la
+    // J38 no ha corregut: no és que n'hi hagi zero, és que no ho sabem.
+    const senseEns = ensSupramunicipals.length === 0;
     await writeFile(
       `${OUT_DIR}../xifres.json`,
-      `${JSON.stringify({ municipis: carregats.length, electes: electes.regidors, candidatures: electes.candidatures, generatedAt })}\n`,
+      `${JSON.stringify({
+        municipis: carregats.length,
+        electes: electes.regidors,
+        candidatures: electes.candidatures,
+        diputacions: senseEns ? null : quantesDiputacions,
+        consells: senseEns ? null : quantsConsells,
+        generatedAt,
+      })}\n`,
       "utf8",
     );
     // Els rànquings porten el peu global: s'escriuen després de fixar-ne els
@@ -300,6 +340,12 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
           grup: medianesCriminalitat.get(grupsMida.get(data.municipality.id)?.key ?? "") ?? null,
           coberts: filesCriminalitat.length > 0 ? filesCriminalitat.length : null,
         },
+        // La diputació i el consell del municipi: la fitxa els busca a la
+        // llista pel seu slug (`ensDeMunicipi`).
+        ensSupramunicipals,
+        // Les files dels 947, ja carregades per al mapa: «Els teus veïns» hi
+        // busca la xifra de cada municipi que toca de terme.
+        carregats,
       );
       await mkdir(`${OUT_DIR}${slug}`, { recursive: true });
       await writeFile(`${OUT_DIR}${slug}/index.html`, html, "utf8");
@@ -311,6 +357,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         capsPerMunicipi.get(data.municipality.id) ?? null,
         candidatures2023.get(data.municipality.id),
         historialMandats.get(data.municipality.id),
+        ensSupramunicipals,
       );
       // I les de qui ha tingut l'alcaldia des del 1979, una per persona, a
       // `m/<slug>/alcaldia/<persona>/`. Wikidata (J21) hi posa la trajectòria.
@@ -402,7 +449,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       const slug = slugify((comarca as { name?: string; nom?: string }).name ?? (comarca as { nom?: string }).nom ?? "");
       if (!slug) continue;
       await mkdir(`${OUT_DIR}../c/${slug}`, { recursive: true });
-      await writeFile(`${OUT_DIR}../c/${slug}/index.html`, renderComarca(comarca, generatedAt), "utf8");
+      await writeFile(`${OUT_DIR}../c/${slug}/index.html`, renderComarca(comarca, generatedAt, ensSupramunicipals), "utf8");
       filesComarques.push({
         slug,
         name: comarca.name,
@@ -430,6 +477,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       run.say("sense pàgina de l'AMB: cap municipi marcat com a metropolità (falta J17)");
     }
 
+
     /*
      * L'índex de les comarques. Les 43 pàgines existien i no hi havia índex, de
      * manera que el peu i la portada enviaven al Barcelonès com si fos l'única.
@@ -442,6 +490,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         filesComarques,
         generatedAt,
         amb ? { municipis: amb.municipis.length, comarques: amb.comarques.length } : null,
+        ensSupramunicipals,
       ),
       "utf8",
     );
@@ -487,11 +536,53 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       "utf8",
     );
     run.say(`${downloads.files} fitxers de dades (${Math.round(downloads.bytes / 1024)} kB)`);
+    // Qui toca de terme amb qui, calculat de la mateixa geometria que el mapa:
+    // és la base del bloc «Els teus veïns» i una dada que algú altre pot voler
+    // reutilitzar sense refer el càlcul.
+    const veins = await escriuVeins(`${OUT_DIR}../dades/veins.json`);
+    run.say(`veïns de terme de ${Object.keys(veins.veins).length} municipis`);
 
     // Una imatge social per municipi: amb la mateixa per a tots, res del que es
     // comparteix diu de quin poble parla.
-    const og = await writeOgImages(db, `${OUT_DIR}../og`, all ? undefined : done);
+    const og = await writeOgImages(db, `${OUT_DIR}../og`, all ? undefined : done, ensSupramunicipals);
     run.say(`${og.images} imatges socials (${Math.round(og.bytes / 1024)} kB)`);
+
+    /*
+     * Les fitxes de les quatre diputacions i dels consells comarcals, i el seu
+     * índex. Van al costat de l'AMB perquè són el mateix tipus de pàgina: un ens
+     * que decideix per sobre de l'ajuntament i que el veí no tria directament.
+     *
+     * L'adreça la dona `adrecaEns()` i no s'escriu aquí: el consell viu dins
+     * de la seva comarca (`c/<slug>/consell/`), i si l'adreça es calculés a dos
+     * llocs, l'enllaç de la comarca i la pàgina mateixa podrien no trobar-se.
+     *
+     * Van després de les imatges socials: `imatgeSocial()` mira si el fitxer
+     * existeix quan es pinta la pàgina, i abans d'aquest punt la de cada ens
+     * encara no s'ha generat (la primera publicació apuntava a la genèrica).
+     *
+     * Sense J38 no s'escriu res, com passa amb l'AMB sense J17: un índex buit
+     * diria «no n'hi ha cap», i el que passa és que encara no ho sabem.
+     */
+    if (ensSupramunicipals.length > 0) {
+      for (const ens of ensSupramunicipals) {
+        const dir = `${OUT_DIR}../${adrecaEns(ens.tipus, ens.slug)}`;
+        await mkdir(dir, { recursive: true });
+        await writeFile(`${dir}index.html`, renderEns(ens, generatedAt), "utf8");
+      }
+      // L'índex necessita els 947 per dir de cada municipi a quina diputació i
+      // a quin consell pertany: una consulta lleugera, quatre columnes.
+      const municipisEns = await db
+        .select({
+          slug: municipalities.slug,
+          nom: municipalities.name,
+          comarca: municipalities.comarca,
+          provincia: municipalities.provincia,
+        })
+        .from(municipalities);
+      await mkdir(`${OUT_DIR}../ens`, { recursive: true });
+      await writeFile(`${OUT_DIR}../ens/index.html`, renderEnsIndex(ensSupramunicipals, municipisEns, generatedAt), "utf8");
+      run.say(`${quantesDiputacions} fitxes de diputació, ${quantsConsells} de consell comarcal i el seu índex`);
+    }
 
     // Les preguntes de prova: esborrany, amb l'evidència i el veredicte del
     // llindar a la vista. No és el test; és el material perquè qui conegui el
@@ -535,39 +626,48 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     }
 
     /*
-     * Sitemap: es genera sempre i `robots.txt` l'enllaça sempre. Amb
-     * `QUIVOTO_NOINDEX=1` les pàgines porten `noindex` i el cercador les deixa
-     * estar encara que hi siguin; el sitemap es fa igual perquè la publicació
-     * que torni a obrir no hagi de tocar res més. El que sí que en queda fora
-     * és el que porta `noindex` de pàgina —les demostracions de les preguntes i
-     * els conjunts «en revisió»—: un sitemap que apunta a pàgines tancades és
-     * un avís a Search Console, i es llegeix del HTML de disc perquè la
-     * decisió és de cada plantilla i el fitxer és l'única font que la guarda.
+     * Sitemaps i `llms.txt`: es generen sempre i `robots.txt` els enllaça
+     * sempre. Amb `QUIVOTO_NOINDEX=1` les pàgines porten `noindex` i el
+     * cercador les deixa estar encara que hi siguin; els sitemaps es fan igual
+     * perquè la publicació que torni a obrir no hagi de tocar res més. El que
+     * sí que en queda fora és el que porta `noindex` de pàgina —les
+     * demostracions de les preguntes i els conjunts «en revisió»—: un sitemap
+     * que apunta a pàgines tancades és un avís a Search Console, i es llegeix
+     * del HTML de disc perquè la decisió és de cada plantilla.
      *
      * Hi va tot el que hi ha publicat A DISC, no només el que s'acaba
      * d'escriure: una publicació parcial (`--slug`) no pot fer desaparèixer del
      * sitemap els altres 940 municipis. Per això les fitxes de persona i de
-     * candidatura es llegeixen del directori de cada municipi —el pipeline no
-     * en guarda cap llista— i el `lastmod` de cada adreça és la data del fitxer,
-     * que és l'única que un cercador pot contrastar amb el que li servim.
+     * candidatura es llegeixen del directori de cada municipi.
      *
-     * Les prioritats diuen què volem que es rastregi primer: la portada i els
-     * municipis, després les seccions i, al final, les 12.000 fitxes de persona
-     * i candidatura. Si algun dia passen del límit del protocol (50.000 adreces
-     * o 50 MB per fitxer), el mateix `sitemap.xml` es converteix en un índex que
-     * apunta a un sitemap per tipus, sense canviar l'adreça que coneix robots.txt.
+     * ## El `lastmod` diu quan ha canviat el contingut, no el fitxer
+     *
+     * Abans era la data del fitxer, i cada publicació els reescriu tots: les
+     * 18.000 adreces deien «avui» cada vegada, i un `lastmod` que sempre és avui
+     * és el que Google aprèn a ignorar per a tot el lloc. Ara cada adreça guarda
+     * l'empremta del que la pàgina diu (`empremtaPagina()` a `seo.ts`, sense la
+     * data de generació, el peu ni els estils) i el dia que va canviar per
+     * última vegada, a `web/private/data/sitemap-empremtes.json` (fora del web
+     * servit i fora de git). Si l'empremta és la mateixa, el `lastmod` també.
+     * Un fitxer que aquesta publicació no ha tocat (el mateix `mtime`) ni es
+     * torna a llegir. La portada i la llista dels 947 s'escriuen després
+     * d'aquest bloc: el seu `lastmod` va una publicació endarrerit.
+     *
+     * ## Un sitemap per tipus, sempre
+     *
+     * `sitemap.xml` és un índex que apunta a `sitemap-seccions.xml`,
+     * `-ens.xml`, `-municipis.xml`, `-candidatures.xml` i `-persones.xml`. Cap
+     * no s'acosta al límit del protocol (50.000 adreces), però separats Search
+     * Console diu quantes fitxes de persona s'han indexat i quantes de
+     * municipi, que és el que cal saber. Ja no porten `priority`: ni Google ni
+     * Bing no en fan cas. L'adreça que coneix `robots.txt` no canvia.
      */
-    type AdrecaSitemap = { loc: string; lastmod: string; prioritat: string };
     const OBS = `${SITE}/observatori`;
-    const dataDe = async (fitxer: string): Promise<string> => {
-      try {
-        return (await stat(fitxer)).mtime.toISOString().slice(0, 10);
-      } catch {
-        return generatedAt;
-      }
-    };
-    const adreca = async (cami: string, prioritat: string, fitxer = `${OUT_DIR}../${cami}index.html`): Promise<AdrecaSitemap> =>
-      ({ loc: `${OBS}/${cami}`, lastmod: await dataDe(fitxer), prioritat });
+    const sitemaps = await import("./seo");
+    type AdrecaSitemap = import("./seo").AdrecaSitemap;
+    type Empremta = import("./seo").Empremta;
+    type Pendent = { loc: string; fitxer: string };
+    const fitxaDe = (cami: string, fitxer = `${OUT_DIR}../${cami}index.html`): Pendent => ({ loc: `${OBS}/${cami}`, fitxer });
     /** Subdirectoris d'un directori que tenen `index.html`, en ordre de nom. */
     const fillsAmbFitxa = async (dir: string): Promise<string[]> => {
       let noms: string[];
@@ -587,89 +687,159 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
       return amb;
     };
 
-    const seccions: AdrecaSitemap[] = [
-      await adreca("", "1.0"),
-      await adreca("els947.html", "0.9", `${OUT_DIR}../els947.html`),
-      await adreca("mapa/", "0.7"),
-      await adreca("ranquings/", "0.7"),
-      await adreca("dades/", "0.7"),
-      await adreca("comparador/", "0.7"),
-      await adreca("partit/", "0.7"),
-      ...(await Promise.all(partits.map((p) => adreca(`partit/${p.id}/`, "0.6")))),
-      await adreca("c/", "0.7"),
-      ...(await Promise.all(filesComarques.map((c) => adreca(`c/${c.slug}/`, "0.6")))),
-      ...(amb ? [await adreca("amb/", "0.7")] : []),
-      ...(trajectoria ? [await adreca("trajectoria/", "0.7")] : []),
+    const seccions: Pendent[] = [
+      fitxaDe(""),
+      fitxaDe("els947.html", `${OUT_DIR}../els947.html`),
+      ...["mapa/", "ranquings/", "dades/", "comparador/", "partit/"].map((cami) => fitxaDe(cami)),
+      ...partits.map((p) => fitxaDe(`partit/${p.id}/`)),
+      fitxaDe("c/"),
+      ...filesComarques.map((c) => fitxaDe(`c/${c.slug}/`)),
+      ...(amb ? [fitxaDe("amb/")] : []),
+      ...(trajectoria ? [fitxaDe("trajectoria/")] : []),
     ];
     if (preguntes.length > 0) {
-      seccions.push(await adreca("preguntes/", "0.7"));
+      seccions.push(fitxaDe("preguntes/"));
       for (const conjunt of preguntes) {
         // El conjunt «en revisió» porta `noIndex` propi (vegeu `preguntes.ts`)
-        // i no hi va; es mira al fitxer, no es torna a calcular aquí. Només
-        // quan l'Observatori és obert: tancat, totes el porten i el sitemap
-        // ha de continuar sencer. La demostració (`prova/`) no s'indexa mai.
+        // i no hi va. Només quan l'Observatori és obert: tancat, totes el
+        // porten i el sitemap ha de continuar sencer. La demostració (`prova/`)
+        // no s'indexa mai.
         const fitxer = `${OUT_DIR}../preguntes/${conjunt.slug}/index.html`;
         if (INDEXABLE && portaNoIndex(await readFile(fitxer, "utf8"))) continue;
-        seccions.push(await adreca(`preguntes/${conjunt.slug}/`, "0.6", fitxer));
+        seccions.push(fitxaDe(`preguntes/${conjunt.slug}/`, fitxer));
       }
     }
-    const municipis: AdrecaSitemap[] = [];
-    const candidaturesSitemap: AdrecaSitemap[] = [];
-    const persones: AdrecaSitemap[] = [];
+    // Les diputacions i els consells, al seu propi sitemap. Només si s'han
+    // escrit en aquesta publicació (vegeu més amunt).
+    const ensSitemap: Pendent[] =
+      ensSupramunicipals.length > 0
+        ? [
+            fitxaDe("ens/"),
+            ...[...ensSupramunicipals]
+              .sort((x, y) => (x.tipus === y.tipus ? 0 : x.tipus === "diputacio" ? -1 : 1))
+              .map((e) => fitxaDe(adrecaEns(e.tipus, e.slug))),
+          ]
+        : [];
+    const municipis: Pendent[] = [];
+    const candidaturesSitemap: Pendent[] = [];
+    const persones: Pendent[] = [];
     for (const slug of publicades) {
-      municipis.push(await adreca(`m/${slug}/`, "0.8", `${OUT_DIR}${slug}/index.html`));
+      municipis.push(fitxaDe(`m/${slug}/`, `${OUT_DIR}${slug}/index.html`));
       for (const fill of await fillsAmbFitxa(`${OUT_DIR}${slug}`)) {
         if (fill === "regidor") continue;
-        candidaturesSitemap.push(await adreca(`m/${slug}/${fill}/`, "0.5", `${OUT_DIR}${slug}/${fill}/index.html`));
+        candidaturesSitemap.push(fitxaDe(`m/${slug}/${fill}/`, `${OUT_DIR}${slug}/${fill}/index.html`));
       }
       for (const persona of await fillsAmbFitxa(`${OUT_DIR}${slug}/regidor`)) {
-        persones.push(await adreca(`m/${slug}/regidor/${persona}/`, "0.5", `${OUT_DIR}${slug}/regidor/${persona}/index.html`));
+        persones.push(fitxaDe(`m/${slug}/regidor/${persona}/`, `${OUT_DIR}${slug}/regidor/${persona}/index.html`));
       }
-      // Les alcaldies històriques, amb la mateixa prioritat que les persones
-      // del ple. La de qui hi és avui és una redirecció a la seva fitxa de
-      // regidor i no hi va: al sitemap només hi van pàgines de debò.
+      // Les alcaldies històriques van amb les persones. La de qui hi és avui és
+      // una redirecció a la seva fitxa de regidor i no hi va.
       for (const persona of await fillsAmbFitxa(`${OUT_DIR}${slug}/alcaldia`)) {
         const fitxer = `${OUT_DIR}${slug}/alcaldia/${persona}/index.html`;
         if (esRedireccioAlcaldia(await readFile(fitxer, "utf8"))) continue;
-        persones.push(await adreca(`m/${slug}/alcaldia/${persona}/`, "0.5", fitxer));
+        persones.push(fitxaDe(`m/${slug}/alcaldia/${persona}/`, fitxer));
       }
     }
 
-    const escapaXml = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    const urlset = (llista: readonly AdrecaSitemap[]) =>
-      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${llista
-        .map((a) => `  <url><loc>${escapaXml(a.loc)}</loc><lastmod>${a.lastmod}</lastmod><priority>${a.prioritat}</priority></url>`)
-        .join("\n")}\n</urlset>\n`;
-    const grups: readonly [string, readonly AdrecaSitemap[]][] = [
+    // El `lastmod` de debò de cada adreça (vegeu el comentari de dalt).
+    const FITXER_EMPREMTES = `${OUT_DIR}../../../private/data/sitemap-empremtes.json`;
+    let anteriors: Record<string, Empremta> = {};
+    try {
+      anteriors = JSON.parse(await readFile(FITXER_EMPREMTES, "utf8")) as Record<string, Empremta>;
+    } catch {
+      /* la primera publicació amb empremtes: tot surt datat avui */
+    }
+    const noves: Record<string, Empremta> = {};
+    let rellegides = 0;
+    const lastmod = async (p: Pendent): Promise<AdrecaSitemap> => {
+      let mtime: number;
+      try {
+        mtime = (await stat(p.fitxer)).mtimeMs;
+      } catch {
+        // Encara no hi és (la portada, la primera vegada): avui, com abans.
+        return { loc: p.loc, lastmod: generatedAt };
+      }
+      const abans = anteriors[p.loc];
+      if (abans && abans.t === mtime) {
+        noves[p.loc] = abans;
+        return { loc: p.loc, lastmod: abans.d };
+      }
+      rellegides++;
+      const h = sitemaps.empremtaPagina(await readFile(p.fitxer, "utf8"), generatedAt);
+      const d = sitemaps.lastmodReal(abans, h, generatedAt);
+      noves[p.loc] = { h, d, t: mtime };
+      return { loc: p.loc, lastmod: d };
+    };
+    /** Les adreces d'una llista amb el seu `lastmod`, de 32 en 32 fitxers alhora. */
+    const ambLastmod = async (llista: readonly Pendent[]): Promise<AdrecaSitemap[]> => {
+      const sortida: AdrecaSitemap[] = new Array(llista.length);
+      let seguent = 0;
+      await Promise.all(
+        Array.from({ length: Math.min(32, llista.length) }, async () => {
+          while (seguent < llista.length) {
+            const i = seguent++;
+            sortida[i] = await lastmod(llista[i]!);
+          }
+        }),
+      );
+      return sortida;
+    };
+
+    const grups: [string, AdrecaSitemap[]][] = [];
+    for (const [nom, llista] of [
       ["seccions", seccions],
+      ["ens", ensSitemap],
       ["municipis", municipis],
       ["candidatures", candidaturesSitemap],
       ["persones", persones],
-    ];
-    const totesLesAdreces = grups.flatMap(([, llista]) => llista);
-    const unSolFitxer = urlset(totesLesAdreces);
-    // Límits del protocol: 50.000 adreces i 50 MB (sense comprimir) per fitxer.
-    const capAlLimit = totesLesAdreces.length > 50_000 || Buffer.byteLength(unSolFitxer, "utf8") > 50 * 1024 * 1024;
-    if (!capAlLimit) {
-      await writeFile(`${OUT_DIR}../sitemap.xml`, unSolFitxer, "utf8");
-      // Si abans s'havia hagut de dividir, que no quedin fitxers orfes.
-      for (const [nom] of grups) await rm(`${OUT_DIR}../sitemap-${nom}.xml`, { force: true });
-    } else {
-      for (const [nom, llista] of grups) {
-        await writeFile(`${OUT_DIR}../sitemap-${nom}.xml`, urlset(llista), "utf8");
-      }
-      await writeFile(
-        `${OUT_DIR}../sitemap.xml`,
-        `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${grups
-          .map(([nom]) => `  <sitemap><loc>${OBS}/sitemap-${nom}.xml</loc><lastmod>${generatedAt}</lastmod></sitemap>`)
-          .join("\n")}\n</sitemapindex>\n`,
-        "utf8",
-      );
+    ] as const) {
+      if (llista.length > 0) grups.push([nom, await ambLastmod(llista)]);
     }
+    // Límit del protocol: 50.000 adreces per fitxer. Cap grup no hi arriba,
+    // però si un dia ho fa, es parteix en `-2`, `-3`… sense tocar res més.
+    const fitxers: { nom: string; adreces: AdrecaSitemap[] }[] = grups.flatMap(([nom, adreces]) =>
+      Array.from({ length: Math.ceil(adreces.length / 45_000) }, (_, i) => ({
+        nom: i === 0 ? nom : `${nom}-${i + 1}`,
+        adreces: adreces.slice(i * 45_000, (i + 1) * 45_000),
+      })),
+    );
+    for (const f of fitxers) await writeFile(`${OUT_DIR}../sitemap-${f.nom}.xml`, sitemaps.urlsetXml(f.adreces), "utf8");
+    await writeFile(
+      `${OUT_DIR}../sitemap.xml`,
+      sitemaps.indexSitemapsXml(
+        fitxers.map((f) => ({ loc: `${OBS}/sitemap-${f.nom}.xml`, lastmod: sitemaps.lastmodMesRecent(f.adreces, generatedAt) })),
+      ),
+      "utf8",
+    );
+    // Que no quedin sitemaps orfes d'un grup que ja no hi és.
+    const escrits = new Set(fitxers.map((f) => `sitemap-${f.nom}.xml`));
+    for (const nom of await readdir(`${OUT_DIR}..`)) {
+      if (/^sitemap-.+\.xml$/.test(nom) && !escrits.has(nom)) await rm(`${OUT_DIR}../${nom}`, { force: true });
+    }
+    await mkdir(`${OUT_DIR}../../../private/data`, { recursive: true });
+    await writeFile(FITXER_EMPREMTES, JSON.stringify(noves), "utf8");
+
+    // `llms.txt` i `llms-full.txt` a l'arrel del web, amb les mateixes llistes.
+    const { escriuLlms } = await import("./llms");
+    const enDisc = new Set(publicades);
+    const mides = await escriuLlms(`${OUT_DIR}../../`, {
+      generatedAt,
+      municipis: carregats
+        .filter((f) => enDisc.has(f.s))
+        .map((f) => ({ slug: f.s, nom: f.n, comarca: f.c || null, regidories: f.r || null, alcaldia: f.a, sigles: f.g })),
+      comarques: filesComarques.map((c) => ({ slug: c.slug, nom: c.name })),
+      partits: partits.map((p) => ({ id: p.id, nom: p.name, sigles: p.sigles })),
+      ens: ensSupramunicipals.map((e) => ({ tipus: e.tipus, slug: e.slug, nom: e.nom })),
+      amb: Boolean(amb),
+      trajectoria: Boolean(trajectoria),
+      candidatures: candidaturesSitemap.length,
+      persones: persones.length,
+    });
+
+    const total = grups.reduce((s, [, l]) => s + l.length, 0);
+    const avui = grups.reduce((s, [, l]) => s + l.filter((a) => a.lastmod === generatedAt).length, 0);
     run.say(
-      `sitemap amb ${totesLesAdreces.length} adreces (${municipis.length} municipis · ${candidaturesSitemap.length} candidatures · ${persones.length} persones)${
-        capAlLimit ? ", dividit en un índex per tipus" : ""
-      } · ${INDEXABLE ? "indexable" : "TANCAT amb noindex (QUIVOTO_NOINDEX=1)"}`,
+      `sitemap amb ${total} adreces en ${fitxers.length} fitxers (${municipis.length} municipis · ${ensSitemap.length} ens · ${candidaturesSitemap.length} candidatures · ${persones.length} persones); ${avui} han canviat avui, ${rellegides} fitxers rellegits · llms.txt ${Math.round(mides.curt / 1024)} kB i llms-full.txt ${Math.round(mides.sencer / 1024)} kB · ${INDEXABLE ? "indexable" : "TANCAT amb noindex (QUIVOTO_NOINDEX=1)"}`,
     );
 
     // La portada de l'Observatori: es genera amb la resta perquè els números que
@@ -697,6 +867,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
         },
         generatedAt,
         mostra,
+        ensSupramunicipals,
       ),
       "utf8",
     );
@@ -911,6 +1082,8 @@ async function escriuRegidors(
   fitxaCaps: FitxaCapsDeLlista | null = null,
   llistes2023: readonly Candidatura2023[] | undefined = undefined,
   historial: HistorialMunicipi | undefined = undefined,
+  /** Les diputacions i els consells (J38), per dir si la persona també hi seu. */
+  ens: readonly DadesEns[] = [],
 ): Promise<number> {
   /*
    * Qui seu al ple, i d'on ho sabem.
@@ -1039,6 +1212,7 @@ async function escriuRegidors(
           ...retribucionsDe(dades, carrec.nom),
         },
         generatedAt,
+        ens,
       ),
       "utf8",
     );
@@ -1505,7 +1679,22 @@ export type LlistaAnada = {
 };
 
 export type HistorialMunicipi = {
+  /** Les municipals de les quals el municipi té candidatures als vots (J2). */
   eleccions: number[];
+  /**
+   * Les d'`eleccions` en què al registre de llistes hi falta gent: alguna
+   * candidatura dels vots sense cap titular, o un nombre d'electes que no és
+   * el de regidories. D'aquestes municipals es pot dir el que hi consta, però
+   * no el que no hi consta: vegeu `eleccionsConegudes`.
+   */
+  incompletes: number[];
+  /**
+   * Les d'`incompletes` en què hi pot faltar algun **electe**: hi falta una
+   * candidatura que va treure regidories, o no quadren electes i regidories.
+   * Una llista de zero regidories que no ha lligat treu la línia de les
+   * llistes, però no la dels mandats: d'aquell any tots els electes hi són.
+   */
+  electesIncomplets: number[];
   /** Per nom normalitzat, els anys de les municipals que l'han elegit. */
   mandats: Map<string, number[]>;
   /** Per nom normalitzat, els anys de les municipals en què ha anat en una llista com a titular. */
@@ -1526,16 +1715,25 @@ export type HistorialMunicipi = {
  * substitució, el garbell de `mandatsDe` calla sol: el seu últim any elegit
  * no és el de l'última municipal.
  *
- * `eleccions` són les municipals de les quals el municipi té llistes al
- * registre: sense això no es pot dir de ningú que sigui la primera vegada,
- * perquè el silenci d'una municipal no ingerida no és una absència.
+ * `eleccions` surt de les candidatures dels vots (J2) i no de les llistes:
+ * una municipal de la qual no ha entrat cap llista també hi ha de ser, perquè
+ * el seu silenci no és una absència. I cada municipal es compta **completa**
+ * només si cada candidatura dels vots té titulars i si hi ha tants electes
+ * com regidories. Fins a l'octubre del 2026 no es mirava: J4 deixava caure
+ * sense soroll les llistes amb un codi diferent entre els dos datasets (tot
+ * el 2019 local de la demarcació de Barcelona, mig PSC del 2015), i la fitxa
+ * de Jaume Collboni, regidor des del 2015, deia «elegit per primera vegada el
+ * 2023». Una de cada deu fitxes de persona tenia una frase així de falsa.
  */
 async function carregaHistorialMandats(db: Db): Promise<Map<number, HistorialMunicipi>> {
   const perMunicipi = new Map<number, HistorialMunicipi>();
   const de = (municipalityId: number): HistorialMunicipi => {
     let h = perMunicipi.get(municipalityId);
     if (h === undefined) {
-      h = { eleccions: [], mandats: new Map(), llistes: new Map(), candidatures: new Map() };
+      h = {
+        eleccions: [], incompletes: [], electesIncomplets: [],
+        mandats: new Map(), llistes: new Map(), candidatures: new Map(),
+      };
       perMunicipi.set(municipalityId, h);
     }
     return h;
@@ -1548,6 +1746,7 @@ async function carregaHistorialMandats(db: Db): Promise<Map<number, HistorialMun
 
   const files = await db
     .select({
+      candidatureId: candidacies.candidatureId,
       municipalityId: candidatures.municipalityId,
       electionId: candidatures.electionId,
       sigles: candidatures.sigles,
@@ -1560,21 +1759,70 @@ async function carregaHistorialMandats(db: Db): Promise<Map<number, HistorialMun
     .innerJoin(candidatures, eq(candidatures.id, candidacies.candidatureId))
     .innerJoin(people, eq(people.id, candidacies.personId))
     .where(eq(candidacies.kind, "Titular"));
+  const ambTitulars = new Set<number>();
+  const electes = new Map<string, number>();
   for (const f of files) {
     const any = anyDeLEleccio(f.electionId);
     if (any === null) continue;
+    ambTitulars.add(f.candidatureId);
     const h = de(f.municipalityId);
-    if (!h.eleccions.includes(any)) h.eleccions.push(any);
     const clau = normalizePersonName(f.nom);
     afegeix(h.llistes, clau, any);
-    if (f.elegit) afegeix(h.mandats, clau, any);
+    if (f.elegit) {
+      afegeix(h.mandats, clau, any);
+      electes.set(`${f.municipalityId}|${any}`, (electes.get(`${f.municipalityId}|${any}`) ?? 0) + 1);
+    }
     const anades = h.candidatures.get(clau) ?? [];
-    anades.push({ any, sigles: f.sigles, posicio: f.posicio, capDeLlista: f.capDeLlista, elegit: f.elegit });
+    // J4 desa un zero quan la font no porta el número (179 municipis del
+    // 2023): és «no consta», no el número zero.
+    const posicio = f.posicio > 0 ? f.posicio : null;
+    anades.push({ any, sigles: f.sigles, posicio, capDeLlista: f.capDeLlista, elegit: f.elegit });
     h.candidatures.set(clau, anades);
   }
 
-  for (const h of perMunicipi.values()) {
+  // Les candidatures dels vots, amb les regidories que van treure: és la
+  // vara amb què es mesura si les llistes d'una municipal hi són senceres.
+  const delsVots = await db
+    .select({
+      id: candidatures.id,
+      municipalityId: candidatures.municipalityId,
+      electionId: candidatures.electionId,
+      regidories: electionResults.seats,
+    })
+    .from(candidatures)
+    .leftJoin(electionResults, eq(electionResults.candidatureId, candidatures.id));
+  const regidories = new Map<string, number | null>();
+  const senseTitulars = new Set<string>();
+  const senseElectes = new Set<string>();
+  for (const c of delsVots) {
+    const any = anyDeLEleccio(c.electionId);
+    if (any === null) continue;
+    const h = de(c.municipalityId);
+    if (!h.eleccions.includes(any)) h.eleccions.push(any);
+    const clau = `${c.municipalityId}|${any}`;
+    const abans: number | null = regidories.has(clau) ? (regidories.get(clau) ?? null) : 0;
+    // Una candidatura sense resultat desat deixa el total en «no consta».
+    regidories.set(clau, abans === null || c.regidories === null ? null : abans + c.regidories);
+    if (!ambTitulars.has(c.id)) {
+      senseTitulars.add(clau);
+      if (c.regidories !== 0) senseElectes.add(clau);
+    }
+  }
+
+  for (const [municipalityId, h] of perMunicipi) {
     h.eleccions.sort((a, b) => a - b);
+    const noQuadren = (clau: string): boolean => {
+      const seients = regidories.get(clau) ?? null;
+      return seients === null || (electes.get(clau) ?? 0) !== seients;
+    };
+    h.electesIncomplets = h.eleccions.filter((any) => {
+      const clau = `${municipalityId}|${any}`;
+      return senseElectes.has(clau) || noQuadren(clau);
+    });
+    h.incompletes = h.eleccions.filter((any) => {
+      const clau = `${municipalityId}|${any}`;
+      return senseTitulars.has(clau) || noQuadren(clau);
+    });
     for (const anys of h.mandats.values()) anys.sort((a, b) => a - b);
     for (const anys of h.llistes.values()) anys.sort((a, b) => a - b);
     for (const anades of h.candidatures.values()) anades.sort((a, b) => a.any - b.any);
@@ -1583,44 +1831,94 @@ async function carregaHistorialMandats(db: Db): Promise<Map<number, HistorialMun
 }
 
 /**
+ * Les municipals de les quals es pot parlar d'aquesta persona en aquest
+ * municipi: el tram final d'`eleccions`, de l'última enrere, mentre cada una
+ * sigui completa o la persona hi consti.
+ *
+ * D'una municipal incompleta, el que hi consta és cert —si la seva llista hi
+ * és, també ho és si en va sortir— però el que no hi consta no vol dir res:
+ * potser hi anava en una de les llistes que falten. Per això el tram s'atura
+ * a la primera municipal on no hi consta i on podria haver-hi estat. I es
+ * pren el tram de **seguit**, no les municipals soltes: amb un forat al mig,
+ * «elegida el 2015 i el 2023» faria creure que el 2019 no.
+ *
+ * `que` diu de què es vol parlar. Dels mandats (`"electes"`) n'hi ha prou que
+ * hi siguin tots els electes; de les llistes on ha anat (`"llistes"`) hi han
+ * de ser totes les llistes, també les que no van treure cap regidoria.
+ */
+export function eleccionsConegudes(
+  historial: HistorialMunicipi,
+  clau: string,
+  que: "llistes" | "electes" = "llistes",
+): number[] {
+  const incompletes = que === "electes" ? historial.electesIncomplets : historial.incompletes;
+  const hiConsta = historial.llistes.get(clau) ?? [];
+  const conegudes: number[] = [];
+  for (let i = historial.eleccions.length - 1; i >= 0; i -= 1) {
+    const any = historial.eleccions[i]!;
+    if (incompletes.includes(any) && !hiConsta.includes(any)) break;
+    conegudes.unshift(any);
+  }
+  return conegudes;
+}
+
+/** Cert si el mateix nom surt dues vegades a les llistes d'un mateix any: dues persones, o una fila doble. */
+function nomRepetit(historial: HistorialMunicipi, clau: string): boolean {
+  const anades = historial.candidatures.get(clau) ?? [];
+  return new Set(anades.map((a) => a.any)).size !== anades.length;
+}
+
+/**
  * Les llistes on ha anat aquesta persona en aquest municipi, per a la línia
  * «Les llistes on ha anat» de la seva fitxa.
  *
  * Les mateixes cauteles que `mandatsDe`: només quan el registre cobreix més
- * d'una municipal —amb una de sola semblaria que abans no s'hi presentava,
- * quan senzillament no ho tenim ingerit— i, si el mateix nom surt dues
- * vegades el mateix any —dues persones que es diuen igual, o una fila
- * duplicada—, no es diu res: penjar-li a algú l'anada a llistes d'un homònim
- * és pitjor que callar.
+ * d'una municipal d'on es pot parlar d'aquesta persona (`eleccionsConegudes`)
+ * —amb una de sola semblaria que abans no s'hi presentava, quan senzillament
+ * no ho tenim— i només les anades d'aquestes municipals. I si el mateix nom
+ * surt dues vegades el mateix any —dues persones que es diuen igual, o una
+ * fila duplicada—, no es diu res: penjar-li a algú l'anada a llistes d'un
+ * homònim és pitjor que callar.
  */
 export function llistesDe(
   historial: HistorialMunicipi | undefined,
   nom: string,
 ): ContextRegidor["llistes"] {
-  if (!historial || historial.eleccions.length < 2) return null;
-  const anades = historial.candidatures.get(normalizePersonName(nom)) ?? [];
+  if (!historial) return null;
+  const clau = normalizePersonName(nom);
+  if (nomRepetit(historial, clau)) return null;
+  const eleccions = eleccionsConegudes(historial, clau);
+  if (eleccions.length < 2) return null;
+  const anades = (historial.candidatures.get(clau) ?? []).filter((a) => eleccions.includes(a.any));
   if (anades.length === 0) return null;
-  if (new Set(anades.map((a) => a.any)).size !== anades.length) return null;
   return [...anades].sort((a, b) => a.any - b.any);
 }
 
 /**
  * Quants mandats porta aquesta persona en aquest ple, i des de quan.
  *
- * Només es diu quan el municipi té al registre **més d'una** municipal: amb
- * una de sola, «primer mandat» seria confondre el que no hem ingerit amb el
- * que no ha passat, i a tots els plens hi ha gent que hi és des de molt abans.
- * `seguits` és cert quan els mandats són les últimes municipals sense cap
- * forat, i `desDe` només afirma un inici quan la municipal anterior a la
- * primera també és al registre: si el registre comença el 2015 i la persona
- * hi és des del 2015, no sabem si hi era el 2011.
+ * Només es diu quan el registre té **més d'una** municipal d'on es pot parlar
+ * d'aquesta persona (`eleccionsConegudes`): amb una de sola, «primer mandat»
+ * seria confondre el que no hem ingerit amb el que no ha passat, i a tots els
+ * plens hi ha gent que hi és des de molt abans. `seguits` és cert quan els
+ * mandats són les últimes municipals sense cap forat, i `desDe` només afirma
+ * un inici quan la municipal anterior a la primera també és al registre: si
+ * el registre comença el 2015 i la persona hi és des del 2015, no sabem si hi
+ * era el 2011. Un nom repetit el mateix any no diu res, com a `llistesDe`.
+ *
+ * El tram es mesura amb els electes (`electesIncomplets`) i no amb totes les
+ * llistes: a Barcelona, una llista del 2019 de zero regidories que no lliga
+ * entre els dos datasets no ha de fer callar els mandats de tot el ple.
+ * `llistesSenseEntrar` només diu anades que hi consten, mai que no n'hi hagi.
  */
 export function mandatsDe(historial: HistorialMunicipi | undefined, nom: string): ContextRegidor["mandats"] {
-  if (!historial || historial.eleccions.length < 2) return null;
+  if (!historial) return null;
   const clau = normalizePersonName(nom);
-  const anys = historial.mandats.get(clau) ?? [];
+  if (nomRepetit(historial, clau)) return null;
+  const eleccions = eleccionsConegudes(historial, clau, "electes");
+  if (eleccions.length < 2) return null;
+  const anys = (historial.mandats.get(clau) ?? []).filter((a) => eleccions.includes(a));
   if (anys.length === 0) return null;
-  const eleccions = historial.eleccions;
   // Si l'últim mandat que li consta no és el de l'última municipal, alguna
   // cosa no lliga —un nom escrit diferent en un dels registres— i val més no
   // dir res que comptar malament.
@@ -1629,7 +1927,9 @@ export function mandatsDe(historial: HistorialMunicipi | undefined, nom: string)
   const ultimes = eleccions.slice(eleccions.length - anys.length);
   const seguits = ultimes.length === anys.length && ultimes.every((a, i) => a === anys[i]);
   const iniciConegut = eleccions.some((e) => e < primer);
-  const llistesSenseEntrar = (historial.llistes.get(clau) ?? []).filter((a) => !anys.includes(a));
+  const llistesSenseEntrar = (historial.llistes.get(clau) ?? []).filter(
+    (a) => eleccions.includes(a) && !anys.includes(a),
+  );
   return {
     anys,
     primer,
