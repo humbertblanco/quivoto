@@ -1,7 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { mayors, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { dataCurta, nomLlegible, normalizePersonName, slugify } from "../lib/text";
 import { findChanges } from "../derive/mayor-changes";
+import { reparaNomAlcaldia } from "../derive/alcaldies";
+import { registreAlcaldies, type HistorialAlcaldies as HistorialFusionat } from "./alcaldia-historica";
+import { enBlocs } from "./vots-partit";
 import { GRAFICS_JS, serieTemporal } from "./grafics";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { SITE } from "./config";
@@ -246,9 +249,28 @@ export function fitxaAlcaldia(slug: string, nom: string): string {
  * en té fitxa de regidor, allà, que és on hi ha la cara i el que cobra; si no,
  * a la seva fitxa d'alcaldia històrica.
  */
-export function fitxaDe(muni: MunicipiBasic, nom: string, actual: AdrecaActual | null | undefined): string {
+export function fitxaDe(
+  muni: MunicipiBasic,
+  nom: string,
+  actual: AdrecaActual | null | undefined,
+  registre?: ReadonlyMap<string, string> | null,
+): string {
   if (actual && actual.clau === normalizePersonName(nom)) return `../m/${muni.slug}/${actual.adreca}`;
+  if (registre) return fitxaDelRegistre(muni, nom, registre);
   return fitxaAlcaldia(muni.slug, nom);
+}
+
+/**
+ * On porta un nom segons el registre d'adreces del seu municipi
+ * (`registreAlcaldies()` d'`alcaldia-historica.ts`), que és la mateixa funció
+ * que escriu les fitxes: la grafia ajuntada, el sufix «-2» i la reparació del
+ * nom hi són compresos. Si el nom no hi és, a la llista d'alcaldies del
+ * municipi, que hi és sempre; mai a un slug endevinat, que portava a deu
+ * pàgines que no existien («begur/alcaldia/maite-selva-huertas»).
+ */
+export function fitxaDelRegistre(muni: MunicipiBasic, nom: string, registre: ReadonlyMap<string, string>): string {
+  const adreca = registre.get(normalizePersonName(reparaNomAlcaldia(nom)));
+  return adreca ? `../m/${muni.slug}/${adreca}` : `../m/${muni.slug}/#alcaldies`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -305,7 +327,13 @@ const MUNICIPIS_RELLEUS = 8;
 export function calculaHistorial(
   files: readonly FilaHistorial[],
   municipis: ReadonlyMap<number, MunicipiBasic>,
-  opcions: { avui: string; actuals?: ReadonlyMap<number, AdrecaActual>; font?: string },
+  opcions: {
+    avui: string;
+    actuals?: ReadonlyMap<number, AdrecaActual>;
+    font?: string;
+    /** Les adreces d'alcaldia de cada municipi (`registreAlcaldies`); sense, el slug es calcula pel nom. */
+    registres?: ReadonlyMap<number, ReadonlyMap<string, string>>;
+  },
 ): HistorialAlcaldies | null {
   const bones = files.filter((f) => municipis.has(f.municipalityId) && normalizePersonName(f.name) !== "");
   if (bones.length === 0) return null;
@@ -428,7 +456,7 @@ export function calculaHistorial(
       primerMandat: ordenats[0]!,
       ultimMandat: ordenats[ordenats.length - 1]!,
       actual: p.actual,
-      fitxa: fitxaDe(muni, p.nom, opcions.actuals?.get(p.municipalityId)),
+      fitxa: fitxaDe(muni, p.nom, opcions.actuals?.get(p.municipalityId), opcions.registres?.get(p.municipalityId)),
     });
   }
 
@@ -1222,6 +1250,35 @@ type GovernMetric = { mayorName?: string | null; mayorSigles?: string | null } |
  * pàgina que no hi és. Torna també el retrat petit, per a les targetes del
  * salt.
  */
+/**
+ * El registre d'adreces d'alcaldia de cada municipi, calculat sobre l'historial
+ * fusionat (la mètrica `mayors` de `derive/mayor-changes.ts`) amb
+ * `registreAlcaldies()`, que és el que fan servir les fitxes per anomenar-se.
+ * Es llegeixen només `history` i `changes`, en blocs, com fa `partit.ts`: el
+ * document sencer dels 947 de cop és el que fa petar PGlite.
+ */
+async function carregaRegistresAlcaldies(db: Db): Promise<Map<number, ReadonlyMap<string, string>>> {
+  const files = await enBlocs((limit, salta) =>
+    db
+      .select({
+        municipalityId: municipalityMetrics.municipalityId,
+        history: sql<HistorialFusionat["history"] | null>`${municipalityMetrics.data}->'history'`,
+        changes: sql<HistorialFusionat["changes"] | null>`${municipalityMetrics.data}->'changes'`,
+      })
+      .from(municipalityMetrics)
+      .where(eq(municipalityMetrics.kind, "mayors"))
+      .orderBy(municipalityMetrics.municipalityId)
+      .limit(limit)
+      .offset(salta),
+  );
+  const registres = new Map<number, ReadonlyMap<string, string>>();
+  for (const f of files) {
+    if (!Array.isArray(f.history)) continue;
+    registres.set(f.municipalityId, registreAlcaldies({ history: f.history, changes: Array.isArray(f.changes) ? f.changes : [] }));
+  }
+  return registres;
+}
+
 async function carregaAlcaldiesActuals(
   db: Db,
   munis: readonly { id: number; mayorName: string | null }[],
@@ -1279,7 +1336,8 @@ export async function loadTrajectoriaElectes(db: Db, avui: string = new Date().t
     })
     .from(mayors);
   const actuals = await carregaAlcaldiesActuals(db, munis);
-  const historial = calculaHistorial(historialFiles, perId, { avui, actuals });
+  const registres = await carregaRegistresAlcaldies(db);
+  const historial = calculaHistorial(historialFiles, perId, { avui, actuals, registres });
   if (historial === null) return null;
 
   // Qui de l'historial és a cada municipi, per donar la fitxa històrica a
@@ -1385,10 +1443,13 @@ export async function loadTrajectoriaElectes(db: Db, avui: string = new Date().t
       const actual = actuals.get(fila.municipalityId);
       const propia = actual !== undefined && actual.clau === clau;
       const nomNostre = nomsHistorial.get(`${fila.municipalityId}|${clau}`)?.nom ?? null;
+      const registre = registres.get(fila.municipalityId) ?? null;
       const fitxaUrl = propia
         ? `../m/${muni.slug}/${actual.adreca}`
         : p.aparellat && nomNostre !== null
-          ? fitxaAlcaldia(muni.slug, nomNostre)
+          ? registre
+            ? fitxaDelRegistre(muni, registre.has(clau) ? p.nom : nomNostre, registre)
+            : fitxaAlcaldia(muni.slug, nomNostre)
           : `../m/${muni.slug}/#alcaldies`;
       const foto = propia ? actual.foto : null;
 

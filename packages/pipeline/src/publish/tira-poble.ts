@@ -1,6 +1,7 @@
 import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { familiaDelPartit, type PasAlcaldia } from "../derive/alcaldies";
-import { dataCurta, de, nomLlegible, normalizePersonName } from "../lib/text";
+import { partitSenseParentesis } from "../derive/alcaldies";
+import { dataCurta, de, delDia, nomLlegible, normalizePersonName } from "../lib/text";
 import { atributsEtiqueta, textEtiqueta, type DadaEtiqueta } from "./grafics";
 
 /**
@@ -415,8 +416,8 @@ export function liniaDelMandat(m: MandatTira): string {
     .map((t, k) => {
       if (t.tipus === "futur") return k === 0 ? "encara no ha començat" : "";
       if (t.tipus === "buit") return t.de === 0 && t.fins === 1 ? "no consta" : "el principi del mandat no consta";
-      const qui = `${t.nom} (${t.partit ?? "partit no consta"})`;
-      return t.relleu && t.desDe ? `des del ${dataCurta(t.desDe)}, ${qui}` : t.relleu ? `després, ${qui}` : qui;
+      const qui = `${t.nom} (${t.partit ? partitSenseParentesis(t.partit) : "partit no consta"})`;
+      return t.relleu && t.desDe ? `des ${delDia(t.desDe)}, ${qui}` : t.relleu ? `després, ${qui}` : qui;
     })
     .filter(Boolean);
   return `${m.term}: ${parts.join("; ")}`;

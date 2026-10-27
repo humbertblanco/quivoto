@@ -185,7 +185,7 @@ describe("tiraDelPoble", () => {
     expect(html).toMatch(/role="img" aria-label="Qui ha tingut l'alcaldia d'Alcanar/);
     expect(html).toContain('<span>1979</span><span>2027</span>');
     expect(html.match(/<li>/g)).toHaveLength(12);
-    expect(html).toContain("<li>2011-2015: Anna Ferrer Roca (CiU); des del 1 de febrer del 2013, Pere Vidal Mas (CiU)</li>");
+    expect(html).toContain("<li>2011-2015: Anna Ferrer Roca (CiU); des de l'1 de febrer del 2013, Pere Vidal Mas (CiU)</li>");
     expect(html).toContain("<li>1979-1983: no consta</li>");
     expect(html).toContain("<li>2023-2027: el principi del mandat no consta; des del 5 d'octubre del 2024, Maria Puig Soler (ERC-AM)</li>");
     expect(html).toContain('data-nom="Pere Vidal Mas"');

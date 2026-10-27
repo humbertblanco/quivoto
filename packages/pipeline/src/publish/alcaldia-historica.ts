@@ -1,22 +1,24 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { isNotNull } from "drizzle-orm";
 import { people, type Db } from "@quivoto/db";
 import { BRANDS_BY_ID, siglesFamily } from "@quivoto/shared-schemas/brands";
-import { familiaDelPartit, motiuFinalEscrit, type PasAlcaldia } from "../derive/alcaldies";
+import {
+  familiaDelPartit, mateixaPersona, motiuFinalEscrit, partitAmbSentit, reparaNomAlcaldia, type PasAlcaldia,
+} from "../derive/alcaldies";
 import type { FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
 import type { FitxaFotosExalcaldes } from "../jobs/j28-fotos-exalcaldes";
 import { de, elDia, nomLlegible, normalizePersonName, slugify } from "../lib/text";
 import { esAlcaldia, resolAlcaldia } from "./alcaldia";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
-import { SITE } from "./config";
+import { INDEXABLE, SITE } from "./config";
 import { sobreColor } from "./contrast";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { FOTOS_WIKIMEDIA_CSS, creditRetrat, retratsPerNom, type Retrat } from "./fotos-wikidata";
 import { peu } from "./peu";
 import type { RadiografiaData } from "./radiografia";
 import { frasesQueCaben, titolQueCap } from "./regidor";
-import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
+import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg, portaNoIndex } from "./seo";
 import { personaLd } from "./seo-ld";
 import { partitDe, sigla } from "./sigla";
 
@@ -152,6 +154,8 @@ export type Mandat = {
   anyInici: number;
   anyFi: number;
   partyRaw: string | null;
+  /** La font diu que no hi havia partit («N/A», a les comissions gestores), que no és el mateix que no dir-lo. */
+  senseParit: boolean;
   tookOfficeOn: string | null;
   /** Va prendre possessió a mig mandat, rellevant algú altre. */
   arribaAMigMandat: boolean;
@@ -200,6 +204,13 @@ export type WikidataAlcaldia = {
 
 export type PersonaAlcaldia = {
   clau: string;
+  /**
+   * Totes les claus amb què surt a l'historial: la canònica i la de cada
+   * grafia que `unificaVariants` hi ha ajuntat («alejandro pastor lopez» i
+   * «alex pastor lopez»). És el que permet a les altres pàgines trobar la
+   * fitxa pel nom que elles tenen, i no només pel canònic.
+   */
+  variants: string[];
   nom: string;
   slug: string;
   /** On porta el seu nom, relatiu a `m/<slug>/`: `alcaldia/<slug>/` o la fitxa de regidor. */
@@ -342,71 +353,154 @@ export function wikidataDe(
 }
 
 /** Un pas per l'alcaldia, posat en ordre: qui, quan i en quin mandat. */
-type Pas = FilaHistorial & { clau: string; anyInici: number; anyFi: number };
+type Pas = FilaHistorial & {
+  clau: string;
+  anyInici: number;
+  anyFi: number;
+  senseParit: boolean;
+  /** Les claus de totes les grafies d'aquest pas, també les dels passos que `fusionaContigus` hi ha ajuntat. */
+  grafies: string[];
+};
 
 /**
  * Tots els passos per l'alcaldia en ordre cronològic: per mandat i, dins del
  * mandat, per data de presa de possessió. Una fila sense data va primer: a
  * l'historial, qui no en té és qui va sortir del ple de constitució, i qui va
  * arribar després sempre la porta.
+ *
+ * El nom i el partit passen per les dues reparacions de `derive/alcaldies.ts`
+ * també aquí, perquè valguin encara que la mètrica sigui d'abans: la «Ð» que
+ * era una «Ñ» («Montaða» → «Montaña», i el slug «montana» i no «monta-a») i
+ * el «N/A» de les comissions gestores, que no és cap partit.
  */
 function passos(historial: HistorialAlcaldies): Pas[] {
   const ordenats = historial.history
     .map((h) => {
       const anys = anysDelTerm(h.term);
-      return { ...h, clau: normalizePersonName(h.name), anyInici: anys.inici, anyFi: anys.fi };
+      const name = reparaNomAlcaldia(h.name);
+      const partyRaw = partitAmbSentit(h.partyRaw);
+      return {
+        ...h,
+        name,
+        partyRaw,
+        senseParit: h.partyRaw !== null && h.partyRaw !== undefined && h.partyRaw.trim() !== "" && partyRaw === null,
+        clau: normalizePersonName(name),
+        grafies: [normalizePersonName(name)],
+        anyInici: anys.inici,
+        anyFi: anys.fi,
+      };
     })
     .filter((h) => h.clau !== "")
     .sort((a, b) => a.term.localeCompare(b.term) || (a.tookOfficeOn ?? "").localeCompare(b.tookOfficeOn ?? ""));
-  return unificaVariants(ordenats);
+  return fusionaContigus(unificaVariants(ordenats));
 }
 
-/** Distància d'edició entre dues cadenes curtes (Levenshtein), per a cognoms amb una lletra de més. */
-function distancia(a: string, b: string): number {
-  const fila = Array.from({ length: b.length + 1 }, (_, i) => i);
-  for (let i = 1; i <= a.length; i += 1) {
-    let anterior = fila[0]!;
-    fila[0] = i;
-    for (let j = 1; j <= b.length; j += 1) {
-      const temp = fila[j]!;
-      fila[j] = Math.min(fila[j]! + 1, fila[j - 1]! + 1, anterior + (a[i - 1] === b[j - 1] ? 0 : 1));
-      anterior = temp;
+/**
+ * Dos passos seguits de la mateixa persona dins del mateix mandat són un sol
+ * pas. Passa quan una font escriu el nom d'una manera i una altra font d'una
+ * altra («Eudald Picas Mitjavila» a la Generalitat i «Eudald Picas Mijtavila»
+ * al Ministeri): la fusió de fonts no els va saber ajuntar, `unificaVariants`
+ * sí, i sense això la fitxa comptava dos mandats on n'hi ha un. Mana el pas de
+ * la font oficial; de l'altre se'n pren el que li falta (la data d'inici, la
+ * de final, el motiu). Dos passos de la mateixa persona amb algú altre pel mig
+ * no es toquen: són dues alcaldies.
+ */
+function fusionaContigus(cadena: Pas[]): Pas[] {
+  const sortida: Pas[] = [];
+  for (const pas of cadena) {
+    const anterior = sortida[sortida.length - 1];
+    if (anterior === undefined || anterior.clau !== pas.clau || anterior.term !== pas.term) {
+      sortida.push(pas);
+      continue;
     }
+    const [base, altre] = anterior.font === undefined || pas.font !== undefined ? [anterior, pas] : [pas, anterior];
+    // Cada dada que ve de l'altre pas porta la marca de la seva font: la
+    // data d'inici del Ministeri diu «segons el Ministeri», i la de final
+    // també (la de Wikidata no porta `fontFi`, que és com es diu «Wikidata»).
+    const iniciDeLAltre = base.tookOfficeOn === null && altre.tookOfficeOn !== null;
+    const fiDeLAltre = !base.finsA && !!altre.finsA;
+    sortida[sortida.length - 1] = {
+      ...altre,
+      ...base,
+      font: base.font,
+      fontInici: iniciDeLAltre ? (altre.font === "ministeri" ? "ministeri" : altre.fontInici) : base.fontInici,
+      fontFi: fiDeLAltre ? (altre.font === "ministeri" ? "ministeri" : altre.fontFi) : base.fontFi,
+      tookOfficeOn: base.tookOfficeOn ?? altre.tookOfficeOn,
+      finsA: base.finsA ?? altre.finsA ?? null,
+      motiuFinal: base.motiuFinal ?? altre.motiuFinal ?? null,
+      partitWikidata: base.partitWikidata ?? altre.partitWikidata ?? null,
+      llistaMinisteri: base.llistaMinisteri ?? altre.llistaMinisteri ?? null,
+      qid: base.qid ?? altre.qid,
+      grafies: [...new Set([...base.grafies, ...altre.grafies])],
+    };
   }
-  return fila[b.length]!;
+  return sortida;
 }
 
 /**
  * La mateixa persona escrita de dues maneres és una sola persona.
  *
- * L'historial de la Generalitat escriu el nom a cada mandat, i a Alcanar hi
- * havia «Alfons Monserrat Esteller» i «Alfons Montserrat Esteller», i «Joan
- * B. Beltran Queralt» i «Juan Bautista Beltran Queralt»: quatre fitxes per a
- * dues persones, i cap de les dues amb la trajectòria sencera. Dins d'un
- * mateix municipi, dos noms amb els mateixos cognoms (o amb una lletra de
- * diferència) i la mateixa inicial del nom es donen per la mateixa persona,
- * i la clau que mana és la del mandat més recent, que és també la que fa el
- * slug de la fitxa a totes les pàgines. Entre municipis no es fusiona res.
+ * L'historial escriu el nom a cada mandat, Wikidata i el Ministeri l'escriuen
+ * a la seva manera, i a Gombrèn hi havia «Gudald Picas Mitjavila», «Eudald
+ * Picas Mijtavila» i «Eudald Picas Mitjavila»: tres fitxes per a una persona,
+ * i cap amb la trajectòria sencera. Dins d'un mateix municipi, dos noms que
+ * `mateixaPersona()` dona per iguals (la «i» dels cognoms, accents, una
+ * errada d'una lletra, un cognom de menys…) són la mateixa persona, i la clau
+ * que mana és la del mandat més recent, que és també la que fa el slug de la
+ * fitxa a totes les pàgines. Entre municipis no es fusiona res.
+ *
+ * Dues cauteles, perquè ajuntar dues persones és pitjor que deixar-ne una
+ * partida:
+ *
+ *   · **Un nom que lliga amb dues persones no s'ajunta amb cap.** «Josep
+ *     March» pot ser «Josep March Minguell» o «Josep March Silart».
+ *   · **Dues grafies de la mateixa font al mateix mandat són dues persones**,
+ *     llevat que siguin el mateix nom normalitzat: una font no escriu la
+ *     mateixa persona de dues maneres dins d'un mandat, i si ho fa, el que hi
+ *     ha és un relleu entre dues persones que s'assemblen.
  */
 function unificaVariants(ordenats: Pas[]): Pas[] {
-  const parts = (clau: string): { inicial: string; cognoms: string } => {
-    const tokens = clau.split(/\s+/).filter((t) => t.length > 0);
-    const cognoms = tokens.length >= 3 ? tokens.slice(-2).join(" ") : tokens.slice(-1).join(" ");
-    return { inicial: tokens[0]?.[0] ?? "", cognoms };
-  };
-  const mateixa = (a: string, b: string): boolean => {
-    const pa = parts(a);
-    const pb = parts(b);
-    if (pa.inicial === "" || pa.inicial !== pb.inicial || pa.cognoms.length < 5) return false;
-    return pa.cognoms === pb.cognoms || distancia(pa.cognoms, pb.cognoms) <= 1;
-  };
-  // Del més recent al més antic: cada clau nova busca una de posterior amb qui
-  // s'assembli, i s'hi ajunta. Així la canònica és sempre la del mandat més tard.
+  /** Les marques (mandat i font) de cada clau, per a la segona cautela. */
+  const marques = new Map<string, Set<string>>();
+  for (const p of ordenats) {
+    const set = marques.get(p.clau) ?? new Set<string>();
+    set.add(`${p.term}|${p.font ?? "generalitat"}`);
+    marques.set(p.clau, set);
+  }
+  const nomDe = new Map<string, string>();
+  for (const p of ordenats) nomDe.set(p.clau, p.name);
+  const contradiuen = (a: string, b: string): boolean => [...(marques.get(a) ?? [])].some((m) => marques.get(b)?.has(m));
+
+  // Del més recent al més antic: cada clau nova busca un grup posterior amb
+  // qui s'assembli —amb **tots** els seus membres, perquè «Josep March» no
+  // faci de pont entre Minguell i Silart— i s'hi ajunta. Així la canònica és
+  // sempre la del mandat més tard.
   const canonica = new Map<string, string>();
   const claus = [...new Set([...ordenats].reverse().map((p) => p.clau))];
+  const grupsQueLliguen = (clau: string): string[] => {
+    const grups = new Set([...canonica.entries()].filter(([c]) => c !== clau).map(([, g]) => g));
+    return [...grups].filter((grup) => {
+      const membres = claus.filter((c) => c !== clau && canonica.get(c) === grup);
+      return (
+        membres.length > 0 &&
+        membres.every((m) => mateixaPersona(nomDe.get(m)!, nomDe.get(clau)!)) &&
+        !membres.some((m) => contradiuen(m, clau))
+      );
+    });
+  };
   for (const clau of claus) {
-    const iguals = claus.find((c) => canonica.has(c) && c !== clau && mateixa(c, clau));
-    canonica.set(clau, iguals ? canonica.get(iguals)! : clau);
+    const grups = grupsQueLliguen(clau);
+    canonica.set(clau, grups.length === 1 ? grups[0]! : clau);
+  }
+  // La primera cautela, un cop fets tots els grups: un nom ajuntat que també
+  // lligaria amb un altre grup no és de cap dels dos. Fins aquí «Josep March»
+  // s'havia ajuntat al primer que havia trobat.
+  for (const clau of claus) {
+    if (canonica.get(clau) === clau) continue;
+    const propi = canonica.get(clau)!;
+    canonica.set(clau, clau);
+    const grups = grupsQueLliguen(clau);
+    canonica.set(clau, grups.length === 1 && grups[0] === propi ? propi : clau);
   }
   return ordenats.map((p) => ({ ...p, clau: canonica.get(p.clau) ?? p.clau }));
 }
@@ -448,6 +542,9 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
   if (!historial || historial.history.length === 0) return [];
   const avui = opcions.avui ?? new Date().toISOString().slice(0, 10);
   const cadena = passos(historial);
+  // Cada grafia de l'historial, a la clau canònica de la seva persona.
+  const canonicaDeNom = new Map<string, string>();
+  for (const pas of cadena) for (const v of pas.grafies) canonicaDeNom.set(v, pas.clau);
   const durades = periodes(cadena, avui);
   const ultim = cadena[cadena.length - 1]!;
   const clauActual = opcions.actual?.nom ? normalizePersonName(opcions.actual.nom) : "";
@@ -459,13 +556,12 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
   for (const pas of cadena) {
     if (persones.has(pas.clau)) continue;
     const seus = cadena.filter((p) => p.clau === pas.clau);
-    // El nom que dona l'historial al mandat més recent: és el que tindrà el
-    // slug, i és el que la pàgina de trajectòries reprodueix.
-    const nomFont = seus[seus.length - 1]!.name;
+    const nomFont = nomDeLaFitxa(seus);
     const actual = ultim.clau === pas.clau;
     const fitxaRegidor = actual && clauActual === pas.clau ? (opcions.actual?.adreca ?? null) : null;
     persones.set(pas.clau, {
       clau: pas.clau,
+      variants: clausDe(seus),
       nom: nomLlegible(nomFont),
       slug: slugify(nomLlegible(nomFont)),
       adreca: "",
@@ -505,7 +601,15 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
   for (const [i, pas] of cadena.entries()) {
     const persona = persones.get(pas.clau)!;
     const canvi = historial.changes.find((c) => c.term === pas.term) ?? null;
-    const ordre = canvi ? canvi.mayors.map((m) => normalizePersonName(m.name)) : [];
+    // L'ordre del relleu, amb cada nom passat a la seva clau canònica i les
+    // repeticions seguides fora: dues grafies de la mateixa persona al mateix
+    // mandat («Mitjavila» i «Mijtavila») no són cap relleu, i sense això la
+    // fitxa deia que havia plegat abans d'hora sense dir per qui.
+    const ordre = canvi
+      ? canvi.mayors
+          .map((m) => canonicaDeNom.get(normalizePersonName(reparaNomAlcaldia(m.name))) ?? normalizePersonName(m.name))
+          .filter((c, k, totes) => k === 0 || totes[k - 1] !== c)
+      : [];
     // Pel nom canònic o per la grafia d'aquest pas: després d'`unificaVariants`
     // la clau pot ser la d'un altre mandat («alejandro pastor lopez») i el
     // relleu, escrit com el diu Wikidata («Àlex Pastor López»).
@@ -520,6 +624,7 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
       anyInici: pas.anyInici,
       anyFi: pas.anyFi,
       partyRaw: pas.partyRaw,
+      senseParit: pas.senseParit,
       tookOfficeOn: pas.tookOfficeOn,
       arribaAMigMandat: arriba,
       marxaAMigMandat: marxa,
@@ -568,7 +673,7 @@ export function alcaldiesHistoriques(historial: HistorialAlcaldies | null | unde
  * el retrat de J28 porta la segona.
  */
 function clausDe(seus: readonly Pas[]): string[] {
-  return [...new Set([seus[seus.length - 1]!.clau, ...seus.map((s) => normalizePersonName(s.name))])];
+  return [...new Set([seus[seus.length - 1]!.clau, ...seus.map((s) => normalizePersonName(s.name)), ...seus.flatMap((s) => s.grafies)])];
 }
 
 /**
@@ -608,7 +713,40 @@ function colorDe(partyRaw: string | null): string | null {
  * Relatives a `m/<slug>/`.
  */
 export function adrecesAlcaldies(persones: readonly PersonaAlcaldia[]): ReadonlyMap<string, string> {
-  return new Map(persones.map((p) => [p.clau, p.adreca]));
+  const adreces = new Map<string, string>();
+  // Primer les canòniques, que manen; després cada grafia que no sigui ja la
+  // canònica d'una altra persona.
+  for (const p of persones) adreces.set(p.clau, p.adreca);
+  for (const p of persones) for (const v of p.variants) if (!adreces.has(v)) adreces.set(v, p.adreca);
+  return adreces;
+}
+
+/**
+ * El registre d'adreces d'alcaldia d'un municipi, calculat amb **la mateixa
+ * funció que escriu les fitxes**: qualsevol pàgina que vulgui enllaçar una
+ * fitxa d'alcaldia (la de trajectòries, per exemple) l'ha de fer servir, i no
+ * recalcular el slug pel seu compte. Un slug recalculat a part no sap res de
+ * les grafies ajuntades ni dels sufixos «-2», i portava a pàgines que no hi
+ * eren («begur/alcaldia/maite-selva-huertas»). Les adreces són relatives a
+ * `m/<slug>/`, i la clau és el nom normalitzat (`normalizePersonName`).
+ */
+export function registreAlcaldies(historial: HistorialAlcaldies | null | undefined): ReadonlyMap<string, string> {
+  return adrecesAlcaldies(alcaldiesHistoriques(historial));
+}
+
+/**
+ * El nom que dona nom a la fitxa (i el slug): el que l'historial escriu al
+ * mandat més recent, que és el que la pàgina de trajectòries reprodueix. Amb
+ * una excepció: si aquest nom només té un cognom («Jordi Cabezas») i un altre
+ * pas de la mateixa persona el porta sencer («Jordi Cabezas Llobet»), mana el
+ * sencer, el més recent dels sencers.
+ */
+function nomDeLaFitxa(seus: readonly Pas[]): string {
+  const darrer = seus[seus.length - 1]!.name;
+  const trossos = (nom: string): number => normalizePersonName(nom).split(" ").filter(Boolean).length;
+  if (trossos(darrer) > 2) return darrer;
+  const sencers = seus.filter((s) => trossos(s.name) > 2);
+  return sencers.length > 0 ? sencers[sencers.length - 1]!.name : darrer;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -808,17 +946,25 @@ const llistaDe = (sigles: string): string => {
 function renderMandats(p: PersonaAlcaldia): string {
   const targetes = p.mandats.map((m) => {
     // El partit: el de la Generalitat com a sigla; si no n'hi ha, el que diu
-    // Wikidata, dit amb aquestes paraules. I quan la Generalitat el retalla
-    // («BADALONA EN COM»), el nom sencer de Wikidata al costat, no a sobre.
-    // El partit: el de la Generalitat com a sigla; si no n'hi ha, el que diu
-    // Wikidata, o la llista del Ministeri, dits amb aquestes paraules.
+    // Wikidata, o la llista del Ministeri, dits amb aquestes paraules. I quan
+    // la Generalitat el retalla («BADALONA EN COM»), el nom sencer de
+    // Wikidata al costat, no a sobre.
+    //
+    // La font del partit només es diu al costat del partit quan el pas és
+    // d'una altra font: si el pas sencer ja porta la marca «segons Wikidata»,
+    // repetir-la al partit feia dir a la capçalera «segons Wikidata segons
+    // Wikidata».
+    const fontDelPartit = (font: "wikidata" | "ministeri"): string =>
+      m.font === font ? "" : ` <span class="secundari">${font === "wikidata" ? "segons Wikidata" : "segons el Ministeri"}</span>`;
     const partit = m.partyRaw
       ? sigla(m.partyRaw, { base: BASE, color: p.color })
       : m.partitWikidata
-        ? `<span class="partit-wikidata">${escape(m.partitWikidata)} <span class="secundari">segons Wikidata</span></span>`
+        ? `<span class="partit-wikidata">${escape(m.partitWikidata)}${fontDelPartit("wikidata")}</span>`
         : m.llistaMinisteri
-          ? `<span class="partit-wikidata">${escape(m.llistaMinisteri)} <span class="secundari">segons el Ministeri</span></span>`
-          : `<span class="secundari">partit no consignat</span>`;
+          ? `<span class="partit-wikidata">${escape(m.llistaMinisteri)}${fontDelPartit("ministeri")}</span>`
+          : m.senseParit
+            ? `<span class="secundari">sense partit</span>`
+            : `<span class="secundari">partit no consignat</span>`;
     const partitSencer = m.partyRaw && m.partitWikidata
       ? `<p class="secundari">Nom complet segons Wikidata: ${escape(m.partitWikidata)}.</p>`
       : "";
@@ -1157,7 +1303,47 @@ export function renderRedireccioAlcaldia(p: PersonaAlcaldia, municipi: MunicipiA
 </body></html>`;
 }
 
-export const esRedireccioAlcaldia = (html: string): boolean => html.includes(`<meta ${MARCA_REDIRECCIO}`);
+/**
+ * La pàgina que hi ha a una adreça d'`alcaldia/` que ja **no** és de cap
+ * fitxa: la d'una grafia que ara s'ajunta amb una altra («jordi-hereu-i-boher»
+ * és la fitxa «jordi-hereu-boher»), o la d'un slug que la reparació del nom ha
+ * canviat («joan-casas-monta-a» → «joan-casas-montana»). Abans s'hi quedava la
+ * fitxa vella, amb les dades d'aquell dia i el `noindex` de la publicació
+ * tancada, i el sitemap la llistava igualment. Ara hi va una redirecció a la
+ * fitxa que la substitueix —o, si no se sap quina és, a la llista d'alcaldies
+ * del municipi—, amb la canònica allà i `noindex,follow`: qui hi arriba per un
+ * enllaç antic troba la pàgina bona, i el cercador la canvia per la bona.
+ */
+export function renderRedireccioAntiga(desti: { nom: string; adreca: string } | null, municipi: MunicipiAlcaldia): string {
+  const cami = desti ? desti.adreca : "#alcaldies";
+  const relatiu = `../../${cami}`;
+  const canonica = `${SITE}/observatori/m/${municipi.slug}/${desti ? desti.adreca : ""}`;
+  const text = desti
+    ? `Aquesta fitxa ara és la de ${escape(desti.nom)}`
+    : `Aquesta fitxa ja no hi és; les alcaldies ${escape(de(municipi.nom))} són a la fitxa del municipi`;
+  return `<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta ${MARCA_REDIRECCIO} content="0; url=${escape(relatiu)}">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="${escape(canonica)}">
+<title>${escape(desti?.nom ?? municipi.nom)}</title>
+</head>
+<body>
+<p>${text}: <a href="${escape(relatiu)}">${escape(canonica)}</a>.</p>
+</body></html>`;
+}
+
+/**
+ * Si una pàgina d'`alcaldia/` ja escrita **no** ha d'anar al sitemap: les
+ * redireccions (la de qui té fitxa de regidor i la de les adreces velles) i,
+ * quan l'Observatori és obert, qualsevol que porti `noindex` —una fitxa que
+ * s'hagi quedat a disc d'una publicació tancada—. Un sitemap que apunta a
+ * pàgines `noindex` és un avís a Search Console per cada adreça.
+ */
+export const esRedireccioAlcaldia = (html: string): boolean =>
+  html.includes(`<meta ${MARCA_REDIRECCIO}`) || (INDEXABLE && portaNoIndex(html));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // El gènere, quan una font el diu
@@ -1261,5 +1447,45 @@ export async function escriuAlcaldiesHistoriques(
     await writeFile(`${dir}/index.html`, renderAlcaldiaHistorica(persona, municipi, { generatedAt, genere }), "utf8");
     escrites += 1;
   }
+
+  // Les adreces que hi ha a disc d'una publicació anterior i que avui no són
+  // de ningú: una redirecció a qui les ha heretat (vegeu `renderRedireccioAntiga`).
+  const vigents = new Set(persones.map((p) => p.slug));
+  let antigues: string[] = [];
+  try {
+    antigues = (await readdir(`${outDir}${slug}/alcaldia`, { withFileTypes: true }))
+      .filter((e) => e.isDirectory() && !vigents.has(e.name))
+      .map((e) => e.name);
+  } catch {
+    /* encara no hi havia res */
+  }
+  for (const antiga of antigues) {
+    const hereu = hereuDeLAdreca(antiga, persones);
+    await writeFile(
+      `${outDir}${slug}/alcaldia/${antiga}/index.html`,
+      renderRedireccioAntiga(hereu ? { nom: hereu.nom, adreca: hereu.adreca } : null, municipi),
+      "utf8",
+    );
+  }
   return escrites;
+}
+
+/**
+ * La persona que ha heretat una adreça d'`alcaldia/` que ja no és de ningú.
+ * El slug és el nom normalitzat amb guions, i es compara amb totes les
+ * grafies de cada persona amb `mateixaPersona()`: «jordi-hereu-i-boher» és
+ * Jordi Hereu Boher, «alejandro-pastor-lopez-alex» és Àlex Pastor López. Un
+ * sufix «-2» de col·lisió es treu abans. Si lliga amb més d'una persona, o
+ * amb cap, no és de ningú.
+ */
+export function hereuDeLAdreca(slugAntic: string, persones: readonly PersonaAlcaldia[]): PersonaAlcaldia | null {
+  const nom = slugAntic.replace(/-\d+$/, "").replace(/-/g, " ");
+  const exactes = persones.filter((p) => p.variants.includes(normalizePersonName(nom)));
+  if (exactes.length === 1) return exactes[0]!;
+  const lliguen = persones.filter((p) => p.variants.some((v) => mateixaPersona(v, nom)));
+  if (lliguen.length === 1) return lliguen[0]!;
+  // La «ñ» que era una «ð» va fer slugs com «monta-a» i «pe-a»: la lletra
+  // que falta entre el tros i la vocal solta era una «n».
+  const ambEnye = slugAntic.replace(/([a-z])-([aeiou])(?=-|$)/g, "$1n$2");
+  return ambEnye !== slugAntic ? hereuDeLAdreca(ambEnye, persones) : null;
 }

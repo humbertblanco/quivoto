@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { AlcaldiaWikidata } from "../jobs/j31-alcaldies-wikidata";
-import { fusionaAmbWikidata, mateixaPersona, motiuFinalEscrit, partitTruncat, termDe, type PasAlcaldia } from "./alcaldies";
+import type { AlcaldiaMinisteri } from "../jobs/j35-alcaldes-ministeri";
+import {
+  distanciaNoms, fusionaAmbWikidata, mateixaPersona, motiuFinalEscrit, partitAmbSentit, partitSenseParentesis, partitTruncat,
+  reparaNomAlcaldia, termDe, type PasAlcaldia,
+} from "./alcaldies";
 import { datesDeConstitucio, findChanges } from "./mayor-changes";
 
 /**
@@ -199,5 +203,103 @@ describe("l'alcalde sortint en funcions", () => {
       "2019-2023 RUBEN GUIJARRO PALMA",
     ]);
     expect(history[2]).toMatchObject({ tookOfficeOn: "2019-06-15", finsA: "2020-04-22", motiuFinal: "renúncia" });
+  });
+});
+
+describe("la font oficial mana sobre un tram de Wikidata", () => {
+  // Barcelona: Wikidata data Jordi Hereu fins a l'1 de juliol del 2011, i la
+  // Generalitat del 2011 ençà no dona cap data de presa de possessió. Sense la
+  // regla, a Hereu li sortia un mandat 2011-2015 «segons Wikidata» que acabava
+  // quan hi arribava Xavier Trias, que va ser qui el va obrir.
+  const generalitat: PasAlcaldia[] = [
+    { term: "2003-2007", name: "JORDI HEREU BOHER", partyRaw: "(PSC-PSOE)-PM", tookOfficeOn: "2006-09-08" },
+    { term: "2007-2011", name: "JORDI HEREU BOHER", partyRaw: "PSC-PSOE", tookOfficeOn: "2007-06-16" },
+    { term: "2011-2015", name: "XAVIER TRIAS VIDAL DE LLOBATERA", partyRaw: "CiU", tookOfficeOn: null },
+  ];
+  const inicis = new Map([["2003-2007", "2003-06-14"], ["2007-2011", "2007-06-16"], ["2011-2015", "2011-06-11"]]);
+  const hereu = wd({ qid: "Q953762", nom: "Jordi Hereu i Boher", inici: "2006-08-08", fi: "2011-07-01" });
+  const ministeri: AlcaldiaMinisteri[] = [
+    { mandat: "2011-2015", nom: "XAVIER TRIAS VIDAL DE LLOBATERA", llista: "CIU", possessio: "2011-07-01", baixa: null },
+  ];
+
+  it("no crea cap mandat on una font oficial diu que hi havia una altra persona", () => {
+    const history = fusionaAmbWikidata(generalitat, [hereu], inicis, ministeri);
+    expect(history.filter((h) => mateixaPersona(h.name, "Jordi Hereu Boher")).map((h) => h.term)).toEqual(["2003-2007", "2007-2011"]);
+    expect(history.some((h) => h.font === "wikidata")).toBe(false);
+  });
+
+  it("tampoc quan la Generalitat no té data i Wikidata sí que té qui va obrir el mandat", () => {
+    const trias = wd({ qid: "Q973064", nom: "Xavier Trias i Vidal de Llobatera", inici: "2011-07-01", fi: "2015-06-13" });
+    const history = fusionaAmbWikidata(generalitat, [hereu, trias], inicis);
+    expect(history.filter((h) => h.term === "2011-2015").map((h) => h.name)).toEqual(["XAVIER TRIAS VIDAL DE LLOBATERA"]);
+  });
+
+  it("un pas nou que diu haver obert el mandat quan l'oficial en diu un altre no s'afegeix; un relleu a mig mandat, sí", () => {
+    const wikidata = [
+      wd({ qid: "Q1", nom: "Pere Inventat Roca", inici: "2011-06-11", fi: "2012-01-01" }),
+      wd({ qid: "Q2", nom: "Anna Rellevant Puig", inici: "2013-03-01", fi: "2015-06-13" }),
+    ];
+    const history = fusionaAmbWikidata(generalitat, wikidata, inicis, ministeri);
+    expect(history.filter((h) => h.term === "2011-2015").map((h) => h.name)).toEqual(["XAVIER TRIAS VIDAL DE LLOBATERA", "Anna Rellevant Puig"]);
+  });
+});
+
+describe("la mateixa persona escrita de dues maneres", () => {
+  it("la «i» i la «y» dels cognoms, els accents i el sobrenom entre parèntesis no compten", () => {
+    expect(mateixaPersona("Jordi Hereu Boher", "Jordi Hereu i Boher")).toBe(true);
+    expect(mateixaPersona("Alejandro Pastor López (Àlex)", "Àlex Pastor López")).toBe(true);
+    expect(mateixaPersona("Juan García y Pérez", "JUAN GARCIA PEREZ")).toBe(true);
+    expect(mateixaPersona("Joan Piqué Vilà", "JOAN PIQUE VILA")).toBe(true);
+  });
+
+  it("una errada d'una lletra, o dues lletres girades, al nom o als cognoms", () => {
+    expect(mateixaPersona("Gudald Picas Mitjavila", "Eudald Picas Mitjavila")).toBe(true);
+    expect(mateixaPersona("Eudald Picas Mijtavila", "Eudald Picas Mitjavila")).toBe(true);
+    expect(mateixaPersona("Lluís Dalmau Almacellas", "Lluís Dalmau Almacelles")).toBe(true);
+    expect(mateixaPersona("Víctor Falguera Pascual", "Víctor Falguera Pasqual")).toBe(true);
+    expect(mateixaPersona("Antoni Siurana Zaragoza", "Antoni Siurana i Saragossa")).toBe(true);
+    expect(mateixaPersona("Ngel Vidal Povill", "Àngel Vidal Povill")).toBe(true);
+    expect(mateixaPersona("Enrique Pujol - Casanovas.", "Enrique Pujol Casanovas")).toBe(true);
+  });
+
+  it("un cognom de menys", () => {
+    expect(mateixaPersona("Vanessa Olivart", "Vanesa Olivart Rosicart")).toBe(true);
+    expect(mateixaPersona("Jordi Cabezas", "Jordi Cabezas Llobet")).toBe(true);
+    expect(mateixaPersona("Toni Bosch Carabante", "Antoni Bosch i Carabante")).toBe(true);
+  });
+
+  it("però no persones diferents amb el mateix cognom", () => {
+    expect(mateixaPersona("Josep March Minguell", "Josep March Silart")).toBe(false);
+    expect(mateixaPersona("Manuel Sales Sales", "Manel Sales Martori")).toBe(false);
+    expect(mateixaPersona("Maria Sarret Pijuan", "Manuel Sarret Pons")).toBe(false);
+    expect(mateixaPersona("Jose Masdeu Vives", "Josep Masdeu Isern")).toBe(false);
+    expect(mateixaPersona("Pere Arderiu Arraut", "Pere Arderiu Ros")).toBe(false);
+    expect(mateixaPersona("Meritxell Capdevila Morera", "Magí Capdevila Huguet")).toBe(false);
+    expect(mateixaPersona("Maria Puig", "Marta Puig")).toBe(false);
+  });
+
+  it("distanciaNoms compta una transposició com una sola errada", () => {
+    expect(distanciaNoms("mitjavila", "mijtavila")).toBe(1);
+    expect(distanciaNoms("almacellas", "almacelles")).toBe(1);
+    expect(distanciaNoms("abc", "abc")).toBe(0);
+  });
+});
+
+describe("les reparacions d'escriptura", () => {
+  it("la «Ð» era una «Ñ», i un parèntesi solt no hi és", () => {
+    expect(reparaNomAlcaldia("JOAN CASAS MONTAÐA")).toBe("JOAN CASAS MONTAÑA");
+    expect(reparaNomAlcaldia("Jordi Delgado Peða")).toBe("Jordi Delgado Peña");
+    expect(reparaNomAlcaldia("Eduard Montseny i Masip Pons)")).toBe("Eduard Montseny i Masip Pons");
+    expect(reparaNomAlcaldia("Alejandro Pastor López (Àlex)")).toBe("Alejandro Pastor López (Àlex)");
+    expect(mateixaPersona("JOAN CASAS MONTAÐA", "Joan Casas Montaña")).toBe(true);
+  });
+
+  it("«N/A» no és cap partit, i el parèntesi de dins no es dobla", () => {
+    expect(partitAmbSentit("N/A")).toBeNull();
+    expect(partitAmbSentit(" n/a ")).toBeNull();
+    expect(partitAmbSentit("")).toBeNull();
+    expect(partitAmbSentit("PSC-CP")).toBe("PSC-CP");
+    expect(partitSenseParentesis("(PSC-PSOE)-PM")).toBe("PSC-PSOE-PM");
+    expect(partitSenseParentesis("CiU")).toBe("CiU");
   });
 });

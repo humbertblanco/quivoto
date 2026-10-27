@@ -79,6 +79,7 @@ describe("ine5DelCodi", () => {
 describe("nomEndret i dataIso", () => {
   it("gira la coma dels fitxers vells i deixa els altres noms com són", () => {
     expect(nomEndret("LOPEZ LOZANO, MANUEL")).toBe("MANUEL LOPEZ LOZANO");
+    expect(nomEndret("CASAS MONTAÐA, JOAN")).toBe("JOAN CASAS MONTAÑA");
     expect(nomEndret("RIERA VILAPLANA,  VALENTI ")).toBe("VALENTI RIERA VILAPLANA");
     expect(nomEndret("MARIA SOLER SALA")).toBe("MARIA SOLER SALA");
     expect(nomEndret("ALEJANDRO PASTOR LÓPEZ (ÀLEX)")).toBe("ALEJANDRO PASTOR LÓPEZ (ÀLEX)");

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
+import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
+import { partitDe } from "./sigla";
+import { MARQUES } from "./vots-partit";
 import {
-  marcaDe, PARTIT_CSS, renderPartit, tintaSobre,
+  marcaDe, PARTIT_CSS, renderPartit, resumHistoric, tintaSobre,
   type PartitData, type PartitMunicipi, type PartitRenda, type PartitRetribucions,
 } from "./partit";
 
@@ -507,7 +510,7 @@ describe("renderPartit", () => {
       expect(html).toContain("La corba comença el 2019 i no el 1979");
     });
 
-    it("enllaça a la pàgina de l'altra marca només quan en té", () => {
+    it("enllaça a la pàgina de l'altra marca, i totes en tenen: també CiU, que és històrica", () => {
       const html = renderPartit(
         mostra({
           id: "junts", sigles: "Junts",
@@ -516,8 +519,8 @@ describe("renderPartit", () => {
         "2026-08-30",
       );
       expect(html).toContain('href="../pdecat/"');
-      // CiU no en té: hi surt escrit i sense enllaç.
-      expect(html).not.toContain('href="../ciu/"');
+      // CiU té pàgina històrica (vegeu `loadPartits`): l'enllaç ja no cau enlloc.
+      expect(html).toContain('href="../ciu/"');
     });
 
     it("qui no té llinatge documentat no en porta cap secció inventada", () => {
@@ -896,5 +899,56 @@ describe("el cap SEO del partit", () => {
 
   it("té un sol <h1>", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+});
+
+describe("les marques històriques", () => {
+  /** CiU: res avui, i una sèrie que s'acaba el 2015. Xifres versemblants, no les de debò. */
+  const ciu = (): PartitData =>
+    mostra({
+      id: "ciu", sigles: "CiU", name: "Convergència i Unió", color: "#18307b", historica: true,
+      alcaldies: 0, regidories: 0, municipis: 0, comarques: 0, majories: 0, poblacioGovernada: 0, vots: 0,
+      llocs: [], votsMunicipis: {}, poblacioSerie: [], serieRegidories2023: 0, serieAlcaldies2023: 0,
+      serie: [
+        { year: 1995, regidories: 3_100, regidoriesCatalunya: 9_000, guanyats: 520, alcaldies: 540, municipisAmbSerie: 947 },
+        { year: 2011, regidories: 3_300, regidoriesCatalunya: 9_000, guanyats: 500, alcaldies: 480, municipisAmbSerie: 947 },
+        { year: 2015, regidories: 2_000, regidoriesCatalunya: 9_000, guanyats: 300, alcaldies: 380, municipisAmbSerie: 947 },
+        { year: 2019, regidories: 0, regidoriesCatalunya: 9_000, guanyats: 0, alcaldies: 0, municipisAmbSerie: 947 },
+        { year: 2023, regidories: 0, regidoriesCatalunya: 9_000, guanyats: 0, alcaldies: 0, municipisAmbSerie: 947 },
+      ],
+    });
+
+  it("cada marca que una pastilla pot enllaçar té pàgina: les dues llistes són la mateixa", () => {
+    const ambPagina = new Set(MARQUES.map((b) => b.id));
+    for (const id of BRANDS_BY_ID.keys()) {
+      const enllac = partitDe(null, id);
+      if (enllac !== null) expect(ambPagina.has(enllac)).toBe(true);
+    }
+    expect(ambPagina.has("ciu")).toBe(true);
+    expect(partitDe("CiU")).toBe("ciu");
+  });
+
+  it("la pàgina diu què va ser, no què no és: ni mapa, ni «on mana», ni vots d'avui", () => {
+    const html = renderPartit(ciu(), "2026-10-27");
+    expect(resumHistoric(ciu())).toBe(
+      "CiU no té avui cap alcaldia ni cap regidoria a Catalunya. Va tenir regidories fins a les municipals del 2015, i el 1995 va arribar a tenir 540 alcaldies.",
+    );
+    expect(html).toContain("Com li va anar des del 1979");
+    expect(html).toContain("D'on ve i cap a on va");
+    expect(html).not.toContain('id="mapa"');
+    expect(html).not.toContain('id="mana"');
+    expect(html).not.toContain('id="poblacio"');
+    expect(html).not.toContain("totes a l'oposició");
+  });
+
+  it("una marca sense cap dada ho diu, sense inventar-ne cap", () => {
+    expect(resumHistoric(mostra({ sigles: "X", historica: true, serie: [] }))).toBe(
+      "X no té avui cap alcaldia ni cap regidoria a Catalunya. A les dades de les municipals des del 1979 tampoc no n'hi consta cap.",
+    );
+  });
+
+  it("a la llista dels altres, la marca històrica hi surt com a tal", () => {
+    const html = renderPartit(mostra({ altres: [{ id: "ciu", sigles: "CiU", color: "#18307b", alcaldies: 0, regidories: 0, historica: true }] }), "2026-10-27");
+    expect(html).toMatch(/<b>CiU<\/b>\s*<span class="quantes">històric<\/span>/);
   });
 });

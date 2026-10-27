@@ -164,6 +164,11 @@ export const PARTITS_INDEX_CSS = `
   overflow-wrap:anywhere}
 .px-nom{flex-basis:100%;padding-left:24px;font-size:.8rem;color:var(--ink-suau);line-height:1.3;
   overflow-wrap:anywhere}
+/* Les marques històriques: una línia per marca, sense xifres d'avui. */
+.px-historiques{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:6px}
+.px-historiques a{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;color:inherit;text-decoration:none}
+.px-historiques a:hover .px-sigles,.px-historiques a:focus-visible .px-sigles{text-decoration:underline}
+.px-historiques .px-nom{flex-basis:auto;padding-left:0}
 .px-xifres{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--e2);margin:0;padding:0;
   list-style:none;font-variant-numeric:tabular-nums}
 .px-xifres > li{display:flex;flex-direction:column;min-width:0}
@@ -211,7 +216,11 @@ export function renderPartitsIndex(
   poblacioCatalunya: number,
   generatedAt: string,
 ): string {
-  const ordenades = ordena(files);
+  // Les marques sense cap alcaldia ni cap regidoria avui (CiU) tenen pàgina
+  // històrica (vegeu `loadPartits`), però no són cap de «qui es reparteix els
+  // 947»: van a part, al final, i no compten als totals de la portada.
+  const historiques = ordena(files).filter((p) => p.alcaldies === 0 && p.regidories === 0);
+  const ordenades = ordena(files).filter((p) => p.alcaldies > 0 || p.regidories > 0);
   const ambAlcaldia = ordenades.filter((p) => p.alcaldies > 0);
   const sumaAlcaldies = ordenades.reduce((a, p) => a + p.alcaldies, 0);
   // El tros de ningú. Es calcula i no s'escriu perquè creixi i minvi sol quan
@@ -326,6 +335,20 @@ ${cercador("../")}
     <li class="px-capcalera" aria-hidden="true"><span>Partit</span><span class="px-xifres"><span>Alcaldies</span>
       <span>Regidories</span><span>Població governada</span></span></li>
     ${llista}</ul>
+  ${
+    historiques.length > 0
+      ? `<h3>${historiques.length === 1 ? "La marca que avui no hi és" : "Les marques que avui no hi són"}</h3>
+  <p class="px-nota">Sense cap alcaldia ni cap regidoria del 2023. ${
+    historiques.length === 1 ? "La seva pàgina és" : "Les seves pàgines són"
+  } històriques: com els va anar des del 1979 i d'on vénen o cap a on van.</p>
+  <ul class="px-historiques">${historiques
+    .map(
+      (p) => `<li><a href="${escape(encodeURIComponent(p.id))}/"><span class="px-mostra" style="--c:${colorSegur(p.color)}"></span>
+    <span class="px-sigles">${escape(p.sigles)}</span> <span class="px-nom">${escape(p.nom)}</span></a></li>`,
+    )
+    .join("")}</ul>`
+      : ""
+  }
   <p class="px-nota">Font: alcaldies i regidories, resultats de les municipals del 28 de maig
   del 2023 i registre d'ens de la Generalitat (<code>ntc4-rnwr</code>, <code>6nei-4b44</code>);
   població governada, padró municipal vigent.</p>

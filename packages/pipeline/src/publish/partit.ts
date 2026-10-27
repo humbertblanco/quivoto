@@ -149,10 +149,10 @@ type PasLlinatge = {
  * «JUNTS FEM CAMPR» de Camprodon i «Junts - AM» de la Torre de l'Espanyol
  * —llistes d'Acord Municipal i llistes locals, cap d'elles el partit.
  *
- * CiU no té pàgina pròpia avui —no li queda cap alcaldia ni cap regidoria del
- * 2023— i per això la seva entrada aquí només serveix perquè les de Junts i el
- * PDeCAT la puguin anomenar; el dia que una llista de CiU torni a treure un
- * regidor, la seva pàgina ja sabrà on s'acaba la corba.
+ * CiU no té cap alcaldia ni cap regidoria del 2023, i la seva pàgina és
+ * **històrica** (`historica` a `PartitData`): la corba fins al 2015, aquest
+ * llinatge i prou. Hi ha de ser perquè més de dues mil fitxes d'alcaldia de
+ * qui va governar per CiU hi enllacen.
  *
  * Cada data està comprovada i no n'hi ha cap que no sigui pública i indiscutible.
  * Els casos dels quals no n'estem segurs no hi són: ICV i els comuns, per
@@ -491,8 +491,16 @@ export type PartitData = {
   /** La renda dels pobles que governa. `null` quan la font encara no hi és. */
   renda: PartitRenda | null;
 
+  /**
+   * Una marca **històrica**: avui no té cap alcaldia ni cap regidoria (CiU,
+   * dissolta el 2015). Té pàgina igualment, perquè les fitxes d'alcaldia de
+   * qui va governar amb aquelles sigles hi enllacen (vegeu `loadPartits`), i
+   * la pàgina parla del que va ser i no del que no és.
+   */
+  historica?: boolean;
+
   /** Les altres marques amb pàgina, per poder-hi saltar sense tornar enrere. */
-  altres: { id: string; sigles: string; color: string; alcaldies: number; regidories: number }[];
+  altres: { id: string; sigles: string; color: string; alcaldies: number; regidories: number; historica?: boolean }[];
 };
 
 // ------------------------------------------------------------------- format
@@ -701,14 +709,14 @@ function renderMapa(data: PartitData): string {
  * pàgina de l'altra marca —**i les xifres continuen separades**, que és
  * exactament el que la font permet afirmar.
  *
- * Només s'hi enllaça quan l'altra marca té pàgina, i en té una si i només si
- * avui li queda alguna alcaldia o alguna regidoria: CiU, per exemple, ja no en
- * té cap i el seu nom hi surt escrit sense enllaç.
+ * S'hi enllaça sempre: cada marca té pàgina, també les que avui no tenen cap
+ * alcaldia ni cap regidoria, com CiU, que en té una d'històrica.
  */
 function renderLlinatge(data: PartitData): string {
   const vida = LLINATGE[data.id];
   if (!vida) return "";
-  const ambPagina = new Set(data.altres.map((a) => a.id));
+  // Cada marca té pàgina (vegeu `loadPartits`): la del passat també.
+  const ambPagina = new Set([...data.altres.map((a) => a.id), ...ES_MARCA]);
 
   const passos = vida.passos
     .map((pas) => {
@@ -1762,10 +1770,35 @@ export const PARTIT_CSS = `
 
 // -------------------------------------------------------------------- pàgina
 
+/**
+ * La frase d'obertura d'una marca històrica, feta amb la seva sèrie i prou:
+ * fins quan va tenir representació i quantes alcaldies va arribar a tenir.
+ * Cap xifra que la sèrie no tingui, i si no en té cap, es diu així.
+ */
+export function resumHistoric(data: PartitData): string {
+  const serie = data.serie.filter((p) => dinsDeLaVida(data.id, p.year));
+  const ambRegidories = serie.filter((p) => (p.regidories ?? 0) > 0);
+  const maxim = serie.reduce<PartitEleccio | null>((m, p) => ((p.alcaldies ?? 0) > (m?.alcaldies ?? 0) ? p : m), null);
+  const avui = `${data.sigles} no té avui cap alcaldia ni cap regidoria a Catalunya.`;
+  if (ambRegidories.length === 0 && maxim === null) {
+    return `${avui} A les dades de les municipals des del 1979 tampoc no n'hi consta cap.`;
+  }
+  const darrer = ambRegidories[ambRegidories.length - 1];
+  const fins = darrer ? `Va tenir regidories fins a les municipals del ${darrer.year}` : null;
+  const cim =
+    maxim !== null && maxim.alcaldies !== null && maxim.alcaldies > 0
+      ? `el ${maxim.year} va arribar a tenir ${number(maxim.alcaldies)} ${plural(maxim.alcaldies, "alcaldia", "alcaldies")}`
+      : null;
+  const frase = fins && cim ? `${fins}, i ${cim}.` : fins ? `${fins}.` : `${cim!.charAt(0).toUpperCase()}${cim!.slice(1)}.`;
+  return `${avui} ${frase}`;
+}
+
 export function renderPartit(data: PartitData, generatedAt: string): string {
   const color = colorSegur(data.color);
-  const resum =
-    data.alcaldies > 0
+  const historica = data.historica === true;
+  const resum = historica
+    ? resumHistoric(data)
+    : data.alcaldies > 0
       ? `${data.sigles} té ${number(data.alcaldies)} ${plural(data.alcaldies, "alcaldia", "alcaldies")}, ${number(data.regidories)} ${plural(data.regidories, "regidoria", "regidories")} i governa ${number(data.poblacioGovernada)} habitants de Catalunya.`
       : `${data.sigles} no té cap alcaldia a Catalunya: hi té ${number(data.regidories)} ${plural(data.regidories, "regidoria", "regidories")}, ${plural(data.regidories, "tota", "totes")} a l'oposició.`;
   /*
@@ -1781,7 +1814,7 @@ export function renderPartit(data: PartitData, generatedAt: string): string {
   const url = `${SITE}/observatori/partit/${data.id}/`;
   const cap = capSeo({
     titol: `${data.sigles} als ajuntaments de Catalunya`,
-    descripcio: `${resum} On mana i com li ha anat des del 1979.`,
+    descripcio: historica ? `${resum} Com li va anar des del 1979.` : `${resum} On mana i com li ha anat des del 1979.`,
     url,
     imatge: imatgeOg(FITXER_OG.partit(data.id)),
     tipus: "article",
@@ -1834,19 +1867,25 @@ ${cercador("../../")}
     NOM_TIPUS[data.kind] ? ` · ${escape(NOM_TIPUS[data.kind]!)}` : ""
   }</p>
   <p class="resum">${escape(resum)}</p>
-  ${ulladaPartit(data)}
+  ${historica ? "" : ulladaPartit(data)}
 </section>
 
 <nav class="index" aria-label="Seccions d'aquesta pàgina">
-  <a href="#mapa">El mapa</a>
+  ${historica ? "" : '<a href="#mapa">El mapa</a>'}
   <a href="#evolucio">Des del 1979</a>
-  <a href="#mana">On mana</a>
-  <a href="#poblacio">Vots i habitants</a>
+  ${historica ? "" : '<a href="#mana">On mana</a>'}
+  ${historica ? "" : '<a href="#poblacio">Vots i habitants</a>'}
   ${retribucions ? '<a href="#retribucions">Què cobren les seves alcaldies</a>' : ""}
   ${renda ? '<a href="#renda">La renda dels pobles que governa</a>' : ""}
   <a href="#altres">Els altres partits</a>
 </nav>
-
+${
+  // Una marca històrica no té mapa d'avui, ni llista d'on mana, ni vots del
+  // 2023: aquests tres blocs dirien «cap», «cap» i «cap». La pàgina és la
+  // corba i el llinatge.
+  historica
+    ? ""
+    : `
 <section class="bloc" id="mapa">
   <h2>On és, als 947</h2>
   <p class="entrada-bloc">Els municipis amb l'alcaldia van del color de la marca; els que hi tenen
@@ -1858,16 +1897,21 @@ ${cercador("../../")}
   }</p>
   ${renderMapa(data)}
 </section>
+`
+}
 
 <section class="bloc" id="evolucio">
-  <h2>Com li ha anat des del 1979</h2>
+  <h2>${historica ? "Com li va anar des del 1979" : "Com li ha anat des del 1979"}</h2>
   <p class="entrada-bloc">Dotze eleccions municipals. La comparació va <b>per força i no per
   sigles</b>: les candidatures es rebategen cada poques convocatòries i comparar-les pel nom no
   diria res.</p>
   ${renderLlinatge(data)}
   ${renderEvolucio(data)}
 </section>
-
+${
+  historica
+    ? ""
+    : `
 <section class="bloc" id="mana">
   <h2>On mana</h2>
   <p class="entrada-bloc">Els municipis amb l'alcaldia, del que té més habitants al que en té
@@ -1879,6 +1923,8 @@ ${cercador("../../")}
   <h2>La gent que el vota i la gent que governa</h2>
   ${renderPoblacio(data)}
 </section>
+`
+}
 
 ${
   retribucions
@@ -1907,7 +1953,7 @@ ${
             (a) => `<li><a href="../${escape(a.id)}/">
         <span class="mostra" style="--c:${colorSegur(a.color)}"></span>
         <b>${escape(a.sigles)}</b>
-        <span class="quantes">${a.alcaldies} ${plural(a.alcaldies, "alcaldia", "alcaldies")}</span>
+        <span class="quantes">${a.historica ? "històric" : `${a.alcaldies} ${plural(a.alcaldies, "alcaldia", "alcaldies")}`}</span>
       </a></li>`,
           )
           .join("")}</ul>`
@@ -1936,8 +1982,12 @@ ${
         : ""
     }
     ${data.renda ? `<li>Renda neta per persona: INE, Atles de distribució de renda de les llars, sèrie 2015-${data.renda.any}.</li>` : ""}
-    <li>Límits municipals del mapa: <a href="${escape(geometria.fontUrl)}" target="_blank" rel="noopener">${escape(geometria.font)}</a>,
-      sota <a href="${escape(geometria.llicenciaUrl)}" target="_blank" rel="noopener">${escape(geometria.llicencia)}</a>.</li>
+    ${
+      historica
+        ? ""
+        : `<li>Límits municipals del mapa: <a href="${escape(geometria.fontUrl)}" target="_blank" rel="noopener">${escape(geometria.font)}</a>,
+      sota <a href="${escape(geometria.llicenciaUrl)}" target="_blank" rel="noopener">${escape(geometria.llicencia)}</a>.</li>`
+    }
   </ul>
   <p class="nota">Quines candidatures són d'aquesta marca és un càlcul nostre i es pot reproduir
   amb el codi del projecte: surt de l'agrupació electoral que publica la Generalitat i, quan
@@ -2550,12 +2600,19 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
 
   const anys = [...new Set([...totalAny.keys(), ...alcaldiesAny.keys()])].sort((a, b) => a - b);
 
-  // ---- una pàgina per marca amb alguna alcaldia o alguna regidoria ara
-
-  const ambPagina = MARQUES.filter((brand) => {
-    const llocs = llocsPerMarca.get(brand.id) ?? [];
-    return llocs.some((m) => m.alcaldia) || (regidoriesPerMarca.get(brand.id) ?? 0) > 0;
-  });
+  // ---- una pàgina per marca, totes
+  //
+  // **Les pàgines i els enllaços surten de la mateixa llista.** Abans només
+  // tenien pàgina les marques amb alguna alcaldia o alguna regidoria avui,
+  // mentre que `partitDe()` (a `sigla.ts`) enllaça qualsevol marca de
+  // `PARTY_BRANDS`: les 2.230 fitxes d'alcaldia de qui va governar per CiU
+  // portaven 8.773 enllaços a `partit/ciu/`, que no existia. Ara la llista de
+  // pàgines és `MARQUES`, que és exactament el conjunt que `partitDe()` pot
+  // tornar, i la marca que avui no té res és `historica`: la pàgina diu què va
+  // ser, amb la corba des del 1979, i no què no és.
+  const avui = (id: string): boolean =>
+    (llocsPerMarca.get(id) ?? []).some((m) => m.alcaldia) || (regidoriesPerMarca.get(id) ?? 0) > 0;
+  const ambPagina = MARQUES;
 
   const resum = ambPagina.map((brand) => {
     const llocs = llocsPerMarca.get(brand.id) ?? [];
@@ -2565,6 +2622,7 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
       color: colorDe(brand.id),
       alcaldies: llocs.filter((m) => m.alcaldia).length,
       regidories: regidoriesPerMarca.get(brand.id) ?? 0,
+      ...(avui(brand.id) ? {} : { historica: true }),
     };
   });
   resum.sort((a, b) => b.alcaldies - a.alcaldies || b.regidories - a.regidories);
@@ -2718,6 +2776,7 @@ export async function loadPartits(db: Db): Promise<PartitData[]> {
       color: colorDe(brand.id),
       lineage: brand.lineage ?? null,
       lineageSigles: brand.lineage ? siglesDe(brand.lineage) : null,
+      ...(avui(brand.id) ? {} : { historica: true }),
 
       alcaldies: mana.length,
       regidories,

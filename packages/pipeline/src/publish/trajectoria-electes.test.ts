@@ -9,6 +9,7 @@ import {
   decades,
   fitxaAlcaldia,
   fitxaDe,
+  fitxaDelRegistre,
   fitxaPersona,
   inicisDeMandat,
   llistaDestins,
@@ -27,6 +28,7 @@ import {
   type TrajectoriaData,
 } from "./trajectoria-electes";
 import type { Retrat } from "./fotos-wikidata";
+import { registreAlcaldies } from "./alcaldia-historica";
 
 /**
  * Les proves de l'historial van amb un poble sintètic de tres municipis, prou
@@ -732,5 +734,31 @@ describe("«Qui són», de 24 en 24", () => {
     expect(TRAJECTORIA_CSS).toMatch(/\.tj-lletres button\{min-width:44px;min-height:44px/);
     expect(TRAJECTORIA_CSS).toMatch(/\.tj-lletres\{[^}]*overflow-x:auto/);
     expect(TRAJECTORIA_CSS).toContain(".tj-mes[hidden]{display:none}");
+  });
+});
+
+describe("els enllaços a les fitxes d'alcaldia surten del mateix registre que les escriu", () => {
+  const muni = { slug: "begur", nom: "Begur" };
+  const registre = registreAlcaldies({
+    history: [
+      { term: "2003-2007", name: "GUDALD PICAS MITJAVILA", partyRaw: "CiU", tookOfficeOn: null },
+      { term: "2007-2011", name: "EUDALD PICAS MITJAVILA", partyRaw: "CiU", tookOfficeOn: null },
+      { term: "2011-2015", name: "JOAN CASAS MONTAÐA", partyRaw: "N/A", tookOfficeOn: null },
+    ],
+    changes: [],
+  });
+
+  it("qualsevol grafia porta a la fitxa que existeix", () => {
+    expect(fitxaDe(muni, "Gudald Picas Mitjavila", null, registre)).toBe("../m/begur/alcaldia/eudald-picas-mitjavila/");
+    expect(fitxaDelRegistre(muni, "JOAN CASAS MONTAÐA", registre)).toBe("../m/begur/alcaldia/joan-casas-montana/");
+  });
+
+  it("un nom que no és al registre va a la llista del municipi, mai a un slug endevinat", () => {
+    expect(fitxaDe(muni, "Maite Selva Huertas", null, registre)).toBe("../m/begur/#alcaldies");
+  });
+
+  it("qui té fitxa de regidor hi continua anant", () => {
+    const actual = { clau: "eudald picas mitjavila", adreca: "regidor/eudald-picas-mitjavila/" };
+    expect(fitxaDe(muni, "EUDALD PICAS MITJAVILA", actual, registre)).toBe("../m/begur/regidor/eudald-picas-mitjavila/");
   });
 });

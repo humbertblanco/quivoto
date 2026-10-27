@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   adrecesAlcaldies, alcaldiesHistoriques, anysDeLaPersona, descripcioAlcaldia, duradaEscrita, esRedireccioAlcaldia,
-  fraseNaixement, genereDe, periodesDeLaPersona, renderAlcaldiaHistorica, renderRedireccioAlcaldia, resultatDeLaLlista, titolAlcaldia,
+  fraseNaixement, genereDe, hereuDeLAdreca, periodesDeLaPersona, registreAlcaldies, renderAlcaldiaHistorica, renderRedireccioAlcaldia,
+  renderRedireccioAntiga, resultatDeLaLlista, titolAlcaldia,
   type HistorialAlcaldies, type PersonaAlcaldia, type ResultatsPerEleccio,
 } from "./alcaldia-historica";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
@@ -519,7 +520,9 @@ describe("els passos que vénen de Wikidata", () => {
 
     const pastor = renderAlcaldiaHistorica(de("alejandro pastor lopez"), BADALONA_MUNICIPI, { generatedAt: "avui", genere: "alcalde", avui: AVUI });
     expect(pastor).toContain('<span class="marca-canvi">segons Wikidata</span>');
-    expect(pastor).toContain('Partit dels Socialistes de Catalunya <span class="secundari">segons Wikidata</span>');
+    // El pas ja porta la marca «segons Wikidata»: el partit no la repeteix.
+    expect(pastor).toContain('<span class="partit-wikidata">Partit dels Socialistes de Catalunya</span><span class="marca-canvi">segons Wikidata</span>');
+    expect(pastor).not.toMatch(/segons Wikidata(<\/span>)*\s*(<[^>]+>)*\s*segons Wikidata/);
     expect(pastor).toContain("Segons Wikidata, va dimitir.");
     expect(pastor).toContain("rellevant <a href=\"../../alcaldia/ma-dolors-sabater-puig/\">Ma. Dolors Sabater Puig</a>");
 
@@ -581,7 +584,7 @@ describe("el que ve del Ministeri", () => {
 
     const nou = pagina("persona del ministeri");
     expect(nou).toContain('<span class="marca-canvi">segons el Ministeri</span>');
-    expect(nou).toContain('CIU <span class="secundari">segons el Ministeri</span>');
+    expect(nou).toContain('<span class="partit-wikidata">CIU</span><span class="marca-canvi">segons el Ministeri</span>');
     expect(nou).not.toContain("segons Wikidata");
   });
 
@@ -590,5 +593,170 @@ describe("el que ve del Ministeri", () => {
     expect(html).not.toContain("segons el Ministeri");
     const sabater = renderAlcaldiaHistorica(alcaldiesHistoriques(BADALONA, { avui: AVUI })[0]!, BADALONA_MUNICIPI, { generatedAt: "avui", genere: "alcaldessa", avui: AVUI });
     expect(sabater).not.toContain("segons el Ministeri");
+  });
+});
+
+/** Un historial de proves amb els noms tal com arriben: només el que cal per agrupar persones. */
+const historialDe = (files: [term: string, name: string, extra?: Partial<HistorialAlcaldies["history"][number]>][]): HistorialAlcaldies => ({
+  history: files.map(([term, name, extra]) => ({ term, name, partyRaw: "IND", tookOfficeOn: null, ...extra })),
+  changes: [],
+});
+
+describe("una persona, una fitxa, encara que les fonts l'escriguin diferent", () => {
+  it("Barcelona: «Jordi Hereu i Boher» de Wikidata i «JORDI HEREU BOHER» de la Generalitat", () => {
+    const p = alcaldiesHistoriques(
+      historialDe([
+        ["2003-2007", "JORDI HEREU BOHER", { tookOfficeOn: "2006-09-08" }],
+        ["2007-2011", "Jordi Hereu i Boher", { font: "wikidata" }],
+      ]),
+      { avui: AVUI },
+    );
+    expect(p.map((x) => x.slug)).toEqual(["jordi-hereu-i-boher"]);
+    expect(p[0]!.mandats).toHaveLength(2);
+  });
+
+  it("Gombrèn: «Gudald», «Eudald», «Mitjavila» i «Mijtavila» són una sola persona", () => {
+    const p = alcaldiesHistoriques(
+      historialDe([
+        ["1999-2003", "GUDALD PICAS MITJAVILA"],
+        ["2003-2007", "EUDALD PICAS MITJAVILA"],
+        ["2007-2011", "EUDALD PICAS MIJTAVILA", { font: "ministeri" }],
+        ["2011-2015", "EUDALD PICAS MITJAVILA"],
+      ]),
+      { avui: AVUI },
+    );
+    expect(p.map((x) => x.slug)).toEqual(["eudald-picas-mitjavila"]);
+    expect(p[0]!.variants).toEqual(expect.arrayContaining(["gudald picas mitjavila", "eudald picas mijtavila"]));
+  });
+
+  it("Badalona: «Alejandro Pastor López (Àlex)» és Àlex Pastor López", () => {
+    const p = alcaldiesHistoriques(
+      historialDe([
+        ["2015-2019", "Alejandro Pastor López (Àlex)", { font: "wikidata" }],
+        ["2019-2023", "ALEX PASTOR LOPEZ"],
+      ]),
+      { avui: AVUI },
+    );
+    expect(p.map((x) => x.slug)).toEqual(["alex-pastor-lopez"]);
+  });
+
+  it("accents, una lletra de diferència, i un cognom de menys, dins del mateix municipi", () => {
+    const p = alcaldiesHistoriques(
+      historialDe([
+        ["2003-2007", "JOAN PIQUE VILA"],
+        ["2007-2011", "Joan Piqué Vilà", { font: "wikidata" }],
+        ["2011-2015", "LLUIS DALMAU ALMACELLAS"],
+        ["2015-2019", "Lluís Dalmau Almacelles", { font: "ministeri" }],
+        ["2019-2023", "Vanessa Olivart", { font: "ministeri" }],
+        ["2019-2023", "VANESA OLIVART ROSICART", { tookOfficeOn: "2021-02-01" }],
+      ]),
+      { avui: AVUI },
+    );
+    expect(p.map((x) => x.slug)).toEqual(["joan-pique-vila", "lluis-dalmau-almacelles", "vanesa-olivart-rosicart"]);
+  });
+
+  it("un nom curt que lliga amb dues persones no s'ajunta amb cap", () => {
+    const p = alcaldiesHistoriques(
+      historialDe([
+        ["2003-2007", "JOSEP MARCH MINGUELL"],
+        ["2007-2011", "Josep March", { font: "ministeri" }],
+        ["2011-2015", "JOSEP MARCH SILART"],
+      ]),
+      { avui: AVUI },
+    );
+    expect(p.map((x) => x.slug).sort()).toEqual(["josep-march", "josep-march-minguell", "josep-march-silart"]);
+  });
+
+  it("dues grafies de la mateixa font al mateix mandat són dues persones", () => {
+    const p = alcaldiesHistoriques(
+      historialDe([
+        ["2011-2015", "JOAN MONCOSI SISACH", { tookOfficeOn: "2011-06-11" }],
+        ["2011-2015", "JOAN MONCUSI SUSACH", { tookOfficeOn: "2013-06-11" }],
+      ]),
+      { avui: AVUI },
+    );
+    expect(p).toHaveLength(2);
+  });
+
+  it("la «Ð» que era una «Ñ»: un sol nom i el slug «montana»", () => {
+    const p = alcaldiesHistoriques(
+      historialDe([
+        ["2003-2007", "JOAN CASAS MONTAÐA"],
+        ["2007-2011", "Joan Casas Montaña", { font: "wikidata" }],
+      ]),
+      { avui: AVUI },
+    );
+    expect(p.map((x) => x.slug)).toEqual(["joan-casas-montana"]);
+    expect(p[0]!.nom).not.toContain("ð");
+  });
+
+  it("el registre d'adreces troba la fitxa per qualsevol de les grafies", () => {
+    const registre = registreAlcaldies(historialDe([["2003-2007", "GUDALD PICAS MITJAVILA"], ["2007-2011", "EUDALD PICAS MITJAVILA"]]));
+    expect(registre.get("gudald picas mitjavila")).toBe("alcaldia/eudald-picas-mitjavila/");
+    expect(registre.get("eudald picas mitjavila")).toBe("alcaldia/eudald-picas-mitjavila/");
+  });
+});
+
+describe("«N/A» no és cap partit", () => {
+  it("la comissió gestora surt «sense partit», sense cap «N/A»", () => {
+    const [gestora] = alcaldiesHistoriques(historialDe([["2011-2015", "COMISSIO GESTORA", { partyRaw: "N/A" }]]), { avui: AVUI });
+    expect(gestora!.sigles).toBeNull();
+    const html = renderAlcaldiaHistorica(gestora!, MUNICIPI, { generatedAt: "avui", genere: null, avui: AVUI });
+    expect(html).toContain('<span class="secundari">sense partit</span>');
+    expect(html).not.toContain("N/A");
+  });
+});
+
+describe("les adreces velles", () => {
+  const persones = () =>
+    alcaldiesHistoriques(
+      historialDe([
+        ["2003-2007", "JORDI HEREU BOHER"],
+        ["2007-2011", "JOAN CASAS MONTAÐA"],
+        ["2011-2015", "ALEJANDRO PASTOR LOPEZ"],
+        ["2015-2019", "Àlex Pastor López", { font: "wikidata" }],
+      ]),
+      { avui: AVUI },
+    );
+
+  it("cada adreça que ja no és de ningú troba qui l'ha heretada", () => {
+    expect(hereuDeLAdreca("jordi-hereu-i-boher", persones())?.slug).toBe("jordi-hereu-boher");
+    expect(hereuDeLAdreca("alejandro-pastor-lopez-alex", persones())?.slug).toBe("alex-pastor-lopez");
+    expect(hereuDeLAdreca("joan-casas-monta-a", persones())?.slug).toBe("joan-casas-montana");
+    expect(hereuDeLAdreca("pere-qui-sigui", persones())).toBeNull();
+  });
+
+  it("la redirecció porta a la fitxa bona, amb canònica allà i noindex,follow, i no va al sitemap", () => {
+    const hereu = hereuDeLAdreca("jordi-hereu-i-boher", persones())!;
+    const html = renderRedireccioAntiga({ nom: hereu.nom, adreca: hereu.adreca }, MUNICIPI);
+    expect(html).toContain('content="0; url=../../alcaldia/jordi-hereu-boher/"');
+    expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/m/alcanar/alcaldia/jordi-hereu-boher/">');
+    expect(html).toContain('content="noindex,follow"');
+    expect(esRedireccioAlcaldia(html)).toBe(true);
+    const ningu = renderRedireccioAntiga(null, MUNICIPI);
+    expect(ningu).toContain('content="0; url=../../#alcaldies"');
+    expect(esRedireccioAlcaldia(ningu)).toBe(true);
+  });
+
+  it("una fitxa que s'ha quedat a disc amb noindex tampoc no va al sitemap", () => {
+    expect(esRedireccioAlcaldia('<head><meta name="robots" content="noindex,nofollow"></head>')).toBe(true);
+    expect(esRedireccioAlcaldia('<head><meta name="robots" content="index,follow,max-image-preview:large"></head>')).toBe(false);
+  });
+});
+
+describe("dues grafies al mateix mandat, de fonts diferents", () => {
+  it("són un sol pas, sense cap relleu inventat", () => {
+    const historial: HistorialAlcaldies = {
+      history: [
+        { term: "2007-2011", name: "EUDALD PICAS MITJAVILA", partyRaw: "CiU", tookOfficeOn: null },
+        { term: "2007-2011", name: "EUDALD PICAS MIJTAVILA", partyRaw: null, tookOfficeOn: "2007-06-16", font: "ministeri", finsA: "2011-06-11", fontFi: "ministeri" },
+        { term: "2011-2015", name: "EUDALD PICAS MITJAVILA", partyRaw: "CiU", tookOfficeOn: null },
+      ],
+      changes: [{ term: "2007-2011", mayors: [{ name: "EUDALD PICAS MITJAVILA", tookOfficeOn: null }, { name: "EUDALD PICAS MIJTAVILA", tookOfficeOn: "2007-06-16" }], partyChanged: false }],
+    };
+    const [p] = alcaldiesHistoriques(historial, { avui: AVUI });
+    expect(p!.mandats.map((m) => m.term)).toEqual(["2007-2011", "2011-2015"]);
+    expect(p!.mandats[0]).toMatchObject({ partyRaw: "CiU", tookOfficeOn: "2007-06-16", fontInici: "ministeri", font: "generalitat", marxaAMigMandat: false, arribaAMigMandat: false });
+    expect(registreAlcaldies(historial).get("eudald picas mijtavila")).toBe("alcaldia/eudald-picas-mitjavila/");
   });
 });

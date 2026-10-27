@@ -4,7 +4,9 @@ import { KIND as KIND_ALCALDIES_WIKIDATA, type FitxaAlcaldiesWikidata } from "..
 import { KIND as KIND_ALCALDIES_MINISTERI, type FitxaAlcaldiesMinisteri } from "../jobs/j35-alcaldes-ministeri";
 import { normalize } from "../lib/text";
 import { withRun } from "../lib/run";
-import { familiaDelPartit, fusionaAmbMinisteri, fusionaAmbWikidata, mateixaPersona, type PasAlcaldia } from "./alcaldies";
+import {
+  familiaDelPartit, fusionaAmbMinisteri, fusionaAmbWikidata, mateixaPersona, partitAmbSentit, reparaNomAlcaldia, type PasAlcaldia,
+} from "./alcaldies";
 
 /**
  * Canvis d'alcaldia a mig mandat.
@@ -205,12 +207,24 @@ export async function deriveMayorChanges(db: Db): Promise<void> {
     let finalsDelMinisteri = 0;
     let inicisDelMinisteri = 0;
     for (const [municipalityId, list] of byMunicipality) {
-      const generalitat: PasAlcaldia[] = list.map((r) => ({ term: r.term, name: r.name, partyRaw: r.partyRaw, tookOfficeOn: r.tookOfficeOn }));
+      // El nom i el partit, amb les dues reparacions que no canvien cap dada
+      // sinó l'escriptura: la «Ð» que era una «Ñ» («MONTAÐA») i el «N/A» que
+      // no és cap partit (vegeu `reparaNomAlcaldia` i `partitAmbSentit`).
+      const generalitat: PasAlcaldia[] = list.map((r) => ({
+        term: r.term,
+        name: reparaNomAlcaldia(r.name),
+        partyRaw: partitAmbSentit(r.partyRaw),
+        tookOfficeOn: r.tookOfficeOn,
+      }));
       const fitxaWikidata = wikidata.get(municipalityId) ?? null;
       const fitxaMinisteri = ministeri.get(municipalityId) ?? null;
+      const alcaldiesMinisteri = (fitxaMinisteri?.alcaldies ?? []).map((a) => ({ ...a, nom: reparaNomAlcaldia(a.nom) }));
+      // El Ministeri entra dues vegades: a la fusió amb Wikidata, només per
+      // saber qui va obrir cada mandat segons una font oficial (que un tram de
+      // Wikidata no hi pugui posar ningú altre), i després per omplir forats.
       const history = fusionaAmbMinisteri(
-        fusionaAmbWikidata(generalitat, fitxaWikidata?.alcaldies ?? [], termStarts),
-        fitxaMinisteri?.alcaldies ?? [],
+        fusionaAmbWikidata(generalitat, fitxaWikidata?.alcaldies ?? [], termStarts, alcaldiesMinisteri),
+        alcaldiesMinisteri,
       );
       const afegits = history.filter((h) => h.font === "wikidata").length;
       passosDeWikidata += afegits;

@@ -82,24 +82,210 @@ export function partitTruncat(partyRaw: string | null): boolean {
 }
 
 /**
- * La mateixa persona escrita per dues fonts. Primer el nom sencer normalitzat;
- * si no lliga, els dos últims cognoms iguals i la mateixa inicial del nom de
- * pila, que és com «Alejandro Pastor López» i «Àlex Pastor López» s'ajunten.
- * Només es fa servir dins d'un mateix mandat, on la probabilitat que hi hagi
- * dues persones amb els mateixos cognoms i la mateixa inicial és negligible.
+ * Les errades d'escriptura de l'historial que no són de cap persona sinó de la
+ * codificació, reparades abans de publicar o de comparar res.
+ *
+ *   · **«Ð» per «Ñ».** L'historial de la Generalitat té «JOAN CASAS MONTAÐA» a
+ *     Cornellà del Terri i «JORDI DELGADO PEÐA» a Gratallops: és la «Ñ» llegida
+ *     amb la taula de caràcters que no tocava (la «Ñ» i la «Ð» són veïnes a
+ *     totes dues). Cap nom català ni castellà no porta «ð», i la reparació no
+ *     pot fer mal enlloc; sense ella, el slug sortia «monta-a» i la mateixa
+ *     persona tenia dues fitxes.
+ *   · **Un parèntesi que no tanca o no obre** («EDUARD MONTSENY I MASIP
+ *     PONS)»): el que hi havia dins es conserva, el signe solt no.
+ *
+ * El nom es retorna en la mateixa caixa: majúscules si venia en majúscules.
+ */
+export function reparaNomAlcaldia(nom: string): string {
+  let net = nom.replace(/Ð/g, "Ñ").replace(/ð/g, "ñ");
+  const obre = (net.match(/\(/g) ?? []).length;
+  const tanca = (net.match(/\)/g) ?? []).length;
+  if (obre !== tanca) net = net.replace(/[()]/g, " ");
+  return net.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Un partit de l'historial que diu alguna cosa. «N/A» —que surt, per exemple,
+ * a les comissions gestores— no és cap partit: és la manera de la font de dir
+ * que no n'hi ha, i publicar-lo com si fos una sigla fa dir a la pàgina que
+ * algú ha governat «per N/A». Torna `null` i la pàgina diu «sense partit».
+ */
+export function partitAmbSentit(partyRaw: string | null | undefined): string | null {
+  if (partyRaw === null || partyRaw === undefined) return null;
+  const net = partyRaw.trim();
+  if (net === "") return null;
+  const n = normalize(net).replace(/\s+/g, "");
+  if (n === "na" || n === "n-a" || n === "nd" || n === "-" || n === "" || /^(sense|sin)partit|^(sense|sin)partido/.test(n)) return null;
+  return net;
+}
+
+/**
+ * El partit per escriure'l **entre parèntesis** darrere d'un nom. La
+ * Generalitat escriu alguna sigla amb el parèntesi ja posat —«(PSC-PSOE)-PM»—
+ * i, embolicada en un altre, la línia deia «Joan Clos i Matheu
+ * ((PSC-PSOE)-PM)». Els parèntesis de dins es treuen («PSC-PSOE-PM») i la
+ * sigla queda llegible i sencera.
+ */
+export function partitSenseParentesis(partit: string): string {
+  return partit
+    .replace(/[()]/g, " ")
+    .replace(/\s*-\s*/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/^-+|-+$/g, "")
+    .trim();
+}
+
+/**
+ * Els trossos d'un nom per comparar-lo amb un altre: normalitzat amb
+ * `normalizePersonName()` (sense accents, sense el que va entre parèntesis i
+ * sense la «i» dels cognoms), sense la «y» castellana que fa el mateix paper,
+ * amb els guions partits («Puig-Gros» són dos trossos com «Puig Gros») i sense
+ * cap tros d'una sola lletra que no sigui la inicial («Josep M. Pou»).
+ */
+function trossosDeNom(nom: string): string[] {
+  const n = normalizePersonName(reparaNomAlcaldia(nom)).replace(/-/g, " ");
+  return n
+    .split(" ")
+    .filter((t, i) => t !== "" && t !== "y" && (i === 0 || t.length > 1));
+}
+
+/**
+ * Plec fonètic per a la comparació aproximada: les lletres que les fonts
+ * canvien d'una llengua a l'altra o d'un ofici a l'altre sense que la persona
+ * canviï. «Zaragoza» i «Saragossa», «Vives» i «Bibes».
+ */
+const plec = (t: string): string => t.replace(/ss/g, "s").replace(/z/g, "s").replace(/v/g, "b").replace(/y/g, "i");
+
+/**
+ * Distància d'edició amb les transposicions de dues lletres veïnes comptades
+ * com una sola errada (Damerau, en la variant d'alineació òptima): «Mitjavila»
+ * i «Mijtavila» són a 1, que és el que són, un dit que s'ha avançat.
+ */
+export function distanciaNoms(a: string, b: string): number {
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i]![j] = Math.min(d[i - 1]![j]! + 1, d[i]![j - 1]! + 1, d[i - 1]![j - 1]! + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i]![j] = Math.min(d[i]![j]!, d[i - 2]![j - 2]! + 1);
+    }
+  }
+  return d[a.length]![b.length]!;
+}
+
+/** Dos trossos de nom iguals, o a una errada si tots dos són prou llargs per tenir-ne. */
+function trosSemblant(a: string, b: string): "igual" | "errada" | "no" {
+  const pa = plec(a);
+  const pb = plec(b);
+  if (pa === pb) return "igual";
+  return Math.min(pa.length, pb.length) >= 4 && distanciaNoms(pa, pb) <= 1 ? "errada" : "no";
+}
+
+/**
+ * Dos noms de pila que poden ser de la mateixa persona. Sempre: iguals; amb
+ * una lletra doblada de més o de menys («Vanesa» i «Vanessa»); sense la
+ * primera lletra, que és l'«Àngel» que una font escriu «Ngel» perquè s'ha
+ * menjat la majúscula accentuada; amb una lletra final de més («Adolf» i
+ * «Adolfo», «Jose» i «Josep»), o l'un el diminutiu final de l'altre («Toni» i
+ * «Antoni»).
+ *
+ * Una errada qualsevol d'una lletra («Gudald» i «Eudald», «Joan» i «Juan»)
+ * només quan no és `estricte`, és a dir quan hi ha dos cognoms per lligar:
+ * amb un sol cognom, «Maria Puig» i «Marta Puig» són a una lletra i són dues
+ * persones.
+ */
+function pilaCompatible(a: string, b: string, estricte: boolean): boolean {
+  const pa = plec(a);
+  const pb = plec(b);
+  if (pa === pb) return true;
+  const senseDobles = (t: string): string => t.replace(/(.)\1/g, "$1");
+  if (senseDobles(pa) === senseDobles(pb)) return true;
+  const [curt, llarg] = pa.length <= pb.length ? [pa, pb] : [pb, pa];
+  if (curt.length >= 3 && llarg.slice(1) === curt) return true;
+  if (llarg.length >= 5 && llarg.length === curt.length + 1 && llarg.startsWith(curt)) return true;
+  if (curt.length >= 4 && llarg.endsWith(curt)) return true;
+  return !estricte && curt.length >= 3 && distanciaNoms(pa, pb) <= 1;
+}
+
+/**
+ * Dos noms amb el mateix nombre de trossos: el de pila compatible i la resta
+ * igual o amb errades d'una lletra. Com a molt `maxErrades` trossos diferents
+ * (el de pila inclòs), i almenys un tros que lligui sencer a banda del de pila
+ * si el de pila també és diferent: «Joan Moncosi Sisach» i «Joan Moncusi
+ * Susach» sí; «Gudald Picas Mijtavila» i «Eudald Picas Mitjavila» també
+ * («Picas» lliga); dos noms amb tot diferent per una lletra, no.
+ */
+function trossosSemblants(a: readonly string[], b: readonly string[], maxErrades: number): boolean {
+  if (a.length !== b.length || a.length < 2) return false;
+  if (!pilaCompatible(a[0]!, b[0]!, a.length < 3)) return false;
+  let errades = plec(a[0]!) === plec(b[0]!) ? 0 : 1;
+  let iguals = 0;
+  for (let i = 1; i < a.length; i += 1) {
+    const s = trosSemblant(a[i]!, b[i]!);
+    if (s === "no") return false;
+    if (s === "errada") errades += 1;
+    else if (a[i]!.length >= 3) iguals += 1;
+  }
+  if (errades > maxErrades) return false;
+  return errades === 0 || iguals > 0 || plec(a[0]!) === plec(b[0]!);
+}
+
+/**
+ * La mateixa persona escrita de dues maneres. Les regles, de la més segura a
+ * la més arriscada, i **només per comparar dins d'un mateix municipi** (i a la
+ * fusió de fonts, dins d'un mateix mandat), on dues persones diferents amb
+ * noms tan semblants són una raresa:
+ *
+ *   1. El nom sencer normalitzat: «Jordi Hereu i Boher» i «JORDI HEREU BOHER»
+ *      (sense la «i» ni la «y» dels cognoms, sense accents, sense el que va
+ *      entre parèntesis com «Alejandro Pastor López (Àlex)»).
+ *   2. Els dos últims cognoms iguals i la mateixa inicial: «Alejandro Pastor
+ *      López» i «Àlex Pastor López», «Josep Ramon Ibarz Gilart» i «Josep Ibarz
+ *      i Gilart».
+ *   3. Els guions i els espais no compten: «Pujol-Casanovas» i «Pujol
+ *      Casanovas», «Ruiz- Canela» i «Ruiz-Canela».
+ *   4. Errades d'una lletra (o dues lletres veïnes girades) en un o dos
+ *      trossos: «Piqué»/«Pique», «Almacellas»/«Almacelles», «Pascual»/
+ *      «Pasqual», «Mitjavila»/«Mijtavila», «Gudald»/«Eudald».
+ *   5. Un cognom de menys: «Jordi Cabezas» i «Jordi Cabezas Llobet», «Vanessa
+ *      Olivart» i «Vanesa Olivart Rosicart». Qui crida ha de comprovar que el
+ *      nom curt no lligui amb dues persones diferents (`alcaldia-historica.ts`
+ *      ho fa): «Josep March» pot ser Minguell o Silart.
  */
 export function mateixaPersona(a: string, b: string): boolean {
-  const na = normalizePersonName(a);
-  const nb = normalizePersonName(b);
+  const na = normalizePersonName(reparaNomAlcaldia(a));
+  const nb = normalizePersonName(reparaNomAlcaldia(b));
   if (na === "" || nb === "") return false;
   if (na === nb) return true;
-  const parts = (n: string): { inicial: string; cognoms: string } => {
-    const tokens = n.split(" ");
-    return { inicial: tokens[0]![0] ?? "", cognoms: tokens.length >= 3 ? tokens.slice(-2).join(" ") : tokens.slice(-1).join(" ") };
-  };
-  const pa = parts(na);
-  const pb = parts(nb);
-  return pa.inicial === pb.inicial && pa.cognoms.length >= 5 && pa.cognoms === pb.cognoms;
+  const ta = trossosDeNom(a);
+  const tb = trossosDeNom(b);
+  if (ta.length === 0 || tb.length === 0) return false;
+  if (ta.join(" ") === tb.join(" ")) return true;
+
+  // 2. Cognoms i inicial, la regla de sempre.
+  const parts = (tokens: readonly string[]): { inicial: string; cognoms: string } => ({
+    inicial: tokens[0]![0] ?? "",
+    cognoms: (tokens.length >= 3 ? tokens.slice(-2) : tokens.slice(-1)).map(plec).join(" "),
+  });
+  const pa = parts(ta);
+  const pb = parts(tb);
+  if (pa.inicial === pb.inicial && pa.cognoms.length >= 5 && pa.cognoms === pb.cognoms) return true;
+
+  // 3. Junts, sense espais ni guions.
+  const compacteA = ta.map(plec).join("");
+  const compacteB = tb.map(plec).join("");
+  if (compacteA === compacteB) return true;
+  if (ta[0]![0] === tb[0]![0] && Math.min(compacteA.length, compacteB.length) >= 20 && distanciaNoms(compacteA, compacteB) <= 2) return true;
+
+  // 4. Errades de lletra, amb el mateix nombre de trossos.
+  if (trossosSemblants(ta, tb, ta.length >= 3 ? 2 : 1)) return true;
+
+  // 5. Un cognom de menys: el nom llarg sense l'últim tros és el curt.
+  const [curt, llarg] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
+  if (curt.length >= 2 && llarg.length === curt.length + 1) {
+    if (trossosSemblants(curt, llarg.slice(0, -1), 1)) return true;
+  }
+  return false;
 }
 
 /** L'any en què comença un mandat «2015-2019». */
@@ -131,12 +317,50 @@ const diesEntre = (a: string, b: string): number => Math.round((Date.parse(b) - 
  * Guijarro, el novembre del 2021— és un relleu, no qui va obrir el mandat, i
  * no diu res de fins quan va durar l'alcalde sortint en funcions.
  */
-function primerOficialDe(historial: readonly PasAlcaldia[], term: string, inici: string): string | undefined {
-  const primera = historial
-    .filter((r) => r.term === term && r.font === undefined && r.tookOfficeOn !== null)
-    .map((r) => r.tookOfficeOn!)
-    .sort()[0];
-  return primera !== undefined && Math.abs(diesEntre(inici, primera)) <= 45 ? primera : undefined;
+function primerOficialDe(
+  historial: readonly PasAlcaldia[],
+  term: string,
+  inici: string,
+  ministeri: readonly AlcaldiaMinisteri[] = [],
+): string | undefined {
+  const primera = obridorsOficials(historial, term, inici, ministeri).map((o) => o.data).sort()[0];
+  return primera;
+}
+
+/** Dies de marge sobre la constitució del ple: qui pren possessió dins d'aquest marge va obrir el mandat. */
+const MARGE_CONSTITUCIO = 45;
+
+/**
+ * Qui va obrir un mandat segons les fonts oficials: les files de la
+ * Generalitat amb data de presa de possessió dins dels quaranta-cinc dies de
+ * la constitució i, com que la Generalitat no en dona cap data del 2011 ençà,
+ * també les preses de possessió del Ministeri (J35) dins del mateix marge. Una
+ * fila de la Generalitat sense data que lliga amb una persona del Ministeri en
+ * pren la data del Ministeri. Una fila sense data enlloc no compta: no se sap
+ * si va obrir el mandat o va arribar-hi tard.
+ *
+ * És el que fa que **la font oficial mani sobre Wikidata**: si una font
+ * oficial diu que el mandat el va obrir una altra persona, un tram de
+ * Wikidata que travessa la constitució (Jordi Hereu, que Wikidata data fins a
+ * l'1 de juliol del 2011) no hi pot crear cap mandat.
+ */
+function obridorsOficials(
+  historial: readonly PasAlcaldia[],
+  term: string,
+  inici: string,
+  ministeri: readonly AlcaldiaMinisteri[],
+): { nom: string; data: string }[] {
+  const delMinisteri = ministeri.filter((m) => m.mandat === term && m.possessio !== null);
+  const obridors: { nom: string; data: string }[] = [];
+  for (const r of historial) {
+    if (r.term !== term || r.font !== undefined) continue;
+    const data = r.tookOfficeOn ?? delMinisteri.find((m) => mateixaPersona(m.nom, r.name))?.possessio ?? null;
+    if (data !== null && Math.abs(diesEntre(inici, data)) <= MARGE_CONSTITUCIO) obridors.push({ nom: r.name, data });
+  }
+  for (const m of delMinisteri) {
+    if (Math.abs(diesEntre(inici, m.possessio!)) <= MARGE_CONSTITUCIO) obridors.push({ nom: m.nom, data: m.possessio! });
+  }
+  return obridors;
 }
 
 const compareDates = (a: string | null, b: string | null): number => (a ?? "").localeCompare(b ?? "");
@@ -150,6 +374,12 @@ export function fusionaAmbWikidata(
   generalitat: readonly PasAlcaldia[],
   wikidata: readonly AlcaldiaWikidata[],
   termStarts: ReadonlyMap<string, string> = new Map(),
+  /**
+   * Les alcaldies del Ministeri (J35), si n'hi ha, només per saber qui va
+   * obrir cada mandat segons una font oficial (`obridorsOficials`). No
+   * s'afegeix res d'aquí: això ho fa `fusionaAmbMinisteri`, després.
+   */
+  ministeri: readonly AlcaldiaMinisteri[] = [],
 ): PasAlcaldia[] {
   const terms = [...new Set(generalitat.map((r) => r.term))];
   const resultat: PasAlcaldia[] = generalitat.map((r) => ({ ...r }));
@@ -170,7 +400,8 @@ export function fusionaAmbWikidata(
     // (o abans) que el primer alcalde oficial del següent pren possessió al
     // seu poble: fins llavors era l'alcalde sortint en funcions, no un
     // alcalde del mandat nou (vegeu més avall, on el tram no es duplica).
-    const primerOficialSeguent = seguent === undefined || iniciSeguent === null ? undefined : primerOficialDe(resultat, seguent, iniciSeguent);
+    const primerOficialSeguent =
+      seguent === undefined || iniciSeguent === null ? undefined : primerOficialDe(resultat, seguent, iniciSeguent, ministeri);
     const acabaEnAquest =
       alcaldia.fi !== null &&
       (iniciSeguent === null || alcaldia.fi < iniciSeguent || (primerOficialSeguent !== undefined && alcaldia.fi <= primerOficialSeguent));
@@ -198,6 +429,16 @@ export function fusionaAmbWikidata(
         fila.partitWikidata = alcaldia.partit;
       }
       continue;
+    }
+
+    // Un pas nou que diu haver obert el mandat (comença dins del marge de la
+    // constitució) quan una font oficial diu que el va obrir una altra
+    // persona: no és un forat de la Generalitat, és una contradicció, i mana
+    // la font oficial. Els relleus a mig mandat sí que s'hi afegeixen.
+    const iniciTerm = termStarts.get(term) ?? `${anyDelTerm(term)}-06-15`;
+    if (Math.abs(diesEntre(iniciTerm, alcaldia.inici)) <= MARGE_CONSTITUCIO) {
+      const obridors = obridorsOficials(resultat, term, iniciTerm, ministeri);
+      if (obridors.length > 0 && !obridors.some((o) => mateixaPersona(o.nom, alcaldia.nom))) continue;
     }
 
     resultat.push({
@@ -239,7 +480,15 @@ export function fusionaAmbWikidata(
       // Wikidata data Màrius Díaz fins al 24 de maig del 1983, que és el dia
       // que Joan Blanch va prendre possessió a Badalona; sense això, un tram
       // de setze dies de Díaz encapçalaria el 1983-1987.
-      const primerOficial = primerOficialDe(resultat, term, inici);
+      //
+      // I en general: si una font oficial (la Generalitat o el Ministeri) diu
+      // que aquest mandat el va obrir una altra persona, el tram de Wikidata
+      // s'atura aquí, plegui quan plegui segons Wikidata. Jordi Hereu, que
+      // Wikidata data fins a l'1 de juliol del 2011, no té cap mandat
+      // 2011-2015: aquell mandat el va obrir Xavier Trias.
+      const obridors = obridorsOficials(resultat, term, inici, ministeri);
+      if (obridors.length > 0 && !obridors.some((o) => mateixaPersona(o.nom, alcaldia.nom))) break;
+      const primerOficial = primerOficialDe(resultat, term, inici, ministeri);
       if (alcaldia.fi !== null && primerOficial !== undefined && alcaldia.fi <= primerOficial) break;
       const seguent = ordenats[ordenats.indexOf(term) + 1];
       const finsAlMandat = seguent !== undefined ? (termStarts.get(seguent) ?? `${seguent.slice(0, 4)}-06-15`) : null;

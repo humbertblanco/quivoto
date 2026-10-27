@@ -177,3 +177,15 @@ describe("el cap SEO de l'índex de partits", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
   });
 });
+
+describe("les marques històriques a l'índex", () => {
+  const ciu = marca({ id: "ciu", sigles: "CiU", nom: "Convergència i Unió", color: "#18307b", alcaldies: 0, regidories: 0, poblacioGovernada: 0 });
+  const html = renderPartitsIndex([...MOSTRA, ciu], CATALUNYA, "2026-10-27");
+
+  it("hi són, enllaçades, però a part i fora dels totals", () => {
+    expect(html).toContain("La marca que avui no hi és");
+    expect(html).toMatch(/<ul class="px-historiques"><li><a href="ciu\/">/);
+    expect(html).toContain(`${MOSTRA.length} partits amb pàgina pròpia`);
+    expect(html).not.toContain("<span class=\"px-sigles\">CiU</span>\n      <span class=\"px-nom\">");
+  });
+});

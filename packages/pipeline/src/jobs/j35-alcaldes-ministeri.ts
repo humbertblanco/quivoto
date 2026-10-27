@@ -156,9 +156,16 @@ export function ine5DelCodi(valor: string): string | null {
   return codi.slice(0, 5);
 }
 
-/** «LOPEZ LOZANO, MANUEL» → «MANUEL LOPEZ LOZANO»; sense coma, tal qual. */
+/**
+ * «LOPEZ LOZANO, MANUEL» → «MANUEL LOPEZ LOZANO»; sense coma, tal qual.
+ *
+ * La «Ð» es torna «Ñ» de passada: és la «Ñ» llegida amb una taula de
+ * caràcters que no tocava, la mateixa errada que l'historial de la
+ * Generalitat té a «MONTAÐA» i «PEÐA» (vegeu `reparaNomAlcaldia()` a
+ * `derive/alcaldies.ts`). Cap nom català ni castellà no porta «ð».
+ */
 export function nomEndret(nom: string): string {
-  const net = nom.replace(/\s+/g, " ").trim();
+  const net = nom.replace(/Ð/g, "Ñ").replace(/ð/g, "ñ").replace(/\s+/g, " ").trim();
   const coma = net.indexOf(",");
   if (coma < 0) return net;
   const cognoms = net.slice(0, coma).trim();
