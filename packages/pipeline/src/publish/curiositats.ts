@@ -692,14 +692,58 @@ function llistaHtml(l: LlistaCuriosa, id: string): string {
       </ol>${cua}`;
 }
 
+/**
+ * La resposta d'una línia: la primera fila de la primera llista, dita en text.
+ *
+ * Cada curiositat feia uns 2.100 px a 360 —títol, mètode, dues llistes de
+ * deu i la cobertura— i les vint-i-quatre sumaven més de 50.000 px de
+ * pàgina. Ara es pleguen, i el que queda a la vista ha de bastar per saber
+ * si val la pena obrir-la: la pregunta (el títol) i qui encapçala la llista,
+ * amb la xifra. «Els que fa més anys que manen: Joan Serra Vila, a Riubaix ·
+ * 12 mandats seguits».
+ *
+ * Va en text i no en enllaços perquè és dins del `<summary>`: un enllaç dins
+ * del botó que obre el calaix fa que el mateix toc faci dues coses. Els
+ * enllaços hi són a dins, a la llista. Sense cap fila —no hauria de passar,
+ * perquè un fet sense files no es publica— no es diu res.
+ */
+export function respostaCuriositat(c: Curiositat): string {
+  const llista = c.llistes.find((l) => l.files.length > 0);
+  const primera = llista?.files[0];
+  if (!llista || !primera) return "";
+  const qui = primera.persona
+    ? `${primera.persona.nom}, a ${primera.municipi.n}`
+    : primera.municipi.n;
+  return `${llista.cap}: ${qui} · ${primera.valor}`;
+}
+
+/**
+ * Una curiositat, plegada: el títol i la resposta d'una línia a la vista, i
+ * la resta —la font, el mètode, les llistes, la cobertura— a dins.
+ *
+ * L'`<article>` amb l'`id` es queda com era: hi ha enllaços a `#cur-…` i
+ * altres pàgines (`territori-fitxa.ts`) que pinten els seus fets amb aquesta
+ * mateixa targeta. El que canvia és que a dins hi ha un `<details>`, que
+ * s'obre i es tanca sense JavaScript; el títol hi va com a `<h3>` dins del
+ * `<summary>`, que l'HTML permet, perquè l'esquema de la pàgina continuï
+ * tenint un encapçalament per fet.
+ */
 export function targetaCuriositat(c: Curiositat): string {
+  const resposta = respostaCuriositat(c);
   return `<article class="curiositat" id="cur-${escape(c.id)}">
+    <details class="cur-plec">
+    <summary class="cur-obre">
+      <h3>${escape(c.titol)}</h3>
+      ${resposta ? `<span class="cur-resposta">${escape(resposta)}</span>` : ""}
+    </summary>
+    <div class="cur-cos">
     <p class="micro">${escape(c.periode)} · ${escape(c.font)}</p>
-    <h3>${escape(c.titol)}</h3>
     <p class="entrada-bloc">${escape(c.metode)}</p>
     ${c.llistes.map((l) => llistaHtml(l, c.id)).join("\n    ")}
     <p class="cobertura">${escape(c.cobertura)}</p>
     ${c.cautela ? `<p class="nota">${escape(c.cautela)}</p>` : ""}
+    </div>
+    </details>
   </article>`;
 }
 
@@ -709,22 +753,40 @@ export function renderCuriositats(curiositats: readonly Curiositat[]): string {
   return `<section class="bloc" id="curiositats">
   <h2>Curiositats</h2>
   <p class="entrada-bloc">Els fets singulars que cap rànquing de 947 no ensenya: llistes curtes, cadascuna
-  amb la font, l'any i sobre quants municipis o persones s'ha mirat. Descriuen; no jutgen.</p>
+  amb la font, l'any i sobre quants municipis o persones s'ha mirat. Descriuen; no jutgen. Toca'n una
+  per veure-la sencera.</p>
   <div class="curiositats">
   ${curiositats.map(targetaCuriositat).join("\n  ")}
   </div>
 </section>`;
 }
 
-/** El CSS de la secció, amb el mateix llenguatge que les targetes de «Destaquen» i les llistes dels rànquings. */
+/**
+ * El CSS de la secció. Les curiositats són una llista de calaixos, no una
+ * graella de targetes: vint-i-quatre caixes iguals amb ombra eren el patró que
+ * la marca vol evitar, i plegades es llegeixen millor com les preguntes d'un
+ * índex, separades per un filet. A partir de 900 px, en dues columnes; cada
+ * calaix s'obre sense estirar el del costat («align-items:start»).
+ */
 export const CURIOSITATS_CSS = `
-.curiositats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--e3);margin-top:var(--e3)}
-.curiositat{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
-  padding:var(--e3);min-width:0;display:flex;flex-direction:column;gap:var(--e2)}
+.curiositats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--e4);margin-top:var(--e3);align-items:start}
+.curiositat{border-top:2px solid var(--ink);min-width:0}
+.cur-obre{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:start;cursor:pointer;
+  list-style:none;padding:var(--e2) 2px;min-height:44px}
+.cur-obre::-webkit-details-marker{display:none}
+.cur-obre::after{content:"+";grid-column:2;grid-row:1;font-family:var(--display);font-weight:900;font-size:1.4rem;
+  line-height:1;transition:transform .15s ease}
+.cur-plec[open]>.cur-obre::after{transform:rotate(45deg)}
+.cur-obre:focus-visible{outline:3px solid var(--coral-text);outline-offset:2px}
+.cur-obre:hover h3{text-decoration:underline;text-decoration-thickness:2.5px;text-underline-offset:3px;
+  text-decoration-color:var(--coral)}
+.curiositat h3{grid-column:1;font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em;
+  line-height:1.2;margin:0}
+.cur-resposta{grid-column:1/-1;font-size:.88rem;color:var(--ink-suau);overflow-wrap:anywhere}
+.cur-cos{display:flex;flex-direction:column;gap:var(--e2);padding:0 0 var(--e3)}
 .curiositat .micro{margin:0}
-.curiositat h3{font-family:var(--display);font-weight:900;font-size:1.3rem;letter-spacing:-.02em;line-height:1.15;margin:0}
 .curiositat .entrada-bloc{margin:0}
-.curiositat .cap{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-suau);margin:var(--e1) 0 0}
+.curiositat .cap{font-size:.86rem;font-weight:800;color:var(--ink-suau);margin:var(--e1) 0 0}
 .llista-curiosa{list-style:none;padding:0;margin:0;display:grid;gap:8px}
 .llista-curiosa li{display:grid;grid-template-columns:2.4rem minmax(0,1fr) auto;gap:10px;align-items:center;
   border:2px solid var(--vora);border-radius:var(--r-m);padding:9px 12px;background:var(--paper)}
@@ -738,6 +800,7 @@ export const CURIOSITATS_CSS = `
 .llista-curiosa .dada{font-family:var(--display);font-weight:900;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .curiositat .cobertura{font-size:.86rem;font-weight:700;margin:var(--e1) 0 0}
 .curiositat .nota{margin-top:0}
+@media (prefers-reduced-motion:reduce){.cur-obre::after{transition:none}}
 @media(max-width:900px){.curiositats{grid-template-columns:1fr}}
 @media(max-width:480px){.llista-curiosa .dada{white-space:normal;text-align:left;grid-column:2}}
 `;

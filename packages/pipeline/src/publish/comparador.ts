@@ -1139,6 +1139,15 @@ const SUGGERIMENTS: readonly { titol: string; slugs: readonly string[] }[] = [
 ];
 
 const CSS = `
+/* On ets, com a fil d'Ariadna en minúscula. Era un rètol «COMPARADOR» en
+   versaletes espaiades i de color, que només repetia el títol. */
+.cmp-fil{font-size:.86rem;font-weight:700;color:var(--ink-suau);margin:0 0 var(--e2)}
+.cmp-fil a{color:inherit;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
+/* Aquesta pàgina no té índex de blocs. El full compartit, a partir de 1180 px,
+   fa de tot <main> dues columnes per al rail de l'índex, i sense índex la
+   primera quedava buida: el comparador s'enganxava a la dreta amb 190 px de
+   no-res al costat. Aquí torna a ser una sola columna centrada. */
+@media (min-width:1180px){ main.cmp-main{display:block;max-width:960px} }
 .entradeta{font-size:1.1rem;color:var(--ink-suau);max-width:52ch;margin:var(--e2) 0 var(--e4)}
 
 /* --- el cercador i els municipis triats --- */
@@ -1210,7 +1219,7 @@ const CSS = `
 .comparativa .lloc{font-size:.78rem;color:var(--ink-suau);display:block;margin-top:2px}
 .comparativa .grup{font-size:.72rem;color:var(--ink-suau);display:block;margin-top:4px}
 .comparativa tr.seccio th{background:var(--ink);color:var(--paper);font-family:var(--display);font-weight:900;
-  font-size:.8rem;text-transform:uppercase;letter-spacing:.12em;position:static;max-width:none;border-right:0}
+  font-size:.95rem;letter-spacing:-.01em;position:static;max-width:none;border-right:0}
 .comparativa tr.seccio th span{position:sticky;left:15px;display:inline-block}
 .comparativa .etq{display:block}
 .comparativa .sentit{display:block;font-weight:400;font-size:.74rem;color:var(--ink-suau);margin-top:3px}
@@ -1238,7 +1247,7 @@ const CSS = `
    la vora discontínua i les majúscules grises d'aquí es menjaven el logotip
    del peu d'aquesta pàgina, que sortia com una pastilla d'extrem més. */
 .marca-extrem{display:inline-block;margin-top:6px;border:2px dashed var(--ink-suau);border-radius:var(--r-max);
-  padding:2px 10px;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  padding:2px 10px;font-size:.76rem;font-weight:800;
   color:var(--ink-suau);background:transparent}
 /* L'enllaç que la llicència de l'Idescat demana al costat de la xifra. */
 .comparativa a.idescat{text-decoration:underline;text-decoration-color:var(--vora);text-underline-offset:3px}
@@ -1305,12 +1314,16 @@ const CSS = `
 .escala-compte{background:var(--presec);color:#1E1B2E;border:2.5px solid #1E1B2E;border-radius:var(--r-m);
   padding:var(--e2);margin:var(--e2) 0 0;font-size:.9rem}
 .escala-compte[hidden]{display:none}
-.escala-seccio{font-family:var(--display);font-weight:900;font-size:.8rem;text-transform:uppercase;
-  letter-spacing:.12em;color:var(--ink-suau);margin:var(--e3) 0 var(--e1)}
+.escala-seccio{font-family:var(--display);font-weight:900;font-size:1.1rem;letter-spacing:-.02em;
+  color:var(--ink);margin:var(--e4) 0 var(--e1)}
+/* Per què no hi ha mediana, dit un sol cop per a tots els regles. */
+.escala-lligues{font-size:.88rem;color:var(--ink-suau);margin:var(--e2) 0 0;max-width:60ch}
 .escala-graella{display:grid;gap:var(--e2)}
 @media (min-width:900px){ .escala-graella{grid-template-columns:1fr 1fr} }
-.escala{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);padding:var(--e2)}
+/* Cada regle és una fila amb filet i no una targeta amb ombra: eren setze
+   targetes idèntiques, el patró que la marca vol fora, i la vora i l'ombra no
+   deien res que el filet no digui. */
+.escala{border-top:2.5px solid var(--ink);padding:var(--e2) 0 var(--e1)}
 .escala-titol{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.02em;margin:0}
 .escala-com{display:block;font-family:var(--text);font-weight:600;font-size:.78rem;color:var(--ink-suau);
   margin-top:2px}
@@ -1367,7 +1380,7 @@ const CSS = `
    gràfic s'arrossega dins de la seva caixa i no empeny el document, que és el
    mateix que fa la fitxa amb les seves gràfiques. */
 .serie-marc{overflow-x:auto;-webkit-overflow-scrolling:touch;border:2.5px solid var(--ink);
-  border-radius:var(--r-m);background:var(--paper-2);box-shadow:var(--ombra);padding:var(--e2)}
+  border-radius:var(--r-m);background:var(--paper-2);padding:var(--e2)}
 .serie-marc svg{display:block;width:100%;height:auto}
 @media (max-width:640px){ .serie-marc svg{min-width:520px} }
 .serie-graella{stroke:var(--vora);stroke-width:1}
@@ -1590,13 +1603,14 @@ ${tipografia("../")}
 ${capcalera("../", "comparador")}
 ${cercador("../")}
 
-<main>
+<main class="cmp-main">
 <section class="portada">
-  <p class="micro">Comparador</p>
+  <nav class="cmp-fil" aria-label="On ets"><a href="../">Observatori</a>
+    <span aria-hidden="true">·</span> Comparador</nav>
   <h1>El teu poble, al costat</h1>
-  <p class="entradeta">Tria de dos a quatre municipis. Cada xifra es dibuixa en un regle amb la
-  mediana dels municipis de la mateixa mida marcada, que és l'única comparació justa; el deute
-  hi va any a any, i la taula del final en té el detall, fila per fila.</p>
+  <p class="entradeta">Tria de dos a quatre municipis. Cada xifra es dibuixa en un regle on hi ha
+  marcat el municipi del mig dels de la mateixa mida (la mediana), que és l'única comparació
+  justa; el deute hi va any a any, i la taula del final en té el detall, fila per fila.</p>
 </section>
 
 <section class="tria">
@@ -1742,8 +1756,14 @@ let actiu = -1;
 const esc = (text) => String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const milers = (n) => n.toLocaleString("ca-ES");
 
+// Un arrodoniment que dona zero ha de ser zero i no «−0»: un estalvi net de
+// −0,04 % escrit «-0 %» sembla una errada, i ho és.
+function senseMenysZero(x){ return x === 0 ? 0 : x; }
 function formata(def, valor){
   if (valor === null || valor === undefined) return null;
+  if (def.format === "percent") valor = senseMenysZero(Math.round(valor * 10) / 10);
+  if (def.format === "euros") valor = senseMenysZero(Math.round(valor));
+  if (def.format === "euros-decimal" || def.format === "per-mil") valor = senseMenysZero(Math.round(valor * 10) / 10);
   if (def.format === "euros") return milers(Math.round(valor)) + " €";
   // El cost del govern per habitant són pocs euros: arrodonit a l'euro, 8,4 i
   // 7,6 serien el mateix «8 €».
@@ -2263,12 +2283,14 @@ function blocEscala(def, i, files){
       formata(def, repart[0]) + " a " + formata(def, repart[2]) + "; la mediana és " +
       formata(def, repart[1]) + ".";
   } else if (grupsAmb.length > 1) {
-    peu = "Sense mediana: aquests municipis són de " + grupsAmb.length +
-      " grups de mida diferents i cadascun es compara amb el seu.";
+    // Quan els triats són de lligues diferents, la frase seria la mateixa a
+    // tots els regles: es diu un sol cop, a dalt de tot (vegeu pintaEscales).
+    // Repetida setze vegades era la línia que més es llegia de la pàgina.
+    peu = "";
   } else {
     peu = "Sense mediana: del seu grup de mida no en tenim prou xifres per calcular-la.";
   }
-  if (sense.length > 0) peu += " Fora del dibuix, " + sense.join(" i ") + ": " + minuscula(def.absent);
+  if (sense.length > 0) peu += (peu ? " " : "") + "Fora del dibuix, " + sense.join(" i ") + ": " + minuscula(def.absent);
 
   return '<article class="escala">' + titol +
     '<svg class="escala-svg" viewBox="0 0 ' + ESC.ample + " " + alt +
@@ -2280,7 +2302,7 @@ function blocEscala(def, i, files){
     // fer semblar un abisme el que són quatre euros.
     '<p class="escala-limits"><span>' + esc(formata(def, domini.min)) + "</span><span>" +
     esc(formata(def, domini.max)) + "</span></p>" +
-    '<p class="escala-peu">' + esc(peu) + "</p></article>";
+    (peu ? '<p class="escala-peu">' + esc(peu) + "</p>" : "") + "</article>";
 }
 
 function pintaEscales(){
@@ -2309,7 +2331,17 @@ function pintaEscales(){
         '<div class="escala-graella">' + blocs + "</div>";
     }
   }
-  escalesCos.innerHTML = html;
+  // Els grups de mida dels triats: si n'hi ha més d'un, cap regle no porta
+  // mediana, i el perquè es diu aquí un sol cop en lloc de repetir-lo a peu de
+  // cada regle.
+  const grups = [];
+  for (const row of files) if (grups.indexOf(row.g) === -1) grups.push(row.g);
+  const lligues = grups.length > 1
+    ? '<p class="escala-lligues">Sense mediana: aquests municipis són de ' + grups.length +
+      " grups de mida diferents i cadascun es compara amb el seu. Per això els regles no marquen " +
+      "el municipi del mig: en marcarien dos, i es llegirien com un de sol.</p>"
+    : "";
+  escalesCos.innerHTML = lligues + html;
   escalaCompte.hidden = mudes === 0;
   if (mudes > 0) {
     escalaCompte.innerHTML = "<b>" + mudes + " de les " + total + " xifres no es poden comparar</b>: " +
@@ -2490,6 +2522,12 @@ function pintaSerie(){
     '<thead><tr><th scope="col">Any</th>' +
     files.map((row) => '<th scope="col">' + esc(row.n) + "</th>").join("") +
     "</tr></thead><tbody>" + filesHtml + "</tbody></table></div>";
+  // En un telèfon el dibuix és més ample que la caixa i llisca dins seu. Comença
+  // arrossegat a la dreta, que és on hi ha l'últim any i el número de cada
+  // municipi: començar pel 2015 amagava justament la xifra d'ara, i el que es
+  // compara primer és on és cadascú avui.
+  const marc = serieCos.querySelector(".serie-marc");
+  if (marc && marc.scrollWidth > marc.clientWidth) marc.scrollLeft = marc.scrollWidth;
 }
 
 function pintaTriats(){

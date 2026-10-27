@@ -15,6 +15,8 @@ import {
   llistaLongeus,
   llistaMunicipisRelleus,
   ocupacions,
+  inicialCognom,
+  PAS_GENT,
   percent,
   renderTrajectoriaElectes,
   type FilaHistorial,
@@ -502,7 +504,7 @@ describe("renderTrajectoriaElectes", () => {
     expect(html).toContain('<div class="filtra" hidden>');
     expect(html).toContain('<input type="search"');
     expect(html).toContain('data-familia="tots" aria-pressed="true"');
-    expect(html).toContain('<li class="persona" data-families="parlament" data-nom="josep pujadas maspons">');
+    expect(html).toContain('<li class="persona" data-families="parlament" data-nom="josep pujadas maspons" data-lletra="P">');
     expect(html).toContain('data-families="senat"');
     expect(html).toContain('<button type="button" data-familia="parlament" aria-pressed="false">');
   });
@@ -529,7 +531,8 @@ describe("renderTrajectoriaElectes", () => {
   it("el compte de la llista neix amb totes i el guió el refà a cada canvi", () => {
     expect(html).toContain('<p class="quants-gent" aria-live="polite">Es mostren les 2 persones.</p>');
     const guio = html.slice(html.lastIndexOf('<script>\n(function(){'));
-    expect(guio).toContain('"Es mostren " + visibles + " de " + targetes.length + " persones."');
+    expect(guio).toContain('"Es mostren " + visibles + " de "');
+    expect(guio).toContain('" trobades, de " + targetes.length');
     expect(guio).toContain('"Es mostren les " + visibles + " persones."');
   });
 
@@ -602,5 +605,132 @@ describe("el cap SEO de la trajectòria", () => {
 
   it("té un sol <h1>", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// «Qui són»: cerca primer, salt per lletra i de 24 en 24
+// ───────────────────────────────────────────────────────────────────────────
+
+describe("inicialCognom", () => {
+  it("amb la «i» entre cognoms, el primer cognom és el d'abans", () => {
+    expect(inicialCognom("Montserrat Candini i Puig")).toBe("C");
+    expect(inicialCognom("Josep Maria Graells i Forcada")).toBe("G");
+    expect(inicialCognom("Joan Roma i Cunill")).toBe("R");
+  });
+
+  it("un cognom amb «d'» va amb la paraula d'abans", () => {
+    expect(inicialCognom("Josep Maria Vila d'Abadal i Serra")).toBe("V");
+  });
+
+  it("sense «i», la penúltima paraula, tret dels noms de pila compostos amb un sol cognom", () => {
+    expect(inicialCognom("Román Ruiz Llamas")).toBe("R");
+    expect(inicialCognom("Alfons Jaume Montserrat Esteller")).toBe("M");
+    expect(inicialCognom("Joan Carles Garcia Guillamon")).toBe("G");
+    expect(inicialCognom("Joan Maria Roig")).toBe("R");
+    expect(inicialCognom("Maria Roig")).toBe("R");
+  });
+
+  it("treu els accents i, si no en surt cap lletra, torna «#»", () => {
+    expect(inicialCognom("Pere Òdena i Puig")).toBe("O");
+    expect(inicialCognom("Àngel Èrcules Roca")).toBe("E");
+    expect(inicialCognom("")).toBe("#");
+  });
+});
+
+type TargetaFalsa = { attrs: Record<string, string>; hidden: boolean; getAttribute(k: string): string | null };
+type BotoFals = TargetaFalsa & { oients: (() => void)[]; setAttribute(k: string, v: string): void; addEventListener(t: string, f: () => void): void };
+
+/** Executa el guió de «Qui són» amb un DOM de mentida fet de l'HTML de debò. */
+function obreGent(html: string) {
+  const inici = html.lastIndexOf("<script>\n(function(){");
+  const script = html.slice(inici + 8, html.indexOf("</script>", inici));
+  const boto = (attrs: Record<string, string>): BotoFals => {
+    const b: BotoFals = {
+      attrs, hidden: false, oients: [],
+      getAttribute: (k) => b.attrs[k] ?? null,
+      setAttribute: (k, v) => { b.attrs[k] = v; },
+      addEventListener: (_t, f) => { b.oients.push(f); },
+    };
+    return b;
+  };
+  const targetes = [...html.matchAll(/<li class="persona" data-families="([^"]*)" data-nom="([^"]*)" data-lletra="([^"]*)">/g)]
+    .map((m) => boto({ "data-families": m[1]!, "data-nom": m[2]!, "data-lletra": m[3]! }));
+  const lletres = [...html.matchAll(/<button type="button" data-lletra="([^"]*)"/g)].map((m) => boto({ "data-lletra": m[1]! }));
+  const families = [...html.matchAll(/<button type="button" data-familia="([^"]*)"/g)].map((m) => boto({ "data-familia": m[1]! }));
+  const cerca = Object.assign(boto({}), { value: "" });
+  const quants = { textContent: "" };
+  const mes = Object.assign(boto({}), { textContent: "" });
+  const caixa = {
+    hidden: true,
+    querySelectorAll: (sel: string) => (sel.includes("data-lletra") ? lletres : families),
+    querySelector: () => cerca,
+  };
+  const gent = { querySelectorAll: () => targetes };
+  const document = {
+    querySelector: (sel: string) =>
+      ({ ".filtra": caixa, ".gent": gent, ".quants-gent": quants, ".tj-mes": mes } as Record<string, unknown>)[sel] ?? null,
+  };
+  new Function("document", script)(document);
+  const visibles = () => targetes.filter((t) => !t.hidden);
+  const toca = (b: BotoFals) => { for (const f of b.oients) f(); };
+  return { caixa, targetes, lletres, families, cerca, quants, mes, visibles, toca };
+}
+
+describe("«Qui són», de 24 en 24", () => {
+  const cognoms = ["Puig", "Roca", "Serra", "Vila", "Font", "Mas", "Pons", "Riera"];
+  const moltes = Array.from({ length: 60 }, (_, i) =>
+    persona({ qid: `Q${i}`, nom: `Persona${i} ${cognoms[i % cognoms.length]} i Soler`, primerAny: 1980 + (i % 40), families: [i % 3 === 0 ? "senat" : "parlament"] }));
+  const html = renderTrajectoriaElectes({ ...DADES, persones: moltes }, "avui");
+
+  it("la cerca va primer, i després el salt per lletra i les famílies", () => {
+    const filtra = html.slice(html.indexOf('<div class="filtra" hidden>'), html.indexOf('<p class="quants-gent"'));
+    expect(filtra.indexOf('type="search"')).toBeLessThan(filtra.indexOf('data-lletra="totes"'));
+    expect(filtra.indexOf('data-lletra="totes"')).toBeLessThan(filtra.indexOf('data-familia="tots"'));
+  });
+
+  it("només hi ha botó per a les lletres que tenen algú", () => {
+    const lletres = [...html.matchAll(/data-lletra="([A-Z#])" aria-pressed/g)].map((m) => m[1]);
+    expect(lletres).toEqual(["F", "M", "P", "R", "S", "V"]);
+  });
+
+  it("sense JavaScript la llista surt sencera; amb ell, se'n veuen 24 i un botó per a la resta", () => {
+    expect(html.match(/<li class="persona"/g)).toHaveLength(60);
+    expect(html).toContain('<button type="button" class="tj-mes" hidden></button>');
+    const p = obreGent(html);
+    expect(p.caixa.hidden).toBe(false);
+    expect(p.visibles()).toHaveLength(PAS_GENT);
+    expect(p.mes.hidden).toBe(false);
+    expect(p.mes.textContent).toBe("Mostra'n 24 més (en queden 36)");
+    expect(p.quants.textContent).toBe("Es mostren 24 de 60 persones.");
+    p.toca(p.mes);
+    p.toca(p.mes);
+    expect(p.visibles()).toHaveLength(60);
+    expect(p.mes.hidden).toBe(true);
+    expect(p.quants.textContent).toBe("Es mostren les 60 persones.");
+  });
+
+  it("una lletra deixa només els seus, i torna a començar per la primera pàgina", () => {
+    const p = obreGent(html);
+    p.toca(p.mes);
+    p.toca(p.lletres.find((b) => b.attrs["data-lletra"] === "S")!);
+    const esses = moltes.filter((_, i) => cognoms[i % cognoms.length] === "Serra").length;
+    expect(p.visibles()).toHaveLength(esses);
+    expect(p.visibles().every((t) => t.attrs["data-lletra"] === "S")).toBe(true);
+    expect(p.lletres.find((b) => b.attrs["data-lletra"] === "S")!.attrs["aria-pressed"]).toBe("true");
+    expect(p.quants.textContent).toBe(`Es mostren ${esses} de ${esses} trobades, de 60 persones.`);
+  });
+
+  it("la cerca troba a totes les pàgines, no només a la primera", () => {
+    const p = obreGent(html);
+    p.cerca.value = "persona59";
+    for (const f of p.cerca.oients) f();
+    expect(p.visibles().map((t) => t.attrs["data-nom"])).toEqual(["persona59 vila soler"]);
+  });
+
+  it("cada lletra és un objectiu de 44 px, i la tira llisca de costat sense moure la pàgina", () => {
+    expect(TRAJECTORIA_CSS).toMatch(/\.tj-lletres button\{min-width:44px;min-height:44px/);
+    expect(TRAJECTORIA_CSS).toMatch(/\.tj-lletres\{[^}]*overflow-x:auto/);
+    expect(TRAJECTORIA_CSS).toContain(".tj-mes[hidden]{display:none}");
   });
 });

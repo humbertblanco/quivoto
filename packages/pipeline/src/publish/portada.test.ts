@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import { anellsDe, camiCompacte, mapaQuiMana, renderPortada, type ComptesPortada } from "./portada";
 import type { PortadaMostra } from "./portada-mostra";
+import { ensDeProva } from "./ens-prova-enllacos";
+import { RADIOGRAFIA_CSS } from "./estil";
+import { MASCOTA_CSS } from "./mascota";
 
 /**
  * La portada és la pàgina que més s'ha trencat sense que ningú ho notés: es
@@ -166,7 +169,7 @@ describe("renderPortada amb la mostra", () => {
     expect(llista).toContain('<a href="m/l-hospitalet-de-llobregat/#alcaldies">David Quirós</a>');
     // Terrassa: llista local, la pastilla grisa i sense enllaç enlloc.
     expect(llista).toContain('<b class="sigla" style="--c:#8b8b8b;--t:');
-    expect(main).toContain('<a href="els947.html">i 939 més →</a>');
+    expect(main).toContain('<a href="els947.html">i 939 més</a>');
   });
 
   /**
@@ -211,7 +214,7 @@ describe("renderPortada amb la mostra", () => {
   it("posa l'Observatori en xifres al costat del títol, cada xifra enllaçada a la seva pàgina", () => {
     const nav = main.slice(main.indexOf('<nav class="xifres"'), main.indexOf("</nav>", main.indexOf('<nav class="xifres"')));
     expect(main.indexOf('<nav class="xifres"')).toBeLessThan(main.indexOf('<section class="bloc" id="grans">'));
-    expect([...nav.matchAll(/<li><a href="([^"]+)"><b>([^<]+)<\/b> ([^<]+)<\/a>/g)].map((m) => [m[1], m[2], m[3]])).toEqual([
+    expect([...nav.matchAll(/<li><a class="navega" href="([^"]+)"><b>([^<]+)<\/b> ([^<]+)<\/a>/g)].map((m) => [m[1], m[2], m[3]])).toEqual([
       ["els947.html", "947", "municipis"],
       ["c/", "43", "comarques"],
       ["partit/", "15", "partits"],
@@ -290,7 +293,7 @@ describe("renderPortada amb la mostra", () => {
     expect(taula).toContain("<td>2.390.000</td>");
     expect(taula).toContain('href="./partit/psc/"');
     expect(taula).toContain('<span class="sec">4 de 5</span>');
-    expect(main).toContain('<a href="c/">totes 43 →</a>');
+    expect(main).toContain('<a href="c/">les 43 comarques</a>');
   });
 
   it("posa un xip per poble amb preguntes: els que es responen com a botó a la prova, la resta a l'esborrany", () => {
@@ -374,7 +377,7 @@ describe("renderPortada sense la mostra", () => {
     expect(main).not.toContain('<ol class="grans">');
     expect(main).not.toContain('<svg class="minimapa"');
     expect(main).not.toContain('<ul class="marques">');
-    expect([...seccions(main).matchAll(/<li><a href="([^"]+)">/g)].map((m) => m[1])).toEqual([
+    expect([...seccions(main).matchAll(/<li><a class="navega" href="([^"]+)">/g)].map((m) => m[1])).toEqual([
       "els947.html",
       "mapa/",
       "ranquings/",
@@ -391,13 +394,13 @@ describe("renderPortada sense la mostra", () => {
     expect(main).toContain("data-obre-cerca hidden");
     // Les xifres només necessiten els recomptes, i `portada-ara.ts` els té.
     expect(main).toContain('<nav class="xifres"');
-    expect(main).toContain('<li><a href="partit/"><b>15</b> partits</a></li>');
+    expect(main).toContain('<li><a class="navega" href="partit/"><b>15</b> partits</a></li>');
     expect(main.match(/href="dades\/"/g)).toHaveLength(1);
   });
 
   it("no enllaça el que no s'ha publicat", () => {
     const sense = cos(renderPortada(comptes({ trajectoria: null, amb: null, conjuntsPreguntes: 0 }), "avui"));
-    expect([...seccions(sense).matchAll(/<li><a href="([^"]+)">/g)].map((m) => m[1])).toEqual([
+    expect([...seccions(sense).matchAll(/<li><a class="navega" href="([^"]+)">/g)].map((m) => m[1])).toEqual([
       "els947.html",
       "mapa/",
       "ranquings/",
@@ -480,5 +483,73 @@ describe("el cap SEO de la portada", () => {
 
   it("té un sol <h1>", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+});
+
+describe("la portada enllaça les diputacions i els consells", () => {
+  const ens = [ensDeProva(), ensDeProva({ slug: "anoia", nom: "Consell Comarcal de l'Anoia" }), ensDeProva({ tipus: "diputacio" })];
+  const main = (html: string): string => html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+
+  it("sense ens, la portada queda exactament com era", () => {
+    expect(renderPortada(comptes(), "avui", mostra(), undefined)).toBe(renderPortada(comptes(), "avui", mostra()));
+    expect(main(renderPortada(comptes(), "avui", mostra(), []))).not.toContain('href="ens/"');
+  });
+
+  it("amb ens, una línia al costat de la de l'AMB, amb els recomptes", () => {
+    const html = main(renderPortada(comptes(), "avui", mostra(), ens));
+    expect(html).toContain('<a href="ens/">Diputacions i consells comarcals</a> <span>1 diputació · 2 consells comarcals:');
+    expect(html.indexOf('href="ens/"')).toBeGreaterThan(html.indexOf('href="amb/"'));
+  });
+
+  it("i a la portada sense base de dades, entre les seccions", () => {
+    const html = main(renderPortada(comptes(), "avui", undefined, ens));
+    expect(html).toContain('<li><a class="navega" href="ens/">Diputacions i consells comarcals</a></li>');
+  });
+});
+
+/**
+ * La marca de la casa (vegeu «les pastilles» a estil.ts): la navegació és text
+ * subratllat, sense vora de pastilla ni fletxa al final, i cap etiqueta va en
+ * majúscules espaiades. La sigla del partit i el botó del joc són les úniques
+ * peces arrodonides que hi queden.
+ */
+describe("la portada segueix la marca", () => {
+  const ambMostra = renderPortada(comptes(), "avui", mostra());
+  const senseMostra = renderPortada(comptes(), "avui");
+  /** El full propi de la portada: el de la pàgina sense el compartit (estil.ts) ni el de la mascota. */
+  const estil = (html: string): string => {
+    const tot = html.slice(html.lastIndexOf("<style>") + 7, html.indexOf("</style>", html.lastIndexOf("<style>")));
+    return tot.replace(RADIOGRAFIA_CSS, "").replace(MASCOTA_CSS, "");
+  };
+  /** El cos de totes les regles d'aquest full que comencen pel selector donat. */
+  const regles = (css: string, sel: string): string =>
+    (css.match(new RegExp(`(^|\\})\\s*${sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\{[^}]*\\}`, "gm")) ?? []).join("\n");
+
+  it("cap enllaç porta la fletxa «→», ni escrita ni pintada amb CSS", () => {
+    for (const html of [ambMostra, senseMostra]) {
+      expect(cos(html)).not.toContain("→");
+      expect(estil(html)).not.toMatch(/content:"[^"]*→/);
+    }
+  });
+
+  it("cap etiqueta en majúscules espaiades al full de la portada", () => {
+    for (const html of [ambMostra, senseMostra]) expect(estil(html)).not.toContain("text-transform:uppercase");
+  });
+
+  it("les xifres i les seccions són «.navega», i el seu CSS ja no hi dibuixa cap pastilla", () => {
+    const css = estil(ambMostra);
+    for (const sel of [".xifres a", ".seccions a", ".marques a", ".xip"]) expect(regles(css, sel), sel).not.toContain("var(--r-max)");
+    expect(senseMostra).toContain('<li><a class="navega" href="mapa/">El mapa</a></li>');
+  });
+
+  it("el títol de cada bloc és un enllaç subratllat, i el recompte de cada marca també", () => {
+    const css = estil(ambMostra);
+    expect(regles(css, ".bloc h2 a")).toContain("text-decoration:underline");
+    expect(regles(css, ".marques .compte")).toContain("text-decoration:underline");
+    expect(regles(css, ".xip")).toContain("text-decoration:underline");
+  });
+
+  it("el poble que ja es pot respondre conserva el dibuix de botó: obre el joc", () => {
+    expect(regles(estil(ambMostra), ".xip.jugable")).toContain("var(--r-max)");
   });
 });

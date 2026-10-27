@@ -22,6 +22,8 @@ import type { CensElectoralMetric } from "../jobs/j36-cens-electoral";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
+import { codiPerAlNavegador } from "./comparador";
+import { TIRA_POBLE_CSS, tiraDesDeHistorial, type DadesTira, type HistorialPerTira } from "./tira-poble";
 
 /**
  * «Els 947» — l'índex de tots els municipis de Catalunya amb el que en sabem.
@@ -174,7 +176,20 @@ export type Els947Row = {
    */
   cens79?: number | null; censUlt?: number | null; creixCens?: number | null; censDes?: number | null;
   partMax?: number | null; partMaxA?: number | null; partMin?: number | null; partMinA?: number | null;
+  /**
+   * Qui ha tingut l'alcaldia del 1979 al 2027, mandat a mandat, per a la tira
+   * fina de cada fila (vegeu `tiraCompacta()`). Opcional i `null` quan no hi
+   * ha historial: `mapa-ara.ts` fa files a mà i no en porta.
+   */
+  tp?: TramCompacte[][] | null;
 };
+
+/**
+ * Un tros de mandat de la tira, en la forma més curta que la fila pot portar:
+ * de quina mena és («a» alcaldia, «b» buit, «f» futur), la família de marca
+ * de l'alcaldia quan se'n sap, i on comença dins del mandat (de 0 a 1).
+ */
+export type TramCompacte = [mena: "a" | "b" | "f", familia: string | null, de: number];
 
 /**
  * Les mètriques que la llista dels 947 llegeix, i cap més.
@@ -390,7 +405,7 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
             mayorName: string | null; mayorSigles: string | null;
           }
         | undefined;
-      const mayors = llegeix("mayors") as { currentTermChange: unknown } | undefined;
+      const mayors = llegeix("mayors") as ({ currentTermChange: unknown } & Partial<HistorialPerTira>) | undefined;
       const parity = llegeix("parity") as { womenElectedPct: number | null; complet?: boolean } | undefined;
       const history = llegeix("electoralHistory") as { alternances: number; elections: number } | undefined;
       const transparency = llegeix("transparency") as { pct: number | null } | undefined;
@@ -525,6 +540,8 @@ export async function loadEls947(db: Db): Promise<Els947Row[]> {
         partMaxA: cens?.participacioMaxima.any ?? null,
         partMin: cens?.participacioMinima.participacio ?? null,
         partMinA: cens?.participacioMinima.any ?? null,
+        // La tira d'alcaldies, del mateix historial que la fitxa del municipi.
+        tp: mayors?.history?.length ? tiraCompacta(tiraDesDeHistorial(mayors as HistorialPerTira, m.name)) : null,
       };
     })
     .sort((a, b) => b.p - a.p);
@@ -617,8 +634,10 @@ const xifra = (n: number): string => n.toLocaleString("ca-ES");
 /**
  * Els filtres, agrupats per la pregunta que responen.
  *
- * Cap filtre no diu si el que troba està bé o malament: «deute per sobre de la
- * mediana» és una posició dins dels 947, no una nota de gestió. Els quatre
+ * Cap filtre no diu si el que troba està bé o malament: «més deute per
+ * habitant que el municipi del mig» és una posició dins dels 947, no una nota
+ * de gestió. Cada etiqueta diu la xifra del mig entre parèntesis, perquè el
+ * botó ha de dir exactament la regla que aplica. Els quatre
  * últims (dones al ple, deute, transparència i mida) són camps que ja hi eren a
  * cada fila i que no es podien filtrar: la pàgina els ensenyava i no deixava
  * preguntar-los, que és la manera més segura de tenir una dada que no serveix.
@@ -661,14 +680,14 @@ export const FILTRES: readonly Filtre[] = [
   {
     clau: "deute",
     grup: "papers",
-    text: (l) => `Deute per sobre de ${xifra(l.deute ?? 0)} €`,
+    text: (l) => `Més deute per habitant que el municipi del mig (${xifra(l.deute ?? 0)} €)`,
     te: (f, l) => l.deute !== null && f.d !== null && f.d > l.deute,
     hi: (l) => l.deute !== null,
   },
   {
     clau: "opac",
     grup: "papers",
-    text: (l) => `Transparència per sota del ${xifra(l.transparencia ?? 0)} %`,
+    text: (l) => `Menys transparència que el municipi del mig (${xifra(l.transparencia ?? 0)} %)`,
     te: (f, l) => l.transparencia !== null && f.y !== null && f.y < l.transparencia,
     hi: (l) => l.transparencia !== null,
   },
@@ -677,18 +696,23 @@ export const FILTRES: readonly Filtre[] = [
    * La renda va a «Quin municipi» i no a «Els comptes i els papers» a posta:
    * no és un compte de l'ajuntament sinó el context en què governa, i posar-la
    * al costat del deute la faria llegir com una nota de gestió. El text diu
-   * «hi entra menys» i no «és més pobre»: la xifra és una posició dins dels
-   * 947, i qui hi viu no ha de rebre cap adjectiu d'aquesta pàgina.
+   * «per sota del municipi del mig» i no «és més pobre»: la xifra és una
+   * posició dins dels 947, i qui hi viu no ha de rebre cap adjectiu d'aquesta
+   * pàgina. «Mediana» no hi surt enlloc: és la paraula de qui fa el web, i
+   * «el municipi del mig» és la mateixa idea dita com la diu un veí.
+   *
+   * «Amb radiografia» ja no hi és. Era el nom intern de la fitxa municipal, i
+   * la tenen tots 947: una casella que, marcada, deixa la llista igual només
+   * ensenya que el web té una paraula que el lector no sap.
    */
   {
     clau: "renda",
     grup: "municipi",
-    text: (l) => `Hi entra menys de ${xifra(l.renda ?? 0)} € per persona`,
+    text: (l) => `Renda per sota del municipi del mig (${xifra(l.renda ?? 0)} €)`,
     te: (f, l) => l.renda !== null && (f.rn ?? null) !== null && f.rn! < l.renda,
     hi: (l) => l.renda !== null,
   },
   { clau: "petits", grup: "municipi", text: () => "Menys de 1.000 habitants", te: (f) => f.p < 1000 },
-  { clau: "fitxa", grup: "municipi", text: () => "Amb radiografia", te: (f) => f.x === 1 },
 ];
 
 /** Els filtres que aquest conjunt de dades permet oferir. */
@@ -889,6 +913,112 @@ export function clausOrdre(fila: Fila): string {
   return xifres.join("|");
 }
 
+// ───────────────────────────────────────────────────────────────────────────
+// La tira d'alcaldies de cada fila
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * La tira del poble, reduïda al que la fila necessita per pintar-la fina.
+ *
+ * `tira-poble.ts` en treu dotze mandats amb noms, partits i dates de cada
+ * tram; a la fila d'una llista de 947 només hi cap el color i on comença cada
+ * tros. La resta és a la fitxa del municipi, on la tira és gran i porta
+ * etiqueta.
+ */
+export function tiraCompacta(dades: DadesTira): TramCompacte[][] {
+  return dades.mandats.map((m) =>
+    m.trams.map((t): TramCompacte =>
+      t.tipus === "alcaldia" ? ["a", t.familia, t.de] : [t.tipus === "buit" ? "b" : "f", null, t.de]),
+  );
+}
+
+/** Les lletres de la paleta: una per família, sense «x», que és «força que no es reconeix». */
+const LLETRES_TIRA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw";
+
+/**
+ * La paleta de la pàgina: una lletra per a cada família que té alguna
+ * alcaldia en alguna tira, amb el color de la seva marca.
+ *
+ * Va una sola vegada al guió i no repetida a cada fila: escriure «#e30613» a
+ * cada tram de 947 tires eren 300 kB més de pàgina, i una lletra en són 23.
+ * Una família sense color de marca no hi entra i es pinta com «x», el gris
+ * neutre de la tira, que és com la pinta també la fitxa.
+ */
+export function paletaTira(files: readonly Els947Row[]): Map<string, { lletra: string; color: string }> {
+  const families = new Set<string>();
+  for (const f of files) for (const mandat of f.tp ?? []) for (const [, familia] of mandat) if (familia) families.add(familia);
+  const paleta = new Map<string, { lletra: string; color: string }>();
+  for (const familia of [...families].sort()) {
+    const color = BRANDS_BY_ID.get(familia)?.color;
+    if (!color || !/^#[0-9a-f]{3,8}$/i.test(color) || paleta.size >= LLETRES_TIRA.length) continue;
+    paleta.set(familia, { lletra: LLETRES_TIRA[paleta.size]!, color });
+  }
+  return paleta;
+}
+
+/**
+ * La tira d'una fila en una cadena d'unes catorze lletres, per a `data-t`.
+ *
+ * Cada mandat comença amb la lletra del seu primer tram; cada relleu a dins
+ * hi afegeix una xifra —on comença, en desenes del mandat— i la lletra de qui
+ * entra. «_» és un tros que no consta, «~» el que encara no ha passat i «x»
+ * una força sense color de marca. Una alcaldia del PSC des del 1979 amb un
+ * relleu a Junts a mig mandat del 2015 s'escriu «AAAAAAAAA5BBBB8~» si la
+ * paleta dona A al PSC i B a Junts. Les desenes basten: a 6 px d'alt i 70 px
+ * per mandat, un dia de diferència no es veu.
+ */
+export function codiTira(tp: readonly TramCompacte[][], paleta: ReadonlyMap<string, { lletra: string }>): string {
+  return tp
+    .map((mandat) =>
+      mandat
+        .map(([mena, familia, de], k) => {
+          const lletra = mena === "b" ? "_" : mena === "f" ? "~" : (familia ? paleta.get(familia)?.lletra : null) ?? "x";
+          return k === 0 ? lletra : `${Math.min(9, Math.max(1, Math.round(de * 10)))}${lletra}`;
+        })
+        .join("") || "_",
+    )
+    .join("");
+}
+
+/**
+ * El dibuix de la tira fina a partir de `data-t`, amb les classes de
+ * `TIRA_POBLE_CSS` perquè sigui la mateixa tira que la de la fitxa.
+ *
+ * El pinta el navegador i no el servidor: escrita a l'HTML, cada tira eren
+ * més d'un quilobyte de `<span>` i la pàgina creixia més d'un 100 %; com a
+ * codi són vint bytes per fila. Viatja amb `toString()` i per això no té
+ * funcions internes ni crida res de fora.
+ *
+ * Va amb `aria-hidden`: 947 tires de dotze mandats llegides una per una serien
+ * un passadís que ningú no recorre, i la fila ja porta a la fitxa, on la tira
+ * gran té la llista sencera per als lectors de pantalla.
+ */
+export function htmlTira(codi: string, colors: Record<string, string>): string {
+  const mandats: { lletra: string; de: number }[][] = [];
+  let de = 0;
+  let relleu = false;
+  for (let i = 0; i < codi.length; i++) {
+    const c = codi.charAt(i);
+    if (c >= "1" && c <= "9") { de = Number(c) / 10; relleu = true; continue; }
+    if (!relleu) mandats.push([]);
+    mandats[mandats.length - 1]!.push({ lletra: c, de: relleu ? de : 0 });
+    relleu = false;
+  }
+  let html = "";
+  for (const trams of mandats) {
+    html += '<span class="tp-mandat">';
+    for (let k = 0; k < trams.length; k++) {
+      const t = trams[k]!;
+      const fins = k + 1 < trams.length ? trams[k + 1]!.de : 1;
+      const classe = t.lletra === "_" ? " tp-buit" : t.lletra === "~" ? " tp-futur" : k > 0 ? " tp-relleu" : "";
+      const color = colors[t.lletra] ? ";--c:" + colors[t.lletra] : "";
+      html += '<span class="tp-tram' + classe + '" style="width:' + Math.round((fins - t.de) * 1000) / 10 + "%" + color + '"></span>';
+    }
+    html += "</span>";
+  }
+  return '<span class="tp tp-fina tira-947" aria-hidden="true">' + html + "</span>";
+}
+
 /**
  * El CSS propi. Tota la resta —tipografies, colors, capçalera, `.destins`,
  * `.bloc`, `.index`— surt de `RADIOGRAFIA_CSS`, que és el que fa que aquesta
@@ -977,10 +1107,32 @@ const CSS = `
 #cerca{width:100%;font:inherit;font-size:1.1rem;padding:13px 16px;border:2.5px solid var(--ink);
   border-radius:var(--r-m);background:var(--paper-2);color:var(--ink);box-shadow:var(--ombra)}
 
-.filtres{margin:var(--e3) 0 0}
+/* --- el calaix «Filtra i ordena» ---------------------------------------
+   Els filtres, l'ordre i la nota feien 777 px oberts, i a 360 px la primera
+   fila de la llista quedava a la segona pantalla. Ara són un <details>: es
+   plega sense JavaScript, el resum fa 44 px i diu quants filtres hi ha
+   marcats. El marcador del navegador es treu i el posa la pàgina, un «+» que
+   gira, perquè el triangle de cada navegador és diferent i no diu «obre». */
+.calaix-947{margin:var(--e3) 0 0;border-bottom:1.5px solid var(--vora)}
+.calaix-947-obre{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer;
+  list-style:none;font-family:var(--display);font-weight:800;font-size:1.05rem;padding:0 2px}
+.calaix-947-obre::-webkit-details-marker{display:none}
+.calaix-947-obre::after{content:"+";margin-left:auto;font-size:1.4rem;line-height:1;
+  transition:transform .15s ease}
+.calaix-947[open]>.calaix-947-obre::after{transform:rotate(45deg)}
+.calaix-947-obre:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.calaix-947-n{font-family:var(--text);font-size:.78rem;font-weight:800;background:var(--ink);
+  color:var(--paper);border-radius:var(--r-max);padding:2px 10px;font-variant-numeric:tabular-nums}
+.calaix-947-n[hidden]{display:none}
+.calaix-947-dins{padding:0 0 var(--e3)}
+@media (prefers-reduced-motion:reduce){.calaix-947-obre::after{transition:none}}
+
+.filtres{margin:var(--e2) 0 0}
 .colla{margin:0 0 var(--e2)}
+/* El rètol de cada colla, en minúscula i sense espaiat: les etiquetes en
+   majúscules espaiades sobre cada títol són el tic que la marca vol evitar. */
 .colla h3{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-family:var(--text);
-  font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-suau)}
+  font-size:.86rem;font-weight:800;color:var(--ink-suau)}
 .colla h3 .icona{width:26px;height:26px}
 .tries{display:flex;flex-wrap:wrap;gap:8px}
 .filtre{display:inline-flex;align-items:center;min-height:44px;padding:0 15px;font-size:.82rem;
@@ -1066,6 +1218,52 @@ const CSS = `
 .buit{padding:var(--e4) 0;color:var(--ink-suau)}
 .fila.fora{display:none}
 
+/* --- la tira d'alcaldies -------------------------------------------------
+   La franja fina de «tira-poble.ts», arrambada a baix a l'esquerra de cada
+   fila: 6 px d'alt i com a molt 168 px d'ample, catorze per mandat. No ocupa
+   tota l'amplada a posta: 947 franges de punta a punta farien una paret de
+   ratlles que es menjaria la llista. Va en posició absoluta perquè no afegeixi
+   cap línia a la fila; la fila guanya els 8 px de baix que la tira necessita.
+   Sense JavaScript no hi és, i la nota que l'explica tampoc. */
+.fila{position:relative}
+.fila:has(.tira-947){padding-bottom:calc(var(--e2) + 8px)}
+.fila .tira-947{position:absolute;left:0;bottom:6px;width:min(168px,50%)}
+.tira-947-clau{display:none}
+.js .tira-947-clau{display:block}
+
+/* --- la fila d'una línia, al mòbil ------------------------------------
+   Cada fila feia 176 px a 360: nom, comarca, qui mana i pastilles en quatre
+   ratlles, i les 947 sumaven 166.000 px de pàgina. Al mòbil una llista de 947
+   es recorre, no es llegeix, i el que l'ull busca a cada fila és el nom, la
+   mida i de qui és l'alcaldia. Per això queda en una sola línia d'uns 56 px:
+   nom · habitants · cara petita · sigla.
+   El que s'hi treu no es perd: la comarca és a la clau de cerca i al bloc de
+   comarques de sota, les tres pastilles de «qui mana» són filtres del calaix,
+   i el nom de l'alcaldia continua a l'enllaç de la cara per a qui fa servir un
+   lector de pantalla —només s'amaga a la vista, amb la mateixa capsa que
+   «.nomes-lectors». Una sigla llarga es talla amb punts suspensius i el nom
+   sencer és al «title»: a la fila d'una línia, una candidatura de 63 lletres
+   partida en sis ratlles tornaria a fer la fila alta. La pastilla, retallada,
+   perd la caixa de toc invisible, i per això fa 30 px d'alt: per sobre dels
+   24 que demana la norma d'accessibilitat (WCAG 2.2, 2.5.8). */
+@media (max-width:640px){
+  .fila{display:flex;align-items:center;gap:0 10px;padding:6px 0;min-height:56px}
+  .fila:has(.tira-947){padding-bottom:12px;min-height:62px}
+  .fila .tira-947{bottom:4px;width:min(168px,45%)}
+  .fila .titol{flex:1 1 auto;min-width:0;align-items:center;gap:0 8px}
+  .fila .municipi{font-size:1rem;line-height:1.2}
+  .fila .pob{margin-left:0;font-size:.78rem}
+  .fila .lloc,.fila .dades{display:none}
+  .fila .mana{flex:0 1 auto;margin:0;flex-wrap:nowrap;gap:6px;min-width:0;max-width:45%}
+  .fila .mana a.persona{gap:0;flex:none}
+  .fila .mana .qui-mana{position:absolute;width:1px;height:1px;overflow:hidden;
+    clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+  .fila .mana .cara{width:26px;height:26px;border-width:1.5px}
+  .fila .mana .cara.inicials{font-size:.62rem}
+  .fila .mana .sigla{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    max-width:8.5em;min-height:30px;line-height:26px;font-size:.68rem}
+}
+
 /* Les 43 comarques reaprofiten les pastilles de l'índex de la fitxa, però aquí
    van dins d'un bloc que ja porta la seva ratlla: dues de seguides es llegien
    com una separació doble. */
@@ -1091,6 +1289,10 @@ export function renderEls947(
   const disponibles = filtresDisponibles(llindars);
   // Un ordre només s'ofereix si algú té la xifra: vegeu «ordresDisponibles».
   const ordres = ordresDisponibles(files);
+  // La paleta de les tires i el color de cada lletra, per al guió.
+  const paleta = paletaTira(files);
+  const colorsTira = Object.fromEntries([...paleta.values()].map((v) => [v.lletra, v.color]));
+  const ambTira = files.some((f) => f.tp && f.tp.length > 0);
 
   const totals = {
     municipis: files.length,
@@ -1200,7 +1402,9 @@ export function renderEls947(
       const dades = pastilles(f);
       return `<li class="fila" data-k="${escape(clauCerca(f.n) + " " + clauCerca(f.c))}" data-f="${escape(
         marques(f, llindars).join(" "),
-      )}" data-o="${clausOrdre(f)}" data-b="${escape(marcaAlcaldia)}">
+      )}" data-o="${clausOrdre(f)}" data-b="${escape(marcaAlcaldia)}"${
+        f.tp && f.tp.length > 0 ? ` data-t="${escape(codiTira(f.tp, paleta))}"` : ""
+      }>
 <p class="titol">${titol}<span class="pastilla ordre" hidden></span><span class="pob">${xifra(f.p)} hab.</span></p>
 <p class="lloc">${lloc}</p>
 ${qui}${dades.length > 0 ? `\n<p class="dades">${dades.join("")}</p>` : ""}
@@ -1251,7 +1455,7 @@ ${qui}${dades.length > 0 ? `\n<p class="dades">${dades.join("")}</p>` : ""}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${cap}
 ${tipografia("./")}
-<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${CSS}</style>
+<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${ambTira ? TIRA_POBLE_CSS : ""}${CSS}</style>
 <script>document.documentElement.className += " js";</script>
 </head>
 <body>
@@ -1273,8 +1477,8 @@ ${cercador("./")}
   <a href="https://els947.cat/" target="_blank" rel="noopener">els947.cat</a>, un joc d'una altra
   gent amb qui no tenim cap relació.</p>
   <p class="pistes">
-    <a class="prova-enllac" href="mapa/">Els mateixos 947, al mapa →</a>
-    <a class="prova-enllac" href="comparador/">Posa'n quatre de costat →</a>
+    <a class="prova-enllac" href="mapa/">Els mateixos 947, al mapa</a>
+    <a class="prova-enllac" href="comparador/">Posa'n quatre de costat</a>
   </p>
 </section>
 
@@ -1298,6 +1502,14 @@ ${cercador("./")}
       placeholder="Filtra la llista: esplugues, la seu…">
   </div>
 
+  <!-- El calaix: els filtres, l'ordre i la nota que els explica, plegats.
+       Oberts de sortida feien 777 px a 360 abans de la primera fila: al mòbil
+       la llista començava a la segona pantalla. Un <details> s'obre i es tanca
+       sense JavaScript, i el resum diu quants filtres hi ha marcats perquè un
+       calaix tancat no amagui que la llista està filtrada. -->
+  <details class="calaix-947" id="calaix">
+  <summary class="calaix-947-obre"><span class="calaix-947-diu">Filtra i ordena</span><span class="calaix-947-n" id="filtra-n" hidden></span></summary>
+  <div class="calaix-947-dins">
   <div class="filtres" role="group" aria-label="Filtres">
   ${tries}
   </div>
@@ -1319,14 +1531,8 @@ ${cercador("./")}
     </div>
   </section>
 
-  <div class="eines">
-    <button class="neteja" type="reset">Treu-ho tot</button>
-    <button class="nomes-partit" type="button" id="nomes-partit" hidden><span id="nomes-partit-text"></span><span class="treu" aria-hidden="true">×</span><span class="nomes-lectors">Treu aquest filtre</span></button>
-    <p class="recompte" id="recompte" aria-live="polite">${totals.municipis} municipis, ${ordres[0]!.avall}</p>
-  </div>
-
-  <p class="nota">Les medianes són el municipi que queda al mig dels ${totals.municipis}: diuen on
-  cau cadascun respecte dels altres, no si això està bé o malament. Els filtres es poden combinar, i
+  <p class="nota">El municipi del mig és el que queda al mig dels ${totals.municipis} quan s'ordenen:
+  diu on cau cadascun respecte dels altres, no si això està bé o malament. Els filtres es poden combinar, i
   la xifra de cada casella diu quants dels que ara es veuen hi entrarien. Cap ordre no és un
   rànquing de gestió, i qui no té la dada va sempre al final: un forat no és un zero.${
     llindars.renda === null
@@ -1334,8 +1540,23 @@ ${cercador("./")}
       : ` La renda per persona la tenen ${xifra(llindars.ambRenda)} dels ${totals.municipis}: l'INE
   tapa per secret estadístic la dels municipis més petits, i no tenir-la no vol dir no tenir-ne.`
   }</p>
+  </div>
+  </details>
 
-  <ul class="llista" id="llista">
+  <div class="eines">
+    <button class="neteja" type="reset">Treu-ho tot</button>
+    <button class="nomes-partit" type="button" id="nomes-partit" hidden><span id="nomes-partit-text"></span><span class="treu" aria-hidden="true">×</span><span class="nomes-lectors">Treu aquest filtre</span></button>
+    <p class="recompte" id="recompte" aria-live="polite">${totals.municipis} municipis, ${ordres[0]!.avall}</p>
+  </div>
+
+${
+    ambTira
+      ? `  <p class="nota tira-947-clau">La franja de sota cada municipi és qui hi ha tingut l'alcaldia del 1979
+  al 2027, mandat a mandat: cada color és una força, el gris clar és un tros que no consta i el
+  final en blanc és el que encara no ha passat. A la fitxa de cada municipi hi ha els noms.</p>
+`
+      : ""
+  }  <ul class="llista" id="llista">
 ${llista}
   </ul>
   <p class="buit" id="buit" hidden>Cap municipi no coincideix. Prova amb menys lletres o treu algun filtre.</p>
@@ -1354,7 +1575,7 @@ ${llista}
   <h2>I tu, te'ls saps?</h2>
   <p>Nosaltres tenim les dades dels 947. Saber-ne els noms i on són ja és una altra cosa.
   Hi ha un joc que ho posa a prova, i és boníssim:</p>
-  <p class="crida"><a href="https://els947.cat/" target="_blank" rel="noopener">Ves a jugar a els947.cat →</a></p>
+  <p class="crida"><a href="https://els947.cat/" target="_blank" rel="noopener">Ves a jugar a els947.cat</a></p>
   <p class="nota">No hi tenim res a veure: és el repte de geografia catalana d'algú altre,
   i ens va recordar que 947 no és una xifra abstracta sinó 947 llocs amb gent que hi vota.</p>
 </section>
@@ -1396,7 +1617,28 @@ const buit = document.getElementById("buit");
 const capgira = document.getElementById("capgira");
 const nomesPartit = document.getElementById("nomes-partit");
 const nomesPartitText = document.getElementById("nomes-partit-text");
+const filtraN = document.getElementById("filtra-n");
+const calaix = document.getElementById("calaix");
 const TOTAL = files.length;
+
+/*
+ * El calaix de filtres neix tancat perquè al mòbil la llista ha de sortir a la
+ * primera pantalla. A una pantalla ampla, en canvi, els filtres hi caben al
+ * costat de tot i amagar-los només faria fer un clic de més: allà s'obre sol.
+ * Es decideix un cop, en carregar; després mana qui el toca.
+ */
+if (calaix && window.matchMedia && window.matchMedia("(min-width: 900px)").matches) calaix.open = true;
+
+/*
+ * Quants filtres hi ha marcats, al resum del calaix. Un calaix tancat que
+ * amaga que la llista està filtrada fa creure que falten municipis: per això
+ * el resum ho diu, i quan no n'hi ha cap no diu res.
+ */
+function pintaCalaix(actius) {
+  if (!filtraN) return;
+  filtraN.hidden = actius === 0;
+  filtraN.textContent = actius === 0 ? "" : actius === 1 ? "1 actiu" : actius + " actius";
+}
 
 /*
  * «?partit=erc»: la pàgina d'un partit hi envia amb «On mana», i la llista es
@@ -1543,6 +1785,7 @@ function pinta() {
   for (const clau in quants) {
     quants[clau].textContent = "(" + (facetes[clau] || 0) + ")";
   }
+  pintaCalaix(actius.length);
   buit.hidden = queden > 0;
   // El recompte diu també el partit, perquè «212 de 947 municipis» sense dir
   // per què no és cap resposta.
@@ -1568,6 +1811,18 @@ tauler.addEventListener("reset", function () {
 });
 pintaPartit();
 refresca();
+
+/*
+ * La tira d'alcaldies de cada fila. Es pinta després de la llista i no abans:
+ * la llista ja es pot llegir i filtrar mentre el navegador hi afegeix els
+ * colors. Vegeu «htmlTira()» al generador.
+ */
+const COLORS_TIRA = ${JSON.stringify(colorsTira)};
+const htmlTira = ${codiPerAlNavegador(htmlTira)};
+for (const fila of files) {
+  const codi = fila.getAttribute("data-t");
+  if (codi) fila.insertAdjacentHTML("beforeend", htmlTira(codi, COLORS_TIRA));
+}
 </script>
 </body>
 </html>`;

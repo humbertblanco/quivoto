@@ -10,9 +10,10 @@ import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { esAlcaldia } from "./alcaldia";
 import { ARREL_OBSERVATORI, capSeo, DESCRIPCIO_MAXIMA, filAriadna, FITXER_OG, imatgeOg, MARCA, TITOL_MAXIM } from "./seo";
-import { mateixQue } from "./seo-ld";
+import { personaLd } from "./seo-ld";
 import type { FitxaTrajectoria } from "../jobs/j21-trajectoria-electes";
 import type { FitxaCapsDeLlista } from "../jobs/j27-caps-de-llista";
+import { adrecaEns, type DadesEns } from "./ens-tipus";
 
 /**
  * Una pàgina per a cada persona que seu al ple.
@@ -623,28 +624,23 @@ const CSS = `
 .persona .inicials-gran{width:120px;height:120px;border-radius:var(--r-m);border:2.5px solid var(--ink);
   box-shadow:var(--ombra);display:flex;align-items:center;justify-content:center;
   font-family:var(--display);font-weight:900;font-size:2.6rem;background:var(--c,var(--paper-2));color:var(--t,inherit)}
-.etiquetes{display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--e2)}
-/* La pastilla de les sigles es deia «grup», i a l'estil compartit aquest nom ja
-   és una altra cosa: la targeta desplegable d'un grup municipal al ple, amb vora
-   esquerra de 10px i display de bloc. La pastilla d'aquesta pàgina n'heretava la
-   caixa i «PSC-CP» sortia com una taca rodona de 31 px amb dues lletres a dins:
-   feia de logotip deformat del partit a la pàgina de cada alcalde i de cada
-   regidor, i no era cap problema de responsive sinó una col·lisió de noms.
-   Ara fa servir «sigla», que és la mateixa pastilla que la fitxa del municipi i
-   la de la candidatura: el mateix component i no una còpia. */
-.etiquetes span:not(.sigla),.etiquetes a:not(.sigla){border:2px solid var(--ink);border-radius:var(--r-max);padding:4px 14px;
-  font-size:.8rem;font-weight:800;flex:none;white-space:nowrap;max-width:100%;text-decoration:none}
+/* --- les etiquetes de sota el nom ------------------------------------------
+   Dues formes i prou (vegeu etiquetesDeLaPersona()): les sigles, plenes del
+   color del partit, que és una marca de dada; i els estats, una etiqueta
+   petita i plana, sense vora, escrita com una frase. El que és un enllaç no
+   és aquí: va a la línia de sota, subratllat. */
+.etiquetes{display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center;margin-top:var(--e2)}
 .etiquetes .sigla{flex:none;font-size:.86rem;padding:3px 12px}
-/* L'alcaldia és el càrrec que fa mirar la pàgina: va en coral, que és l'accent
-   de la casa, i és l'única pastilla plena de la fila que no depèn del partit. */
-.etiquetes .alcaldia-etiqueta{background:var(--coral);color:#FBF7EE;text-transform:uppercase;
-  letter-spacing:.08em;font-size:.68rem}
-.etiquetes .govern{background:var(--menta);color:#1E1B2E}
-.etiquetes .oposicio{background:transparent}
+.etiquetes .rg-estat{font-size:.8rem;font-weight:800;line-height:1.3;padding:4px 10px;border-radius:6px;
+  background:var(--paper-2);color:var(--ink);max-width:100%}
 /* «No consta» no és una tercera posició política: és una absència, i per això
-   va amb el gris de la lletra petita i sense pastilla. */
-.etiquetes .sense-govern{background:transparent;border-style:dashed;color:var(--ink-suau);
-  font-weight:700;text-transform:none;letter-spacing:0}
+   va amb el gris de la lletra petita i sense fons. */
+.etiquetes .rg-buit{background:none;padding-left:0;padding-right:0;color:var(--ink-suau);font-weight:700}
+.rg-tambe{margin:var(--e2) 0 0;font-size:.9rem;font-weight:800;line-height:1.5}
+.rg-tambe a{color:inherit;text-decoration:underline;text-decoration-color:var(--coral);
+  text-decoration-thickness:2px;text-underline-offset:3px}
+.rg-tambe a:hover,.rg-tambe a:focus-visible{color:var(--coral-text,var(--coral))}
+.rg-tambe span{color:var(--ink-suau)}
 .vots{list-style:none;padding:0;margin:var(--e3) 0 0}
 .vots li{border-top:2.5px solid var(--ink);padding:var(--e2) 0;display:flex;gap:var(--e2);
   align-items:baseline;flex-wrap:wrap}
@@ -666,13 +662,19 @@ const CSS = `
 .resum-vot b{font-family:var(--display);font-size:1.35rem;line-height:1}
 .resum-vot small{font-size:.72rem;font-weight:800;color:var(--ink-suau);margin-top:4px}
 .resum-vot .favor b{color:#2f8f68}.resum-vot .contra b{color:var(--coral)}.resum-vot .abstencio b{color:#9a7b18}
-.nav-fitxa{display:flex;gap:7px;flex-wrap:wrap;margin:var(--e2) 0 0;padding:0;list-style:none}
-.nav-fitxa a{display:block;border:1.5px solid var(--vora);border-radius:999px;padding:5px 10px;font-size:.76rem;font-weight:800;text-decoration:none}
-.nav-fitxa a:hover,.nav-fitxa a:focus-visible{border-color:var(--coral);color:var(--coral)}
+/* L'índex de la fitxa és navegació, i la navegació és text subratllat: una
+   filera de pastilles aquí era la quarta forma de pastilla de la pàgina. */
+/* Sense filet propi: el primer bloc de sota ja en porta un de gruixut, i dos
+   filets l'un sobre l'altre feien de la navegació una capsa. */
+.rg-index{margin:var(--e2) 0 0}
+.nav-fitxa{display:flex;gap:0 18px;flex-wrap:wrap;margin:0;padding:0;list-style:none}
+.nav-fitxa a{display:inline-block;padding:6px 0;font-size:.88rem;font-weight:800;color:inherit;
+  text-decoration:underline;text-decoration-color:var(--vora);text-decoration-thickness:2px;text-underline-offset:4px}
+.nav-fitxa a:hover,.nav-fitxa a:focus-visible{text-decoration-color:var(--coral)}
 .cronologia{list-style:none;margin:var(--e3) 0 0;padding:0;border-left:3px solid var(--coral)}
-.cronologia li{display:grid;grid-template-columns:5rem 1fr;gap:var(--e2);padding:0 0 var(--e2) var(--e3);position:relative}
+.cronologia li{display:grid;grid-template-columns:6.4rem 1fr;gap:var(--e2);padding:0 0 var(--e2) var(--e3);position:relative}
 .cronologia li::before{content:"";position:absolute;left:-7px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--coral);border:2px solid var(--paper)}
-.cronologia-any{font-family:var(--display);font-weight:900;font-variant-numeric:tabular-nums}
+.cronologia-any{font-family:var(--display);font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* --- què cobra ------------------------------------------------------------
    Una targeta per pagador i cap total: l'import gran, qui el paga al capdamunt
@@ -709,11 +711,12 @@ const CSS = `
 .pas{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e2);
   grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .pas li{border-top:2.5px solid var(--ink);padding-top:var(--e2)}
-.pas .etq{display:block;font-size:.7rem;font-weight:800;text-transform:uppercase;
-  letter-spacing:.09em;color:var(--ink-suau)}
+.pas .etq{display:block;font-size:.8rem;font-weight:800;color:var(--ink-suau)}
 .pas .xifra{display:block;font-family:var(--display);font-weight:900;font-size:1.9rem;
   line-height:1.1;letter-spacing:-.03em;margin-top:4px}
-.pas .peu{display:block;font-size:.76rem;color:var(--ink-suau);line-height:1.35;margin-top:5px}
+/* «rg-peu» i no «peu»: el nom nu és el del peu de pàgina i n'heretava el
+   farciment, que deixava la frase sagnada 24 px sota cada xifra. */
+.pas .rg-peu{display:block;font-size:.76rem;color:var(--ink-suau);line-height:1.35;margin-top:5px}
 .activitat-vot{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:var(--e2) 0 0}
 .activitat-vot span{border:1.5px solid var(--vora);padding:8px 10px;background:var(--paper-2);display:flex;flex-direction:column}
 .activitat-vot b{font-family:var(--display);font-size:1.25rem;line-height:1}
@@ -727,8 +730,7 @@ const CSS = `
 .fets{list-style:none;margin:var(--e3) 0 0;padding:0}
 .fets li{border-top:2.5px solid var(--ink);padding:var(--e2) 0;display:flex;gap:var(--e2);
   flex-wrap:wrap;align-items:baseline}
-.fets .etq{flex:0 0 8.5rem;font-size:.7rem;font-weight:800;text-transform:uppercase;
-  letter-spacing:.09em;color:var(--ink-suau)}
+.fets .etq{flex:0 0 8.5rem;font-size:.8rem;font-weight:800;color:var(--ink-suau)}
 .fets .fet{flex:1 1 16rem;min-width:0;font-size:.95rem;line-height:1.45}
 
 /* --- més enllà de l'ajuntament -------------------------------------------
@@ -744,31 +746,29 @@ const CSS = `
 .ofici-abans{margin:var(--e3) 0 0}
 .viqui{margin:var(--e2) 0 0;font-size:.9rem;font-weight:700}
 
-/* --- cap de llista ---------------------------------------------------------
-   La pastilla va en lavanda, que és el tercer color de la casa i encara no
-   tenia feina en aquesta fila: el coral és l'alcaldia i la menta el govern.
-   La frase del bloc porta les xifres en negreta i amb números tabulars, com
-   les caselles del pas pel ple: és la mateixa mena de dada, dita en una línia. */
-.etiquetes .cap-llista{background:var(--lavanda);color:#1E1B2E}
-.etiquetes .segon-carrec{background:var(--paper-2);border-color:var(--coral);color:var(--coral)}
-.etiquetes a.segon-carrec:hover,.etiquetes a.segon-carrec:focus-visible{background:var(--coral);color:#FBF7EE}
 /* El nom del grup és un enllaç a la fitxa municipal, però va dins d'una frase
    i no ha de semblar una pastilla: subratllat fi i la tinta de sempre. */
 .entrada .grup-enllac{color:inherit;text-decoration-color:var(--vora);text-underline-offset:3px}
 .entrada .grup-enllac:hover,.entrada .grup-enllac:focus-visible{text-decoration-color:var(--coral)}
 
 /* --- al mateix grup ------------------------------------------------------
-   Una cara i un nom per persona, en fila i sense cap altra dada: el bloc
-   respon «amb qui seu», i la resta ja és a la fitxa de cadascú. La cara és la
-   compartida («cara.ts», 40 px), amb el color del grup a les inicials. */
-.cares-grup{list-style:none;margin:var(--e2) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
-.cares-grup a{display:inline-flex;align-items:center;gap:10px;border:2px solid var(--ink);
-  border-radius:var(--r-max);padding:5px 16px 5px 6px;background:var(--paper-2);text-decoration:none;
-  color:inherit;max-width:100%}
-.cares-grup a:hover,.cares-grup a:focus-visible{border-color:var(--coral);box-shadow:2px 2px 0 var(--coral)}
-.cares-grup .qui{display:flex;flex-direction:column;min-width:0;line-height:1.2}
-.cares-grup .qui b{font-size:.92rem;overflow-wrap:anywhere}
-.cares-grup .qui small{font-size:.72rem;font-weight:700;color:var(--ink-suau)}
+   Una graella de cares i noms curts: dues columnes en un telèfon, tantes com
+   hi càpiguen en una pantalla ampla. El nom és l'enllaç i va subratllat; el
+   càrrec, a sota, només quan és l'alcaldia o una tinença. La cara de les
+   inicials va a sota de la foto i la foto no porta fons, de manera que mentre
+   carrega es veuen les inicials i no un cercle de paper. A 360 px hi caben
+   dues columnes de 8,5rem amb el marge de la pàgina; amb 9,5 en cabia una. */
+.rg-grup{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:12px 16px;
+  grid-template-columns:repeat(auto-fill,minmax(8.5rem,1fr))}
+.rg-grup a{display:flex;align-items:center;gap:10px;min-height:44px;color:inherit;text-decoration:none}
+.rg-cara{position:relative;flex:none;width:40px;height:40px}
+.rg-cara .cara-alcaldia{position:absolute;inset:0}
+.rg-cara img.cara-alcaldia{background:transparent}
+.rg-qui{display:flex;flex-direction:column;min-width:0}
+.rg-nom{font-weight:800;font-size:.92rem;line-height:1.25;overflow-wrap:anywhere;
+  text-decoration:underline;text-decoration-color:var(--vora);text-decoration-thickness:2px;text-underline-offset:3px}
+.rg-grup a:hover .rg-nom,.rg-grup a:focus-visible .rg-nom{text-decoration-color:var(--coral)}
+.rg-carrec{font-size:.76rem;font-weight:700;color:var(--ink-suau);margin-top:2px}
 .encapcala{font-size:1.05rem;line-height:1.5}
 .encapcala b{font-variant-numeric:tabular-nums}
 /* La frase dels mandats, sota la del càrrec i abans de les pastilles: el gris
@@ -821,6 +821,11 @@ type SouPublicat = {
    */
   sostreAssistencies?: number | null;
   font: { nom: string; url: string | null; llicencia?: string | null; consultat?: string | null } | null;
+  /**
+   * La fitxa de qui paga, quan és una diputació o un consell que en té
+   * (`fitxaEnsPerNom`). Relativa a la pàgina del regidor.
+   */
+  fitxaPaga?: string | null;
   declaracioBens?: string | null;
   /**
    * Si l'avís de la xifra parcial pot citar el cas de Rubí.
@@ -857,7 +862,9 @@ function targetaSou(s: SouPublicat): string {
       : ` El màxim anual per assistències que publica és de <b>${euros(s.sostreAssistencies)}</b>: és un
          sostre, no el que ha cobrat, i no se suma amb res.`;
   return `<li${s.parcial ? ' class="parcial"' : ""}>
-      <span class="ens">${escape(s.paga)}${s.quin ? `<span class="quin">${escape(s.quin)}</span>` : ""}</span>
+      <span class="ens">${
+        s.fitxaPaga ? `<a href="${escape(s.fitxaPaga)}">${escape(s.paga)}</a>` : escape(s.paga)
+      }${s.quin ? `<span class="quin">${escape(s.quin)}</span>` : ""}</span>
       ${
         s.parcial
           ? `<span class="adverteix">Això <b>no és el que cobra</b>: la seu electrònica només hi recull
@@ -926,7 +933,36 @@ function targetaSou(s: SouPublicat): string {
  *    buit de la pàgina: si el bloc s'amagués, la pàgina diria exactament el
  *    mateix tant si la persona cobra cent mil euros com si no en cobra cap.
  */
-function queCobra(r: Regidor, ctx: ContextRegidor): string {
+/** Des de `m/<slug>/regidor/<persona>/` fins a `observatori/`. */
+const BASE_REGIDOR = "../../../../";
+
+/**
+ * La fitxa d'un ens a partir del nom amb què l'escriu qui paga el càrrec.
+ *
+ * Els càrrecs supramunicipals arriben amb el nom de l'ens tal com el publica
+ * la J24 o la J30 —«Diputació de Barcelona», «Consell Comarcal del Vallès
+ * Occidental»— i les fitxes, amb el del registre d'ens. Es comparen sense
+ * accents, majúscules ni apòstrofs, i **només si n'hi ha una de sola** que
+ * lligui: un nom que podria ser de dos ens no és de cap, la mateixa regla que
+ * les persones. Sense `ens`, o sense cap que lligui, torna `null` i el nom va
+ * sense enllaç, com abans.
+ */
+export function fitxaEnsPerNom(
+  ens: readonly DadesEns[] | undefined,
+  nom: string,
+  base: string = BASE_REGIDOR,
+): string | null {
+  if (!ens || ens.length === 0) return null;
+  const clau = (t: string): string => normalize(t).replace(/-/g, " ").replace(/\s+/g, " ").trim();
+  const buscat = clau(nom);
+  if (buscat === "") return null;
+  const lliguen = ens.filter((e) => clau(e.nom) === buscat);
+  if (lliguen.length !== 1) return null;
+  const e = lliguen[0]!;
+  return `${base}${adrecaEns(e.tipus, e.slug)}`;
+}
+
+function queCobra(r: Regidor, ctx: ContextRegidor, ens?: readonly DadesEns[]): string {
   const sous: SouPublicat[] = [];
   if (ctx.retribucio) {
     sous.push({
@@ -1022,6 +1058,7 @@ function queCobra(r: Regidor, ctx: ContextRegidor): string {
       motiuSenseImport: a.motiuSenseImport,
       sostreAssistencies: a.sostreAssistencies ?? null,
       font: a.font,
+      fitxaPaga: fitxaEnsPerNom(ens, a.ens),
     });
   }
 
@@ -1086,7 +1123,7 @@ function queCobra(r: Regidor, ctx: ContextRegidor): string {
         ? "Cap import, però sí el que en diu qui el paga."
         : ambImport === 1
           ? `Un import, amb qui el paga${sous.length > 1 ? ", i el que en diuen els altres que li paguen un càrrec" : ""}.`
-          : `${ambImport} imports, cadascun amb qui el paga.`
+          : `${majusculaInicial(enLletres(ambImport))} imports, cadascun amb qui el paga.`
     } <b>No n'hi ha cap total</b>: sumar xifres que publiquen fonts diferents, d'anys diferents i amb
     criteris diferents donaria una xifra que no ha publicat ningú i que ningú no podria comprovar.</p>
     <ul class="sous">${sous.map((s) => targetaSou(s)).join("")}</ul>
@@ -1101,8 +1138,19 @@ function queCobra(r: Regidor, ctx: ContextRegidor): string {
 }
 
 /** Una xifra amb l'etiqueta a sobre i, a sota, el peu que diu d'on surt. */
+/**
+ * Un nombre petit en lletres, masculí: «dos imports» i no «2 imports» a
+ * l'inici d'una frase. Del deu amunt, en xifres, que és com es llegeixen.
+ */
+function enLletres(n: number): string {
+  const noms = ["zero", "un", "dos", "tres", "quatre", "cinc", "sis", "set", "vuit", "nou", "deu"];
+  return noms[n] ?? n.toLocaleString("ca-ES");
+}
+
+const majusculaInicial = (t: string): string => `${t.charAt(0).toUpperCase()}${t.slice(1)}`;
+
 const casella = (etq: string, xifra: string, peu: string): string =>
-  `<li><span class="etq">${etq}</span><span class="xifra">${xifra}</span><span class="peu">${peu}</span></li>`;
+  `<li><span class="etq">${etq}</span><span class="xifra">${xifra}</span><span class="rg-peu">${peu}</span></li>`;
 
 /**
  * La casella «Fa que hi seu», o `null` quan no hi ha res a dir.
@@ -1520,6 +1568,21 @@ function fraseMandats(r: Regidor, ctx: ContextRegidor): string {
 function fraseLlistes(r: Regidor, ctx: ContextRegidor): string {
   const anades = ctx.llistes;
   if (!anades || anades.length === 0) return "";
+  // Una sola anada, i elegida: la frase dels mandats ja diu l'elecció i les
+  // etiquetes de sota diuen el número o el cap de llista. La línia hi repetia
+  // les tres coses amb unes altres paraules («2023: cap de llista amb PSC-CP
+  // (elegit)» sota «Elegit per primera vegada a les municipals del 2023» i
+  // damunt de «Cap de llista el 2023»). Quan el número no es diu enlloc més,
+  // la línia es queda.
+  const unica = anades.length === 1 ? anades[0]! : null;
+  if (
+    unica &&
+    unica.elegit &&
+    ((unica.capDeLlista && ctx.capDeLlista?.es === true) ||
+      (!unica.capDeLlista && unica.posicio !== null && unica.posicio === r.posicioLlista))
+  ) {
+    return "";
+  }
   const fem = /a$/i.test(r.carrec.trim());
   const elegit = fem ? "elegida" : "elegit";
   let anteriors: string | null = null;
@@ -1720,17 +1783,26 @@ function queEnPublica(ctx: ContextRegidor): string {
   </section>`;
 }
 
-/** Cronologia curta: només fets datats que provenen d'una font explícita. */
+/**
+ * Cronologia curta: només fets datats que provenen d'una font explícita.
+ *
+ * El número de la llista només es diu quan el sabem: una candidatura sense
+ * posició lligada porta `posicio: null` (abans hi arribava com a 0 i sortia
+ * «núm. 0»), i llavors la frase és «Va anar a la llista X», sense cap «?» al
+ * lloc del número. Un interrogant en una fitxa publicada és un buit que fa
+ * veure que és una dada.
+ */
 function cronologia(r: Regidor, ctx: ContextRegidor): string {
   const fets: { ordre: string; any: string; text: string }[] = [];
   for (const l of ctx.llistes ?? []) {
-    fets.push({ ordre: String(l.any), any: String(l.any), text: `${l.capDeLlista ? "Va encapçalar" : `Va anar de número ${l.posicio ?? "?"}`} la llista ${escape(l.sigles)}${l.elegit ? " i en va sortir elegit" : " i no en va sortir elegit"}.` });
+    const com = l.capDeLlista ? "Va encapçalar" : l.posicio !== null && l.posicio > 0 ? `Va anar de número ${l.posicio} a` : "Va anar a";
+    fets.push({ ordre: String(l.any), any: String(l.any), text: `${com} la llista ${escape(l.sigles)}${l.elegit ? " i en va sortir elegit" : " i no en va sortir elegit"}.` });
   }
   if (ctx.mandat?.constitucio) fets.push({ ordre: ctx.mandat.constitucio, any: ctx.mandat.constitucio.slice(0, 4), text: `Es va constituir el ple del mandat ${escape(ctx.mandat.nom)}.` });
   if (r.desDe) fets.push({ ordre: r.desDe, any: r.desDe.slice(0, 4), text: `Va prendre possessió del càrrec el ${escape(delDia(r.desDe))}.` });
   if (r.entradaTardana) fets.push({ ordre: "9999", any: "", text: "Va entrar a mig mandat; la font no en dona la data exacta." });
   if (r.canviDeGrup) fets.push({ ordre: "9998", any: "", text: `Avui consta ${r.canviDeGrup.a ? `al grup ${escape(r.canviDeGrup.a)}` : "sense grup"}; va ser elegit per ${escape(r.canviDeGrup.de ?? "una altra llista")}.` });
-  for (const c of ctx.trajectoria?.carrecs ?? []) if (c.inici || c.fi) fets.push({ ordre: c.inici ?? c.fi ?? "", any: `${c.inici?.slice(0, 4) ?? ""}${c.fi ? `–${c.fi.slice(0, 4)}` : ""}`, text: `Va ocupar ${escape(c.nom)}.` });
+  for (const c of ctx.trajectoria?.carrecs ?? []) if (c.inici || c.fi) fets.push({ ordre: c.inici ?? c.fi ?? "", any: `${c.inici?.slice(0, 4) ?? ""}${c.fi ? `–${c.fi.slice(0, 4)}` : ""}`, text: `Va ser ${escape(c.nom)}.` });
   if (fets.length < 2) return "";
   fets.sort((a, b) => a.ordre.localeCompare(b.ordre));
   return `<section class="bloc" id="cronologia"><h2>Cronologia política</h2><p class="entrada-bloc">Només hi entren fets amb <b>data o període publicat</b>; el que no consta no s'omple amb una suposició.</p><ol class="cronologia">${fets.map((f) => `<li><span class="cronologia-any">${escape(f.any)}</span><span>${f.text}</span></li>`).join("")}</ol><p class="nota">La cronologia combina el registre d'electes, les candidatures i, quan n'hi ha, fonts de trajectòria. Cada bloc de la fitxa conserva l'enllaç a la font corresponent.</p></section>`;
@@ -1763,31 +1835,253 @@ export function carrecAmbMunicipi(carrec: string, municipi: string): string {
 }
 
 /**
+ * Les partícules que s'enganxen al cognom que les segueix: «Marta Alarcón i
+ * Puerto» té dos cognoms, «Alarcón» i «i Puerto», i no tres paraules soltes.
+ */
+const PARTICULES_COGNOM = new Set(["de", "del", "dels", "d", "i", "y", "la", "les", "el", "els", "da", "das", "do", "dos", "van", "von", "der", "den"]);
+
+/**
+ * El nom curt d'una persona: el nom de pila i el primer cognom.
+ *
+ * El bloc «Al mateix grup» posa deu o vint noms en una graella de dues
+ * columnes en un telèfon, i «Francesc Xavier Marcé Carol» hi ocupa tres línies
+ * on «Francesc Marcé» n'ocupa una. És com es diu la gent en una conversa.
+ *
+ * La regla és la de l'ús d'aquí, dos cognoms al final: el primer tros és el
+ * nom de pila i el penúltim, el primer cognom. Les partícules («i», «de»,
+ * «del») van amb el cognom que les segueix, de manera que «Marta Alarcón i
+ * Puerto» és «Marta Alarcón» i no «Marta i». Amb dos trossos o menys no hi ha
+ * res a escurçar. On la regla s'equivoca —un nom compost amb un sol cognom,
+ * «Joan Carles Garcia»— surt «Joan Carles», que segueix sent el nom de la
+ * persona: escurçar mai no en posa un d'inventat. El nom sencer va al `title`
+ * de l'enllaç i a la fitxa de cadascú.
+ */
+export function nomCurt(nom: string): string {
+  const net = nomLlegible(nom).replace(/\s*\([^)]*\)\s*/g, " ").trim().replace(/\s+/g, " ");
+  const trossos: string[] = [];
+  let pendent = "";
+  for (const mot of net.split(" ")) {
+    if (trossos.length > 0 && PARTICULES_COGNOM.has(mot.toLocaleLowerCase("ca"))) {
+      pendent = `${pendent}${mot} `;
+      continue;
+    }
+    trossos.push(`${pendent}${mot}`);
+    pendent = "";
+  }
+  if (trossos.length <= 2) return net;
+  return `${trossos[0]} ${trossos[trossos.length - 2]}`;
+}
+
+const ORDINALS_TINENCA: Record<string, number> = {
+  primer: 1, primera: 1, segon: 2, segona: 2, tercer: 3, tercera: 3, quart: 4, quarta: 4,
+  cinque: 5, cinquena: 5, sise: 6, sisena: 6, sete: 7, setena: 7, vuite: 8, vuitena: 8,
+  nove: 9, novena: 9, dese: 10, desena: 10,
+};
+
+/**
+ * El càrrec que val la pena posar sota una cara: l'alcaldia i les tinences
+ * d'alcaldia, i res més (`null`).
+ *
+ * Els altres càrrecs, tal com els escriuen les seus, no diuen res a qui mira
+ * la graella: a Barcelona tothom hi era «Regidor del Districte», i a d'altres
+ * llocs «Regidora municipal» o «Regidor del grup…», tallat a mitja paraula. En
+ * canvi l'alcaldia i les tinences són l'ordre de qui mana, i es llegeixen
+ * igual a tot arreu. La tinença es diu amb el número quan la seu el dona,
+ * escrit en xifra («1a Tinent d'Alcalde», «5aTta.Alcaldessa») o en lletres
+ * («Segona tinenta d'alcaldia»), i sense quan no el dona.
+ */
+export function carrecALaVista(carrec: string): string | null {
+  if (esAlcaldia(carrec)) return "Alcaldia";
+  const net = normalize(carrec);
+  // «tinen» cobreix «tinent», «tinenta» i «tinença»; «tta» és l'abreviatura
+  // de Viladecans, que `normalize()` deixa com «5atta alcaldessa».
+  const esTinenca = /tinen/.test(net) || /(^|\s|\d[a-z]{0,2})tta\b/.test(net);
+  if (!esTinenca) return null;
+  const xifra = /(\d{1,2})/.exec(net);
+  if (xifra) return `${Number(xifra[1])}a tinença`;
+  const paraula = net.split(" ").find((m) => ORDINALS_TINENCA[m] !== undefined);
+  return paraula ? `${ORDINALS_TINENCA[paraula]}a tinença` : "Tinença d'alcaldia";
+}
+
+/**
+ * Una cara de 40 px que mai no és un cercle buit.
+ *
+ * Les fotos de la graella es carreguen en mandrós, i mentre no arriben el
+ * navegador hi pintava el fons de paper: deu cercles blancs en fila. Ara la
+ * cara amb inicials de `cara()` va a sota i el retrat, també de `cara()`, a
+ * sobre i sense fons, de manera que fins que no arriba la foto es veuen les
+ * inicials amb el color del grup, com a la portada. Qui no té foto només té
+ * la capa de les inicials.
+ */
+function caraAmbInicials(nom: string, foto: string | null, color: string | null): string {
+  const inicials = cara(nom, null, { mida: 40, color });
+  if (!foto) return `<span class="rg-cara">${inicials}</span>`;
+  return `<span class="rg-cara">${inicials}${cara(nom, foto, { mida: 40, color })}</span>`;
+}
+
+/**
  * Les cares de qui seu al mateix grup municipal.
  *
  * Va després de la capçalera i abans de les xifres perquè respon la pregunta
- * que ve just després de «qui és»: amb qui hi seu. Cada persona és un enllaç
- * a la seva fitxa, amb la cara compartida de `cara.ts` a 40 px i el color del
- * grup a les inicials de qui no té foto. Si el grup és d'una sola persona no
- * hi ha ningú a ensenyar i el bloc no s'escriu; el que no es fa és escriure
- * «no té companys de grup», que no és cap dada.
+ * que ve just després de «qui és»: amb qui hi seu. Cada persona és un enllaç a
+ * la seva fitxa: la cara, el nom curt a la vista (`nomCurt()`, que al telèfon
+ * cap en una línia) i, a sota, el càrrec només si és l'alcaldia o una tinença
+ * (`carrecALaVista()`). Abans el nom només era al `title` i el que es veia era
+ * el càrrec en brut, que no distingia ningú. Si dues persones del grup tenen
+ * el mateix nom curt, totes dues porten el nom sencer.
+ *
+ * Si el grup és d'una sola persona no hi ha ningú a ensenyar i el bloc no
+ * s'escriu; el que no es fa és escriure «no té companys de grup», que no és
+ * cap dada.
  */
 function mateixGrup(r: Regidor, ctx: ContextRegidor): string {
   const altres = (ctx.companys ?? []).filter((c) => c.adreca !== ctx.adreca);
   if (altres.length === 0 || !r.grup) return "";
   const color = r.color ?? null;
+  const curts = altres.map((c) => nomCurt(c.nom));
+  const repetit = (curt: string): boolean => curts.filter((x) => x === curt).length > 1;
   const files = altres
-    .map(
-      (c) => `<li><a href="../${escape(c.adreca)}/">${cara(c.nom, c.foto, { mida: 40, color })}<span class="qui"><b>${escape(nomLlegible(c.nom))}</b><small>${escape(c.carrec)}</small></span></a></li>`,
-    )
+    .map((c, i) => {
+      const sencer = nomLlegible(c.nom);
+      const visible = repetit(curts[i]!) ? sencer : curts[i]!;
+      const carrec = carrecALaVista(c.carrec);
+      return `<li><a href="../${escape(c.adreca)}/"${visible === sencer ? "" : ` title="${escape(sencer)}"`}>${caraAmbInicials(
+        visible,
+        c.foto,
+        color,
+      )}<span class="rg-qui"><span class="rg-nom">${escape(visible)}</span>${
+        carrec ? `<span class="rg-carrec">${escape(carrec)}</span>` : ""
+      }</span></a></li>`;
+    })
     .join("");
   return `<section class="bloc mateix-grup" id="mateix-grup">
     <h2>Al mateix grup</h2>
     <p class="entrada-bloc">${
       altres.length === 1 ? "L'altra persona" : `Les altres <b>${altres.length}</b> persones`
     } del grup <a href="../../#regidors">${escape(r.grup)}</a> al ple ${escape(de(ctx.municipi))}.</p>
-    <ul class="cares-grup">${files}</ul>
+    <ul class="rg-grup">${files}</ul>
   </section>`;
+}
+
+/**
+ * La fila d'etiquetes sota el nom: les sigles i l'estat de la persona.
+ *
+ * Hi havia cinc estils de pastilla en una sola fila —sigles plenes, l'alcaldia
+ * en coral i majúscules espaiades, el govern en menta, el cap de llista en
+ * lavanda, el número amb vora i els enllaços amb vora de coral— i cap regla
+ * que digués què volia dir cada forma. Ara n'hi ha dues, i la forma diu la
+ * mena de cosa:
+ *
+ * - **les sigles** són l'única peça plena de color, perquè el color del partit
+ *   és una marca de dada (`sigla()`, la mateixa pastilla de tot el web);
+ * - **els estats** —alcaldia, govern, oposició, cap de llista, número,
+ *   entrada a mig mandat— són una etiqueta petita i plana, sense vora, escrita
+ *   com una frase («Alcaldia», no «ALCALDIA»).
+ *
+ * El que porta a un altre lloc no hi és: va a la línia de sota, subratllat
+ * com qualsevol enllaç (`tambeTeCarrecs()`).
+ *
+ * Quan encapçalava la llista, «Cap de llista el 2023» ja diu el número u, i
+ * «Número 1 de la llista» al costat era dir el mateix dues vegades.
+ */
+function etiquetesDeLaPersona(r: Regidor, ctx: ContextRegidor): string {
+  const estat = (text: string, classe = ""): string =>
+    `<span class="rg-estat${classe ? ` ${classe}` : ""}">${escape(text)}</span>`;
+  // `esAlcaldia()` i no «hi diu alcald»: amb aquella regla, un «1r Tinent
+  // d'Alcalde» portava l'etiqueta de l'alcaldia.
+  const alcaldia = esAlcaldia(r.carrec);
+  // Una tinença d'alcaldia la nomena l'alcaldia d'entre l'equip de govern:
+  // com l'alcaldia, és a l'equip de govern pel càrrec mateix.
+  const alGovern = alcaldia || r.equipGovern || carrecALaVista(r.carrec) !== null;
+  const capDeLlista = ctx.capDeLlista?.es === true;
+  const peces = [
+    // Les sigles porten a la pàgina del partit a tot Catalunya, com el nom
+    // de la persona porta a la seva. Des d'aquí, quatre nivells amunt.
+    r.grup ? sigla(r.sigles ?? r.grup, { base: "../../../../", color: r.color ?? "#8b8b8b" }) : "",
+    // Qui té l'alcaldia hi surt dit amb totes les lletres i no només dins de
+    // la frase: és el càrrec pel qual s'entra en aquesta pàgina.
+    alcaldia ? estat("Alcaldia", "rg-alcaldia") : "",
+    // Qui té l'alcaldia o una tinença és a l'equip de govern per definició,
+    // i això no depèn que la font ho marqui: no és una deducció, és el càrrec.
+    alGovern
+      ? estat("A l'equip de govern", "rg-govern")
+      : ctx.governConegut
+        ? estat("A l'oposició", "rg-oposicio")
+        : // «No consta» no és una tercera posició política: és una absència,
+          // i va sense etiqueta, amb el gris de la lletra petita.
+          estat("La seu electrònica no diu qui és a l'equip de govern", "rg-buit"),
+    // L'alcaldable, dit amb totes les lletres: és la persona per qui es va
+    // votar la llista.
+    capDeLlista ? estat("Cap de llista el 2023", "rg-cap-llista") : "",
+    r.posicioLlista !== null && !(capDeLlista && r.posicioLlista === 1)
+      ? estat(`Número ${r.posicioLlista} de la llista`, "rg-numero")
+      : "",
+    r.entradaTardana ? estat("Va entrar a mig mandat", "rg-tard") : "",
+  ].filter((p) => p !== "");
+  return `<div class="etiquetes">${peces.join("")}</div>`;
+}
+
+/**
+ * La línia dels càrrecs supramunicipals, sota les etiquetes: navegació, i per
+ * això text subratllat i no una pastilla més.
+ *
+ * El primer enllaç baixa al bloc «Què cobra», on cada càrrec té qui el paga;
+ * els següents van a la fitxa de l'ens (una diputació, un consell comarcal)
+ * quan l'Observatori en té i el nom lliga sense dubte (`fitxaEnsPerNom()`),
+ * una vegada per ens. Els noms dels ens arriben sovint en majúscules de la
+ * font i s'escriuen com un nom («Diputació de Barcelona»).
+ */
+function tambeTeCarrecs(ctx: ContextRegidor, ens?: readonly DadesEns[]): string {
+  const n = ctx.altresCarrecs.length;
+  if (n === 0) return "";
+  const enllacos = [
+    `<a class="segon-carrec" href="#que-cobra">${
+      n === 1 ? "També té un càrrec supramunicipal" : `També té ${n} càrrecs supramunicipals`
+    }</a>`,
+    ...[...new Set(ctx.altresCarrecs.map((a) => a.ens))]
+      .map((nom) => ({ nom, on: fitxaEnsPerNom(ens, nom) }))
+      .filter((x): x is { nom: string; on: string } => x.on !== null)
+      .map((x) => `<a class="segon-carrec" href="${escape(x.on)}">${escape(nomLlegible(x.nom))}</a>`),
+  ];
+  return `<p class="rg-tambe">${enllacos.join('<span aria-hidden="true"> · </span>')}</p>`;
+}
+
+/** El nom curt de cada bloc a l'índex, per l'`id` de la seva secció. */
+const APARTATS: Record<string, string> = {
+  "mateix-grup": "Al mateix grup",
+  "cap-de-llista": "Cap de llista",
+  "que-cobra": "Què cobra",
+  "pas-pel-ple": "Pas pel ple",
+  "que-en-sabem": "Què en sabem",
+  "mes-enlla": "Trajectòria",
+  "qui-es": "Qui és",
+  cronologia: "Cronologia",
+  "que-en-publica": "Transparència",
+  "que-ha-votat": "Què ha votat",
+};
+
+/**
+ * L'índex de la fitxa, fet amb els blocs que s'han escrit de debò.
+ *
+ * L'índex d'abans era una llista fixa: enllaçava «Transparència» encara que
+ * `queEnPublica()` no hagués escrit res —a la pàgina de Collboni l'enllaç no
+ * portava enlloc—, enllaçava «Trajectòria» a `#mes-enlla` quan el bloc era
+ * `#qui-es`, no deia «Com a cap de llista» i no seguia l'ordre de la pàgina.
+ * Ara llegeix l'`id` de la primera secció de cada bloc, en l'ordre en què
+ * s'escriuen, com ja fa l'índex de la fitxa municipal. Un bloc sense nom a
+ * `APARTATS` no hi surt, i amb menys de dos apartats l'índex no s'escriu: un
+ * índex d'una línia no estalvia cap desplaçament.
+ *
+ * És navegació i va com a text subratllat, no com una filera de pastilles.
+ */
+export function indexDeLaFitxa(blocs: readonly string[]): string {
+  const apartats = blocs
+    .map((bloc) => /<section\b[^>]*\bid="([^"]+)"/.exec(bloc)?.[1] ?? null)
+    .filter((id): id is string => id !== null && APARTATS[id] !== undefined);
+  if (apartats.length < 2) return "";
+  return `<nav class="rg-index" aria-label="Apartats d'aquesta fitxa">
+    <ul class="nav-fitxa">${apartats.map((id) => `<li><a href="#${id}">${APARTATS[id]}</a></li>`).join("")}</ul>
+  </nav>`;
 }
 
 // ------------------------------------------------------------ el cap SEO
@@ -1842,6 +2136,56 @@ export function frasesQueCaben(frases: readonly FraseSeo[], maxim = DESCRIPCIO_M
 }
 
 /**
+ * Com `frasesQueCaben()`, però primer hi fa cabre tants fets com pot i després
+ * els fa créixer: per a les descripcions on la primera frase és llarga i les
+ * altres són xifres que no es volen perdre.
+ *
+ * `frasesQueCaben()` és golafre: cada frase agafa la variant més llarga que hi
+ * cap, i la primera s'emporta el lloc de les que vénen darrere. Amb el nom de
+ * la persona davant de tot («Marta Alarcón i Puerto, regidora d'Esplugues de
+ * Llobregat (ERC-AM), a l'oposició.» ja són 82 lletres), «a l'oposició» feia
+ * fora «Ha estat diputada al Parlament de Catalunya (1999–2003)», que és molt
+ * més del que la distingeix.
+ *
+ * Aquí es fa en tres passos:
+ *
+ *   1. Cada frase, per ordre d'importància i en la seva variant **més curta**,
+ *      entra si hi cap. La primera hi va sempre.
+ *   2. Cada frase que hi és, per ordre, creix fins a la variant **més llarga**
+ *      que encara hi cap amb les altres.
+ *   3. La coletilla del final («Què ha votat el seu grup…»), que no és cap
+ *      fet sinó una invitació, només si encara queda lloc.
+ *
+ * Així un fet no es perd mai per fer lloc a una variant més rica d'un altre, i
+ * el que sobra de lloc va a les frases de més amunt.
+ */
+export function fetsQueCaben(frases: readonly FraseSeo[], coletilla: FraseSeo = null, maxim = DESCRIPCIO_MAXIMA): string {
+  const neta = (f: string): string => f.replace(/\s+/g, " ").trim();
+  const opcionsDe = (f: FraseSeo): string[] => (typeof f === "string" ? [f] : (f ?? [])).map(neta).filter((v) => v !== "");
+  const variants = frases.map(opcionsDe).filter((v) => v.length > 0);
+  const tria: (string | null)[] = variants.map(() => null);
+  const llargada = (): number => tria.filter((t): t is string => t !== null).join(" ").length;
+
+  variants.forEach((opcions, i) => {
+    tria[i] = opcions[opcions.length - 1]!;
+    if (i > 0 && llargada() > maxim) tria[i] = null;
+  });
+  variants.forEach((opcions, i) => {
+    const curta = tria[i] ?? null;
+    if (curta === null) return;
+    for (const v of opcions) {
+      tria[i] = v;
+      if (llargada() <= maxim) return;
+    }
+    tria[i] = curta;
+  });
+
+  const text = tria.filter((t): t is string => t !== null).join(" ");
+  const final = opcionsDe(coletilla).map((v) => (text === "" ? v : `${text} ${v}`)).find((t) => t.length <= maxim);
+  return final ?? text;
+}
+
+/**
  * El càrrec en una paraula, per al títol i la primera frase: «alcaldessa»,
  * «alcalde», «regidora», «regidor». «Alcalde President» és un alcalde i
  * «Regidora delegada d'Urbanisme» una regidora. Quan la seu escriu una altra
@@ -1875,12 +2219,35 @@ export function titolRegidor(r: Pick<Regidor, "nom" | "carrec">, ctx: Pick<Conte
 
 /**
  * La descripció per al cercador, composta amb el que hi ha de la persona i
- * sense el que falta: el càrrec i el grup; des de quan és al ple; si va
+ * sense el que falta: qui és i quin càrrec té; des de quan és al ple; si va
  * encapçalar la llista el 2023 i amb quins vots; i si té o ha tingut un
  * càrrec per sobre de l'ajuntament. Cap veredicte: xifres i dates que la
  * pàgina mateixa cita amb la seva font.
+ *
+ * **Comença sempre pel nom de la persona.** Abans començava pel càrrec
+ * («Regidora de Sabadell (PSC-CP), a l'equip de govern.»), i totes les
+ * regidores del mateix grup d'un ple que no tenien res més a dir —ni mandats
+ * anteriors, ni cap de llista, ni cap càrrec a fora— tenien la mateixa
+ * descripció lletra per lletra: 2.323 de les 9.094 fitxes de persona. Una
+ * descripció repetida és el senyal que el cercador fa servir per decidir que
+ * dues pàgines diuen el mateix i ensenyar-ne només una, i al resultat qui
+ * cerca un nom no el veia fins que no obria la pàgina. El nom i el municipi
+ * junts ja no es repeteixen.
+ *
+ * Totes les frases van amb variants de la més rica a la més pelada, i
+ * `fetsQueCaben()` hi fa entrar primer tots els fets en la forma curta i
+ * després els fa créixer: el nom davant no ha de fer fora cap xifra.
+ *
+ * La primera frase en té més que cap altra, perquè hi
+ * ha càrrecs de cent vint lletres («1a Tinent d'alcalde delegada de les àrees
+ * de Personal, Educació…») que amb el nom davant passarien dels 158 i el
+ * cercador els tallaria a mitja paraula. Primer cau el costat, després el
+ * grup; si ni el càrrec sol no hi cap, es diu on seu («al ple de Navàs»), amb
+ * el grup si hi cap, i l'última variant —el nom i el ple— hi cap sempre. El
+ * càrrec sencer és a la pàgina, que és on es pot llegir sense retallar.
  */
 export function descripcioRegidor(r: Regidor, ctx: ContextRegidor): string {
+  const nom = nomLlegible(r.nom);
   const carrec = carrecAmbMunicipi(carrecCurt(r.carrec), ctx.municipi);
   // Les sigles abans que el nom del grup: «(ERC-AM)» diu el mateix que «del
   // Grup Municipal Republicà (GMR)» en set lletres, i el que s'estalvia aquí
@@ -1897,25 +2264,47 @@ export function descripcioRegidor(r: Regidor, ctx: ContextRegidor): string {
   // seuen només quan la seu marca algú, que és la mateixa regla de la pàgina.
   const costat =
     !esAlcaldia(r.carrec) && ctx.governConegut ? (r.equipGovern ? ", a l'equip de govern" : ", a l'oposició") : "";
-  const primera = `${carrec[0]!.toUpperCase()}${carrec.slice(1)}${grup}${costat}.`;
+  const alPleDe = `al ple ${de(ctx.municipi)}`;
+  const primera = [
+    `${nom}, ${carrec}${grup}${costat}.`,
+    `${nom}, ${carrec}${grup}.`,
+    `${nom}, ${carrec}.`,
+    `${nom}, ${alPleDe}${grup}${costat}.`,
+    `${nom}, ${alPleDe}${grup}.`,
+    `${nom}, ${alPleDe}.`,
+  ];
 
   // Des de quan: els mandats del registre quan n'hi ha més d'un, i si no el
   // dia de la presa de possessió o el de la constitució del ple (`casellaDesDe`).
   const m = ctx.mandats;
   const desDe = r.desDe ?? (r.entradaTardana ? null : (ctx.mandat?.constitucio ?? null));
+  // Cada una amb una forma curta, que és la que entra primer (`fetsQueCaben`).
+  // El primer any només es diu quan és el primer de debò (`iniciConegut`): si
+  // la municipal d'abans no és al registre, «des del 2015» seria afirmar que el
+  // 2011 no hi era, i el que en sabem és que hi ha almenys aquests mandats.
   const alPle =
     m && m.quants > 1
-      ? m.seguits
-        ? `Al ple des del ${m.primer}: ${m.quants} mandats seguits.`
-        : `${m.quants} mandats al ple, el primer el ${m.primer}.`
+      ? !m.iniciConegut
+        ? m.seguits
+          ? `Almenys ${m.quants} mandats seguits al ple.`
+          : `Almenys ${m.quants} mandats al ple.`
+        : m.seguits
+          ? [`Al ple des del ${m.primer}: ${m.quants} mandats seguits.`, `Al ple des del ${m.primer}.`]
+          : [`${m.quants} mandats al ple, el primer el ${m.primer}.`, `${m.quants} mandats al ple.`]
       : desDe
-        ? `Al ple des ${delDia(desDe)}.`
+        ? [`Al ple des ${delDia(desDe)}.`, `Al ple des del ${desDe.slice(0, 4)}.`]
         : null;
 
   const c = ctx.capDeLlista;
+  // Amb el nom al davant la frase sencera no sempre hi cap; «Cap de llista
+  // d'ERC-AM el 2023.» ja diu el que la distingeix de la resta del grup.
   const cap =
     c && c.es
-      ? `Cap de llista ${de(c.sigles)} el 2023: ${c.vots.toLocaleString("ca-ES")} vots i ${c.regidories} de ${ctx.regidories} regidories.`
+      ? [
+          `Cap de llista ${de(c.sigles)} el 2023: ${c.vots.toLocaleString("ca-ES")} vots i ${c.regidories} de ${ctx.regidories} regidories.`,
+          `Cap de llista ${de(c.sigles)} el 2023: ${c.regidories} de ${ctx.regidories} regidories.`,
+          `Cap de llista ${de(c.sigles)} el 2023.`,
+        ]
       : null;
 
   // El càrrec de més amunt segons Wikidata, o el d'un altre ens segons qui el
@@ -1929,13 +2318,24 @@ export function descripcioRegidor(r: Regidor, ctx: ContextRegidor): string {
       ? `També és ${carrecCurt(altre.carrec)} (${altre.ens}).`
       : null;
 
-  return frasesQueCaben([primera, alPle, cap, mesEnlla, "Què ha votat el seu grup, què cobra i d'on surt cada dada."]);
+  return fetsQueCaben(
+    [primera, alPle, cap, mesEnlla],
+    ["Què ha votat el seu grup, què cobra i d'on surt cada dada.", "Què ha votat el seu grup i què cobra."],
+  );
 }
 
 /**
  * La persona en JSON-LD, només amb el que la pàgina ja diu d'ella: el nom, el
- * càrrec, l'ajuntament on el té, el partit si en té pàgina i el retrat si en
- * publica. Cap correu ni telèfon: és un càrrec electe públic, no un contacte.
+ * càrrec amb el municipi, l'ajuntament on el té, el partit si en té pàgina (o
+ * la llista local, com a `Organization`, si no) i el retrat si en publica. Cap
+ * correu ni telèfon: és un càrrec electe públic, no un contacte.
+ *
+ * La forma és la de `personaLd()` (`seo-ld.ts`), la mateixa de les alcaldies
+ * històriques i dels membres d'una diputació, perquè totes les pàgines diguin
+ * la persona amb els mateixos `@id`: `…/regidor/<persona>/#persona` per a ella,
+ * `…/m/<slug>/#ajuntament` per a l'ajuntament i `…/partit/<id>/#partit` per al
+ * partit. Així qui llegeix la fitxa del municipi i la de la regidora sap que
+ * parlen del mateix ajuntament sense comparar cap nom.
  *
  * Del que Wikidata en sap (`ctx.trajectoria`), només el que el bloc «Més
  * enllà de l'ajuntament» o «Qui és» escriu: l'element i els articles com a
@@ -1949,35 +2349,34 @@ function personaJsonLd(
   url: string,
   partit: { id: string; name: string } | null,
 ): Record<string, unknown> {
-  return {
-    "@type": "Person",
-    name: nomLlegible(r.nom),
-    jobTitle: r.carrec.trim(),
+  const t = ctx.trajectoria ?? null;
+  const capsDeLlista = t?.origen === "caps-de-llista";
+  return personaLd({
     url,
+    nom: nomLlegible(r.nom),
+    carrec: r.carrec,
+    municipi: { slug: ctx.slug, nom: ctx.municipi },
     // El retrat pot venir com a adreça relativa a la pàgina («../../../cares/…»)
-    // o absoluta; `URL` resol totes dues contra l'adreça canònica.
-    image: r.foto ? new URL(r.foto, url).href : undefined,
-    worksFor: {
-      "@type": "GovernmentOrganization",
-      name: `Ajuntament ${de(ctx.municipi)}`,
-      url: `${SITE}/observatori/m/${ctx.slug}/`,
-    },
-    memberOf: partit
-      ? { "@type": "Organization", name: partit.name, url: `${SITE}/observatori/partit/${partit.id}/` }
-      : undefined,
-    sameAs: ctx.trajectoria
-      ? mateixQue(
-          ctx.trajectoria.url,
-          ctx.trajectoria.viquipedia,
-          ctx.trajectoria.origen === "caps-de-llista" ? ctx.trajectoria.wikipediaEs : null,
-        )
-      : undefined,
-    birthDate:
-      ctx.trajectoria?.origen === "caps-de-llista" && ctx.trajectoria.naixement != null ? String(ctx.trajectoria.naixement) : undefined,
-  };
+    // o absoluta: `personaLd()` el resol contra l'adreça canònica.
+    foto: r.foto,
+    partit: partit && { id: partit.id, nom: partit.name },
+    // Una llista local no té pàgina de partit, però la fitxa en diu el nom.
+    grup: partit ? null : (r.sigles ?? r.grup),
+    sameAs: t ? [t.url, t.viquipedia, capsDeLlista ? t.wikipediaEs : null] : undefined,
+    naixement: capsDeLlista && t?.naixement != null ? String(t.naixement) : null,
+  });
 }
 
-export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: string): string {
+/**
+ * @param ens Les fitxes de diputacions i consells (`loadEns`). Opcional: sense,
+ *   la pàgina surt com sortia, amb el nom de l'ens sense enllaç.
+ */
+export function renderRegidor(
+  r: Regidor,
+  ctx: ContextRegidor,
+  generatedAt: string,
+  ens?: readonly DadesEns[],
+): string {
   const inicials = r.nom
     .split(/\s+/)
     .filter(Boolean)
@@ -1994,8 +2393,18 @@ export function renderRegidor(r: Regidor, ctx: ContextRegidor, generatedAt: stri
   // El partit de les sigles, si en té pàgina; `null` per a les llistes locals.
   const partitId = r.sigles ? partitDe(r.sigles) : null;
   const partit = partitId ? { id: partitId, name: BRANDS_BY_ID.get(partitId)?.name ?? r.sigles! } : null;
-  // Les cares del seu grup, escrites una vegada: la navegació només mira si hi són.
-  const alMateixGrup = mateixGrup(r, ctx);
+  // Els blocs del cos, en l'ordre en què es llegeixen. L'índex de la fitxa es
+  // fa d'aquesta mateixa llista (`indexDeLaFitxa()`), de manera que no pot
+  // enllaçar un bloc que no s'ha escrit ni dir-los en un altre ordre.
+  const blocs = [
+    mateixGrup(r, ctx),
+    comACapDeLlista(r, ctx),
+    ...(senseRes ? [queEnSabem(r, ctx, generatedAt)] : [queCobra(r, ctx, ens), pasPelPle(r, ctx, generatedAt)]),
+    mesEnllaDelPle(ctx),
+    cronologia(r, ctx),
+    queEnPublica(ctx),
+    senseRes ? "" : queHaVotat(ctx),
+  ].filter((bloc) => bloc.trim() !== "");
 
   // El cap SEO: l'adreça canònica és la que ha decidit `adrecesRegidors()`
   // (vegeu `ContextRegidor.adreca`), i el fil d'Ariadna passa per la comarca
@@ -2044,39 +2453,8 @@ ${cercador("../../../../")}
         }.</p>
         ${fraseMandats(r, ctx)}
         ${fraseLlistes(r, ctx)}
-        <div class="etiquetes">
-          ${
-            // Les sigles porten a la pàgina del partit a tot Catalunya, com el
-            // nom de la persona porta a la seva. Des d'aquí, quatre nivells amunt.
-            r.grup ? sigla(r.sigles ?? r.grup, { base: "../../../../", color }) : ""
-          }
-          ${
-            // Qui té l'alcaldia hi surt dit amb totes les lletres i no només
-            // dins de la frase: és el càrrec pel qual s'entra en aquesta pàgina.
-            /alcald/i.test(r.carrec) ? '<span class="alcaldia-etiqueta">alcaldia</span>' : ""
-          }
-          ${
-            // Qui té l'alcaldia és a l'equip de govern per definició, i això no
-            // depèn que la font ho marqui: no és una deducció, és el càrrec.
-            /alcald/i.test(r.carrec) || r.equipGovern
-              ? '<span class="govern">a l\'equip de govern</span>'
-              : ctx.governConegut
-                ? '<span class="oposicio">a l\'oposició</span>'
-                : '<span class="sense-govern">la seu electrònica no diu qui és a l\'equip de govern</span>'
-          }
-          ${r.posicioLlista !== null ? `<span>número ${r.posicioLlista} de la llista</span>` : ""}
-          ${
-            // L'alcaldable, dit amb totes les lletres: és la persona per qui
-            // es va votar la llista, i la pàgina no ho deia.
-            ctx.capDeLlista?.es ? '<span class="cap-llista">cap de llista el 2023</span>' : ""
-          }
-          ${r.entradaTardana ? `<span>va entrar a mig mandat</span>` : ""}
-          ${
-            // Els càrrecs supramunicipals es detallen al bloc «Què cobra», amb
-            // qui els paga: la pastilla hi porta en comptes de només anunciar-los.
-            ctx.altresCarrecs.length > 0 ? `<a class="segon-carrec" href="#que-cobra">${ctx.altresCarrecs.length === 1 ? "també té un càrrec supramunicipal" : `també té ${ctx.altresCarrecs.length} càrrecs supramunicipals`}</a>` : ""
-          }
-        </div>
+        ${etiquetesDeLaPersona(r, ctx)}
+        ${tambeTeCarrecs(ctx, ens)}
       </div>
     </div>
     ${
@@ -2090,34 +2468,9 @@ ${cercador("../../../../")}
     }
   </section>
 
-  <nav aria-label="Apartats d'aquesta fitxa">
-    <ul class="nav-fitxa">
-      ${alMateixGrup ? '<li><a href="#mateix-grup">Al mateix grup</a></li>' : ""}
-      ${senseRes ? '<li><a href="#que-en-sabem">Què en sabem</a></li>' : '<li><a href="#que-cobra">Què cobra</a></li><li><a href="#pas-pel-ple">Pas pel ple</a></li><li><a href="#que-ha-votat">Què ha votat</a></li><li><a href="#que-en-publica">Transparència</a></li>'}
-      ${ctx.trajectoria ? '<li><a href="#mes-enlla">Trajectòria</a></li>' : ""}
-      ${(ctx.llistes?.length ?? 0) > 1 || (ctx.trajectoria?.carrecs.length ?? 0) > 0 ? '<li><a href="#cronologia">Cronologia</a></li>' : ""}
-    </ul>
-  </nav>
+  ${indexDeLaFitxa(blocs)}
 
-  ${alMateixGrup}
-
-  ${comACapDeLlista(r, ctx)}
-
-  ${
-    senseRes
-      ? queEnSabem(r, ctx, generatedAt)
-      : `${queCobra(r, ctx)}
-
-  ${pasPelPle(r, ctx, generatedAt)}`
-  }
-
-  ${mesEnllaDelPle(ctx)}
-
-  ${cronologia(r, ctx)}
-
-  ${queEnPublica(ctx)}
-
-  ${senseRes ? "" : queHaVotat(ctx)}
+  ${blocs.join("\n\n  ")}
 
   <section class="bloc anar">
     <h2>Segueix estirant</h2>

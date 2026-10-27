@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  adrecesRegidors, carrecAmbMunicipi, carrecCurt, descripcioRegidor, frasesQueCaben, quiEsDeWikidata,
+  adrecesRegidors, carrecALaVista, carrecAmbMunicipi, carrecCurt, descripcioRegidor, fetsQueCaben, frasesQueCaben, indexDeLaFitxa,
+  nomCurt, quiEsDeWikidata,
   renderRegidor, slugRegidor, titolQueCap, titolRegidor, trajectoriaDePersona,
   type ContextRegidor,
 } from "./regidor";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
+import { fitxaEnsPerNom } from "./regidor";
+import { ensDeProva } from "./ens-prova-enllacos";
 
 describe("adrecesRegidors", () => {
   it("dona una adreça diferent a dues persones que es diuen igual", () => {
@@ -321,8 +324,8 @@ describe("qui és a l'equip de govern, i quan no se sap", () => {
 
   it("qui té l'alcaldia hi és per definició, encara que la font no ho marqui", () => {
     const html = renderRegidor(alcalde, { ...CONTEXT, governConegut: false }, "2026-08-29");
-    expect(html).toContain("a l'equip de govern");
-    expect(html).not.toContain("a l'oposició");
+    expect(html).toContain('<span class="rg-estat rg-govern">A l\'equip de govern</span>');
+    expect(html).not.toContain("rg-oposicio");
   });
 
   it("sense ningú marcat al ple, no es diu que estigui a l'oposició", () => {
@@ -332,7 +335,8 @@ describe("qui és a l'equip de govern, i quan no se sap", () => {
       "2026-08-29",
     );
     expect(html).not.toContain("a l'oposició");
-    expect(html).toContain("no diu qui és a l'equip de govern");
+    expect(html).not.toContain("rg-oposicio");
+    expect(html).toContain('<span class="rg-estat rg-buit">La seu electrònica no diu qui és a l\'equip de govern</span>');
   });
 
   it("amb algú marcat, el fals dels altres sí que vol dir oposició", () => {
@@ -341,7 +345,19 @@ describe("qui és a l'equip de govern, i quan no se sap", () => {
       { ...CONTEXT, governConegut: true },
       "2026-08-29",
     );
-    expect(html).toContain("a l'oposició");
+    expect(html).toContain('<span class="rg-estat rg-oposicio">A l\'oposició</span>');
+  });
+
+  it("una tinença d'alcaldia és a l'equip de govern pel càrrec, encara que la font no ho marqui", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, carrec: "2a Tinenta d'Alcaldia", equipGovern: false },
+      { ...CONTEXT, governConegut: true },
+      "2026-08-29",
+    );
+    expect(html).toContain("rg-govern");
+    expect(html).not.toContain("rg-oposicio");
+    // I no porta l'etiqueta de l'alcaldia, que la paraula «alcald» enganyava.
+    expect(html).not.toContain("rg-alcaldia");
   });
 });
 
@@ -367,10 +383,11 @@ describe("el que es llegeix a sobre de tot", () => {
 
   it("qui té l'alcaldia ho porta escrit a la fila d'etiquetes, no només a la frase", () => {
     const html = renderRegidor(alcalde, CONTEXT, "2026-08-30");
-    expect(html).toContain('<span class="alcaldia-etiqueta">');
-    // El CSS de la pastilla hi és sempre; el que no hi ha de ser és el <span>.
+    // Escrita com una frase, no en majúscules espaiades.
+    expect(html).toContain('<span class="rg-estat rg-alcaldia">Alcaldia</span>');
+    expect(html).not.toMatch(/\.rg-estat[^}]*text-transform:uppercase/);
     expect(renderRegidor({ ...REGIDORA, carrec: "Regidora" }, CONTEXT, "2026-08-30")).not.toContain(
-      '<span class="alcaldia-etiqueta">',
+      "rg-alcaldia",
     );
   });
 
@@ -853,6 +870,25 @@ describe("les llistes on ha anat", () => {
   it("sense historial no hi ha línia", () => {
     expect(renderRegidor(REGIDORA, CONTEXT, "2026-08-30")).not.toContain("Les llistes on ha anat");
   });
+
+  it("la cronologia diu el número quan el sabem, i quan no, cap «?» ni «núm. 0»", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        llistes: [
+          { any: 2015, sigles: "CUP", posicio: null, capDeLlista: false, elegit: false },
+          { any: 2019, sigles: "ERC-AM", posicio: 4, capDeLlista: false, elegit: true },
+          { any: 2023, sigles: "ERC-AM", posicio: 1, capDeLlista: true, elegit: true },
+        ],
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("Va anar a la llista CUP i no en va sortir elegit.");
+    expect(html).toContain("Va anar de número 4 a la llista ERC-AM i en va sortir elegit.");
+    expect(html).toContain("Va encapçalar la llista ERC-AM i en va sortir elegit.");
+    expect(html).not.toMatch(/número \?|número 0|núm\. 0/);
+  });
 });
 
 describe("les tipografies de la marca", () => {
@@ -888,13 +924,14 @@ describe("cap de llista", () => {
       { ...CONTEXT, capDeLlista: CAP },
       "2026-08-30",
     );
-    expect(html).toContain("cap de llista el 2023");
+    expect(html).toContain('<span class="rg-estat rg-cap-llista">Cap de llista el 2023</span>');
     expect(html).toContain("<h2>Com a cap de llista</h2>");
     expect(html).toContain("9.000 vots");
     expect(html).toContain("5 regidories");
     expect(html).toContain("segona força");
     expect(html).toContain("No va aconseguir l'alcaldia");
-    expect(html).toContain("número 1 de la llista");
+    // «Cap de llista» ja diu el número u: no es diu dues vegades.
+    expect(html).not.toContain("Número 1 de la llista");
     // I torna a la pàgina de la seva candidatura.
     expect(html).toContain('href="../../erc-am/"');
   });
@@ -905,7 +942,7 @@ describe("cap de llista", () => {
       { ...CONTEXT, capDeLlista: { ...CAP, es: false, posicio: 2 } },
       "2026-08-30",
     );
-    expect(html).toContain("número 2 de la llista");
+    expect(html).toContain('<span class="rg-estat rg-numero">Número 2 de la llista</span>');
     expect(html).not.toContain("Com a cap de llista");
   });
 
@@ -1291,7 +1328,8 @@ describe("els enllaços entre pàgines", () => {
       },
       "2026-08-30",
     );
-    expect(html).toContain('<a class="segon-carrec" href="#que-cobra">també té un càrrec supramunicipal</a>');
+    // És navegació: un enllaç a la línia de sota les etiquetes, no una pastilla més.
+    expect(html).toContain('<p class="rg-tambe"><a class="segon-carrec" href="#que-cobra">També té un càrrec supramunicipal</a></p>');
     expect(html).toContain('id="que-cobra"');
   });
 });
@@ -1307,13 +1345,14 @@ describe("al mateix grup", () => {
     const html = renderRegidor(REGIDORA, { ...CONTEXT, companys }, "2026-08-30");
     expect(html).toContain('id="mateix-grup"');
     expect(html).toContain("Les altres <b>2</b> persones del grup");
-    expect(html).toContain('<a href="../pere-coll-vidal/">');
-    expect(html).toContain('<a href="../anna-ribas-sola/">');
+    expect(html).toContain('<a href="../pere-coll-vidal/" title="Pere Coll Vidal">');
+    expect(html).toContain('<a href="../anna-ribas-sola/" title="Anna Ribas Solà">');
     // La cara compartida, a 40 px: foto per a qui en té, inicials per a qui no.
     expect(html).toContain('src="/observatori/fotos/160/1.webp" alt="" width="40" height="40"');
     expect(html).toMatch(/cara-alcaldia inicials petita" style="--mida:40px;[^"]*" aria-hidden="true">AR</);
-    // El nom es publica com s'escriu un nom, també aquí.
-    expect(html).toContain("<b>Anna Ribas Solà</b>");
+    // A la vista, el nom curt i escrit com un nom; el sencer, al title.
+    expect(html).toContain('<span class="rg-nom">Anna Ribas</span>');
+    expect(html).toContain('<span class="rg-nom">Pere Coll</span>');
     // I el bloc entra a la navegació de la fitxa.
     expect(html).toContain('<a href="#mateix-grup">Al mateix grup</a>');
   });
@@ -1331,6 +1370,51 @@ describe("al mateix grup", () => {
     // però la variable hi ha de ser i no el gris de «no sabem de qui és».
     expect(bloc).toMatch(/--mida:40px;--c:#[0-9a-f]{6};--t:#[0-9a-f]{6}/i);
     expect(bloc).not.toContain("--c:#9a9a9a");
+  });
+
+  it("mentre la foto carrega es veuen les inicials, no un cercle buit", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, companys }, "2026-08-30");
+    // Qui té foto porta les dues capes de `cara()`: les inicials a sota i la foto a sobre.
+    expect(html).toMatch(
+      /<span class="rg-cara"><span class="cara-alcaldia inicials petita"[^>]*>PC<\/span><img class="cara-alcaldia petita"[^>]*src="\/observatori\/fotos\/160\/1\.webp"[^>]*loading="lazy"><\/span>/,
+    );
+    // I la foto no porta el fons de paper que tapava les inicials.
+    expect(html).toContain(".rg-cara img.cara-alcaldia{background:transparent}");
+  });
+
+  it("el càrrec només surt a la vista quan és l'alcaldia o una tinença", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        companys: [
+          { nom: "Albert Batlle Bastardas", foto: null, adreca: "albert-batlle", carrec: "Regidor del Districte" },
+          { nom: "Laia Bonet Rull", foto: null, adreca: "laia-bonet", carrec: "Primera Tinenta d'Alcaldia" },
+          { nom: "Jaume Collboni Cuadrado", foto: null, adreca: "jaume-collboni", carrec: "Alcalde" },
+        ],
+      },
+      "2026-08-30",
+    );
+    const bloc = html.slice(html.indexOf('id="mateix-grup"'), html.indexOf("</section>", html.indexOf('id="mateix-grup"')));
+    expect(bloc).not.toContain("Regidor del Districte");
+    expect(bloc).toContain('<span class="rg-nom">Laia Bonet</span><span class="rg-carrec">1a tinença</span>');
+    expect(bloc).toContain('<span class="rg-nom">Jaume Collboni</span><span class="rg-carrec">Alcaldia</span>');
+  });
+
+  it("dues persones amb el mateix nom curt porten el nom sencer", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        companys: [
+          { nom: "Joan Puig Serra", foto: null, adreca: "joan-puig-serra", carrec: "Regidor" },
+          { nom: "Joan Puig Vila", foto: null, adreca: "joan-puig-vila", carrec: "Regidor" },
+        ],
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain('<span class="rg-nom">Joan Puig Serra</span>');
+    expect(html).toContain('<span class="rg-nom">Joan Puig Vila</span>');
   });
 
   it("si al grup només hi seu ella, el bloc no s'escriu", () => {
@@ -1406,11 +1490,32 @@ describe("el títol de la persona", () => {
 });
 
 describe("la descripció de la persona", () => {
-  it("diu el càrrec, les sigles i el costat, i acaba amb el que hi ha a la pàgina", () => {
+  it("comença pel nom, diu el càrrec, les sigles i el costat, i acaba amb el que hi ha a la pàgina", () => {
     const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
     expect(descripcioDe(html)).toBe(
-      "Regidora d'Esplugues de Llobregat (ERC-AM), a l'oposició. Què ha votat el seu grup, què cobra i d'on surt cada dada.",
+      "Marta Alarcón i Puerto, regidora d'Esplugues de Llobregat (ERC-AM), a l'oposició. Què ha votat el seu grup, què cobra i d'on surt cada dada.",
     );
+  });
+
+  it("dues persones del mateix grup i del mateix ple ja no tenen la mateixa descripció", () => {
+    // Abans totes dues eren «Regidora d'Esplugues de Llobregat (ERC-AM), a l'oposició. …».
+    const una = descripcioRegidor(REGIDORA, CONTEXT);
+    const altra = descripcioRegidor({ ...REGIDORA, nom: "ANNA COLL PUIG" }, CONTEXT);
+    expect(una).not.toBe(altra);
+    expect(altra.startsWith("Anna Coll Puig, regidora d'Esplugues de Llobregat (ERC-AM)")).toBe(true);
+  });
+
+  it("amb un càrrec llarguíssim, retalla el càrrec i no el nom ni cap xifra, i no passa mai de 158", () => {
+    const carrec =
+      "1a Tinent d'alcalde delegada de les àrees de Personal, Educació, Medi Ambient, Món Rural, Participació, Transparència, Pubillatge i Porta a porta";
+    const descripcio = descripcioRegidor(
+      { ...REGIDORA, carrec, equipGovern: true },
+      { ...CONTEXT, mandat: { constitucio: "2023-06-17", nom: "2023-2027" } },
+    );
+    expect(descripcio.length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
+    expect(descripcio.startsWith("Marta Alarcón i Puerto, al ple d'Esplugues de Llobregat (ERC-AM)")).toBe(true);
+    expect(descripcio).toContain("Al ple des del 17 de juny del 2023.");
+    expect(descripcio).not.toMatch(/…$/);
   });
 
   it("hi posa des de quan és al ple, la llista que encapçalava i les seves xifres", () => {
@@ -1420,9 +1525,14 @@ describe("la descripció de la persona", () => {
       capDeLlista: CAP,
     });
     expect(descripcio).toContain("Al ple des del 17 de juny del 2023.");
-    expect(descripcio).toContain("Cap de llista d'ERC-AM el 2023: 9.000 vots i 5 de 21 regidories.");
+    // Amb el nom davant, la llista hi entra en la forma curta: el fet hi és,
+    // les xifres són a la pàgina.
+    expect(descripcio).toContain("Cap de llista d'ERC-AM el 2023.");
     expect(descripcio.length).toBeLessThanOrEqual(DESCRIPCIO_MAXIMA);
     expect(descripcio.length).toBeGreaterThanOrEqual(70);
+    // Sense el nom davant (un nom curt) les xifres sí que hi caben senceres.
+    const curt = descripcioRegidor({ ...REGIDORA, nom: "Pau Gil" }, { ...CONTEXT, governConegut: false, capDeLlista: CAP });
+    expect(curt).toContain("Cap de llista d'ERC-AM el 2023: 9.000 vots i 5 de 21 regidories.");
   });
 
   it("amb més d'un mandat, els compta; i diu el càrrec de més amunt", () => {
@@ -1431,13 +1541,38 @@ describe("la descripció de la persona", () => {
       mandats: { anys: [2015, 2019, 2023], primer: 2015, quants: 3, seguits: true, iniciConegut: true, cobertesDesDe: 2011, llistesSenseEntrar: [] },
       trajectoria: trajectoriaDePersona(FITXA_J21, REGIDORA.nom),
     });
-    expect(descripcio).toContain("Al ple des del 2015: 3 mandats seguits.");
-    expect(descripcio).toContain("Ha estat diputada al Parlament de Catalunya (1999–2003).");
+    // Els dos fets hi són: el càrrec de més amunt no es perd per dir «a
+    // l'oposició» o «3 mandats seguits», que passen a la forma curta.
+    expect(descripcio).toBe(
+      "Marta Alarcón i Puerto, regidora d'Esplugues de Llobregat (ERC-AM). Al ple des del 2015. Ha estat diputada al Parlament de Catalunya (1999–2003).",
+    );
+    const sola = descripcioRegidor(REGIDORA, {
+      ...CONTEXT,
+      mandats: { anys: [2015, 2019, 2023], primer: 2015, quants: 3, seguits: true, iniciConegut: true, cobertesDesDe: 2011, llistesSenseEntrar: [] },
+    });
+    expect(sola).toContain("Al ple des del 2015: 3 mandats seguits.");
+  });
+
+  it("el primer any només es diu quan el registre arriba a la municipal d'abans", () => {
+    // El registre comença el 2015: «des del 2015» diria que el 2011 no hi era, i no ho sabem.
+    const mandats = { anys: [2015, 2019, 2023], primer: 2015, quants: 3, seguits: true, iniciConegut: false, cobertesDesDe: 2015, llistesSenseEntrar: [] };
+    const seguits = descripcioRegidor(REGIDORA, { ...CONTEXT, mandats });
+    expect(seguits).toContain("Almenys 3 mandats seguits al ple.");
+    expect(seguits).not.toMatch(/des del 2015|el primer el/);
+    const solts = descripcioRegidor(REGIDORA, { ...CONTEXT, mandats: { ...mandats, anys: [2015, 2023], quants: 2, seguits: false } });
+    expect(solts).toContain("Almenys 2 mandats al ple.");
+    expect(solts).not.toContain("el primer el 2015");
+    // Amb l'inici conegut, el primer any sí.
+    const conegut = descripcioRegidor(REGIDORA, {
+      ...CONTEXT,
+      mandats: { ...mandats, anys: [2015, 2023], quants: 2, seguits: false, iniciConegut: true, cobertesDesDe: 2011 },
+    });
+    expect(conegut).toContain("2 mandats al ple, el primer el 2015.");
   });
 
   it("l'alcaldia no és «a l'oposició», i sense govern conegut no es diu cap costat", () => {
     const alcaldessa = descripcioRegidor({ ...REGIDORA, carrec: "Alcaldessa" }, CONTEXT);
-    expect(alcaldessa.startsWith("Alcaldessa d'Esplugues de Llobregat (ERC-AM).")).toBe(true);
+    expect(alcaldessa.startsWith("Marta Alarcón i Puerto, alcaldessa d'Esplugues de Llobregat (ERC-AM).")).toBe(true);
     expect(alcaldessa).not.toContain("oposició");
     expect(descripcioRegidor(REGIDORA, { ...CONTEXT, governConegut: false })).not.toContain("oposició");
   });
@@ -1454,7 +1589,7 @@ describe("la descripció de la persona", () => {
     const html = renderRegidor({ ...REGIDORA, grup: null, sigles: null }, { ...CONTEXT, governConegut: false }, "2026-08-30");
     expect(cap(html)).not.toMatch(/null|undefined/);
     expect(descripcioDe(html)).toBe(
-      "Regidora d'Esplugues de Llobregat. Què ha votat el seu grup, què cobra i d'on surt cada dada.",
+      "Marta Alarcón i Puerto, regidora d'Esplugues de Llobregat. Què ha votat el seu grup, què cobra i d'on surt cada dada.",
     );
   });
 });
@@ -1474,6 +1609,23 @@ describe("els ajudants del cap SEO", () => {
     expect(frasesQueCaben(["Una.", "Una frase massa llarga per al lloc que queda.", "Sí."], 12)).toBe("Una. Sí.");
     expect(frasesQueCaben(["Una.", ["Té l'alcaldia: Algú.", "Té l'alcaldia."]], 20)).toBe("Una. Té l'alcaldia.");
   });
+
+  it("fetsQueCaben fa entrar primer tots els fets en la forma curta, i després els fa créixer", () => {
+    // frasesQueCaben deixaria la primera llarga i perdria el segon fet.
+    const frases = [["Una primera frase llarga.", "Una."], "Fet dos.", ["Fet tres, amb xifres.", "Fet tres."]];
+    expect(frasesQueCaben(frases, 40)).toBe("Una primera frase llarga. Fet dos.");
+    // fetsQueCaben hi fa cabre els tres fets, i el lloc que queda va al tercer.
+    expect(fetsQueCaben(frases, null, 40)).toBe("Una. Fet dos. Fet tres, amb xifres.");
+    // Amb lloc de sobra, tot en la forma més llarga i la coletilla al final.
+    expect(fetsQueCaben(frases, ["Coletilla llarga.", "Col."], 100)).toBe(
+      "Una primera frase llarga. Fet dos. Fet tres, amb xifres. Coletilla llarga.",
+    );
+    // La coletilla només entra si encara hi cap, i en la seva forma més llarga possible.
+    expect(fetsQueCaben(["Una.", "Dos."], ["Coletilla llarga.", "Col."], 14)).toBe("Una. Dos. Col.");
+    // La primera hi va sempre, encara que no hi càpiga ni curta.
+    expect(fetsQueCaben([["Massa llarga per caber."], "Dos."], null, 10)).toBe("Massa llarga per caber.");
+    expect(fetsQueCaben([null, undefined], "Sola.", 20)).toBe("Sola.");
+  });
 });
 
 describe("les dades estructurades de la persona", () => {
@@ -1491,18 +1643,22 @@ describe("les dades estructurades de la persona", () => {
     expect((fil?.itemListElement as { item: string }[])[2]?.item).toBe("https://quivoto.cat/observatori/c/baix-llobregat/");
   });
 
-  it("la persona: nom, càrrec, ajuntament, partit i retrat, i res més", () => {
+  it("la persona: nom, càrrec amb el municipi, ajuntament, partit i retrat, amb els @id del graf, i res més", () => {
     expect(persona?.["@type"]).toBe("Person");
+    expect(persona?.["@id"]).toBe("https://quivoto.cat/observatori/m/esplugues-de-llobregat/regidor/marta-alarcon-pujol/#persona");
     expect(persona?.name).toBe("Marta Alarcón i Puerto");
-    expect(persona?.jobTitle).toBe("Regidora");
+    // El càrrec amb el municipi: és la frase que es cita quan es pregunta qui és algú.
+    expect(persona?.jobTitle).toBe("Regidora d'Esplugues de Llobregat");
     expect(persona?.url).toBe("https://quivoto.cat/observatori/m/esplugues-de-llobregat/regidor/marta-alarcon-pujol/");
     expect(persona?.worksFor).toEqual({
       "@type": "GovernmentOrganization",
+      "@id": "https://quivoto.cat/observatori/m/esplugues-de-llobregat/#ajuntament",
       name: "Ajuntament d'Esplugues de Llobregat",
       url: "https://quivoto.cat/observatori/m/esplugues-de-llobregat/",
     });
     expect(persona?.memberOf).toEqual({
-      "@type": "Organization",
+      "@type": "PoliticalParty",
+      "@id": "https://quivoto.cat/observatori/partit/erc/#partit",
       name: "Esquerra Republicana de Catalunya",
       url: "https://quivoto.cat/observatori/partit/erc/",
     });
@@ -1511,10 +1667,18 @@ describe("les dades estructurades de la persona", () => {
     expect(JSON.stringify(persona)).not.toMatch(/email|telephone|mailto/);
   });
 
-  it("sense retrat ni partit amb pàgina, aquells camps no hi són", () => {
+  it("sense retrat no hi ha imatge; una llista local hi va com a Organization, no com a partit", () => {
     const [, sola] = jsonLdDe(renderRegidor({ ...REGIDORA, sigles: null, grup: "Independents" }, CONTEXT, "2026-08-30"));
     expect(sola).not.toHaveProperty("image");
-    expect(sola).not.toHaveProperty("memberOf");
+    expect(sola?.memberOf).toEqual({ "@type": "Organization", name: "Independents" });
+    // Sense sigles ni grup, cap memberOf.
+    const [, ningu] = jsonLdDe(renderRegidor({ ...REGIDORA, sigles: null, grup: null }, CONTEXT, "2026-08-30"));
+    expect(ningu).not.toHaveProperty("memberOf");
+  });
+
+  it("la pàgina és un ProfilePage que parla de la persona pel seu @id", () => {
+    const pagina = jsonLdDe(html).find((n) => n["@type"] === "ProfilePage");
+    expect(pagina?.mainEntity).toMatchObject({ "@id": persona?.["@id"], "@type": "Person", name: "Marta Alarcón i Puerto" });
   });
 
   it("sense Wikidata, cap sameAs ni birthDate; amb la fitxa d'alcaldies, l'element i la Viquipèdia", () => {
@@ -1551,5 +1715,172 @@ describe("els encapçalaments de la pàgina de la persona", () => {
     expect(nivells.filter((n) => n === 1)).toHaveLength(1);
     expect(nivells[0]).toBe(1);
     for (let i = 1; i < nivells.length; i++) expect(nivells[i]).toBeLessThanOrEqual(nivells[i - 1]! + 1);
+  });
+});
+
+describe("el nom de l'ens enllaça la seva fitxa", () => {
+  const diba = ensDeProva({ tipus: "diputacio" });
+  const consell = ensDeProva({ nom: "Consell Comarcal del Baix Llobregat", slug: "baix-llobregat" });
+  const ambDiputacio = {
+    ...CONTEXT,
+    altresCarrecs: [
+      {
+        ens: "DIPUTACIÓ DE BARCELONA",
+        carrec: "Diputada",
+        anualBrut: 20_000,
+        concepte: null,
+        dedicacio: null,
+        motiuSenseImport: null,
+        font: { nom: "Diputació de Barcelona", url: "https://www.diba.cat/" },
+      },
+    ],
+  };
+
+  it("lliga el nom sense accents ni majúscules, i només si l'ens és únic", () => {
+    expect(fitxaEnsPerNom([diba, consell], "Diputació de Barcelona")).toBe("../../../../diputacio/barcelona/");
+    expect(fitxaEnsPerNom([diba, consell], "consell comarcal del baix llobregat")).toBe("../../../../c/baix-llobregat/consell/");
+    expect(fitxaEnsPerNom([diba, diba], "Diputació de Barcelona")).toBeNull();
+    expect(fitxaEnsPerNom([diba], "Àrea Metropolitana de Barcelona")).toBeNull();
+    expect(fitxaEnsPerNom(undefined, "Diputació de Barcelona")).toBeNull();
+  });
+
+  it("sense ens, la pàgina queda exactament com era", () => {
+    expect(renderRegidor(REGIDORA, ambDiputacio, "2026-08-30", undefined)).toBe(
+      renderRegidor(REGIDORA, ambDiputacio, "2026-08-30"),
+    );
+    expect(renderRegidor(REGIDORA, ambDiputacio, "2026-08-30")).not.toContain("diputacio/barcelona/");
+  });
+
+  it("amb ens, la targeta de «Què cobra» i la pastilla del capçal porten a la fitxa", () => {
+    const html = renderRegidor(REGIDORA, ambDiputacio, "2026-08-30", [diba, consell]);
+    expect(html).toContain('<span class="ens"><a href="../../../../diputacio/barcelona/">DIPUTACIÓ DE BARCELONA</a>');
+    // Al capçal el nom de l'ens s'escriu com un nom, no amb les majúscules de la font.
+    expect(html).toContain('<a class="segon-carrec" href="../../../../diputacio/barcelona/">Diputació de Barcelona</a>');
+    // La pastilla que porta a «Què cobra» hi continua.
+    expect(html).toContain('<a class="segon-carrec" href="#que-cobra">');
+  });
+});
+
+describe("el nom curt i el càrrec a la vista", () => {
+  it("nomCurt: el nom de pila i el primer cognom, amb les partícules al seu cognom", () => {
+    expect(nomCurt("Francesc Xavier Marcé Carol")).toBe("Francesc Marcé");
+    expect(nomCurt("Albert Batlle Bastardas")).toBe("Albert Batlle");
+    expect(nomCurt("Marta Alarcón i Puerto")).toBe("Marta Alarcón");
+    expect(nomCurt("Josep Maria de Pablo García")).toBe("Josep de Pablo");
+    expect(nomCurt("ANNA RIBAS SOLÀ")).toBe("Anna Ribas");
+    // Amb dos trossos no hi ha res a escurçar; el sufix entre parèntesis cau.
+    expect(nomCurt("Pere Coll")).toBe("Pere Coll");
+    expect(nomCurt("ARIÀ PÉREZ ISIDRO (Ind.)")).toBe("Arià Pérez");
+  });
+
+  it("carrecALaVista: l'alcaldia i les tinences, amb el número si la seu el dona", () => {
+    expect(carrecALaVista("Alcaldessa de Sabadell")).toBe("Alcaldia");
+    expect(carrecALaVista("4t Tinent d'Alcalde")).toBe("4a tinença");
+    expect(carrecALaVista("1ª Tinença Alcaldia")).toBe("1a tinença");
+    expect(carrecALaVista("5aTta.Alcaldessa")).toBe("5a tinença");
+    expect(carrecALaVista("Segona tinenta d'alcaldia")).toBe("2a tinença");
+    expect(carrecALaVista("Tinent d'alcalde")).toBe("Tinença d'alcaldia");
+    expect(carrecALaVista("Regidor del Districte")).toBeNull();
+    expect(carrecALaVista("Regidora d'Alcaldia")).toBeNull();
+    expect(carrecALaVista("Portaveu")).toBeNull();
+  });
+});
+
+describe("l'índex de la fitxa", () => {
+  const enllacos = (html: string): string[] => {
+    const nav = html.slice(html.indexOf('<nav class="rg-index"'), html.indexOf("</nav>", html.indexOf('<nav class="rg-index"')));
+    return [...nav.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]!);
+  };
+  const seccions = (html: string): string[] =>
+    [...html.slice(html.indexOf("<main")).matchAll(/<section class="bloc[^"]*" id="([^"]+)"/g)].map((m) => m[1]!);
+
+  it("no enllaça cap bloc que no s'hagi escrit: sense fitxa de la seu, cap «Transparència»", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, publicaDeLaPersona: null }, "2026-08-30");
+    expect(html).not.toContain('id="que-en-publica"');
+    expect(html).not.toContain('href="#que-en-publica"');
+    for (const id of enllacos(html)) expect(html).toContain(`id="${id}"`);
+  });
+
+  it("segueix l'ordre dels blocs i inclou «Com a cap de llista» quan hi és", () => {
+    const html = renderRegidor(
+      { ...REGIDORA, posicioLlista: 1 },
+      {
+        ...CONTEXT,
+        capDeLlista: CAP,
+        companys: [
+          { nom: "Pere Coll Vidal", foto: null, adreca: "pere-coll-vidal", carrec: "Regidor" },
+        ],
+        trajectoria: trajectoriaDePersona(FITXA_J21, "Marta Alarcón i Puerto"),
+      },
+      "2026-08-30",
+    );
+    const index = enllacos(html);
+    expect(index).toContain("cap-de-llista");
+    expect(index).toContain("mes-enlla");
+    // Exactament les seccions de la pàgina que tenen nom a l'índex, en el seu ordre.
+    expect(index).toEqual(seccions(html).filter((id) => index.includes(id)));
+    expect(index[0]).toBe("mateix-grup");
+  });
+
+  it("és text subratllat, no una filera de pastilles", () => {
+    const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
+    expect(html).toMatch(/\.nav-fitxa a\{[^}]*text-decoration:underline/);
+    expect(html).not.toMatch(/\.nav-fitxa a\{[^}]*border-radius/);
+  });
+
+  it("indexDeLaFitxa llegeix l'id de cada bloc, i amb menys de dos no s'escriu", () => {
+    expect(indexDeLaFitxa(['<section class="bloc" id="que-cobra"></section>'])).toBe("");
+    const nav = indexDeLaFitxa([
+      '<section class="bloc" id="qui-es"></section>',
+      '<section class="bloc" id="que-ha-votat"></section>',
+      '<section class="bloc" id="desconegut"></section>',
+    ]);
+    expect(nav).toContain('<a href="#qui-es">Qui és</a>');
+    expect(nav).toContain('<a href="#que-ha-votat">Què ha votat</a>');
+    expect(nav).not.toContain("desconegut");
+  });
+});
+
+describe("polit de la pàgina de la persona", () => {
+  it("cap enllaç amb «→» al darrere", () => {
+    const html = renderRegidor(REGIDORA, { ...CONTEXT, trajectoria: trajectoriaDePersona(FITXA_J21, "Marta Alarcón i Puerto") }, "2026-08-30");
+    expect(html.slice(html.indexOf("<main"), html.indexOf("</main>"))).not.toContain("→");
+  });
+
+  it("les etiquetes de les caselles no van en majúscules espaiades, i el peu no es diu «peu»", () => {
+    const html = renderRegidor(REGIDORA, CONTEXT, "2026-08-30");
+    expect(html).not.toMatch(/\.(pas|fets) \.etq\{[^}]*uppercase/);
+    expect(html).toContain('<span class="rg-peu">');
+    expect(html).not.toContain('<span class="peu">');
+  });
+
+  it("la cronologia diu «Va ser diputada», no «Va ocupar diputada»", () => {
+    const html = renderRegidor(
+      REGIDORA,
+      {
+        ...CONTEXT,
+        llistes: [{ any: 2023, sigles: "ERC-AM", posicio: 2, capDeLlista: false, elegit: true }],
+        trajectoria: trajectoriaDePersona(FITXA_J21, "Marta Alarcón i Puerto"),
+      },
+      "2026-08-30",
+    );
+    expect(html).toContain("Va ser diputada al Parlament de Catalunya.");
+    expect(html).not.toContain("Va ocupar");
+  });
+
+  it("una sola llista, elegida i amb el número a les etiquetes, no repeteix la línia de llistes", () => {
+    const una = renderRegidor(
+      REGIDORA,
+      { ...CONTEXT, llistes: [{ any: 2023, sigles: "ERC-AM", posicio: 2, capDeLlista: false, elegit: true }] },
+      "2026-08-30",
+    );
+    expect(una).not.toContain("Les llistes on ha anat");
+    // Si el número no es diu enlloc més, la línia es queda.
+    const senseNumero = renderRegidor(
+      { ...REGIDORA, posicioLlista: null },
+      { ...CONTEXT, llistes: [{ any: 2023, sigles: "ERC-AM", posicio: 2, capDeLlista: false, elegit: true }] },
+      "2026-08-30",
+    );
+    expect(senseNumero).toContain("Les llistes on ha anat");
   });
 });

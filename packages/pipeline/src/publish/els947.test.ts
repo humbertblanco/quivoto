@@ -6,7 +6,13 @@ import {
   clausOrdre,
   ORDRES,
   ordresDisponibles,
+  FILTRES,
   filtresDisponibles,
+  codiTira,
+  htmlTira,
+  paletaTira,
+  tiraCompacta,
+  type TramCompacte,
   lectorDe,
   llindarsDe,
   marques,
@@ -110,7 +116,7 @@ describe("llindarsDe", () => {
 describe("marques", () => {
   const l = llindarsDe(conjunt);
 
-  it("un municipi que ho toca tot porta les onze marques", () => {
+  it("un municipi que ho toca tot porta totes les marques", () => {
     const tot = ambX(
       fila("x", { w: 0, k: 1, m: 1, o: 1, p: 400, t: 0, v: 0, q: 12, f: 60, d: 5000, y: 0 }),
       1,
@@ -279,6 +285,18 @@ describe("renderEls947", () => {
     expect(pistes).toContain('href="comparador/"');
   });
 
+  /*
+   * La navegació és text subratllat i prou (vegeu «les pastilles» a estil.ts):
+   * la fletxa «→» del final dels enllaços era un tic de plantilla. Es mira el
+   * cos de la pàgina i no el full d'estil, que porta la fletxa de l'«abans → ara»
+   * del balanç, que no és cap enllaç.
+   */
+  it("cap enllaç de la pàgina acaba amb la fletxa «→»", () => {
+    expect(html.slice(html.indexOf("<body"))).not.toMatch(/→\s*<\/a>/);
+    expect(html).toContain('<a class="prova-enllac" href="mapa/">Els mateixos 947, al mapa</a>');
+    expect(html).toContain('rel="noopener">Ves a jugar a els947.cat</a>');
+  });
+
   it("enllaça les tipografies de la marca abans del full d'estil", () => {
     expect(html.indexOf("assets/fonts.css")).toBeGreaterThan(-1);
     expect(html.indexOf("assets/fonts.css")).toBeLessThan(html.indexOf("<style>"));
@@ -308,8 +326,8 @@ describe("renderEls947", () => {
   it("els filtres nous hi són i porten la xifra que apliquen", () => {
     const l = llindarsDe(conjunt);
     expect(html).toContain("Més dones que homes al ple");
-    expect(html).toContain(`Deute per sobre de ${l.deute!.toLocaleString("ca-ES")} €`);
-    expect(html).toContain(`Transparència per sota del ${l.transparencia} %`);
+    expect(html).toContain(`Més deute per habitant que el municipi del mig (${l.deute!.toLocaleString("ca-ES")} €)`);
+    expect(html).toContain(`Menys transparència que el municipi del mig (${l.transparencia} %)`);
     expect(html).toContain("Menys de 1.000 habitants");
   });
 
@@ -478,7 +496,8 @@ describe("la renda per persona, la dada que faltava per comparar pobles", () => 
 
   it("no diu que un poble sigui pobre, i diu que això no ho decideix l'ajuntament", () => {
     const html = renderEls947(ambRenda, "2026-08-30", new Set());
-    expect(html).toContain("Hi entra menys de");
+    expect(html).toContain("Renda per sota del municipi del mig (");
+    expect(html).not.toContain("Hi entra menys de");
     expect(html).not.toMatch(/pobl?es? (més )?pobres?|municipis pobres/i);
     expect(html).toContain("La renda no la decideix l'ajuntament");
   });
@@ -824,5 +843,284 @@ describe("el cap SEO dels 947", () => {
 
   it("té un sol <h1>", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// Una pàgina més curta: el calaix de filtres i la fila d'una línia
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Un node de mentida amb el que el guió de la pàgina toca, i res més. */
+type NodeFals = {
+  id: string;
+  attrs: Record<string, string>;
+  value: string;
+  checked: boolean;
+  hidden: boolean;
+  open: boolean;
+  textContent: string;
+  classes: Set<string>;
+  oients: Record<string, ((e?: unknown) => void)[]>;
+  fills: NodeFals[];
+  getAttribute(n: string): string | null;
+  setAttribute(n: string, v: string): void;
+  addEventListener(t: string, f: (e?: unknown) => void): void;
+  querySelector(sel: string): NodeFals | null;
+  querySelectorAll(sel: string): NodeFals[];
+  appendChild(n: NodeFals): void;
+  classList: { toggle(c: string, si?: boolean): void; contains(c: string): boolean };
+};
+
+function nodeFals(id = "", attrs: Record<string, string> = {}): NodeFals {
+  const n: NodeFals = {
+    id, attrs, value: attrs.value ?? "", checked: false, hidden: false, open: false, textContent: "",
+    classes: new Set(), oients: {}, fills: [],
+    getAttribute: (k) => (k in n.attrs ? n.attrs[k]! : null),
+    setAttribute: (k, v) => { n.attrs[k] = v; },
+    addEventListener: (t, f) => { (n.oients[t] ??= []).push(f); },
+    querySelector: () => null,
+    querySelectorAll: () => [],
+    appendChild: (f) => { n.fills.push(...(f.fills.length ? f.fills : [f])); },
+    classList: {
+      toggle: (c, si) => { if (si ?? !n.classes.has(c)) n.classes.add(c); else n.classes.delete(c); },
+      contains: (c) => n.classes.has(c),
+    },
+  };
+  return n;
+}
+
+/**
+ * Obre la pàgina amb un DOM de mentida i torna-hi els nodes que importen.
+ *
+ * Les files i les caselles es llegeixen de l'HTML de debò: si el guió i el que
+ * s'escriu deixessin de coincidir —una casella que canvia de nom, una fila
+ * sense «data-f»—, ho diria aquesta prova i no un lector a qui el filtre no
+ * fa res.
+ */
+function obreEls947(html: string, ample = false) {
+  const inici = html.indexOf("<script>\nconst norm");
+  const script = html.slice(inici + 8, html.indexOf("</script>", inici));
+  const files = [...html.matchAll(/<li class="fila" data-k="([^"]*)" data-f="([^"]*)" data-o="([^"]*)" data-b="([^"]*)"(?: data-t="([^"]*)")?>/g)]
+    .map((m) => {
+      const f = nodeFals("", { "data-k": m[1]!, "data-f": m[2]!, "data-o": m[3]!, "data-b": m[4]!, ...(m[5] ? { "data-t": m[5] } : {}) });
+      (f as unknown as { insertAdjacentHTML(p: string, h: string): void }).insertAdjacentHTML = (_p, h) => { f.textContent += h; };
+      const pastilla = nodeFals();
+      f.querySelector = () => pastilla;
+      return f;
+    });
+  const caselles = [...html.matchAll(/type="checkbox" id="f-([a-z]+)" value="([a-z]+)"/g)].map((m) =>
+    nodeFals(`f-${m[1]}`, { value: m[2]!, type: "checkbox" }));
+  const nodes: Record<string, NodeFals> = {};
+  const tauler = nodeFals("tauler");
+  tauler.querySelectorAll = (sel) => (sel === ".fila" ? files : sel.includes("checkbox") ? caselles : []);
+  nodes.tauler = tauler;
+  const fletxa = nodeFals();
+  const document = {
+    getElementById: (id: string) => (nodes[id] ??= (() => {
+      const n = nodeFals(id);
+      if (id === "capgira") { n.attrs["aria-pressed"] = "false"; n.querySelector = () => fletxa; }
+      return n;
+    })()),
+    createDocumentFragment: () => nodeFals(),
+  };
+  const executa = new Function("document", "location", "history", "window", script);
+  executa(
+    document,
+    { search: "", href: "https://quivoto.cat/observatori/els947.html" },
+    { replaceState() {} },
+    { matchMedia: () => ({ matches: ample }) },
+  );
+  const visibles = () => files.filter((f) => !f.classes.has("fora"));
+  const canvia = () => for_each(tauler.oients.change, (f) => f());
+  return { nodes, files, caselles, visibles, canvia };
+}
+
+function for_each<T>(xs: T[] | undefined, f: (x: T) => void): void {
+  for (const x of xs ?? []) f(x);
+}
+
+describe("el calaix de filtres", () => {
+  const files = ambRenda.map((f, i) => ({ ...f, m: i % 3 === 0 ? (1 as const) : (0 as const) }));
+  const html = renderEls947(files, "2026-10-27", new Set(files.map((f) => f.s)));
+
+  it("els filtres, l'ordre i la nota van dins d'un <details> plegat de sortida", () => {
+    const calaix = html.slice(html.indexOf('<details class="calaix-947"'), html.indexOf("</details>"));
+    expect(html).toContain('<details class="calaix-947" id="calaix">');
+    expect(calaix).toContain('id="f-majoria"');
+    expect(calaix).toContain('id="o-pob"');
+    expect(calaix).toContain("El municipi del mig és el que queda al mig");
+    // Tancat a l'HTML: sense JavaScript, al mòbil, la llista surt a la primera pantalla.
+    expect(html).not.toContain('<details class="calaix-947" id="calaix" open');
+    // El recompte i «Treu-ho tot» queden a fora, a la vista, encara que el calaix estigui tancat.
+    expect(calaix).not.toContain('id="recompte"');
+    expect(html.indexOf('id="recompte"')).toBeGreaterThan(html.indexOf("</details>"));
+  });
+
+  it("el resum fa 44 px i té el focus visible", () => {
+    const css = cssPropi(html);
+    expect(css).toMatch(/\.calaix-947-obre\{[^}]*min-height:44px/);
+    expect(css).toContain(".calaix-947-obre:focus-visible{outline:3px solid var(--coral)");
+    expect(css).toContain("prefers-reduced-motion:reduce");
+  });
+
+  it("«Amb radiografia» ja no hi és: la tenen tots 947 i no filtrava res", () => {
+    expect(html).not.toContain("Amb radiografia");
+    expect(html).not.toContain('id="f-fitxa"');
+    expect(FILTRES_CLAUS()).not.toContain("fitxa");
+  });
+
+  it("cap etiqueta de filtre no diu «mediana»: diu «el municipi del mig»", () => {
+    const etiquetes = [...html.matchAll(/<label class="filtre"[^>]*>([^<]*)/g)].map((m) => m[1]!);
+    expect(etiquetes.length).toBeGreaterThan(5);
+    for (const e of etiquetes) expect(e).not.toMatch(/mediana/i);
+    expect(etiquetes.filter((e) => e.includes("municipi del mig")).length).toBe(3);
+    expect(etiquetes.some((e) => e.startsWith("Renda per sota del municipi del mig"))).toBe(true);
+    expect(etiquetes.some((e) => e.includes("per habitant"))).toBe(true);
+  });
+
+  it("marcar un filtre amaga les files que no el porten, i el resum diu quants n'hi ha de marcats", () => {
+    const p = obreEls947(html);
+    expect(p.visibles()).toHaveLength(files.length);
+    expect(p.nodes["filtra-n"]!.hidden).toBe(true);
+    p.caselles.find((c) => c.id === "f-majoria")!.checked = true;
+    p.canvia();
+    const amb = files.filter((f) => f.m === 1).length;
+    expect(p.visibles()).toHaveLength(amb);
+    expect(p.nodes["filtra-n"]!.hidden).toBe(false);
+    expect(p.nodes["filtra-n"]!.textContent).toBe("1 actiu");
+    expect(p.nodes.recompte!.textContent).toBe(`${amb} de ${files.length} municipis, ${ORDRES[0]!.avall}`);
+    // Dos filtres alhora es combinen, i el resum en diu dos.
+    p.caselles.find((c) => c.id === "f-petits")!.checked = true;
+    p.canvia();
+    expect(p.nodes["filtra-n"]!.textContent).toBe("2 actius");
+    expect(p.visibles().length).toBe(files.filter((f) => f.m === 1 && f.p < 1000).length);
+  });
+
+  it("el filtre de text continua trobant pel nom, i el comptador de cada casella diu quants quedarien", () => {
+    const p = obreEls947(html);
+    p.nodes.cerca!.value = "Municipi 1";
+    for_each(p.nodes.cerca!.oients.input, (f) => f());
+    // «municipi 1», «municipi 10» … «municipi 19»: onze.
+    expect(p.visibles()).toHaveLength(11);
+    const ambMajoria = p.visibles().filter((f) => f.attrs["data-f"]!.split(" ").includes("majoria")).length;
+    expect(p.nodes["q-majoria"]!.textContent).toBe(`(${ambMajoria})`);
+  });
+
+  it("a una pantalla ampla el calaix s'obre sol; al mòbil es queda tancat", () => {
+    expect(obreEls947(html, true).nodes.calaix!.open).toBe(true);
+    expect(obreEls947(html, false).nodes.calaix!.open).toBe(false);
+  });
+});
+
+describe("la fila d'una línia al mòbil", () => {
+  const html = renderEls947(ambRenda, "2026-10-27", new Set(ambRenda.map((f) => f.s)));
+  const css = cssPropi(html);
+  const mobil = css.slice(css.indexOf("@media (max-width:640px){"));
+
+  it("la fila és una línia de 56 px: nom, habitants, cara i sigla", () => {
+    expect(mobil).toContain(".fila{display:flex;align-items:center;gap:0 10px;padding:6px 0;min-height:56px}");
+    expect(mobil).toContain(".fila .lloc,.fila .dades{display:none}");
+  });
+
+  it("el nom de l'alcaldia s'amaga a la vista però no al lector de pantalla", () => {
+    expect(mobil).toMatch(/\.fila \.mana \.qui-mana\{position:absolute;width:1px;height:1px;overflow:hidden/);
+    expect(mobil).not.toMatch(/\.qui-mana\{display:none/);
+  });
+
+  it("una sigla llarga es talla en una línia i no desborda la pantalla", () => {
+    const regla = mobil.slice(mobil.indexOf(".fila .mana .sigla{"), mobil.indexOf("}", mobil.indexOf(".fila .mana .sigla{")));
+    expect(regla).toContain("text-overflow:ellipsis");
+    expect(regla).toContain("max-width:8.5em");
+    expect(regla).toContain("min-height:30px");
+  });
+
+  it("el nom del municipi continua sent un objectiu de 44 px", () => {
+    expect(css).toMatch(/\.fila \.municipi\{[^}]*min-height:44px/);
+    expect(mobil).not.toMatch(/\.fila \.municipi\{[^}]*min-height:(?!44)/);
+  });
+});
+
+/** Les claus de tots els filtres que la pàgina sap fer, encara que el conjunt no els aguanti. */
+function FILTRES_CLAUS(): string[] {
+  return FILTRES.map((f) => f.clau);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// La tira d'alcaldies de cada fila
+// ───────────────────────────────────────────────────────────────────────────
+
+describe("la tira d'alcaldies a cada fila", () => {
+  /** Dotze mandats del mateix partit, amb un relleu a Junts a mig mandat del 2015 i el futur del mandat en curs. */
+  const tipica = (familia: string, altra: string): TramCompacte[][] => [
+    ...Array.from({ length: 9 }, (): TramCompacte[] => [["a", familia, 0]]),
+    [["a", familia, 0], ["a", altra, 0.48]],
+    [["a", altra, 0]],
+    [["a", altra, 0], ["f", null, 0.84]],
+  ];
+  const files947 = ambRenda.map((f, i) => ({ ...f, tp: i % 7 === 0 ? null : tipica(i % 2 ? "psc" : "erc", "junts") }));
+  const html = renderEls947(files947, "2026-10-27", new Set(files947.map((f) => f.s)));
+  const paleta = paletaTira(files947);
+
+  it("la paleta dona una lletra a cada família, una sola vegada, amb el color de la seva marca", () => {
+    expect([...paleta.keys()]).toEqual(["erc", "junts", "psc"]);
+    expect(paleta.get("erc")!.lletra).toBe("A");
+    expect(paleta.get("psc")!.color).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(html).toContain(`const COLORS_TIRA = {"A":"${paleta.get("erc")!.color}"`);
+  });
+
+  it("cada mandat és una lletra, i cada relleu, la desena on comença i qui entra", () => {
+    expect(codiTira(tipica("psc", "junts"), paleta)).toBe("CCCCCCCCCC5BBB8~");
+    expect(codiTira([[["b", null, 0]], [["b", null, 0], ["a", "cup", 0.3]]], paleta)).toBe("__3x");
+  });
+
+  it("del codi en surt la mateixa tira de «tira-poble.ts», amb les seves classes i sense lectura de pantalla", () => {
+    const colors = { A: "#e30613" };
+    const tira = htmlTira("AA5_", colors);
+    expect(tira.startsWith('<span class="tp tp-fina tira-947" aria-hidden="true">')).toBe(true);
+    expect(tira.match(/class="tp-mandat"/g)).toHaveLength(2);
+    expect(tira).toContain('<span class="tp-tram" style="width:100%;--c:#e30613"></span>');
+    expect(tira).toContain('<span class="tp-tram" style="width:50%;--c:#e30613"></span><span class="tp-tram tp-buit" style="width:50%"></span>');
+    // Funciona sola, com al navegador.
+    const sola = new Function("return (" + String(htmlTira) + ")")() as typeof htmlTira;
+    expect(sola("AA5_", colors)).toBe(tira);
+  });
+
+  it("de l'historial de la fitxa a la fila: alcaldia, buit i futur, amb on comença cada tros", () => {
+    const tp = tiraCompacta({
+      municipi: "X",
+      mandats: [
+        { term: "1979-1983", inici: 1979, fi: 1983, trams: [{ tipus: "buit", de: 0, fins: 1 }] },
+        { term: "2023-2027", inici: 2023, fi: 2027, trams: [
+          { tipus: "alcaldia", nom: "A", partit: "PSC", familia: "psc", color: "#e30613", desDe: null, de: 0, fins: 0.8, relleu: false, posicioAproximada: false, font: "generalitat" },
+          { tipus: "futur", de: 0.8, fins: 1 },
+        ] },
+      ],
+    });
+    expect(tp).toEqual([[["b", null, 0]], [["a", "psc", 0], ["f", null, 0.8]]]);
+  });
+
+  it("la pinta el navegador: el guió afegeix la tira a cada fila que en porta", () => {
+    const p = obreEls947(html);
+    const ambCodi = p.files.filter((f) => f.attrs["data-t"]);
+    expect(ambCodi).toHaveLength(files947.filter((f) => f.tp).length);
+    for (const f of ambCodi) expect(f.textContent).toContain('class="tp tp-fina tira-947"');
+    expect(p.files.filter((f) => !f.attrs["data-t"]).every((f) => !f.textContent.includes("tira-947"))).toBe(true);
+  });
+
+  it("sense historial no hi ha ni tira, ni CSS de la tira, ni nota que l'expliqui", () => {
+    const sense = renderEls947(ambRenda, "2026-10-27", new Set());
+    expect(sense).not.toContain("data-t=");
+    expect(sense).not.toContain(".tp-fina{");
+    expect(sense).not.toContain("La franja de sota cada municipi");
+    expect(html).toContain("La franja de sota cada municipi");
+  });
+
+  it("pesa poc: uns vint-i-cinc bytes per fila, i no un quilobyte de <span>", () => {
+    const sense = renderEls947(files947.map((f) => ({ ...f, tp: null })), "2026-10-27", new Set(files947.map((f) => f.s)));
+    const perFila = (html.length - sense.length) / files947.length;
+    // Inclou el CSS de la tira, la nota i el guió, repartits entre només 100 files.
+    expect(perFila).toBeLessThan(60);
+    const nomesAtributs = (html.match(/ data-t="[^"]*"/g) ?? []).join("").length / files947.filter((f) => f.tp).length;
+    expect(nomesAtributs).toBeLessThan(28);
   });
 });

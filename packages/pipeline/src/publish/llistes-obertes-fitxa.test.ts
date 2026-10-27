@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FONT, type EleccioLlistaOberta, type LlistesObertesMetric } from "../jobs/j37-llistes-obertes";
 import {
   EXPLICACIO,
+  LLISTES_OBERTES_CSS,
   adrecesDelPle,
   colorDeCandidatura,
   curiositatsLlistesObertes,
@@ -145,5 +146,13 @@ describe("resumLlistesObertes i curiositats", () => {
 
   it("sense cap fila amb dada no diu res", () => {
     expect(curiositatsLlistesObertes([fila("Barcelona", 1, null)])).toEqual([]);
+  });
+});
+
+describe("el full de les llistes obertes segueix la marca", () => {
+  it("cap etiqueta en majúscules espaiades: el títol de cada elecció va en minúscula", () => {
+    expect(LLISTES_OBERTES_CSS).not.toContain("text-transform:uppercase");
+    expect(LLISTES_OBERTES_CSS).not.toMatch(/letter-spacing:\.\d/);
+    expect(LLISTES_OBERTES_CSS).toContain(".llo-titol{");
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
-import { geometria, renderMapaCatalunya } from "./mapa-catalunya";
+import { colorsDelsGraons, geometria, renderMapaCatalunya } from "./mapa-catalunya";
+import { rampaDe } from "./vots-partit";
 import type { Els947Row } from "./els947";
 import type { VotsPartit } from "./vots-partit";
 
@@ -20,6 +21,8 @@ type CapaAlNavegador = {
   w: string[] | null; k: string | null;
   /** La mediana per tram de mida, el diccionari d'anys i, si cal, l'any de cada municipi. */
   d: string[] | null; a: string[] | null; y: string | null;
+  /** El rètol de la clau d'HTML: el nom curt, i la unitat, l'any i la font. */
+  b: string; q: string;
 };
 const capesDe = (html: string): CapaAlNavegador[] =>
   JSON.parse(/var CAPES = (\[.*\]);\n/.exec(html)![1]!) as never;
@@ -343,31 +346,96 @@ describe("la llegenda va dins de l'SVG", () => {
 
   it("la primera capa ja es veu sense JavaScript", () => {
     expect(html).toContain('<svg class="mapa947" data-capa="0"');
-    expect(html).toMatch(/<ul class="llegenda" id="llegenda" data-capa="0">\s*<li>/);
+    expect(html).toMatch(/<ul class="mapa-llegenda" id="llegenda" data-capa="0"><li>/);
   });
 
   it("no la sent dues vegades qui llegeix amb veu", () => {
     expect(html).toMatch(/<g class="clau-mapa" data-clau="0" aria-hidden="true">/);
   });
 
-  it("i és l'única que es veu a partir de 761 px: la d'HTML es queda per a qui llegeix amb veu", () => {
+  it("es veu quan el mapa fa 800 px o més, i llavors la d'HTML es queda per a qui llegeix amb veu", () => {
     // Dues llegendes de la mateixa cosa a un pam l'una de l'altra fan dubtar
-    // de si volen dir el mateix. La d'HTML no se'n va —és la que se sent— però
-    // es retalla com «.nomes-lectors» mentre la de dins del dibuix es veu.
-    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-    expect(css).toContain("@media (min-width:761px){.llegenda{position:absolute;width:1px;height:1px;overflow:hidden;");
-    expect(css).toMatch(/@media \(min-width:761px\)\{\.llegenda\{[^}]*clip:rect\(0 0 0 0\)/);
-    expect(html).toContain('<ul class="llegenda" id="llegenda" data-capa="0">');
+    // de si volen dir el mateix. El tall és l'amplada del mapa, no la de la
+    // finestra: la lletra més petita de la clau de dins (26 unitats d'un llenç
+    // de 1.600) fa 13 px just quan el mapa en fa 800. El full compartit té els
+    // seus propis talls; el que es mira és el del mapa, que comença a «.mapa-marc».
+    const css = html.slice(html.indexOf(".mapa-marc{margin"), html.indexOf("</style>"));
+    expect(css).toContain(".mapa-marc{container:mapa / inline-size}");
+    const dins = css.slice(css.indexOf("@container mapa (min-width:800px){"));
+    expect(dins).toContain('.mapa947[data-capa="0"] .clau-mapa[data-clau="0"]{display:block}');
+    expect(dins).toMatch(/\.mapa-clau\{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect\(0 0 0 0\)/);
+    // Sense «@container» (o amb el mapa estret) mana la d'HTML.
+    expect(css).toContain(".clau-mapa{display:none}");
+    expect(css).not.toContain("min-width:761px");
+    expect(css).not.toContain("max-width:760px");
+    expect(html).toContain('<ul class="mapa-llegenda" id="llegenda" data-capa="0">');
   });
 
-  it("per sota de 760 px es capgira: la d'HTML es veu i la del dibuix es plega", () => {
-    // Allà el text de dins de l'SVG s'escala amb el dibuix i no es llegeix; el
-    // tall era a 620 i ha pujat perquè a 700 px la lletra de la clau de tres
-    // columnes ja fa 10,9 px.
-    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-    expect(css).toContain("@media (max-width:760px){.mapa947[data-capa] .clau-mapa[data-clau]{display:none}}");
-    // El full compartit té el seu propi tall a 620; el del mapa ja no hi és.
-    expect(css.slice(css.indexOf(".clau-mapa{display:none}"))).not.toContain("max-width:620px");
+  it("cap lletra de dins del dibuix no baixa de 26 unitats, que són 13 px amb el mapa a 800", () => {
+    const dins = /<svg class="mapa947"[\s\S]*?<\/svg>/.exec(html)![0]!;
+    const mides = [...dins.matchAll(/font-size="(\d+)"/g)].map((m) => Number(m[1]));
+    expect(mides.length).toBeGreaterThan(0);
+    expect(Math.min(...mides)).toBeGreaterThanOrEqual(26);
+  });
+
+  it("diu la unitat, l'any i la font, a dins del dibuix i a la clau d'HTML", () => {
+    // La clau de dins és la que viatja amb una captura: sense font ni any,
+    // una captura és una xifra que ningú pot comprovar.
+    expect(html).toMatch(/<g class="clau-mapa" data-clau="0"[\s\S]*?class="meta"[^>]*>mandat 2023-2027 · Font: Generalitat de Catalunya</);
+    expect(html).toContain(
+      '<p class="mapa-clau-cap" id="clau-cap"><b>Qui mana</b> mandat 2023-2027 · Font: Generalitat de Catalunya</p>',
+    );
+    const deute = capesDe(html).find((c) => c.t.includes("Quant deu"))!;
+    expect(deute.b).toBe("Deute per habitant");
+    expect(deute.q).toBe("€ per habitant · últim exercici liquidat · Font: Consorci AOC");
+    expect(html).toMatch(/class="meta"[^>]*>€ per habitant · últim exercici liquidat<\/text><text class="meta"[^>]*>Font: Consorci AOC</);
+  });
+
+  it("cap clau no trepitja cap municipi: totes caben al forat del mar", () => {
+    // El mateix càlcul que dona `FORAT_DEL_MAR`, refet amb la geometria del
+    // repositori: si el traçat canvia, això ho diu abans que la clau tapi la costa.
+    const punts: [number, number][] = [];
+    const camina = (d: string): void => {
+      const toks = d.match(/[MLlZzHhVv]|-?\d+(?:\.\d+)?/g) ?? [];
+      let x = 0, y = 0, sx = 0, sy = 0, cmd = "";
+      for (let i = 0; i < toks.length; ) {
+        const t = toks[i]!;
+        if (/[A-Za-z]/.test(t)) {
+          cmd = t;
+          i += 1;
+          if (cmd === "Z" || cmd === "z") { x = sx; y = sy; }
+          continue;
+        }
+        if (cmd === "M") { x = +t; y = +toks[i + 1]!; sx = x; sy = y; i += 2; cmd = "L"; }
+        else if (cmd === "L") { x = +t; y = +toks[i + 1]!; i += 2; }
+        else if (cmd === "l") { x += +t; y += +toks[i + 1]!; i += 2; }
+        else if (cmd === "h") { x += +t; i += 1; }
+        else if (cmd === "v") { y += +t; i += 1; }
+        else if (cmd === "H") { x = +t; i += 1; }
+        else if (cmd === "V") { y = +t; i += 1; }
+        else i += 1;
+        punts.push([x, y]);
+      }
+    };
+    for (const d of Object.values(geometria.municipis)) camina(d);
+    // Amb vots, perquè hi hagi també les claus dels partits, i amb sense dades
+    // a la renda, perquè la clau més alta d'una columna en porti sis files.
+    const slugs = Object.keys(geometria.municipis).sort();
+    const vots: VotsPartit = { erc: {} };
+    slugs.forEach((s, i) => { if (i % 3) vots["erc"]![s] = { nom: s, pct: i % 90, vots: i, regidories: 1, alcaldia: false }; });
+    const amb = renderMapaCatalunya(
+      slugs.map((s, i) => fila(s, { g: "PSC-CP", rn: i % 7 === 0 ? null : 10_000 + i, ra: 2023, sa: 20_000 + i, pa: 1 + i / 1000, paa: 2020 + (i % 4) })),
+      "2026-08-29",
+      vots,
+    );
+    const fons = [...amb.matchAll(/<rect class="fons" x="(\d+)" y="(\d+)" width="(\d+)" height="(\d+)"/g)].map((m) => m.slice(1).map(Number));
+    expect(fons.length).toBe(capesDe(amb).length);
+    for (const [x, y, w, h] of fons) {
+      expect(x! + w!).toBeLessThanOrEqual(1600);
+      expect(y! + h!).toBeLessThanOrEqual(1600);
+      const dins = punts.filter(([px, py]) => px >= x! && px <= x! + w! && py >= y! && py <= y! + h!);
+      expect(dins, `clau a ${x},${y} de ${w}×${h}`).toHaveLength(0);
+    }
   });
 });
 
@@ -410,7 +478,7 @@ describe("la rampa contínua", () => {
     expect(dins).toContain('<pattern id="sense-dada"');
     // I el quadret de la llegenda d'HTML ha de portar les mateixes ratlles: si
     // el mapa va ratllat i la clau va plana, la clau no és la clau del mapa.
-    expect(html).toMatch(/\.llegenda \.gnd\{background:repeating-linear-gradient/);
+    expect(html).toMatch(/\.mapa-llegenda \.gnd\{background:repeating-linear-gradient/);
   });
 });
 
@@ -486,20 +554,20 @@ describe("on es vota més cada partit", () => {
 
   it("sense vots no hi ha cap capa de partit: el mapa surt com sempre", () => {
     const sense = renderMapaCatalunya(files, "2026-08-29");
-    expect(sense).not.toContain('<ul class="tries tries-partits"');
+    expect(sense).not.toContain('class="tries tries-partits"');
     expect(sense).not.toContain("On es vota més");
     expect(capesDe(sense).length).toBe(capesDe(html).length - 2);
   });
 
   it("amb vots, una capa per partit amb pàgina, en una segona filera de botons amb les sigles", () => {
-    const filera = /<ul class="tries tries-partits"[^>]*>([\s\S]*?)<\/ul>/.exec(html)![1]!;
+    const filera = /<div class="tries tries-partits"[^>]*>([\s\S]*?)<\/div>/.exec(html)![1]!;
     expect(filera).toContain(">ERC<");
     expect(filera).toContain(">PSC<");
     // FIC té vots i cap regidoria: no té pàgina i no té capa.
     expect(filera).not.toContain(">FIC<");
     expect(html).toContain("On es vota més cada partit");
     // La primera filera continua sent la de sempre, sense cap partit.
-    const primera = /<ul class="tries" id="tries">([\s\S]*?)<\/ul>/.exec(html)![1]!;
+    const primera = /<div class="tries" id="tries"[^>]*>([\s\S]*?)<\/div>/.exec(html)![1]!;
     expect(primera).not.toContain(">ERC<");
     expect(capes.some((c) => c.t === "On es vota més ERC")).toBe(true);
     expect(capes.some((c) => c.t.includes("FIC"))).toBe(false);
@@ -593,5 +661,189 @@ describe("el cap SEO del mapa", () => {
 
   it("té un sol <h1>", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+});
+
+/**
+ * El mapa al mòbil: el mapa a la primera pantalla.
+ *
+ * Abans hi havia vint-i-vuit botons de capa abans del mapa i el mapa no
+ * sortia fins a la segona pantalla i mitja. Per sota de 721 px els botons
+ * deixen lloc a un desplegable agrupat i el mapa va just sota el títol de la
+ * capa; a l'escriptori els botons continuen on eren.
+ */
+describe("el mapa al mòbil", () => {
+  const slugs = Object.keys(geometria.municipis).sort();
+  const vots: VotsPartit = { erc: {} };
+  slugs.forEach((s, i) => { if (i % 2) vots["erc"]![s] = { nom: s, pct: i % 80, vots: i, regidories: 1, alcaldia: false }; });
+  const html = renderMapaCatalunya(slugs.map((s) => fila(s)), "2026-08-29", vots);
+  const capes = capesDe(html);
+  // El full del mapa, sense el compartit, que té els seus propis talls de 720 px.
+  const css = html.slice(html.indexOf(".mapa-marc{margin"), html.indexOf("</style>"));
+
+  it("porta un desplegable amb totes les capes, agrupades, i la primera triada", () => {
+    const select = /<select id="tria-capa">([\s\S]*?)<\/select>/.exec(html)![1]!;
+    const valors = [...select.matchAll(/<option value="(\d+)"/g)].map((m) => Number(m[1]));
+    // Una opció per capa, amb l'índex de la llista sencera, com els botons.
+    expect([...valors].sort((a, b) => a - b)).toEqual(capes.map((_, i) => i));
+    expect(select).toContain('<option value="0" selected>Qui mana</option>');
+    const grups = [...select.matchAll(/<optgroup label="([^"]+)">/g)].map((m) => m[1]);
+    expect(grups[0]).toBe("Qui governa");
+    expect(grups).toContain("On es vota més cada partit");
+    expect(new Set(grups).size).toBe(grups.length);
+    // I té una etiqueta visible, lligada al desplegable.
+    expect(html).toContain('<label for="tria-capa">Què vols veure al mapa</label>');
+  });
+
+  it("per sota de 721 px amaga els botons, ensenya el desplegable i posa el mapa abans del peu", () => {
+    expect(css).toContain(".mapa-tria{display:none;");
+    const mobil = css.slice(css.indexOf("@media (max-width:720px){"));
+    expect(mobil).toMatch(/^@media \(max-width:720px\)\{\s*\.tries,\.tries-cap\{display:none\}\s*\.mapa-tria\{display:block;order:0\}/);
+    expect(mobil).toContain(".mapa-salta,.mapa-llenc{order:2}");
+    expect(mobil).toContain(".mapa-clau{order:3;");
+    expect(mobil).toContain("#peu-capa{order:4;");
+    // El desplegable va dins del marc del mapa, just abans del títol de la capa.
+    expect(html.indexOf('<div class="mapa-tria">')).toBeLessThan(html.indexOf('<h2 id="titol-capa">'));
+    expect(html.indexOf('<div class="mapa-tria">')).toBeGreaterThan(html.indexOf('<div class="mapa-marc">'));
+    // 16 px, perquè l'iPhone no faci zoom en tocar-lo.
+    expect(css).toMatch(/\.mapa-tria select\{[^}]*font-size:1rem/);
+  });
+
+  it("el desplegable i els botons pinten la mateixa capa i es diuen l'un a l'altre quina és", () => {
+    expect(html).toContain("tria.addEventListener('change', function () { pinta(Number(tria.value)); });");
+    expect(html).toContain("if (tria) tria.value = String(i);");
+  });
+
+  it("els botons de l'escriptori fan de barra d'eines: una parada de tabulador per filera i fletxes per dins", () => {
+    expect(html).toContain('<div class="tries" id="tries" role="toolbar" aria-label="Què vols veure al mapa">');
+    expect(html).toMatch(/<div class="tries tries-partits" id="tries-partits" role="toolbar" aria-labelledby="tries-partits-cap">/);
+    for (const tecla of ["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"]) expect(html).toContain(`'${tecla}'`);
+    expect(html).toContain("bs[k].tabIndex = bs[k] === boto ? 0 : -1;");
+    // I un salt per sobre dels 947 enllaços del mapa per a qui va amb el tabulador.
+    expect(html).toContain('<a class="mapa-salta" href="#cobertura-capa">Salta els 947 municipis del mapa</a>');
+    expect(html).toContain('<p class="nota" id="cobertura-capa" tabindex="-1">');
+  });
+
+  it("la clau d'HTML no baixa de 14 px i no hereta la «.llegenda» del full compartit", () => {
+    expect(css).toMatch(/\.mapa-llegenda\{[^}]*font-size:\.9rem/);
+    expect(css).toMatch(/\.mapa-clau-cap\{[^}]*font-size:\.9rem/);
+    expect(html).not.toContain('class="llegenda"');
+  });
+
+  it("el llenç ocupa tota l'amplada: al mòbil, l'SVG no es queda als 300 px per defecte", () => {
+    expect(css).toContain(".mapa-llenc{position:relative;width:100%;max-width:900px;margin:0 auto}");
+  });
+});
+
+/**
+ * La fitxa que surt en tocar un municipi amb el dit.
+ *
+ * Al mòbil, tocar un municipi portava directament a la seva fitxa i
+ * l'etiqueta flotant no s'arribava a veure. Ara el primer toc obre una fitxa
+ * petita amb el nom, la xifra i l'enllaç; el segon toc al mateix municipi hi
+ * porta. El ratolí i el teclat no canvien.
+ */
+describe("la fitxa del municipi tocat", () => {
+  const html = renderMapaCatalunya(Object.keys(geometria.municipis).map((s) => fila(s)), "2026-08-29");
+
+  it("és al document, amagada, amb l'enllaç relatiu a la fitxa i un botó per tancar-la", () => {
+    expect(html).toContain('<div class="mapa-fitxa" id="mapa-fitxa" hidden>');
+    expect(html).toContain('<a class="mapa-fitxa-enllac" href="../m/">');
+    expect(html).toContain('<button type="button" class="mapa-fitxa-tanca" aria-label="Tanca la fitxa">×</button>');
+    // Es llegeix en obrir-se, per a qui toca amb un lector de pantalla.
+    expect(html).toMatch(/<div class="mapa-fitxa" id="mapa-fitxa" hidden>\s*<div aria-live="polite">/);
+  });
+
+  it("només el dit l'obre, i el segon toc al mateix municipi segueix l'enllaç", () => {
+    expect(html).toContain("tactil = e.pointerType === 'touch';");
+    expect(html).toContain("if (!tactil) return;");
+    expect(html).toContain("if (a === triat) return;");
+    expect(html).toContain("e.preventDefault();\n  obre(a);");
+    // L'enllaç de la fitxa és «../m/<slug>/», com tots els del web.
+    expect(html).toContain("enllacFitxa.href = '../m/' + slug + '/';");
+    // Escape la tanca, com l'etiqueta comuna.
+    expect(html).toContain("if (e.key === 'Escape' && triat) tanca();");
+  });
+
+  it("amb el dit, l'etiqueta comuna no surt sota el dit a repetir el que diu la fitxa", () => {
+    expect(html).toContain("if (tactil) { e.stopPropagation(); return; }");
+  });
+
+  it("el municipi triat o amb el focus porta un ressalt a sobre de tots els altres", () => {
+    const dins = /<svg class="mapa947"[\s\S]*?<\/svg>/.exec(html)![0]!;
+    // Després dels camins i del contorn, i abans de les claus.
+    expect(dins.indexOf('<g class="mapa-ressalt" aria-hidden="true">')).toBeGreaterThan(dins.lastIndexOf("<path class=\"g"));
+    expect(dins.indexOf('<g class="mapa-ressalt"')).toBeLessThan(dins.indexOf('<g class="clau-mapa"'));
+    expect(html).toContain(".mapa947 a:hover path,.mapa947 a:focus-visible path{stroke-width:3.5}");
+  });
+
+  it("respecta qui demana menys moviment", () => {
+    expect(html).toContain("@media (prefers-reduced-motion:reduce){.mapa947 path{transition:none}}");
+    expect(html).toMatch(/\.mapa947 \.mapa-ressalt path\{[^}]*transition:none/);
+  });
+
+  it("el script del mapa es pot compilar: cap barra invertida perduda dins de la plantilla", () => {
+    const script = /<script>\n(var CAPES = [\s\S]*?)<\/script>/.exec(html)![1]!;
+    expect(() => new Function(script)).not.toThrow();
+  });
+});
+
+/**
+ * Els colors de les escales.
+ *
+ * Una escala seqüencial diu «més o menys» amb una sola tinta; els colors de
+ * partit només marquen de qui és cada cosa; i cap color no fa de veredicte.
+ */
+describe("els colors de les escales", () => {
+  const slugs = Object.keys(geometria.municipis);
+
+  it("una capa amb menys graons que colors s'estén per tota la rampa, i el de dalt és el més fort", () => {
+    expect(colorsDelsGraons(["a", "b", "c", "d", "e"], 3)).toEqual(["a", "c", "e"]);
+    expect(colorsDelsGraons(["a", "b", "c", "d", "e"], 2)).toEqual(["a", "e"]);
+    expect(colorsDelsGraons(["a", "b", "c", "d", "e"], 1)).toEqual(["c"]);
+    expect(colorsDelsGraons(["a", "b", "c", "d", "e"], 5)).toEqual(["a", "b", "c", "d", "e"]);
+    // El deute amb quatre-cents municipis a zero fa tres graons: el de dalt és
+    // el coral més fosc, no el del mig.
+    const html = renderMapaCatalunya(slugs.map((s, i) => fila(s, { d: i < 500 ? 0 : i })), "2026-08-29");
+    const capes = capesDe(html);
+    const i = capes.findIndex((c) => c.t.includes("Quant deu"));
+    const n = capes[i]!.e.length;
+    expect(n).toBeLessThan(5);
+    const rampa = rampaDe("#E2735A");
+    expect(html).toContain(`.mapa947[data-capa="${i}"] .g${n - 1}{fill:${rampa.clar[4]}}`);
+    expect(html).toContain(`.mapa947[data-capa="${i}"] .g${n - 1}{fill:${rampa.fosc[4]}}`);
+  });
+
+  it("les capes de «sí o no» són paper i coral, prou diferents per distingir-se", () => {
+    const html = renderMapaCatalunya(slugs.map((s) => fila(s)), "2026-08-29");
+    const capes = capesDe(html);
+    for (const titol of ["majoria absoluta", "llista més votada", "ha canviat l'alcaldia"]) {
+      const i = capes.findIndex((c) => c.t.includes(titol));
+      expect(html, titol).toContain(`.mapa947[data-capa="${i}"] .g0{fill:var(--paper-2)}`);
+      expect(html, titol).toContain(`.mapa947[data-capa="${i}"] .g1{fill:var(--coral)}`);
+    }
+  });
+
+  it("la renda no és verda: un verd al costat del deute coral diria «bé» i «malament»", () => {
+    const html = renderMapaCatalunya(slugs.map((s, i) => fila(s, { rn: 10_000 + i, ra: 2023 })), "2026-08-29");
+    const i = capesDe(html).findIndex((c) => c.t.includes("entren a les cases"));
+    const regla = new RegExp(`\\.mapa947\\[data-capa="${i}"\\] \\.g4\\{fill:(#[0-9a-f]{6})\\}`).exec(html)![1]!;
+    expect(regla).not.toBe(rampaDe("#2E8B57").clar[4]);
+    const [r, g, b] = [1, 3, 5].map((k) => parseInt(regla.slice(k, k + 2), 16));
+    expect(g!).toBeLessThan(Math.max(r!, b!));
+  });
+
+  it("les etiquetes de les capes de xifres són intervals", () => {
+    const html = renderMapaCatalunya(slugs.map((s, i) => fila(s, { d: i * 3 })), "2026-08-29");
+    const deute = capesDe(html).find((c) => c.t.includes("Quant deu"))!;
+    expect(deute.e[0]).toMatch(/^menys de [\d.]+ €$/);
+    expect(deute.e[1]).toMatch(/^de [\d.]+ € a [\d.]+ €$/);
+    expect(deute.e[deute.e.length - 1]).toMatch(/^[\d.]+ € o més$/);
+  });
+
+  it("l'any de la clau surt de les files quan cada municipi porta el seu", () => {
+    const html = renderMapaCatalunya(slugs.map((s, i) => fila(s, { pa: 1 + i / 100, paa: i % 2 ? 2023 : 2024 })), "2026-08-29");
+    const aigua = capesDe(html).find((c) => c.t.includes("costa l'aigua"))!;
+    expect(aigua.q).toBe("€/m³, consum de 12 m³ al mes · 2023-2024 · Font: Agència Catalana de l'Aigua");
   });
 });

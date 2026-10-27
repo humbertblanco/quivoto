@@ -17,7 +17,7 @@ import { peu } from "./peu";
 import type { RadiografiaData } from "./radiografia";
 import { frasesQueCaben, titolQueCap } from "./regidor";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
-import { mateixQue } from "./seo-ld";
+import { personaLd } from "./seo-ld";
 import { partitDe, sigla } from "./sigla";
 
 /**
@@ -735,15 +735,22 @@ const CSS = `
   font-family:var(--display);font-weight:900;font-size:2.6rem;background:var(--c,var(--paper-2));color:var(--t,inherit)}
 .persona .amb-credit{display:flex;flex-direction:column;gap:6px;align-items:flex-start;max-width:100%}
 .persona .amb-credit .credit-retrat{max-width:220px}
-.etiquetes{display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--e2)}
-.etiquetes span:not(.sigla),.etiquetes a:not(.sigla){border:2px solid var(--ink);border-radius:var(--r-max);padding:4px 14px;
-  font-size:.8rem;font-weight:800;flex:none;white-space:nowrap;max-width:100%;text-decoration:none}
+/* Les etiquetes del costat del nom —els anys a l'alcaldia, «encara hi és», quant
+   hi va ser— són estats i no enllaços: van com «.estat» a estil.ts, planes,
+   sense vora, amb els cantons poc arrodonits i en minúscula com una frase. La
+   sigla del partit és l'única pastilla arrodonida que hi queda: és una marca de
+   dada. Abans totes duien vora de pastilla, i els anys anaven en majúscules
+   espaiades sobre corall, que en lletra tan petita no arribava al contrast. */
+.etiquetes{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:var(--e2)}
+.etiquetes span:not(.sigla){display:inline-block;border:0;border-radius:5px;padding:2px 8px;background:var(--vora);
+  color:var(--ink);font-size:.8rem;font-weight:700;line-height:1.35;flex:none;white-space:nowrap;max-width:100%}
 .etiquetes .sigla{flex:none;font-size:.86rem;padding:3px 12px}
-.etiquetes .alcaldia-etiqueta{background:var(--coral);color:#FBF7EE;text-transform:uppercase;letter-spacing:.08em;font-size:.68rem}
+.etiquetes .alcaldia-etiqueta{background:var(--coral);color:#1E1B2E}
 .etiquetes .vigent{background:var(--menta);color:#1E1B2E}
-.nav-fitxa{display:flex;gap:7px;flex-wrap:wrap;margin:var(--e2) 0 0;padding:0;list-style:none}
-.nav-fitxa a{display:block;border:1.5px solid var(--vora);border-radius:999px;padding:5px 10px;font-size:.76rem;font-weight:800;text-decoration:none}
-.nav-fitxa a:hover,.nav-fitxa a:focus-visible{border-color:var(--coral);color:var(--coral)}
+/* Els apartats de la fitxa són navegació: «.navega» (estil.ts), text
+   subratllat, i no les pastilles amb vora que hi havia. */
+.nav-fitxa{display:flex;gap:0 var(--e3);flex-wrap:wrap;margin:var(--e1) 0 0;padding:0;list-style:none}
+.nav-fitxa a{font-size:.9rem}
 /* Un mandat per targeta: els anys grans, el partit al costat, i sota, en
    frases, el que en sabem. Les xifres de la llista van en negreta perquè són
    el que es busca. */
@@ -758,12 +765,12 @@ const CSS = `
 /* Abans i després: dues targetes cara a cara, amb la fletxa que diu el sentit. */
 .veins{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .veins li{display:flex;flex-direction:column;gap:4px;border-top:2.5px solid var(--ink);padding-top:var(--e2)}
-.veins .etq{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-suau);font-weight:800}
+.veins .etq{font-size:.84rem;color:var(--ink-suau);font-weight:800}
 .veins .qui{font-family:var(--display);font-weight:900;font-size:1.1rem;letter-spacing:-.01em}
 .veins .quan{font-size:.82rem;color:var(--ink-suau);font-weight:700}
 .fets{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;gap:8px}
 .fets li{display:grid;grid-template-columns:7rem 1fr;gap:var(--e2);border-top:1.5px solid var(--vora);padding-top:8px}
-.fets .etq{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-suau);font-weight:800;padding-top:3px}
+.fets .etq{font-size:.84rem;color:var(--ink-suau);font-weight:800;padding-top:1px}
 .salts{list-style:none;margin:var(--e2) 0 0;padding:0}
 .salts li{display:flex;gap:var(--e2);align-items:baseline;flex-wrap:wrap;border-top:1.5px solid var(--vora);padding:8px 0}
 .salts .quan{font-size:.82rem;color:var(--ink-suau);font-weight:700;font-variant-numeric:tabular-nums}
@@ -969,27 +976,34 @@ function renderWikidata(p: PersonaAlcaldia, avui: string): string {
   </section>`;
 }
 
+/**
+ * La persona en JSON-LD, amb la forma de `personaLd()` (`seo-ld.ts`): la
+ * mateixa de les fitxes de regidor, perquè l'ajuntament i el partit portin els
+ * mateixos `@id` a totes dues (`…/m/<slug>/#ajuntament`, `…/partit/<id>/#partit`).
+ * La persona porta el de la seva pàgina d'alcaldia (`…/alcaldia/<persona>/#persona`).
+ *
+ * El càrrec ja porta el municipi («Alcalde d'Alcanar», «Titular de l'alcaldia
+ * d'Alcanar» quan no se'n sap el gènere), i `personaLd()` no l'hi torna a posar.
+ * Una llista local, sense pàgina de partit, hi va com a `Organization` amb les
+ * sigles que la pàgina escriu. La data de naixement i els enllaços són els del
+ * bloc «Més enllà de l'ajuntament», que només s'escriu quan Wikidata en sap
+ * alguna cosa: res que la pàgina no ensenyi.
+ */
 function personaJsonLd(p: PersonaAlcaldia, municipi: MunicipiAlcaldia, url: string, genere: Genere | null): Record<string, unknown> {
   const partitId = p.sigles ? partitDe(p.sigles) : null;
-  const partit = partitId ? { id: partitId, name: BRANDS_BY_ID.get(partitId)?.name ?? p.sigles! } : null;
+  const partit = partitId ? { id: partitId, nom: BRANDS_BY_ID.get(partitId)?.name ?? p.sigles! } : null;
   const carrec = genere ? `${genere.charAt(0).toUpperCase()}${genere.slice(1)} ${de(municipi.nom)}` : `Titular de l'alcaldia ${de(municipi.nom)}`;
-  return {
-    "@type": "Person",
-    name: p.nom,
-    jobTitle: carrec,
+  return personaLd({
     url,
-    image: p.retrat ? new URL(p.retrat.cami, url).href : undefined,
-    // La data de naixement i els enllaços són els del bloc «Més enllà de
-    // l'ajuntament», que només s'escriu quan Wikidata en sap alguna cosa.
-    birthDate: p.wikidata?.naixement ?? undefined,
-    sameAs: p.wikidata ? mateixQue(p.wikidata.url, p.wikidata.viquipedia) : undefined,
-    worksFor: {
-      "@type": "GovernmentOrganization",
-      name: `Ajuntament ${de(municipi.nom)}`,
-      url: `${SITE}/observatori/m/${municipi.slug}/`,
-    },
-    memberOf: partit ? { "@type": "Organization", name: partit.name, url: `${SITE}/observatori/partit/${partit.id}/` } : undefined,
-  };
+    nom: p.nom,
+    carrec,
+    municipi: { slug: municipi.slug, nom: municipi.nom },
+    foto: p.retrat?.cami ?? null,
+    partit,
+    grup: partit ? null : p.sigles,
+    sameAs: p.wikidata ? [p.wikidata.url, p.wikidata.viquipedia] : undefined,
+    naixement: p.wikidata?.naixement ?? null,
+  });
 }
 
 export function renderAlcaldiaHistorica(p: PersonaAlcaldia, municipi: MunicipiAlcaldia, ctx: ContextAlcaldia): string {
@@ -1058,10 +1072,10 @@ ${cercador(BASE)}
 
   <nav aria-label="Apartats d'aquesta fitxa">
     <ul class="nav-fitxa">
-      <li><a href="#mandats">${p.mandats.length === 1 ? "El mandat" : "Els mandats"}</a></li>
-      ${p.abans || p.despres ? '<li><a href="#abans-despres">Abans i després</a></li>' : ""}
-      ${wikidata ? '<li><a href="#mes-enlla">Trajectòria</a></li>' : ""}
-      <li><a href="#fonts">D'on surt</a></li>
+      <li><a class="navega" href="#mandats">${p.mandats.length === 1 ? "El mandat" : "Els mandats"}</a></li>
+      ${p.abans || p.despres ? '<li><a class="navega" href="#abans-despres">Abans i després</a></li>' : ""}
+      ${wikidata ? '<li><a class="navega" href="#mes-enlla">Trajectòria</a></li>' : ""}
+      <li><a class="navega" href="#fonts">D'on surt</a></li>
     </ul>
   </nav>
 

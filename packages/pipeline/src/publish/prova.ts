@@ -49,9 +49,12 @@ const CSS = `
 
 .targeta{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-l);
   box-shadow:8px 8px 0 var(--ink);padding:var(--e4) var(--e3);margin-top:var(--e3)}
+/* El tema i el districte són etiquetes de dada i es queden amb el seu color i
+   la seva vora, però en minúscula i sense espaiat, com totes les etiquetes de
+   la casa: les majúscules espaiades damunt del títol eren un tic de plantilla. */
 .targeta .tema{display:inline-flex;align-items:center;gap:7px;background:var(--menta);color:#1E1B2E;
-  border:1.5px solid var(--ink);border-radius:var(--r-max);padding:3px 12px 3px 4px;font-size:.7rem;
-  font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+  border:1.5px solid var(--ink);border-radius:var(--r-max);padding:3px 12px 3px 4px;font-size:.8rem;
+  font-weight:800}
 .targeta .tema .icona{width:26px;height:26px;flex:0 0 auto}
 .targeta .tema:not(:has(.icona)){padding-left:12px}
 .targeta h2{font-size:clamp(1.35rem,4.4vw,2rem);margin:var(--e2) 0 0;max-width:24ch;line-height:1.22}
@@ -68,8 +71,8 @@ const CSS = `
 /* El districte, quan la decisió n'afecta un de concret: a Barcelona, una
    superilla de l'Eixample o un tram del tramvia no toquen igual algú de Sants. */
 .districte{display:inline-block;margin-left:8px;background:var(--lavanda);color:#1E1B2E;
-  border:1.5px solid var(--ink);border-radius:var(--r-max);padding:3px 12px;font-size:.7rem;
-  font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+  border:1.5px solid var(--ink);border-radius:var(--r-max);padding:3px 12px;font-size:.8rem;
+  font-weight:800}
 .presenta{display:flex;align-items:center;gap:var(--e3);flex-wrap:wrap}
 .presenta .papereta{flex:0 0 auto}
 @media (max-width:520px){.presenta .papereta{width:76px;height:89px}}
@@ -110,7 +113,7 @@ const CSS = `
 /* «Comença» i «Afina-ho amb N preguntes més» són les crides a l'acció
    d'aquesta pàgina i van amb la mateixa pastilla coral que la resta de
    l'Observatori («.boto-prova», a estil.ts): abans duien un estil propi de
-   tinta que, al costat del «Respon-les i mira amb qui coincideixes →» de la
+   tinta que, al costat del «Respon-les i mira amb qui coincideixes» de la
    pàgina de preguntes, semblava d'un altre web. La pastilla està escrita per a
    un enllaç: el botó només ha de recuperar la lletra de la pàgina —els
    navegadors li posen la del sistema— i el cursor de mà. */

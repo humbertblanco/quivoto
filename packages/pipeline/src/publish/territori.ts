@@ -130,7 +130,7 @@ export function renderRepartiment(data: DadesPoder): string {
     .filter(([n]) => n > 0)
     .map(([n, cls, label]) => `<li><span class="mostra ${cls}"></span><b>${n}</b> ${escape(label)}</li>`)
     .join("");
-  return `<figure class="grafic">
+  return `<figure class="grafic repartiment-fig">
   <div class="repartiment" role="img" aria-label="${trams.filter(([n]) => n > 0).map(([n, , label]) => `${n} ${label}`).join("; ")}.">${bars}</div>
   <ul class="clau">${clau}</ul>
 </figure>`;
@@ -223,8 +223,7 @@ export const TERRITORI_CSS = `
 .poder{margin:0 0 var(--e3)}
 .tira-fila{display:grid;grid-template-columns:minmax(0,9.5em) 1fr;gap:6px var(--e2);
   align-items:center;margin-bottom:var(--e2)}
-.etq-tira{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--ink-suau);line-height:1.2}
+.etq-tira{font-size:.82rem;font-weight:800;color:var(--ink-suau);line-height:1.2}
 .tira{display:flex;height:34px;border:2.5px solid var(--ink);border-radius:var(--r-s);overflow:hidden}
 /* Un tram d'una alcaldia sobre trenta fa l'1,7 % i sense mínim desapareixeria:
    qui mana en un sol poble ha de continuar sent visible a la cinta. */
@@ -239,6 +238,13 @@ export const TERRITORI_CSS = `
 .poder-clau .dada{font-size:.84rem;color:var(--ink-suau)}
 .poder-clau .dada b{font-family:var(--display);font-weight:900;font-size:1.05rem;
   letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+/* Al mòbil la clau és una sola columna de set o vuit forces: el nom i les
+   alcaldies van a la mateixa línia quan hi caben, i cada força fa dues línies
+   en comptes de tres. */
+@media (max-width:560px){
+  .poder-clau li{flex-direction:row;flex-wrap:wrap;align-items:baseline;column-gap:10px;padding:6px 0}
+  .poder-clau .hab{flex-basis:100%}
+}
 
 /* El mapa del territori. Cada punt és un enllaç, i per això té estat de focus:
    sense això, qui hi va amb el teclat no sap mai on és. */
@@ -251,6 +257,10 @@ export const TERRITORI_CSS = `
 .mapa-territori figcaption a{font-weight:800}
 @media (prefers-reduced-motion:reduce){.mapa-territori circle{transition:none}}
 
+/* La barra del repartiment porta la clau a sota, i la frase que ve després
+   necessita aire: sense, «2 hi va haver pacte» i «A 22 de 30…» es llegien com
+   una sola línia. */
+.repartiment-fig{margin-bottom:var(--e3)}
 /* Governa el més votat o hi va haver pacte: una barra i prou. Els colors són
    els de la identitat, no els de cap partit: aquí no es parla de forces. */
 .repartiment{display:flex;height:52px;border:2.5px solid var(--ink);border-radius:var(--r-s);overflow:hidden}
@@ -284,13 +294,25 @@ export const TERRITORI_CSS = `
 /* La llista de municipis: la taula més llarga del portal, 68 files a l'Alt Empordà. */
 .municipis{width:100%;border-collapse:collapse;font-size:.92rem}
 .municipis th,.municipis td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--vora);vertical-align:top}
-.municipis thead th{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
+.municipis thead th{font-size:.8rem;font-weight:800;color:var(--ink-suau);border-bottom:2.5px solid var(--ink);
+  vertical-align:bottom}
 .municipis tbody th{font-weight:800}
-.municipis .xifra{font-variant-numeric:tabular-nums;white-space:nowrap}
+/* Les columnes de xifres s'encongeixen fins al que ocupa el número (l'1 %
+   és el truc de les taules automàtiques): l'espai que sobra el necessiten el
+   nom del municipi i el de l'alcaldia, que són els que es parteixen. */
+.municipis .xifra{font-variant-numeric:tabular-nums;white-space:nowrap;width:1%}
 .marca-pacte,.marca-minoria{display:inline-block;border-radius:var(--r-max);padding:2px 9px;
   font-size:.68rem;font-weight:800;white-space:nowrap;color:#1E1B2E}
 .marca-pacte{background:var(--presec)}
 .marca-minoria{background:var(--lavanda)}
+/* «La tira del poble» de cada fila (tira-poble.ts), en una columna d'amplada
+   fixa: és el que fa que els mandats quedin l'un sota l'altre i que la
+   columna es llegeixi com un mosaic. La capçalera porta els dos extrems. */
+.municipis .historia{width:9rem;min-width:7rem;padding-right:0;vertical-align:middle}
+.municipis .historia .tp-fina{height:8px}
+.historia-titol{display:block}
+.historia-anys{display:flex;justify-content:space-between;margin-top:3px;font-size:.72rem;
+  font-weight:700;font-variant-numeric:tabular-nums}
 @media (max-width:640px){
   .municipis thead{display:none}
   .municipis tr{display:block;padding:10px 0;border-bottom:1px solid var(--vora)}
@@ -302,5 +324,15 @@ export const TERRITORI_CSS = `
   .municipis .com::after{content:" · "}
   .municipis .pob::after{content:" habitants · "}
   .municipis .reg::after{content:" regidories"}
+  /* Sense capçalera, la tira porta els dos anys als costats, que és el que la
+     fa llegible sola; què és ho diu l'entrada del bloc, un cop i no a cada
+     fila. La cel·la buida (un poble sense historial) no deixa cap forat. */
+  .municipis .historia{display:flex;align-items:center;gap:6px;width:auto;padding-top:8px}
+  .municipis .historia::before{content:"1979"}
+  .municipis .historia::after{content:"2027"}
+  .municipis .historia::before,.municipis .historia::after{font-size:.72rem;font-weight:700;
+    color:var(--ink-suau);font-variant-numeric:tabular-nums}
+  .municipis .historia .tp-fina{flex:1 1 auto}
+  .municipis .historia:empty{display:none}
 }
 `;

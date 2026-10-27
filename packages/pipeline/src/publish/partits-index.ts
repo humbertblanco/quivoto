@@ -97,6 +97,12 @@ export function ordena(files: readonly PartitFila[]): PartitFila[] {
 }
 
 export const PARTITS_INDEX_CSS = `
+/* Aquesta pàgina no té índex de blocs. El full compartit, a partir de 1180 px,
+   converteix tot <main> en dues columnes per deixar-hi el rail de l'índex, i
+   sense índex la primera columna quedava buida: el contingut s'enganxava a la
+   dreta amb 190 px de no-res a l'esquerra. Aquí el main torna a ser una sola
+   columna centrada, de la mateixa amplada que per sota de 1180. */
+@media (min-width:1180px){ main.px-main{display:block;max-width:900px} }
 .px-portada{padding:var(--e3) 0 var(--e4)}
 .px-portada h1{margin-bottom:var(--e2)}
 .px-portada .resum{font-size:1.15rem;max-width:34em}
@@ -108,7 +114,7 @@ export const PARTITS_INDEX_CSS = `
    560 px es torna quadrat, que és el que cap en un mòbil de 320 px sense
    deixar els requadres petits com una ratlla. */
 .px-mapa{position:relative;width:100%;aspect-ratio:16/10;margin:var(--e2) 0 var(--e2);
-  border:2.5px solid var(--ink);border-radius:var(--r-m);overflow:hidden;box-shadow:var(--ombra)}
+  border:2.5px solid var(--ink);border-radius:var(--r-m);overflow:hidden}
 @media (max-width:560px){ .px-mapa{aspect-ratio:1/1} }
 .px-tros{position:absolute;left:var(--x);top:var(--y);width:var(--w);height:var(--h);
   border-right:2px solid var(--paper);border-bottom:2px solid var(--paper);
@@ -136,36 +142,42 @@ export const PARTITS_INDEX_CSS = `
 
 .px-llegenda{font-size:.9rem;color:var(--ink-suau);margin:0 0 var(--e4);max-width:44em}
 
-/* La llista de marques.
-   El «min(280px,100%)» no és decoració: amb «minmax(280px,1fr)» a seques, un
-   telèfon de 320 px deixa 272 px de contingut —24 px de coixí a cada banda— i
-   la columna es planta igualment a 280, de manera que la pàgina se'n va vuit
-   píxels cap a la dreta. Amb el min, la columna s'encongeix fins a l'amplada
-   que hi ha. */
-.px-llista{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:var(--e2);
-  grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr))}
-.px-llista a{display:block;text-decoration:none;height:100%;
-  background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  padding:var(--e2);box-shadow:var(--ombra)}
-.px-llista a:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 var(--ink)}
-.px-cap{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.px-mostra{width:18px;height:18px;flex:0 0 18px;border-radius:5px;border:2px solid var(--ink);
-  background:var(--c)}
-.px-sigles{font-family:var(--display);font-weight:900;font-size:1.3rem;letter-spacing:-.02em;
+/* La llista de marques: files amb filet, com l'ullada, i no targetes.
+   Eren quinze targetes idèntiques amb vora, ombra de tinta i etiquetes en
+   versaletes —el patró que la marca vol fora— i a mòbil feien 2.700 píxels.
+   Ara cada marca és una fila: a l'esquerra la mostra de color (la marca de
+   dada), les sigles i el nom; a la dreta les tres xifres. A partir de 640 px
+   la fila és una sola línia i les etiquetes de les xifres passen a una
+   capçalera única, perquè repetir «Alcaldies, Regidories, Població» quinze
+   cops és soroll; per sota, la unitat va escrita al peu de cada xifra. */
+.px-llista{list-style:none;margin:var(--e2) 0 var(--e3);padding:0;border-top:2.5px solid var(--ink)}
+.px-llista > li{border-bottom:1.5px solid var(--vora)}
+.px-llista > li.px-capcalera{display:none}
+.px-llista a{display:grid;grid-template-columns:minmax(0,1fr);row-gap:8px;padding:12px 0;
+  text-decoration:none;color:inherit}
+.px-llista a:hover .px-sigles,.px-llista a:focus-visible .px-sigles{text-decoration:underline;
+  text-decoration-thickness:2.5px;text-underline-offset:4px}
+.px-cap{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 10px;min-width:0}
+.px-mostra{width:14px;height:14px;flex:0 0 14px;border-radius:4px;border:1.5px solid var(--ink);
+  background:var(--c);align-self:center}
+.px-sigles{font-family:var(--display);font-weight:900;font-size:1.2rem;letter-spacing:-.02em;
   overflow-wrap:anywhere}
-.px-nom{display:block;font-size:.8rem;color:var(--ink-suau);margin-bottom:10px;line-height:1.3;
+.px-nom{flex-basis:100%;padding-left:24px;font-size:.8rem;color:var(--ink-suau);line-height:1.3;
   overflow-wrap:anywhere}
-.px-xifres{display:flex;flex-wrap:wrap;gap:var(--e2) var(--e3);margin:0;padding:0;
+.px-xifres{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--e2);margin:0;padding:0;
   list-style:none;font-variant-numeric:tabular-nums}
-.px-xifres > li{display:flex;flex-direction:column}
-.px-xifres .etq{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
-  color:var(--ink-suau)}
-.px-xifres .val{font-family:var(--display);font-weight:900;font-size:1.35rem;letter-spacing:-.02em}
-.px-xifres .sec{font-size:.72rem;color:var(--ink-suau);font-weight:700}
-@media (max-width:400px){
-  .px-sigles{font-size:1.15rem}
-  .px-xifres{gap:var(--e1) var(--e2)}
-  .px-xifres .val{font-size:1.15rem}
+.px-xifres > li{display:flex;flex-direction:column;min-width:0}
+/* L'etiqueta de cada xifra és per als lectors de pantalla: a la vista, la
+   unitat ja va al peu de la xifra («alcaldies, 35 % dels 947») i, a partir de
+   640 px, a la capçalera de la llista. */
+.px-xifres .etq{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);
+  white-space:nowrap}
+.px-xifres .val{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em}
+.px-xifres .sec{font-size:.72rem;color:var(--ink-suau);font-weight:700;line-height:1.25}
+@media (min-width:640px){
+  .px-llista > li.px-capcalera{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,3fr);
+    column-gap:var(--e2);padding:8px 0;font-size:.8rem;font-weight:800;color:var(--ink-suau)}
+  .px-llista a{grid-template-columns:minmax(0,1.3fr) minmax(0,3fr);column-gap:var(--e2);align-items:baseline}
 }
 .px-nota{font-size:.86rem;color:var(--ink-suau);max-width:44em}
 `;
@@ -248,23 +260,29 @@ export function renderPartitsIndex(
       const color = colorSegur(p.color);
       return `<li><a href="${escape(encodeURIComponent(p.id))}/">
     <span class="px-cap"><span class="px-mostra" style="--c:${color}"></span>
-      <span class="px-sigles">${escape(p.sigles)}</span></span>
-    <span class="px-nom">${escape(p.nom)}</span>
+      <span class="px-sigles">${escape(p.sigles)}</span>
+      <span class="px-nom">${escape(p.nom)}</span></span>
     <ul class="px-xifres">
       <li><span class="etq">Alcaldies</span><span class="val">${number(p.alcaldies)}</span>
         <span class="sec">${
           p.alcaldies === 0
-            ? "cap: tot oposició"
-            : `${percent(p.alcaldies, ALCALDIES_CATALUNYA)} dels 947`
+            ? "alcaldies, cap: tot oposició"
+            : `${plural(p.alcaldies, "alcaldia", "alcaldies")}, ${percent(p.alcaldies, ALCALDIES_CATALUNYA)} dels 947`
         }</span></li>
       <li><span class="etq">Regidories</span><span class="val">${number(p.regidories)}</span>
-        <span class="sec">electes</span></li>
-      <li><span class="etq">Població</span><span class="val">${number(p.poblacioGovernada)}</span>
+        <span class="sec">${plural(p.regidories, "regidoria electa", "regidories electes")}</span></li>
+      <li><span class="etq">Població governada</span><span class="val">${number(p.poblacioGovernada)}</span>
         <span class="sec">${
           // El percentatge és el que fa comparable una marca amb l'altra: 125
           // alcaldies del PSC i 330 d'ERC no diuen qui governa més gent fins
           // que no se sap que les del PSC són les de l'àrea metropolitana.
-          poblacioCatalunya > 0 ? `${percent(p.poblacioGovernada, poblacioCatalunya)} de Catalunya` : "habitants"
+          // Sense cap alcaldia no governa ningú, i «0,0 % de Catalunya» ho diria
+          // amb una precisió que fa pensar en una xifra petita i no en cap.
+          p.alcaldies === 0
+            ? "habitants: no en governa cap"
+            : poblacioCatalunya > 0
+              ? `habitants governats, ${percent(p.poblacioGovernada, poblacioCatalunya)} de Catalunya`
+              : "habitants governats"
         }</span></li>
     </ul></a></li>`;
     })
@@ -285,7 +303,7 @@ ${tipografia("../")}
 ${capcalera("../", "partits")}
 ${cercador("../")}
 
-<main id="contingut">
+<main id="contingut" class="px-main">
 
 <section class="px-portada">
   <h1>Els partits</h1>
@@ -304,7 +322,10 @@ ${cercador("../")}
 
 <section>
   <h2>${number(ordenades.length)} ${plural(ordenades.length, "partit", "partits")}, de més a menys alcaldies</h2>
-  <ul class="px-llista">${llista}</ul>
+  <ul class="px-llista">
+    <li class="px-capcalera" aria-hidden="true"><span>Partit</span><span class="px-xifres"><span>Alcaldies</span>
+      <span>Regidories</span><span>Població governada</span></span></li>
+    ${llista}</ul>
   <p class="px-nota">Font: alcaldies i regidories, resultats de les municipals del 28 de maig
   del 2023 i registre d'ens de la Generalitat (<code>ntc4-rnwr</code>, <code>6nei-4b44</code>);
   població governada, padró municipal vigent.</p>

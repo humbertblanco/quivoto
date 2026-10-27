@@ -126,12 +126,17 @@ ${cercador(base)}`;
 
 const EXTRA_CSS = `
 .pregunta{border-top:2.5px solid var(--ink);padding:var(--e3) 0}
-.pregunta .num{font-family:var(--display);font-weight:900;font-size:.8rem;color:var(--coral);
-  text-transform:uppercase;letter-spacing:.12em}
+/* Les etiquetes petites d'aquesta pàgina —el número de la pregunta, el tema,
+   els noms de cada camp, l'estat «En revisió»— van en minúscula i sense
+   espaiat, com a tot el web: les majúscules espaiades damunt de cada títol són
+   el tic de plantilla que la marca no vol. El número va amb el corall de text
+   («--coral-text»), no amb el de fons, que en lletra petita sobre el paper no
+   arribava al contrast mínim. */
+.pregunta .num{font-family:var(--display);font-weight:800;font-size:.86rem;color:var(--coral-text)}
 .pregunta h3{font-family:var(--display);font-weight:900;font-size:clamp(1.1rem,3.2vw,1.5rem);
   letter-spacing:-.02em;line-height:1.28;margin:6px 0 var(--e2);max-width:34ch}
 .pregunta .tema{display:inline-block;background:var(--menta);color:#1E1B2E;border:1.5px solid var(--ink);
-  border-radius:var(--r-max);padding:2px 10px;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
+  border-radius:var(--r-max);padding:2px 10px;font-size:.76rem;font-weight:800}
 /* La pastilla del govern és un enllaç a l'evidència de la mateixa targeta, que
    és d'on surt la posició: sense subratllat, que la vora discontínua ja diu
    que és una cosa deduïda i no una dada. */
@@ -139,7 +144,7 @@ const EXTRA_CSS = `
   padding:2px 10px;font-size:.7rem;font-weight:800;margin-left:6px;color:inherit;text-decoration:none}
 .pregunta .govern:hover{background:var(--presec);color:#1E1B2E}
 .pregunta dl{margin:var(--e2) 0 0;display:grid;gap:8px}
-.pregunta dt{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-suau)}
+.pregunta dt{font-size:.8rem;font-weight:800;color:var(--ink-suau)}
 .pregunta dd{margin:0;font-size:.92rem;line-height:1.5}
 .veredicte-llindar{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
   box-shadow:var(--ombra);padding:var(--e2);margin:var(--e3) 0}
@@ -155,8 +160,10 @@ const EXTRA_CSS = `
   box-shadow:var(--ombra);padding:var(--e2);text-decoration:none;color:inherit}
 .llista-municipis b{font-family:var(--display);font-weight:900;font-size:1.2rem;letter-spacing:-.02em}
 .llista-municipis .accions{display:flex;flex-wrap:wrap;gap:8px;margin:0}
-.llista-municipis .bloquejada{display:inline-block;margin-top:6px;padding:4px 10px;border-radius:var(--r-max);
-  background:var(--vora);color:var(--ink-suau);font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+/* «En revisió» és un estat, no un enllaç: etiqueta plana i petita, com
+   «.estat» a estil.ts. */
+.llista-municipis .bloquejada{display:inline-flex;align-items:center;margin-top:6px;padding:2px 8px;border-radius:5px;
+  background:var(--vora);color:var(--ink);font-size:.76rem;font-weight:700;min-height:0;align-self:center}
 `;
 
 /** Una pàgina amb les 25 preguntes d'un municipi. */
@@ -236,7 +243,7 @@ export function renderPreguntes(conjunt: ConjuntAmbSlug, generatedAt: string): s
     }</p>
     ${
       disponible
-        ? `<p><a class="boto-prova" href="prova/">Respon-les i mira amb qui coincideixes →</a></p>
+        ? `<p><a class="boto-prova" href="prova/">Respon-les i mira amb qui coincideixes</a></p>
     <p class="nota">És una demostració del que es pot fer avui, amb el que hi ha. Les
     afirmacions encara no estan validades.</p>`
         : `<p class="nota"><b>Aquest conjunt no es pot respondre.</b>
@@ -310,8 +317,8 @@ export function renderIndexPreguntes(conjunts: readonly ConjuntAmbSlug[], genera
       lligades a una votació del ple</span>
     </a>
     <p class="accions">
-      ${c.veredicte.avaluable && verifica(c).jugable ? `<a class="prova-enllac" href="${escape(c.slug)}/prova/">Respon-les →</a>` : '<span class="prova-enllac bloquejada">En revisió</span>'}
-      <a class="prova-enllac" href="../m/${escape(c.slug)}/">La fitxa de ${escape(c.municipi)} →</a>
+      ${c.veredicte.avaluable && verifica(c).jugable ? `<a class="prova-enllac" href="${escape(c.slug)}/prova/">Respon-les</a>` : '<span class="prova-enllac bloquejada">En revisió</span>'}
+      <a class="prova-enllac" href="../m/${escape(c.slug)}/">La fitxa de ${escape(c.municipi)}</a>
     </p></li>`,
     )
     .join("");

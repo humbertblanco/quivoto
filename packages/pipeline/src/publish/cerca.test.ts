@@ -14,6 +14,7 @@ import { cercador } from "./cercador";
 import { adrecesAlcaldies, alcaldiesHistoriques, type HistorialAlcaldies } from "./alcaldia-historica";
 import type { Els947Row } from "./els947";
 import { slugify } from "../lib/text";
+import { ensDeProva } from "./ens-prova-enllacos";
 
 /**
  * El cercador ha de trobar el poble escrivint-lo com l'escriu la gent: sense
@@ -408,5 +409,31 @@ describe("el guió del navegador", () => {
     expect(html).toContain('role="listbox"');
     expect(html).toContain('aria-activedescendant');
     expect(html).toContain('e.key === "/"');
+  });
+});
+
+describe("indexDeCerca amb els ens supramunicipals", () => {
+  const files947 = [fila("manresa", "Manresa", "Bages", 78_000, null, null)];
+
+  it("sense ens, l'índex no porta ni la clau: el fitxer queda com era", () => {
+    expect("ens" in indexDeCerca(files947)).toBe(false);
+    expect("ens" in indexDeCerca(files947, [])).toBe(false);
+  });
+
+  it("amb ens, una fila per ens amb nom, mena, slug, habitants i municipis", () => {
+    const index = indexDeCerca(files947, [
+      ensDeProva({ poblacio: 180_000, municipis: Array.from({ length: 30 }, () => ({ slug: "x", nom: "X", comarca: null, poblacio: null, membres: 0 })) }),
+      ensDeProva({ tipus: "diputacio", poblacio: null }),
+    ]);
+    expect(index.ens).toEqual([
+      ["Consell Comarcal del Bages", "consell", "bages", 180_000, 30],
+      // Sense població coneguda pesa 0: va al final dels empats, no s'inventa res.
+      ["Diputació de Barcelona", "diputacio", "barcelona", 0, 0],
+    ]);
+  });
+
+  it("qui escriu «bages» troba la comarca abans que el consell, i el consell també", () => {
+    const tots = [cand("Comarca", "Bages", 180_000, 0), cand("Ens", "Consell Comarcal del Bages", 180_000, 0)];
+    expect(classifica("bages", tots, 5).map((c) => c.m)).toEqual(["Comarca", "Ens"]);
   });
 });

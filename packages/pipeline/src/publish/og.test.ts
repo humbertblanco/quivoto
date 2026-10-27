@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  creditPla, feinaMunicipi, feinaPartit, feinaTerritori, feinesGlobals, feinesPersones, resumDe, senyalTerritori, triaFrase,
+  creditPla, feinaEns, feinaIndexEns, feinaMunicipi, feinaPartit, feinaTerritori, feinesGlobals, feinesPersones, hemicicleEns,
+  resumDe, senyalTerritori, triaFrase,
   type Feina, type OgFitxa, type OgMunicipi,
 } from "./og";
+import type { DadesEns, MembreEns } from "./ens-tipus";
 import { FITXER_OG } from "./seo";
 
 /** Un municipi mínim, al qual cada prova hi afegeix només el que li interessa. */
@@ -268,5 +270,90 @@ describe("les feines", () => {
     expect(resumDe(feina, "v1")).not.toBe(resumDe(feina, "v2"));
     expect(resumDe(feina, "v1")).not.toBe(resumDe({ ...feina, format: "jpeg" }, "v1"));
     expect(resumDe(feina, "v1")).not.toBe(resumDe(feinaMunicipi({ ...municipi(), name: "Vilanova", ine5: "00000" }), "v1"));
+  });
+});
+
+describe("imatges de les diputacions i els consells", () => {
+  /** Un ens mínim: només el que la imatge llegeix, amb la resta buida. */
+  function ens(canvis: Partial<DadesEns> = {}): DadesEns {
+    return {
+      tipus: "consell", codiEns: "0000000000", nom: "Consell Comarcal del Bages", territori: "Bages", article: "el Bages",
+      cif: null, gerent: null, municat: null, web: null, seients: 33, finances: null, districtes: null, wikidata: null,
+      escut: null, fonts: [], avisos: [], consultat: "2026-10-27",
+      slug: "bages", seu: null, membres: [], presidencia: null, poblacio: null, comarca: null, comarques: [],
+      repartiment: null, subvencions: null,
+      municipis: [{ slug: "manresa", nom: "Manresa", comarca: "Bages", poblacio: 79000, membres: 5 }],
+      composicio: [
+        { partit: "PSC", seients: 14, color: "#e30613" },
+        { partit: "Junts", seients: 12, color: "#00c3b2" },
+        { partit: "ERC", seients: 7, color: "red;" },
+      ],
+      ...canvis,
+    };
+  }
+  const presidenta: MembreEns = {
+    nom: "MARTA PUIG ROCA", carrec: "Presidenta", rol: "presidencia", ordre: 1, partit: "PSC", partitFont: "ens",
+    municipiFont: null, alcaldia: false, municipi: null, adreca: null, foto: null, retribucio: null, grup: "PSC", color: "#e30613",
+  };
+
+  it("cada tipus va al seu directori de FITXER_OG, perquè el slug d'un consell és el de la comarca", () => {
+    expect(feinaEns(ens()).fitxer).toBe("consell/bages.png");
+    expect(feinaEns(ens({ tipus: "diputacio", slug: "girona", nom: "Diputació de Girona" })).fitxer).toBe(FITXER_OG.diputacio("girona"));
+    expect(FITXER_OG.comarca("bages")).not.toBe(FITXER_OG.consell("bages"));
+  });
+
+  it("diu qui té la presidència i quin partit té més escons, amb el nom llegible", () => {
+    const feina = feinaEns(ens({ presidencia: presidenta }));
+    if (feina.dades.tipus !== "territori") throw new Error("tipus");
+    expect(feina.dades.ambit).toBe("Consell comarcal");
+    expect(feina.dades.xifres).toBe("1 municipi · 33 escons");
+    expect(pla(feina.dades.frase)).toBe("Marta Puig Roca en té la presidència (PSC). PSC hi té 14 dels 33 escons.");
+  });
+
+  it("sense presidència coneguda en diu només la composició, i sense composició una frase neutra", () => {
+    const sensePresidencia = feinaEns(ens({ tipus: "diputacio", nom: "Diputació de Barcelona", seients: 51 }));
+    if (sensePresidencia.dades.tipus !== "territori") throw new Error("tipus");
+    expect(sensePresidencia.dades.ambit).toBe("Diputació");
+    expect(pla(sensePresidencia.dades.frase)).toBe("PSC hi té 14 dels 51 escons.");
+    // Si de cap escó no se sap el partit, no se'n fa cap «partit amb més escons».
+    const senseSigles = feinaEns(ens({ composicio: [{ partit: "sense partit conegut", seients: 33, color: null }] }));
+    if (senseSigles.dades.tipus !== "territori") throw new Error("tipus");
+    expect(senseSigles.dades.frase).not.toContain("sense partit");
+    expect(senseSigles.dades.figura).toContain("ens-hemicicle");
+    const buit = feinaEns(ens({ composicio: [], seients: 0 }));
+    if (buit.dades.tipus !== "territori") throw new Error("tipus");
+    expect(buit.dades.frase).not.toMatch(/\b0\b/);
+    expect(buit.dades.xifres).toBe("1 municipi");
+    // Sense hemicicle, Catalunya amb els municipis de l'ens encesos.
+    expect(buit.dades.figura).toContain("senyal-territori");
+  });
+
+  it("diu l'empat al capdamunt en lloc de triar-ne un per ordre alfabètic", () => {
+    const empat = feinaEns(ens({
+      seients: 33,
+      composicio: [
+        { partit: "ERC", seients: 11, color: null },
+        { partit: "Junts", seients: 11, color: null },
+        { partit: "PSC", seients: 6, color: null },
+      ],
+    }));
+    if (empat.dades.tipus !== "territori") throw new Error("tipus");
+    expect(empat.dades.frase).toContain("ERC i Junts hi empaten amb 11 dels 33 escons");
+    expect(empat.dades.frase).not.toContain("ERC hi té");
+  });
+
+  it("l'hemicicle té un cercle per escó i un color que no és hexadecimal no entra a l'atribut", () => {
+    const svg = hemicicleEns(ens());
+    expect(svg.match(/<circle/g)).toHaveLength(33);
+    expect(svg).not.toContain("red;");
+    expect(svg).toContain('fill="#8b8b8b"');
+    expect(hemicicleEns(ens({ composicio: [] }))).toBe("");
+  });
+
+  it("la de l'índex compta diputacions i consells i va on diu FITXER_OG", () => {
+    const feina = feinaIndexEns([ens(), ens(), ens({ tipus: "diputacio" })]);
+    expect(feina.fitxer).toBe(FITXER_OG.ens());
+    if (feina.dades.tipus !== "global") throw new Error("tipus");
+    expect(pla(feina.dades.frase)).toBe("1 diputació i 2 consells comarcals: qui hi seu, com hi arriba i què gasta cadascun.");
   });
 });

@@ -4,6 +4,8 @@ import { vi } from "vitest";
 import { validaConjunt, type Afirmacio } from "./llindar";
 import type { ConjuntAmbSlug } from "./preguntes";
 import { renderProva } from "./prova";
+import { RADIOGRAFIA_CSS } from "./estil";
+import { MASCOTA_CSS } from "./mascota";
 
 /**
  * La demostració vivia amb una capçalera pròpia i un camí absolut, i un peu
@@ -109,5 +111,18 @@ describe("el cap SEO de la demostració", () => {
 
   it("té un sol <h1>", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+});
+
+describe("la prova segueix la marca", () => {
+  const html = renderProva(conjunt(), [], [], "avui");
+  /** El full propi de la prova, sense el compartit (estil.ts) ni el de la mascota. */
+  const css = html.slice(html.indexOf("<style>") + 7, html.indexOf("</style>")).replace(RADIOGRAFIA_CSS, "").replace(MASCOTA_CSS, "");
+
+  it("el tema i el districte van en minúscula i sense espaiat", () => {
+    expect(css).not.toContain("text-transform:uppercase");
+    expect(css).not.toMatch(/letter-spacing:\.\d/);
+    expect(css).toContain(".targeta .tema{");
+    expect(css).toContain(".districte{");
   });
 });

@@ -12,6 +12,7 @@ import { peu } from "./peu";
 import { METRIQUES } from "./ranquings";
 import { sigla } from "./sigla";
 import type { MostraMunicipi, PortadaMostra } from "./portada-mostra";
+import type { DadesEns } from "./ens-tipus";
 
 /**
  * La portada de l'Observatori.
@@ -281,32 +282,37 @@ const CSS = `
 .portada .obre-cerca span{position:static;width:auto;height:auto;overflow:visible;clip:auto}
 .portada .cerca-poble a{font-weight:700;font-size:.92rem}
 
-/* --- l'Observatori en xifres: pastilles en un telèfon, targeta a la dreta ---
-   Sota els 820px és una fila de pastilles que segueix la crida del cercador.
-   A partir d'allà la capçalera és la reixa de dues columnes d'estil.ts i la
+/* --- l'Observatori en xifres: enllaços en un telèfon, targeta a la dreta ---
+   Sota els 820px és una filera d'enllaços que segueix la crida del cercador.
+   Abans eren pastilles amb vora; ara són «.navega» (estil.ts), el text
+   subratllat de tota la navegació de la casa, perquè una vora arrodonida feia
+   semblar botons cinc enllaços. Aquí només s'hi afegeix la xifra en gros i el
+   nom alineats per la base.
+   A partir dels 820px la capçalera és la reixa de dues columnes d'estil.ts i la
    targeta se'n va a la dreta, a la columna que quedava buida: una xifra per
-   línia, la xifra gran i el nom al costat, i tota la línia és l'enllaç. */
+   línia, la xifra gran i el nom al costat, i tota la línia és l'enllaç. La
+   targeta és un índex amb números, no una pastilla, i es queda; el subratllat
+   també, perquè continua sent un enllaç. */
 .xifres{margin:var(--e3) 0 0}
-.xifres ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
-.xifres a{display:inline-flex;align-items:baseline;gap:6px;min-height:40px;padding:0 14px;border:2px solid var(--ink);
-  border-radius:var(--r-max);font-weight:800;font-size:.86rem;text-decoration:none;color:inherit;background:var(--paper-2)}
-.xifres a:hover{box-shadow:var(--ombra)}
+.xifres ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 var(--e3)}
+.xifres a{align-items:baseline;gap:6px;font-size:.9rem}
 .xifres b{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 @media (min-width:820px){
   .portada .xifres{grid-column:2;grid-row:1 / span 99;margin:6px 0 0}
   .xifres ul{flex-direction:column;gap:0;border:2.5px solid var(--ink);border-radius:var(--r-m);
     background:var(--paper-2);box-shadow:var(--ombra);overflow:hidden}
   .xifres li+li{border-top:2px solid var(--vora)}
-  .xifres a{display:flex;align-items:baseline;justify-content:flex-start;min-height:0;padding:11px 16px;
-    border:0;border-radius:0;background:none;font-size:.9rem}
-  .xifres a:hover{box-shadow:none;background:var(--presec);color:#1E1B2E}
+  .xifres a{display:flex;justify-content:flex-start;min-height:0;padding:11px 16px}
+  .xifres a:hover{background:var(--presec);color:#1E1B2E}
   .xifres b{font-size:1.5rem;min-width:3.2ch}
 }
 
-/* --- els blocs: el títol és l'enllaç a la pàgina sencera --- */
-.bloc h2 a{color:inherit;text-decoration:none}
-.bloc h2 a::after{content:" →";color:var(--coral-text);font-weight:900}
-.bloc h2 a:hover{text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:6px}
+/* --- els blocs: el títol és l'enllaç a la pàgina sencera ---
+   Sense fletxa al final: el subratllat coral, el mateix de «.navega», ja diu
+   que el títol porta a algun lloc. Al damunt, el títol pren el corall. */
+.bloc h2 a{color:inherit;text-decoration:underline;text-decoration-color:var(--coral);
+  text-decoration-thickness:3px;text-underline-offset:6px}
+.bloc h2 a:hover{color:var(--coral-text)}
 .mes{margin:var(--e2) 0 0;font-weight:800;font-size:.92rem}
 
 /* --- les ciutats més grans: quatre capses iguals per fila, dues en un telèfon ---
@@ -356,18 +362,21 @@ const CSS = `
 .clau-mini .mostra.cap{background:repeating-linear-gradient(45deg,var(--nd-ratlla) 0 3px,var(--nd-fons) 3px 6px)}
 .clau-mini b{font-variant-numeric:tabular-nums}
 
-/* --- les marques: la pastilla i les xifres, en una sola peça --- */
-.marques{list-style:none;margin:var(--e2) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
-.marques a{display:inline-flex;align-items:center;gap:9px;text-decoration:none;color:inherit;
-  border:2px solid var(--ink);border-radius:var(--r-max);padding:4px 13px 4px 5px;background:var(--paper-2);
-  transition:transform .12s ease,box-shadow .12s ease}
-.marques a:hover{box-shadow:var(--ombra);transform:translate(-1px,-1px)}
-@media (prefers-reduced-motion:reduce){.marques a,.comparacions a,.xip{transition:none}}
+/* --- les marques: la sigla i les xifres, en una sola peça ---
+   La sigla és l'única pastilla que queda (és una marca de dada, el color del
+   partit); el recompte del costat és l'enllaç, i va subratllat com tota la
+   navegació. Abans tot plegat anava dins d'una segona pastilla amb vora, i
+   una pastilla dins d'una altra feia semblar la fila una botonera. */
+.marques{list-style:none;margin:var(--e2) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px var(--e3)}
+.marques a{display:inline-flex;align-items:center;gap:9px;min-height:44px;text-decoration:none;color:inherit}
 .marques li{max-width:100%;min-width:0}
-.marques .compte{font-size:.8rem;font-weight:700;color:var(--ink-suau);white-space:nowrap;font-variant-numeric:tabular-nums}
+.marques .compte{font-size:.84rem;font-weight:700;color:var(--ink-suau);white-space:nowrap;font-variant-numeric:tabular-nums;
+  text-decoration:underline;text-decoration-color:var(--coral);text-decoration-thickness:2px;text-underline-offset:4px}
+.marques a:hover .compte{color:var(--coral-text)}
+@media (prefers-reduced-motion:reduce){.comparacions a,.xip{transition:none}}
 /* En un telèfon, «Independents de la Selva · 2 alcaldies · 50 regidories» no
    cap en una línia de 360 px i feia sobresortir tota la pàgina per la dreta:
-   la pastilla es parteix i el recompte baixa de línia. */
+   la fila es parteix i el recompte baixa de línia. */
 @media (max-width:600px){.marques a{flex-wrap:wrap;max-width:100%}.marques .compte{white-space:normal}}
 .marques .compte b{color:var(--ink)}
 
@@ -377,8 +386,10 @@ const CSS = `
 .comarques-taula th,.comarques-taula td{padding:9px 10px;text-align:right;vertical-align:middle;
   border-bottom:2px solid var(--vora);white-space:nowrap}
 .comarques-taula th[scope="row"],.comarques-taula .mana-cela{text-align:left}
-.comarques-taula thead th{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
+/* La capçalera en minúscula, com totes les taules de la casa (vegeu
+   «.alcaldies thead th» a estil.ts): les etiquetes en majúscules espaiades
+   no són de la marca. */
+.comarques-taula thead th{font-size:.8rem;font-weight:700;color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
 /* La capçalera s'alinea com la seva columna: noms i sigles a l'esquerra,
    xifres a la dreta; si no, «Comarca» i «Qui hi mana més» suraven a la dreta
    de columnes escrites a l'esquerra. */
@@ -388,15 +399,19 @@ const CSS = `
 .comarques-taula th[scope="row"] a:hover{text-decoration:underline;text-decoration-thickness:2.5px;text-underline-offset:4px}
 .comarques-taula .sec{font-size:.78rem;color:var(--ink-suau);font-weight:700;margin-left:6px}
 
-/* --- les preguntes: un xip per poble, i els que ja es responen com a botó --- */
-.xips{list-style:none;margin:var(--e2) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
-.xip{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 14px;border:2px solid var(--ink);
-  border-radius:var(--r-max);font-weight:800;font-size:.86rem;text-decoration:none;color:inherit;
-  background:var(--paper-2);transition:transform .12s ease,box-shadow .12s ease}
-.xip:hover{box-shadow:var(--ombra)}
-.xip.jugable{background:var(--lavanda);color:#1E1B2E;border-color:#1E1B2E;box-shadow:var(--ombra)}
-.xip.jugable:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 #1E1B2E}
-.xip small{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;opacity:.75}
+/* --- les preguntes: un enllaç per poble, i els que ja es responen com a botó ---
+   El poble que només té l'esborrany és navegació i va subratllat, com
+   «.navega»; el que ja es pot respondre obre el joc, i per això és l'únic que
+   conserva el dibuix de botó (lavanda, vora i ombra), com «Respon les
+   preguntes» a la resta del web. */
+.xips{list-style:none;margin:var(--e2) 0 0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px var(--e3)}
+.xip{display:inline-flex;align-items:center;gap:7px;min-height:44px;font-weight:800;font-size:.9rem;color:inherit;
+  text-decoration:underline;text-decoration-color:var(--coral);text-decoration-thickness:2px;text-underline-offset:4px}
+.xip:hover{color:var(--coral-text)}
+.xip.jugable{min-height:40px;padding:0 14px;border:2px solid #1E1B2E;border-radius:var(--r-max);text-decoration:none;
+  background:var(--lavanda);color:#1E1B2E;box-shadow:var(--ombra);transition:transform .12s ease,box-shadow .12s ease}
+.xip.jugable:hover{color:#1E1B2E;transform:translate(2px,2px);box-shadow:1px 1px 0 #1E1B2E}
+.xip small{font-size:.78rem;font-weight:700;opacity:.8}
 
 /* --- tres comparacions per començar ---
    Les targetes fan la mateixa alçada encara que un títol ocupi dues línies i
@@ -424,11 +439,11 @@ const CSS = `
    dins de cada bloc. */
 @media (max-width:600px){.portada{padding:var(--e2) 0 var(--e3)}.bloc{padding:var(--e3) 0}}
 
-/* --- sense la base de dades: els enllaços i prou --- */
-.seccions{list-style:none;margin:var(--e3) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
-.seccions a{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border:2px solid var(--ink);
-  border-radius:var(--r-max);font-weight:800;font-size:.9rem;text-decoration:none;color:inherit;background:var(--paper-2)}
-.seccions a:hover{box-shadow:var(--ombra)}
+/* --- sense la base de dades: els enllaços i prou ---
+   Cada secció és un «.navega» (estil.ts), text subratllat: abans eren
+   pastilles amb vora, i nou pastilles iguals en fila semblaven una botonera. */
+.seccions{list-style:none;margin:var(--e3) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:0 var(--e3)}
+.seccions a{font-size:.95rem}
 `;
 
 const LUPA = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>`;
@@ -470,7 +485,7 @@ function blocMunicipis(mostra: PortadaMostra): string {
   return `<section class="bloc" id="grans">
     <h2><a href="els947.html">Els municipis més grans</a></h2>
     <ol class="grans">${mostra.municipis.map((m) => municipiGran(m, colors)).join("")}</ol>
-    ${resta > 0 ? `<p class="mes"><a href="els947.html">i ${xifra(resta)} més →</a></p>` : ""}
+    ${resta > 0 ? `<p class="mes"><a href="els947.html">i ${xifra(resta)} més</a></p>` : ""}
   </section>`;
 }
 
@@ -537,7 +552,7 @@ function blocComarques(mostra: PortadaMostra): string {
       <thead><tr><th scope="col">Comarca</th><th scope="col">Municipis</th><th scope="col">Habitants</th><th scope="col">Qui hi mana més</th></tr></thead>
       <tbody>${files}</tbody>
     </table></div>
-    <p class="mes"><a href="c/">totes ${xifra(mostra.comptes.comarques)} →</a></p>
+    <p class="mes"><a href="c/">les ${xifra(mostra.comptes.comarques)} comarques</a></p>
   </section>`;
 }
 
@@ -574,13 +589,32 @@ function blocCompara(mostra: PortadaMostra): string {
   </section>`;
 }
 
-function blocLinies(comptes: ComptesPortada, mostra: PortadaMostra): string {
+/**
+ * La línia de les diputacions i els consells, al costat de la de l'AMB: són
+ * els altres governs de per sobre de l'ajuntament i tenen el seu índex a
+ * `ens/`. Sense fitxes publicades no hi ha línia.
+ */
+function liniaEns(ens: readonly DadesEns[] | undefined): string {
+  if (!ens || ens.length === 0) return "";
+  const diputacions = ens.filter((e) => e.tipus === "diputacio").length;
+  const consells = ens.filter((e) => e.tipus === "consell").length;
+  const parts = [
+    diputacions > 0 ? `${xifra(diputacions)} ${diputacions === 1 ? "diputació" : "diputacions"}` : null,
+    consells > 0 ? `${xifra(consells)} ${consells === 1 ? "consell comarcal" : "consells comarcals"}` : null,
+  ].filter(Boolean);
+  return `<p class="linia"><a href="ens/">Diputacions i consells comarcals</a> <span>${parts.join(
+    " · ",
+  )}: qui els presideix i quins diners reparteixen</span></p>`;
+}
+
+function blocLinies(comptes: ComptesPortada, mostra: PortadaMostra, ens?: readonly DadesEns[]): string {
   const linies = [
     mostra.amb
       ? `<p class="linia"><a href="amb/">L'Àrea Metropolitana</a> <span>${xifra(mostra.amb.municipis)} municipis · ${milions(
           mostra.amb.habitants,
         )} habitants</span></p>`
       : "",
+    liniaEns(ens),
     comptes.trajectoria !== null
       ? `<p class="linia"><a href="trajectoria/">D'on surten els que manen</a> <span>${xifra(
           comptes.trajectoria,
@@ -606,13 +640,13 @@ function xifres(comptes: ComptesPortada): string {
   ];
   const items = linies
     .filter(([, n]) => n > 0)
-    .map(([on, n, text]) => `<li><a href="${on}"><b>${xifra(n)}</b> ${escape(text)}</a></li>`)
+    .map(([on, n, text]) => `<li><a class="navega" href="${on}"><b>${xifra(n)}</b> ${escape(text)}</a></li>`)
     .join("");
   return items ? `<nav class="xifres" aria-label="L'Observatori en xifres"><ul>${items}</ul></nav>` : "";
 }
 
 /** Sense la base de dades: els enllaços a les seccions i prou. */
-function seccions(comptes: ComptesPortada): string {
+function seccions(comptes: ComptesPortada, ens?: readonly DadesEns[]): string {
   const enllacos: [string, string][] = [
     ["els947.html", `Els ${xifra(comptes.municipis)} municipis`],
     ["mapa/", "El mapa"],
@@ -622,14 +656,24 @@ function seccions(comptes: ComptesPortada): string {
     ...(comptes.conjuntsPreguntes > 0 ? [["preguntes/", "Les preguntes"] as [string, string]] : []),
     ["comparador/", "El comparador"],
     ...(comptes.amb ? [["amb/", "L'Àrea Metropolitana"] as [string, string]] : []),
+    ...(ens && ens.length > 0 ? [["ens/", "Diputacions i consells comarcals"] as [string, string]] : []),
     ...(comptes.trajectoria !== null ? [["trajectoria/", "D'on surten els que manen"] as [string, string]] : []),
   ];
   return `<nav aria-label="Seccions de l'Observatori"><ul class="seccions">${enllacos
-    .map(([on, text]) => `<li><a href="${on}">${escape(text)}</a></li>`)
+    .map(([on, text]) => `<li><a class="navega" href="${on}">${escape(text)}</a></li>`)
     .join("")}</ul></nav>`;
 }
 
-export function renderPortada(comptes: ComptesPortada, generatedAt: string, mostra?: PortadaMostra): string {
+/**
+ * @param ens Les fitxes de diputacions i consells (`loadEns`). Opcional: sense,
+ *   la portada no les enllaça i surt com sortia.
+ */
+export function renderPortada(
+  comptes: ComptesPortada,
+  generatedAt: string,
+  mostra?: PortadaMostra,
+  ens?: readonly DadesEns[],
+): string {
   const cos = mostra
     ? [
         blocMunicipis(mostra),
@@ -638,9 +682,9 @@ export function renderPortada(comptes: ComptesPortada, generatedAt: string, most
         blocComarques(mostra),
         blocPreguntes(mostra),
         blocCompara(mostra),
-        blocLinies(comptes, mostra),
+        blocLinies(comptes, mostra, ens),
       ].join("\n")
-    : seccions(comptes);
+    : seccions(comptes, ens);
 
   /*
    * El cap per al cercador. La descripció porta les xifres que la pàgina ja

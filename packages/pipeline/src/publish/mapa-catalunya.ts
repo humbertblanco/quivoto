@@ -65,6 +65,40 @@ type Capa = {
    */
   boto: string;
   peu: string;
+  /**
+   * La família de la capa al desplegable del mòbil.
+   *
+   * Amb vint-i-vuit capes, una llista plana és una tira on no es troba res; el
+   * `<select>` les agrupa amb `<optgroup>` per la pregunta que responen —qui
+   * governa, com es vota, qui hi viu, els diners— i les dels partits van al
+   * seu grup de sempre. A l'escriptori no canvia res: els botons continuen en
+   * les dues fileres d'abans i en el mateix ordre.
+   */
+  grup: string;
+  /**
+   * Què mesura la xifra, dit per a la clau: «€ per habitant», «% del cens».
+   *
+   * Les etiquetes de la clau ja porten el símbol —«menys de 81 €»—, però el
+   * símbol sol no diu de què: 81 € de deute per habitant no és el mateix que
+   * 81 € de sou. Les capes de categories no en tenen.
+   */
+  unitat?: string;
+  /**
+   * D'on surt la dada, curt, per a la clau: «Consorci AOC», «Idescat».
+   *
+   * La font llarga, amb l'enllaç, és a «D'on surt el mapa» i al peu de la capa.
+   * Aquí va el nom que cap en una línia, perquè la clau de dins del dibuix és
+   * la que viatja amb una captura i una captura sense font és una xifra que
+   * ningú pot comprovar.
+   */
+  font: string;
+  /**
+   * Quan no hi ha any (`any` buit), el que la clau diu en lloc seu: «últim
+   * exercici liquidat», «darrer cens publicat». És veritat i no s'inventa cap
+   * any: el deute de cada ajuntament és del seu últim exercici, i no és el
+   * mateix a tot arreu.
+   */
+  quan?: string;
   /** Valor d'un municipi, o null si no en tenim. */
   valor: (r: Els947Row) => number | null;
   /** Els talls entre graons; si no n'hi ha, es fan per quantils. */
@@ -203,6 +237,8 @@ const MANDAT = "mandat 2023-2027";
 
 const CAPA_PARTIT: Capa = {
   id: "partit",
+  grup: "Qui governa",
+  font: "Generalitat de Catalunya",
   titol: "De quina força és cada alcaldia",
   boto: "Qui mana",
   peu: `El color és el de la força de qui té l'alcaldia, no el de la llista més votada.
@@ -231,10 +267,28 @@ const CAPA_PARTIT: Capa = {
   },
 };
 
+/**
+ * Els dos colors de les capes de «sí o no»: majoria absoluta, pactes i canvis.
+ *
+ * Abans feien servir els dos primers graons de la rampa coral, #FBEFE6 i
+ * #F0BFA9, que tenen un contrast d'1,5 entre ells —i en fosc, #3B2119 contra
+ * #6A3524, el mateix—: el «sí» i el «no» es confonien just a la capa on només
+ * hi ha dues coses per distingir. Ara el «no» és el paper de les
+ * targetes (`--paper-2`) i el «sí», el coral de la marca (`--coral`), que és el
+ * color que assenyala allò que pregunta el títol —on hi ha majoria, on no
+ * governa el primer, on ha canviat l'alcaldia— i no cap veredicte: no hi ha
+ * cap verd que digui «bé» ni cap vermell que digui «malament». Contrast entre
+ * tots dos: 3,1 en clar i 5,3 en fosc. Són variables de la marca i giren
+ * soles en mode fosc, de manera que no cal cap parell fosc a part.
+ */
+const SI_O_NO = ["var(--paper-2)", "var(--coral)"];
+
 const CAPES: Capa[] = [
   CAPA_PARTIT,
   {
     id: "majoria",
+    grup: "Qui governa",
+    font: "Generalitat de Catalunya",
     titol: "On governa algú amb majoria absoluta",
     boto: "Majoria absoluta",
     peu: `Una llista sola amb prou regidories per aprovar el que vulgui sense pactar amb ningú.
@@ -243,10 +297,13 @@ const CAPES: Capa[] = [
     any: MANDAT,
     talls: [0.5],
     etiquetes: ["cap llista sola", "majoria absoluta"],
+    colors: SI_O_NO,
     format: (v) => (v === 1 ? "amb majoria absoluta" : "sense majoria absoluta"),
   },
   {
     id: "guanyador",
+    grup: "Qui governa",
+    font: "Generalitat de Catalunya",
     titol: "On no governa la llista més votada",
     boto: "Pactes",
     peu: `Guanyar unes municipals no vol dir governar-les: l'alcaldia la vota el ple. Aquí es veu
@@ -255,10 +312,13 @@ const CAPES: Capa[] = [
     any: MANDAT,
     talls: [0.5],
     etiquetes: ["governa qui va guanyar", "governa un altre"],
+    colors: SI_O_NO,
     format: (v) => (v === 1 ? "no governa la llista més votada" : "governa la llista més votada"),
   },
   {
     id: "canvi",
+    grup: "Qui governa",
+    font: "Generalitat de Catalunya",
     titol: "On ha canviat l'alcaldia a mig mandat",
     boto: "Canvis d'alcaldia",
     peu: `Una moció de censura, una dimissió o un relleu pactat. No diu què va passar, però diu
@@ -267,10 +327,14 @@ const CAPES: Capa[] = [
     any: MANDAT,
     talls: [0.5],
     etiquetes: ["la mateixa alcaldia", "hi ha canviat"],
+    colors: SI_O_NO,
     format: (v) => (v === 1 ? "l'alcaldia ha canviat a mig mandat" : "la mateixa alcaldia tot el mandat"),
   },
   {
     id: "alternances",
+    grup: "Com es vota",
+    unitat: "canvis de força més votada",
+    font: "Consorci AOC",
     titol: "Quantes vegades ha canviat qui guanya, des del 1979",
     boto: "Alternança des del 1979",
     peu: `Dotze eleccions. Zero vol dir que la mateixa força les ha guanyat totes; com més alt,
@@ -283,6 +347,9 @@ const CAPES: Capa[] = [
   },
   {
     id: "participacio",
+    grup: "Com es vota",
+    unitat: "% del cens que va votar",
+    font: "Generalitat de Catalunya",
     titol: "Quanta gent va anar a votar el 2023",
     boto: "Participació",
     peu: `Votants sobre el cens a les municipals del maig del 2023, amb les xifres oficials de la
@@ -302,6 +369,10 @@ const CAPES: Capa[] = [
      * i envia al comparador, que és on la comparació es fa amb la vara bona.
      */
     id: "deute",
+    grup: "Què fa i què costa l'ajuntament",
+    unitat: "€ per habitant",
+    quan: "últim exercici liquidat",
+    font: "Consorci AOC",
     titol: "Quant deu cada ajuntament per habitant",
     boto: "Deute per habitant",
     peu: `Deute viu a 31 de desembre de l'últim exercici liquidat, dividit pel padró. Quatre-cents
@@ -312,6 +383,9 @@ const CAPES: Capa[] = [
   },
   {
     id: "aigua",
+    grup: "Què fa i què costa l'ajuntament",
+    unitat: "€/m³, consum de 12 m³ al mes",
+    font: "Agència Catalana de l'Aigua",
     titol: "Què costa l'aigua a cada municipi",
     boto: "Preu de l'aigua",
     peu: `Preu del tram de subministrament per a un consum domèstic de 12 m³ al mes, segons
@@ -323,6 +397,10 @@ const CAPES: Capa[] = [
   },
   {
     id: "estrangera",
+    grup: "Qui hi viu",
+    unitat: "% de la població",
+    quan: "darrer cens publicat",
+    font: "Idescat, a partir de l'INE",
     titol: "Quanta gent hi viu amb nacionalitat estrangera",
     boto: "Població estrangera",
     peu: `Persones sense nacionalitat espanyola sobre el total de població censada, segons el Cens
@@ -333,6 +411,9 @@ const CAPES: Capa[] = [
   },
   {
     id: "dones",
+    grup: "Qui governa",
+    unitat: "% de les regidories",
+    font: "Generalitat de Catalunya",
     titol: "Quantes dones hi ha al ple",
     boto: "Dones al ple",
     peu: `Percentatge de regidories ocupades per dones. La llei obliga a llistes paritàries des del
@@ -343,6 +424,10 @@ const CAPES: Capa[] = [
   },
   {
     id: "transparencia",
+    grup: "Què fa i què costa l'ajuntament",
+    unitat: "% d'apartats publicats",
+    quan: "darrer mesurament",
+    font: "Consorci AOC",
     titol: "Què publica cada ajuntament",
     boto: "Transparència",
     peu: `Percentatge dels apartats del portal de transparència que l'ajuntament té publicats,
@@ -364,6 +449,9 @@ const CAPES: Capa[] = [
      * «sense dada» va ratllat i no pintat d'un to de la rampa.
      */
     id: "renda",
+    grup: "Qui hi viu",
+    unitat: "€ per persona i any",
+    font: "INE, Atlas de renda de les llars",
     titol: "Quants diners entren a les cases",
     boto: "Renda per persona",
     peu: `Renda neta mitjana per persona i any, de l'Atlas de distribución de renta de los hogares
@@ -387,6 +475,10 @@ const CAPES: Capa[] = [
      * és la dada o el mapa.
      */
     id: "sou-alcaldia",
+    grup: "Què fa i què costa l'ajuntament",
+    unitat: "€ l'any",
+    quan: "darrer inventari publicat",
+    font: "Ministeri de Funció Pública",
     titol: "Quant cobra l'alcaldia",
     boto: "Sou de l'alcaldia",
     peu: `El que percep l'alcaldia en un any, segons l'Inventari de retribucions dels membres de les
@@ -405,18 +497,32 @@ const CAPES: Capa[] = [
  * Totes les capes d'escala anaven amb la mateixa rampa coral, i el mapa deia
  * «més o menys» sense dir de què: la mateixa taca fosca era deute a una capa
  * i participació a la següent. Ara cada tema té el seu to —l'aigua en blaus,
- * les dones al ple en liles, la renda en verds, els diners en coral— i la
- * rampa de cinc graons es fa amb `rampaDe()`, la mateixa que pinta els vots
- * de cada partit, en clar i en fosc. Les capes de categories («qui mana»,
- * majoria, pactes) ja porten els colors de cada força i no es toquen.
+ * les dones al ple en liles, els diners en coral— i la rampa de cinc graons es
+ * fa amb `rampaDe()`, la mateixa que pinta els vots de cada partit, en clar i
+ * en fosc. Les capes de categories («qui mana») ja porten els colors de cada
+ * força i les de «sí o no» el parell de `SI_O_NO`, i no es toquen.
+ *
+ * Tres tons han canviat després de passar les rampes pel validador de paletes
+ * (diferència de lluminositat perceptual entre graons veïns, en clar i en
+ * fosc):
+ *
+ * - **La renda ja no és verda.** Una rampa verda per als diners que entren a
+ *   les cases, al costat de la coral del deute, deia «verd = bé, vermell =
+ *   malament», que és justament el color de veredicte que el lloc no fa
+ *   servir. Ara és gerd, un to que no vol dir res.
+ * - **Participació i transparència** eren el mateix turquesa saturat
+ *   (#1C8C8C i #1F9E9E), i a aquella saturació els graons segon, tercer i
+ *   quart quedaven a menys de 0,06 de lluminositat l'un de l'altre: tres
+ *   colors que l'ull llegeix com un de sol. Amb la mateixa família de to i
+ *   menys saturació els cinc graons se separen, i cada capa té el seu.
  */
 const TO_DE_CAPA: Readonly<Record<string, string>> = {
   aigua: "#2F6FD6",         // blau: l'aigua
   dones: "#7C5CC4",         // lila: dones al ple
-  renda: "#2E8B57",         // verd: renda
-  participacio: "#1C8C8C",  // verd-blau: participació
+  renda: "#B04A7A",         // gerd: renda (no verd, que diria «bé»)
+  participacio: "#2B8C8C",  // verd-blau: participació
   estrangera: "#C28A1E",    // ocre: població de nacionalitat estrangera
-  transparencia: "#1F9E9E", // turquesa: transparència
+  transparencia: "#2A7F86", // blau petroli: transparència
   alternances: "#5B6B8A",   // gris blau: alternança des del 1979
   deute: "#E2735A",         // coral: els diners, com fins ara
   "sou-alcaldia": "#C9932A",// daurat: el sou de l'alcaldia
@@ -460,6 +566,9 @@ function capesPartits(vots: VotsPartit): Capa[] {
       const rampa = rampaDe(colorDe(b.id));
       return {
         id: `vots-${b.id}`,
+        grup: "On es vota més cada partit",
+        unitat: "% dels vots a candidatures",
+        font: "Generalitat de Catalunya",
         titol: `On es vota més ${sigles}`,
         boto: sigles,
         clau: `Vot a ${sigles}`,
@@ -512,38 +621,129 @@ const mediana = (valors: readonly number[]): number | null => {
 };
 
 /**
+ * Les etiquetes d'una capa de xifres, una per graó, escrites com a intervals.
+ *
+ * Abans cada tall deia «81 € o més» i el graó del mig i el de dalt deien el
+ * mateix tipus de frase: «81 € o més», «377 € o més». Per saber on cau un
+ * color calia restar. Ara cada graó diu d'on a on va —«de 81 € a 377 €»— i
+ * només els dos extrems queden oberts, que són els que han de dir «menys de»
+ * i «o més». És la mateixa regla que `etiquetesPct()` aplica a les capes de
+ * partit, amb el format de cada capa (euros, metres cúbics, tants per cent).
+ */
+function etiquetesInterval(talls: readonly number[], format: (v: number) => string): string[] {
+  if (talls.length === 0) return [];
+  const mig = talls.slice(0, -1).map((t, k) => `de ${format(t)} a ${format(talls[k + 1]!)}`);
+  return [`menys de ${format(talls[0]!)}`, ...mig, `${format(talls[talls.length - 1]!)} o més`];
+}
+
+/**
+ * Els colors de la rampa que fa servir una capa amb menys graons que colors.
+ *
+ * Una rampa té cinc colors, però una capa per quantils no sempre té cinc
+ * graons: el deute per habitant té quatre-cents municipis a zero i els talls
+ * repetits es fonen, de manera que queden tres graons. Abans aquests tres
+ * agafaven els tres primers colors, i el graó de dalt —«377 € o més»— es
+ * pintava amb el coral mitjà, no amb el fosc: el mapa del deute semblava pàl·lid
+ * i el valor alt no cridava. Ara els graons es reparteixen per tota la rampa
+ * (el primer, el del mig i l'últim, si n'hi ha tres), i el de dalt sempre és el
+ * color més fort. Una capa de categories té tants colors com graons i no es
+ * toca.
+ */
+export function colorsDelsGraons(colors: readonly string[], graons: number): string[] {
+  if (graons >= colors.length || graons < 1) return [...colors];
+  if (graons === 1) return [colors[Math.floor((colors.length - 1) / 2)]!];
+  return Array.from({ length: graons }, (_, k) => colors[Math.round((k * (colors.length - 1)) / (graons - 1))]!);
+}
+
+/**
+ * De quan és la dada, dit una sola vegada per a tota la capa, per a la clau.
+ *
+ * Si la capa té un any per a tothom, és aquell. Si cada municipi porta el seu,
+ * la clau diu de quin a quin («2021-2023») o l'únic que hi ha. Si la capa no
+ * en té cap, diu el `quan` («últim exercici liquidat»), que és la veritat, en
+ * lloc d'inventar-ne un. Sense cap de les tres coses, no en diu res.
+ */
+function anyDeLaClau(capa: Capa, anys: readonly string[] | null): string | null {
+  if (typeof capa.any === "string") return capa.any;
+  if (anys && anys.length > 0) {
+    const nums = anys.map(Number).filter((n) => Number.isFinite(n));
+    if (nums.length === 0) return anys[0]!;
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    return min === max ? String(min) : `${min}-${max}`;
+  }
+  return capa.quan ?? null;
+}
+
+/**
+ * Fins on pot créixer la clau dins del mar sense trepitjar cap municipi.
+ *
+ * Calculat recorrent els vèrtexs dels 947 camins i del contorn: per a cada
+ * amplada de caixa ancorada al racó de baix a la dreta (1592, 1592), l'alçada
+ * màxima que queda lliure amb deu unitats de marge. La costa va en diagonal, i
+ * per això una caixa estreta pot ser alta i una d'ampla ha de ser baixa. Un
+ * test torna a fer el càlcul amb la geometria del repositori, de manera que si
+ * algun dia canvia el traçat, el test ho diu abans que la clau tapi la costa.
+ */
+const FORAT_DEL_MAR: ReadonlyArray<readonly [ample: number, alt: number]> = [
+  [470, 648], [514, 625], [560, 570], [600, 519], [650, 493], [944, 419],
+];
+
+/**
  * La llegenda dibuixada dins de l'SVG, al racó de mar.
  *
  * El lloc no és arbitrari. Amb el «viewBox» de 1600 × 1600 que porta la
- * geometria, Catalunya deixa dos buits grossos: el de dalt a l'esquerra, que és
- * l'Aragó, i el de baix a la dreta, que és el Mediterrani. La llegenda va al
- * segon perquè és el que no toca cap municipi en tot el traçat —comprovat
- * recorrent els 947 camins i marcant una graella de 32 × 32 caselles— i perquè
- * és on la posa qualsevol mapa de tota la vida.
+ * geometria, el buit gran que deixa Catalunya és el de baix a la dreta, que és
+ * el Mediterrani: és el que no toca cap municipi en tot el traçat i és on la
+ * posa qualsevol mapa de tota la vida (vegeu `FORAT_DEL_MAR`).
+ *
+ * Porta, sota el títol, **la unitat, l'any i la font**. És la clau que viatja
+ * amb una captura —la llista d'HTML no hi va— i una captura amb una taca de
+ * colors i quatre xifres, sense dir de què ni de quan ni d'on, és una dada que
+ * ningú pot comprovar. Amb una columna són dues línies («€ per habitant · últim
+ * exercici liquidat» i «Font: Consorci AOC»); amb tres, una sola, perquè la
+ * caixa ampla ja va justa d'alçada.
  *
  * Les mides van en unitats del «viewBox» i no en píxels: el dibuix s'escala
  * sencer, i per això a partir de nou entrades es passa a tres columnes en
- * comptes d'allargar-se cap amunt, on ja hi hauria terra a sota. Amb les dotze
- * famílies i el gris de «sense dada» són tretze, i la caixa acaba fent 944 ×
- * 360 unitats, que és el que cap sense tocar cap municipi.
+ * comptes d'allargar-se cap amunt. La lletra més petita és de 26 unitats, que
+ * és el que fa 13 px quan el mapa en fa 800 d'ample: per sota d'aquesta mida la
+ * clau de dins no s'ensenya (vegeu el full d'estil) i mana la d'HTML, que
+ * s'escala amb la lletra del lector.
  */
-function clauSvg(i: number, titol: string, entrades: readonly { classe: string; text: string }[]): string {
+function clauSvg(
+  i: number,
+  titol: string,
+  meta: readonly string[],
+  entrades: readonly { classe: string; text: string }[],
+): string {
   const columnes = entrades.length > 8 ? 3 : 1;
   const ampleCol = columnes === 1 ? 470 : 300;
   const files = Math.ceil(entrades.length / columnes);
   const alcadaFila = 56;
-  const ample = 44 + ampleCol * columnes;
-  const alt = 18 + 46 + files * alcadaFila + 16;
+  const lletraMeta = 26;
+  const alcadaMeta = 36;
+  const linies = columnes === 1 ? meta.filter((m) => m !== "") : [meta.filter((m) => m !== "").join(" · ")];
+  const alt = 18 + 46 + linies.length * alcadaMeta + files * alcadaFila + 16;
+  // L'amplada que demana el text de la font, estimada a 0,56 em per lletra (la
+  // Nunito Sans en negreta), i la que permet el forat del mar per a aquesta alçada.
+  const perText = 44 + Math.max(0, ...linies.map((l) => Math.ceil(l.length * 0.56 * lletraMeta)));
+  const permesa = Math.max(...FORAT_DEL_MAR.filter(([, a]) => a >= alt).map(([w]) => w), 44 + ampleCol * columnes);
+  const ample = Math.min(permesa, Math.max(44 + ampleCol * columnes, perText));
   const x0 = 1592 - ample;
   const y0 = 1592 - alt;
   const lletra = columnes === 1 ? 28 : 26;
+  const iniciFiles = y0 + 18 + 46 + linies.length * alcadaMeta;
 
+  const textMeta = linies
+    .map((l, k) => `<text class="meta" x="${x0 + 22}" y="${y0 + 46 + (k + 1) * alcadaMeta}" font-size="${lletraMeta}">${escape(l)}</text>`)
+    .join("");
   const fileres = entrades
     .map((e, k) => {
       const columna = Math.floor(k / files);
       const fila = k % files;
       const x = x0 + 22 + columna * ampleCol;
-      const y = y0 + 18 + 46 + fila * alcadaFila;
+      const y = iniciFiles + fila * alcadaFila;
       return (
         `<rect class="quadre ${e.classe}" x="${x}" y="${y}" width="36" height="36" rx="7"/>` +
         `<text x="${x + 50}" y="${y + 27}" font-size="${lletra}">${escape(e.text)}</text>`
@@ -554,7 +754,7 @@ function clauSvg(i: number, titol: string, entrades: readonly { classe: string; 
   return `<g class="clau-mapa" data-clau="${i}" aria-hidden="true">
     <rect class="fons" x="${x0}" y="${y0}" width="${ample}" height="${alt}" rx="16"/>
     <text class="cap" x="${x0 + 22}" y="${y0 + 46}">${escape(titol)}</text>
-    ${fileres}
+    ${textMeta}${fileres}
   </g>`;
 }
 
@@ -565,7 +765,7 @@ function clauSvg(i: number, titol: string, entrades: readonly { classe: string; 
  * treure les capes sense dada i d'afegir-hi una per partit—, no el de la
  * taula escrita a mà.
  */
-const css = (capes: readonly Capa[]): string => `
+const css = (capes: readonly (Capa & { etiquetes: readonly string[] })[]): string => `
 .mapa-marc{margin:var(--e4) 0 0;position:relative}
 /* El rètol de cada municipi és l'etiqueta comuna de tots els gràfics
    —«.etiqueta-grafic», que ve amb GRAFICS_CSS dins de RADIOGRAFIA_CSS— i no
@@ -574,7 +774,11 @@ const css = (capes: readonly Capa[]): string => `
    pintat a la capa d'ara. */
 .mapa947{width:100%;height:auto;display:block;max-width:900px;margin:0 auto}
 .mapa947 path{stroke:var(--ink);stroke-width:.7;stroke-linejoin:round;transition:fill .3s ease}
-.mapa947 a:hover path,.mapa947 a:focus path{stroke-width:3.5}
+/* «focus-visible» i no «focus»: en tocar un municipi amb el dit el navegador hi
+   posa el focus, i la vora gruixuda se sumava al ressalt de la fitxa. El
+   tabulador sí que el marca, i a més hi dibuixa el ressalt (vegeu més avall). */
+.mapa947 a:hover path,.mapa947 a:focus-visible path{stroke-width:3.5}
+.mapa947 a:focus-visible{outline:none}
 .mapa947 .contorn{fill:none;stroke:var(--ink);stroke-width:3.5}
 /* La rampa va d'una sola tinta i amb la lluminància sempre baixant, perquè els
    graons se sàpiguen distingir també sense veure el color: amb la rampa de
@@ -583,18 +787,18 @@ const css = (capes: readonly Capa[]): string => `
    camins són SVG i volen «fill». */
 ${capes.map((c, i) =>
   c.colors
-    ? c.colors
+    ? colorsDelsGraons(c.colors, c.etiquetes.length)
         .map(
           (col, k) =>
-            `.mapa947[data-capa="${i}"] .g${k}{fill:${col}}.llegenda[data-capa="${i}"] .g${k}{background:${col}}`,
+            `.mapa947[data-capa="${i}"] .g${k}{fill:${col}}.mapa-llegenda[data-capa="${i}"] .g${k}{background:${col}}`,
         )
         .join("")
     : "",
 ).join("")}
 .mapa947 .g0{fill:#FBEFE6}.mapa947 .g1{fill:#F0BFA9}.mapa947 .g2{fill:#E2735A}
 .mapa947 .g3{fill:#BE5138}.mapa947 .g4{fill:#8E2F1D}
-.llegenda .g0{background:#FBEFE6}.llegenda .g1{background:#F0BFA9}.llegenda .g2{background:#E2735A}
-.llegenda .g3{background:#BE5138}.llegenda .g4{background:#8E2F1D}
+.mapa-llegenda .g0{background:#FBEFE6}.mapa-llegenda .g1{background:#F0BFA9}.mapa-llegenda .g2{background:#E2735A}
+.mapa-llegenda .g3{background:#BE5138}.mapa-llegenda .g4{background:#8E2F1D}
 /* «Sense dada» no és un graó de l'escala, i per això no es pinta amb cap color.
    El gris de sorra d'abans (#DED8CB) tenia una lluminància de 0,69 sobre una
    rampa que va de 0,88 a 0,08: queia entre el primer graó i el segon, amb un
@@ -608,9 +812,9 @@ ${capes.map((c, i) =>
    justament el que la feia semblar «poc». Les ratlles s'apliquen amb un patró
    d'SVG als camins i amb un degradat repetit als quadrets d'HTML, que són dues
    maneres de dibuixar la mateixa cosa. */
-.mapa947,.llegenda,.clau-mapa{--nd-fons:#DDD9E6;--nd-ratlla:#7B7592}
+.mapa947,.mapa-llegenda,.clau-mapa{--nd-fons:#DDD9E6;--nd-ratlla:#7B7592}
 .mapa947 .gnd{fill:url(#sense-dada)}
-.llegenda .gnd{background:repeating-linear-gradient(45deg,
+.mapa-llegenda .gnd{background:repeating-linear-gradient(45deg,
   var(--nd-ratlla) 0 3px,var(--nd-fons) 3px 6px)}
 /* En fosc la rampa s'ha de girar sencera i no només enfosquir-la: sobre el
    paper fosc, el graó més clar és el que crida més, i amb la rampa de clar la
@@ -622,47 +826,50 @@ ${capes.map((c, i) =>
 @media (prefers-color-scheme:dark){
   .mapa947 .g0{fill:#3B2119}.mapa947 .g1{fill:#6A3524}.mapa947 .g2{fill:#9C4A31}
   .mapa947 .g3{fill:#D06A47}.mapa947 .g4{fill:#F5A583}
-  .llegenda .g0{background:#3B2119}.llegenda .g1{background:#6A3524}.llegenda .g2{background:#9C4A31}
-  .llegenda .g3{background:#D06A47}.llegenda .g4{background:#F5A583}
+  .mapa-llegenda .g0{background:#3B2119}.mapa-llegenda .g1{background:#6A3524}.mapa-llegenda .g2{background:#9C4A31}
+  .mapa-llegenda .g3{background:#D06A47}.mapa-llegenda .g4{background:#F5A583}
   /* En fosc les ratlles s'aclareixen i el fons s'enfosqueix, que és el mateix
      canvi que fa la rampa: el patró de l'SVG llegeix aquestes dues variables i
      no cal tornar-lo a declarar. */
-  .mapa947,.llegenda,.clau-mapa{--nd-fons:#2E2A3A;--nd-ratlla:#8A83A3}
+  .mapa947,.mapa-llegenda,.clau-mapa{--nd-fons:#2E2A3A;--nd-ratlla:#8A83A3}
 }
 /* Les rampes de cada partit, girades en fosc pel mateix motiu que la coral.
    Van després del bloc fosc de la coral i amb més especificitat que ella, que
    és el que fa que guanyin en els dos modes sense cap «important». */
 @media (prefers-color-scheme:dark){${capes.map((c, i) =>
   c.colorsFosc
-    ? c.colorsFosc
+    ? colorsDelsGraons(c.colorsFosc, c.etiquetes.length)
         .map(
           (col, k) =>
-            `.mapa947[data-capa="${i}"] .g${k}{fill:${col}}.llegenda[data-capa="${i}"] .g${k}{background:${col}}`,
+            `.mapa947[data-capa="${i}"] .g${k}{fill:${col}}.mapa-llegenda[data-capa="${i}"] .g${k}{background:${col}}`,
         )
         .join("")
     : "",
 ).join("")}}
-/* La llegenda escrita dins de l'SVG, i per què és l'única que es veu.
+/* La llegenda escrita dins de l'SVG, i quan és la que es veu.
    Hi és perquè el mapa se'n va sol: quan algú en fa una captura o se'n desa el
    dibuix, la llista de colors que hi havia en HTML al costat no hi va, i el
-   que queda és una taca de colors sense clau. Les onze van totes escrites i se
+   que queda és una taca de colors sense clau. Totes van escrites i se
    n'ensenya una amb el mateix «data-capa» que pinta els municipis, així que
    funciona abans que arrenqui cap JavaScript.
-   Durant un temps es veien les dues alhora —la de dins del dibuix i la llista
-   d'HTML de sobre—, i dues llegendes de la mateixa cosa a un pam l'una de
-   l'altra no diuen més: fan dubtar de si volen dir el mateix. A partir de
-   761 px mana la de dins, que viatja amb les captures; la llista d'HTML es
-   queda al document per a qui llegeix amb veu —amb el mateix retall que
+   Dues llegendes de la mateixa cosa a un pam l'una de l'altra fan dubtar de si
+   volen dir el mateix, i per això se n'ensenya una sola: la de dins quan el
+   mapa és prou gran perquè es llegeixi, i la d'HTML quan no. El tall ja no és
+   una amplada de finestra sinó **l'amplada del mapa** («@container»): la
+   lletra més petita de la clau de dins és de 26 unitats d'un llenç de 1.600, i
+   fa 13 px just quan el mapa en fa 800. Amb el tall de finestra d'abans (761
+   px) la clau de tres columnes sortia a 11,6 px. La llista d'HTML es queda al
+   document per a qui llegeix amb veu —amb el mateix retall que
    «.nomes-lectors», i és per això que la de l'SVG va amb «aria-hidden»: la
-   llegenda s'ha de sentir una sola vegada— i torna a veure's per sota de
-   760 px, on el text de dins de l'SVG s'escala amb el dibuix i ja no es
-   llegeix, mentre que la llista s'escala amb la lletra del lector. El tall
-   era a 620 i puja a 760 perquè ara la de dins és l'única: amb el llenç de
-   1.600 unitats i la lletra de 26 de la clau de tres columnes de «qui mana»,
-   a 760 px de finestra la lletra fa 11,8 px, a 700 en fa 10,9 i a 620, 9,6;
-   per sota d'onze ja no és una llegenda que es pugui llegir sola. */
+   llegenda s'ha de sentir una sola vegada—. Un navegador que no entengui
+   «@container» ensenya la d'HTML, que és la que es llegeix a qualsevol mida. */
+.mapa-marc{container:mapa / inline-size}
 .clau-mapa{display:none}
+@container mapa (min-width:800px){
 ${capes.map((_, i) => `.mapa947[data-capa="${i}"] .clau-mapa[data-clau="${i}"]{display:block}`).join("")}
+.mapa-clau{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);
+  white-space:nowrap;margin:-1px;padding:0;border:0}
+}
 .clau-mapa .fons{fill:var(--paper-2);stroke:var(--ink);stroke-width:3}
 /* «quadre» i no «mostra»: el full compartit dona a «.mostra» 14 px d'amplada i
    d'alçada, i el navegador aplica l'amplada de CSS també a un rectangle d'SVG.
@@ -670,12 +877,12 @@ ${capes.map((_, i) => `.mapa947[data-capa="${i}"] .clau-mapa[data-clau="${i}"]{d
 .clau-mapa rect.quadre{stroke:var(--ink);stroke-width:2.5}
 .clau-mapa text{fill:var(--ink);font-family:var(--text);font-weight:800}
 .clau-mapa .cap{font-family:var(--display);font-weight:900;font-size:32px}
-/* Amb la mateixa especificitat que la regla que l'ensenya i escrita després,
-   que és el que la fa guanyar sense haver de posar-hi cap «important». */
-@media (max-width:760px){.mapa947[data-capa] .clau-mapa[data-clau]{display:none}}
-@media (min-width:761px){.llegenda{position:absolute;width:1px;height:1px;overflow:hidden;
-  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px;padding:0;border:0}}
-.tries{display:flex;gap:8px;flex-wrap:wrap;margin:var(--e3) 0 0;padding:0;list-style:none}
+.clau-mapa .meta{fill:var(--ink-suau);font-weight:700}
+/* Els botons de les capes, a partir de 721 px. Fan de barra d'eines: el
+   tabulador entra a cada filera una sola vegada i les fletxes es mouen per
+   dins (vegeu el script), perquè vint-i-vuit parades de tabulador abans del
+   mapa eren una paret per a qui no fa servir ratolí. */
+.tries{display:flex;gap:8px;flex-wrap:wrap;margin:var(--e3) 0 0;padding:0}
 .tries button{font:inherit;font-weight:800;font-size:.85rem;cursor:pointer;background:var(--paper-2);
   color:inherit;border:2.5px solid var(--ink);border-radius:var(--r-max);padding:9px 16px;min-height:44px;
   box-shadow:var(--ombra)}
@@ -685,10 +892,91 @@ ${capes.map((_, i) => `.mapa947[data-capa="${i}"] .clau-mapa[data-clau="${i}"]{d
    on no es podria triar res. */
 .tries-cap{margin:var(--e3) 0 0}
 .tries-partits{margin-top:var(--e1)}
-.llegenda{display:flex;gap:var(--e2);flex-wrap:wrap;align-items:center;margin:var(--e3) 0 0;
-  font-size:.84rem;font-weight:700;list-style:none;padding:0}
-.llegenda li{display:flex;align-items:center;gap:6px}
-.llegenda i{width:22px;height:22px;border:2px solid var(--ink);border-radius:5px;display:inline-block}
+/* El desplegable de les capes, per sota de 721 px. Els vint-i-vuit botons
+   ocupaven dues pantalles de mòbil abans del mapa: el lector havia de lliscar
+   per veure què pintaven. Un «select» natiu ocupa una línia, el sistema
+   l'obre a pantalla sencera amb els grups («optgroup») i és accessible sense fer
+   res. La fletxa es dibuixa amb vores i «currentColor» perquè giri sola en
+   fosc, i la lletra fa 16 px perquè l'iPhone no faci zoom en tocar-lo. */
+.mapa-tria{display:none;margin:0 0 var(--e2)}
+.mapa-tria label{display:block;font-weight:800;font-size:.95rem;margin:0 0 6px}
+.mapa-tria-caixa{position:relative;color:var(--ink)}
+.mapa-tria select{appearance:none;-webkit-appearance:none;width:100%;min-height:48px;margin:0;
+  font:inherit;font-size:1rem;font-weight:800;color:var(--ink);background:var(--paper-2);
+  border:2.5px solid var(--ink);border-radius:var(--r-s);padding:10px 46px 10px 14px;cursor:pointer}
+.mapa-tria-caixa::after{content:"";position:absolute;right:19px;top:50%;width:9px;height:9px;
+  border-right:3px solid currentColor;border-bottom:3px solid currentColor;
+  transform:translateY(-70%) rotate(45deg);pointer-events:none}
+/* La clau d'HTML: un rètol amb la unitat, l'any i la font, i a sota els graons.
+   La lletra no baixa de 14 px: és la que es llegeix al mòbil, sola. Es diu
+   «mapa-llegenda» i no «llegenda» perquè el full compartit ja té una
+   «.llegenda li» d'un altre gràfic —graella de dues columnes, filet a sota de
+   cada fila— que s'escolava aquí i posava una ratlla sota cada color. */
+.mapa-clau{margin:var(--e3) 0 0}
+.mapa-clau-cap{margin:0 0 var(--e1);font-size:.9rem;line-height:1.45;color:var(--ink-suau)}
+.mapa-clau-cap b{color:var(--ink);font-weight:900;margin-right:.4em}
+.mapa-llegenda{display:flex;gap:10px var(--e2);flex-wrap:wrap;align-items:center;margin:0;
+  font-size:.9rem;font-weight:700;list-style:none;padding:0}
+.mapa-llegenda li{display:flex;align-items:center;gap:7px}
+.mapa-llegenda i{width:22px;height:22px;border:2px solid var(--ink);border-radius:5px;display:inline-block;flex:0 0 auto}
+/* El llenç: el mapa i, a sobre, la fitxa que surt en tocar un municipi.
+   «width:100%» és obligatori: al mòbil el marc és una columna flexible, i un
+   fill amb marges automàtics s'encongeix fins a la mida del contingut; l'SVG,
+   que fa el 100 % d'un pare sense amplada, queia als 300 px per defecte. */
+.mapa-llenc{position:relative;width:100%;max-width:900px;margin:0 auto}
+/* El ressalt del municipi triat o amb el focus: un camí a part, dibuixat a
+   sobre de tots, perquè la vora gruixuda d'un camí de dins queda mig tapada
+   pels veïns que es dibuixen després. Doble traç —paper a sota, tinta a
+   sobre— perquè es vegi igual sobre un graó clar que sobre un de fosc. */
+.mapa947 .mapa-ressalt{display:none;pointer-events:none}
+.mapa947 .mapa-ressalt.actiu{display:inline}
+.mapa947 .mapa-ressalt path{fill:none;stroke-linejoin:round;transition:none}
+.mapa947 .mapa-ressalt-fons{stroke:var(--paper);stroke-width:11}
+.mapa947 .mapa-ressalt-linia{stroke:var(--ink);stroke-width:5}
+/* La fitxa del municipi tocat. Va al racó del mapa que menys tapa el
+   municipi (el script tria entre els quatre), i és tan compacta com es pot
+   sense baixar de 13 px de lletra ni de 44 px de zona de toc. */
+.mapa-fitxa{position:absolute;left:8px;bottom:8px;z-index:2;width:min(290px,calc(100% - 16px));
+  background:var(--paper-2);color:var(--ink);border:2.5px solid var(--ink);border-radius:var(--r-m);
+  padding:10px 44px 2px 12px;box-shadow:var(--ombra)}
+.mapa-fitxa[hidden]{display:none}
+.mapa-fitxa p{margin:0}
+.mapa-fitxa-nom{font-family:var(--display);font-weight:900;font-size:1.05rem;line-height:1.2}
+.mapa-fitxa-dada{font-weight:800;font-size:.95rem;margin-top:2px;line-height:1.3}
+.mapa-fitxa-seus,.mapa-fitxa-extres{font-size:.8125rem;line-height:1.35;color:var(--ink-suau);margin-top:2px}
+.mapa-fitxa-enllac{display:inline-flex;align-items:center;min-height:44px;font-weight:800;font-size:.95rem;color:var(--ink);
+  text-decoration:underline;text-decoration-color:var(--coral);text-decoration-thickness:2px;text-underline-offset:3px}
+.mapa-fitxa-tanca{position:absolute;top:0;right:0;width:44px;height:44px;padding:0;border:0;background:none;
+  color:inherit;font:inherit;font-size:1.5rem;line-height:1;cursor:pointer;border-radius:var(--r-s)}
+/* El salt per sobre dels 947 enllaços del mapa: només es veu amb el focus. */
+.mapa-salta{position:absolute;left:-9999px;top:auto}
+.mapa-salta:focus{position:static;display:inline-block;margin:0 0 var(--e1);font-weight:800}
+/* Al mòbil, el mapa a la primera pantalla. L'ordre de lectura és el de
+   l'escriptori i l'ordre de pantalla es capgira: el desplegable i el títol de
+   la capa, el mapa, la clau a tocar del mapa i, després, el peu i la
+   cobertura, que es llegeixen amb el mapa ja vist. La portada es fa una mica
+   més curta, que cada línia que s'hi estalvia és un tros de mapa que puja. */
+@media (max-width:720px){
+  .tries,.tries-cap{display:none}
+  .mapa-tria{display:block;order:0}
+  .mapa-marc{display:flex;flex-direction:column;margin-top:var(--e2)}
+  .mapa-marc > h2{order:1;font-size:1.3rem;line-height:1.2;margin:0 0 var(--e2)}
+  .mapa-salta,.mapa-llenc{order:2}
+  .mapa-clau{order:3;margin-top:var(--e2)}
+  #peu-capa{order:4;margin-top:var(--e3)}
+  #cobertura-capa{order:5}
+  #enllac-capa{order:6}
+  .mapa-portada{padding-bottom:var(--e2)}
+  .mapa-portada .entrada{font-size:1rem}
+}
+/* Per sota de 420 px la papereta del full compartit (84 px) i el bloc del
+   títol (que demana 14rem) no hi caben de costat, i la papereta saltava a una
+   línia sola: 120 px de pantalla abans del mapa. Aquí es queden de costat, amb
+   la papereta més petita i el títol en dues línies. */
+@media (max-width:420px){
+  .mapa-portada .presenta{flex-wrap:nowrap;gap:var(--e2)}
+  .mapa-portada .presenta .papereta{width:64px;height:75px}
+}
 @media (prefers-reduced-motion:reduce){.mapa947 path{transition:none}}
 `;
 
@@ -753,9 +1041,7 @@ export function renderMapaCatalunya(
         ? [valors.length === 0 ? "sense dada" : capa.format(valors[0]!)]
         : capa.etiquetesDe
           ? capa.etiquetesDe(talls)
-          : [`menys de ${capa.format(talls[0]!)}`].concat(
-              talls.map((t) => `${capa.format(t)} o més`),
-            ));
+          : etiquetesInterval(talls, capa.format));
     const ambDada = graons.split("").filter((c) => c !== "x").length;
     // La mediana només val per a una xifra que es pugui ordenar. A «qui mana»
     // el valor és el número de la família a la taula i fer-ne la mediana
@@ -865,6 +1151,17 @@ export function renderMapaCatalunya(
       medianes,
       anys: capa.any === undefined ? null : anys,
       anyDe,
+      /*
+       * El rètol de la clau, sota el títol: què mesura, de quan és i d'on surt.
+       * Es fa aquí una sola vegada i el fan servir les dues claus —la de dins
+       * del dibuix i la d'HTML— i el script, que el reescriu en canviar de capa.
+       */
+      meta: {
+        mesura: [capa.unitat ?? "", anyDeLaClau(capa, capa.any === undefined ? null : anys) ?? ""]
+          .filter((t) => t !== "")
+          .join(" · "),
+        font: `Font: ${capa.font}`,
+      },
     };
   });
 
@@ -924,12 +1221,30 @@ export function renderMapaCatalunya(
    * navega per veu no podria dir «Participació» per prémer-lo.
    */
   const boto = (c: (typeof capes)[number], i: number): string =>
-    `<li><button type="button" data-capa="${i}" aria-pressed="${i === 0 ? "true" : "false"}">${escape(c.boto)}<span class="nomes-lectors">: ${escape(c.titol)}</span></button></li>`;
+    `<button type="button" data-capa="${i}" aria-pressed="${i === 0 ? "true" : "false"}">${escape(c.boto)}<span class="nomes-lectors">: ${escape(c.titol)}</span></button>`;
   // Les capes de partit van en una segona filera i es reconeixen per l'id;
   // l'índex del botó és el de la llista sencera, que és el que llegeix «pinta».
   const esPartit = (c: Capa): boolean => c.id.startsWith("vots-");
   const tries = capes.map((c, i) => (esPartit(c) ? "" : boto(c, i))).join("");
   const triesPartits = capes.map((c, i) => (esPartit(c) ? boto(c, i) : "")).join("");
+
+  /*
+   * El desplegable del mòbil: les mateixes capes, agrupades per la pregunta
+   * que responen. Cada opció porta com a valor l'índex de la capa a la llista
+   * sencera —el mateix que els botons—, i els grups surten en l'ordre en què
+   * apareix la primera capa de cadascun, de manera que «Qui mana» continua
+   * sent la primera opció. El text de l'opció és el nom curt del botó; el
+   * títol llarg ja el diu l'encapçalament que hi ha just a sota.
+   */
+  const familiesDeCapes = [...new Set(capes.map((c) => c.grup))];
+  const opcions = familiesDeCapes
+    .map((grup) => {
+      const seves = capes
+        .map((c, i) => (c.grup === grup ? `<option value="${i}"${i === 0 ? " selected" : ""}>${escape(c.boto)}</option>` : ""))
+        .join("");
+      return `<optgroup label="${escape(grup)}">${seves}</optgroup>`;
+    })
+    .join("");
 
   /*
    * La descripció de la pàgina es fa de les capes que realment es publiquen.
@@ -962,6 +1277,7 @@ export function renderMapaCatalunya(
       clauSvg(
         i,
         c.clau ?? c.boto,
+        [c.meta.mesura, c.meta.font],
         c.etiquetes
           .map((et, k) => ({ classe: `g${k}`, text: et }))
           .concat(c.ambDada < slugs.length ? [{ classe: "gnd", text: c.senseDada }] : []),
@@ -984,29 +1300,40 @@ ${capcalera("../", "mapa")}
 ${cercador("../")}
 
 <main id="contingut">
-  <section class="portada">
+  <section class="portada mapa-portada">
     <div class="presenta">${papereta(110, "felic")}<div>
       <p class="micro">Tot Catalunya</p>
       <h1>El mapa dels 947</h1>
     </div></div>
-    <p class="entrada">Cada municipi és clicable i porta a la seva fitxa. Tria què vols veure-hi
-    pintat: hi ha coses que en una llista de 947 files no es veuen mai.</p>
+    <p class="entrada">Tria què vols veure-hi pintat: hi ha coses que en una llista de 947 files no
+    es veuen mai. Cada municipi porta a la seva fitxa.</p>
   </section>
 
-  <ul class="tries" id="tries">${tries}</ul>
+  <div class="tries" id="tries" role="toolbar" aria-label="Què vols veure al mapa">${tries}</div>
   ${
     triesPartits
       ? `<p class="micro tries-cap" id="tries-partits-cap">On es vota més cada partit</p>
-  <ul class="tries tries-partits" id="tries-partits" aria-labelledby="tries-partits-cap">${triesPartits}</ul>`
+  <div class="tries tries-partits" id="tries-partits" role="toolbar" aria-labelledby="tries-partits-cap">${triesPartits}</div>`
       : ""
   }
 
   <div class="mapa-marc">
+    <div class="mapa-tria">
+      <label for="tria-capa">Què vols veure al mapa</label>
+      <div class="mapa-tria-caixa"><select id="tria-capa">${opcions}</select></div>
+    </div>
     <h2 id="titol-capa">${escape(primera.titol)}</h2>
     <p class="entrada-bloc" id="peu-capa">${primera.peu}</p>
-    <ul class="llegenda" id="llegenda" data-capa="0">${primera.etiquetes
-      .map((et, k) => `<li><i class="g${k}"></i>${escape(et)}</li>`)
-      .join("")}${primera.ambDada < slugs.length ? `<li><i class="gnd"></i>${escape(primera.senseDada)}</li>` : ""}</ul>
+    <div class="mapa-clau">
+      <p class="mapa-clau-cap" id="clau-cap"><b>${escape(primera.clau ?? primera.boto)}</b> ${escape(
+        [primera.meta.mesura, primera.meta.font].filter((t) => t !== "").join(" · "),
+      )}</p>
+      <ul class="mapa-llegenda" id="llegenda" data-capa="0">${primera.etiquetes
+        .map((et, k) => `<li><i class="g${k}"></i>${escape(et)}</li>`)
+        .join("")}${primera.ambDada < slugs.length ? `<li><i class="gnd"></i>${escape(primera.senseDada)}</li>` : ""}</ul>
+    </div>
+    <a class="mapa-salta" href="#cobertura-capa">Salta els ${slugs.length} municipis del mapa</a>
+    <div class="mapa-llenc">
     <svg class="mapa947" data-capa="0" viewBox="${escape(geometria.viewBox)}" role="img" aria-labelledby="titol-capa">
       ${
         /* Les ratlles de «sense dada». El pas és de 5 unitats del llenç de 1.600:
@@ -1022,9 +1349,31 @@ ${cercador("../")}
       </pattern></defs>
       ${camins}
       ${geometria.contorn ? `<path class="contorn" d="${geometria.contorn}"/>` : ""}
+      <g class="mapa-ressalt" aria-hidden="true"><path class="mapa-ressalt-fons" d="M0 0"/><path class="mapa-ressalt-linia" d="M0 0"/></g>
       ${claus}
     </svg>
-    <p class="nota" id="cobertura-capa">${escape(primera.textCobertura)}</p>
+    ${
+      /* La fitxa del municipi tocat amb el dit. Al mòbil, tocar un municipi
+         portava directament a la seva fitxa i l'etiqueta flotant no s'arribava
+         a veure: no hi havia manera de mirar la xifra d'un poble sense sortir
+         del mapa. Ara el primer toc obre aquesta fitxa —nom, xifra de la capa,
+         d'on és— amb l'enllaç, i el segon toc al mateix municipi hi porta. El
+         ratolí i el teclat continuen com sempre: l'etiqueta en passar-hi i
+         l'enllaç en fer-hi clic. «aria-live» perquè, si qui toca fa servir un
+         lector de pantalla, la fitxa es llegeixi en obrir-se. */ ""
+    }
+    <div class="mapa-fitxa" id="mapa-fitxa" hidden>
+      <div aria-live="polite">
+        <p class="mapa-fitxa-nom"></p>
+        <p class="mapa-fitxa-dada"></p>
+        <p class="mapa-fitxa-seus"></p>
+        <p class="mapa-fitxa-extres"></p>
+      </div>
+      <a class="mapa-fitxa-enllac" href="../m/">La fitxa del municipi</a>
+      <button type="button" class="mapa-fitxa-tanca" aria-label="Tanca la fitxa">×</button>
+    </div>
+    </div>
+    <p class="nota" id="cobertura-capa" tabindex="-1">${escape(primera.textCobertura)}</p>
     <p class="nota" id="enllac-capa"${primera.enllac ? "" : " hidden"}><a href="${escape(
       primera.enllac?.href ?? "",
     )}">${escape(primera.enllac?.text ?? "")}</a></p>
@@ -1108,6 +1457,9 @@ var CAPES = ${JSON.stringify(
       d: c.medianes,
       a: c.anys,
       y: c.anyDe,
+      /* El rètol de la clau d'HTML: el nom curt i què mesura, de quan i d'on. */
+      b: c.clau ?? c.boto,
+      q: [c.meta.mesura, c.meta.font].filter((t) => t !== "").join(" · "),
     })),
   )};
 /* El tram de mida de cada municipi, per trobar la seva mediana a cada capa. */
@@ -1143,8 +1495,10 @@ function pinta(i) {
   document.getElementById('titol-capa').textContent = c.t;
   document.getElementById('peu-capa').textContent = c.p;
   document.getElementById('llegenda').innerHTML =
-    c.e.map(function (et, k) { return '<li><i class="g' + k + '"></i>' + et + '</li>'; }).join('') +
-    (c.n < camins.length ? '<li><i class="gnd"></i>' + c.x + '</li>' : '');
+    c.e.map(function (et, k) { return '<li><i class="g' + k + '"></i>' + esc(et) + '</li>'; }).join('') +
+    (c.n < camins.length ? '<li><i class="gnd"></i>' + esc(c.x) + '</li>' : '');
+  /* El rètol de la clau: el nom curt, la unitat, l'any i la font. */
+  document.getElementById('clau-cap').innerHTML = '<b>' + esc(c.b) + '</b> ' + esc(c.q);
   document.getElementById('cobertura-capa').textContent = c.c;
   /* L'enllaç a la pàgina del partit, només a les capes que en tenen. */
   if (c.u) { enllac.querySelector('a').href = c.u[0]; enllac.querySelector('a').textContent = c.u[1]; }
@@ -1153,17 +1507,166 @@ function pinta(i) {
      no el lloc que ocupen: el primer botó de la segona filera és la capa dotze. */
   var botons = document.querySelectorAll('.tries button');
   for (var b = 0; b < botons.length; b++) botons[b].setAttribute('aria-pressed', Number(botons[b].getAttribute('data-capa')) === i ? 'true' : 'false');
+  for (var f = 0; f < fileres.length; f++) {
+    var premut = fileres[f].querySelector('button[aria-pressed="true"]');
+    if (premut) tabulable(fileres[f], premut);
+  }
+  /* El desplegable del mòbil diu la mateixa capa que els botons. */
+  if (tria) tria.value = String(i);
+  /* Si hi ha una fitxa oberta, passa a dir la xifra de la capa nova. */
+  if (triat) { omple(triat); situa(triat); }
+}
+/* Els textos de les capes arriben del servidor i no porten cap etiqueta, però
+   van a «innerHTML»: un «&» o un «<» en un nom de partit no ha de trencar res. */
+function esc(t) {
+  return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 /* El rètol de cada municipi ja no és d'aquest script: és l'etiqueta comuna
    de tots els gràfics (GRAFICS_JS, just a sota), que llegeix el «data-nom» i
    el «data-valor» de l'enllaç que «pinta» acaba d'escriure. */
+
+/* Les fileres de botons fan de barra d'eines: una sola parada de tabulador per
+   filera —el botó de la capa pintada, o el primer— i les fletxes, Inici i Fi
+   es mouen per dins; Retorn o l'espai pinten la capa. Es fa aquí i no a l'HTML
+   perquè sense script els botons no pinten res. */
+function tabulable(filera, boto) {
+  var bs = filera.querySelectorAll('button');
+  for (var k = 0; k < bs.length; k++) bs[k].tabIndex = bs[k] === boto ? 0 : -1;
+}
 var fileres = document.querySelectorAll('.tries');
-for (var f = 0; f < fileres.length; f++) {
-  fileres[f].addEventListener('click', function (e) {
+for (var t = 0; t < fileres.length; t++) {
+  tabulable(fileres[t], fileres[t].querySelector('button'));
+  fileres[t].addEventListener('click', function (e) {
     var b = e.target.closest('button');
     if (b) pinta(Number(b.dataset.capa));
   });
+  fileres[t].addEventListener('keydown', function (e) {
+    var bs = Array.prototype.slice.call(this.querySelectorAll('button'));
+    var ara = bs.indexOf(document.activeElement);
+    if (ara === -1) return;
+    var nou = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? (ara + 1) % bs.length
+      : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? (ara - 1 + bs.length) % bs.length
+      : e.key === 'Home' ? 0 : e.key === 'End' ? bs.length - 1 : -1;
+    if (nou === -1) return;
+    e.preventDefault();
+    tabulable(this, bs[nou]);
+    bs[nou].focus();
+  });
 }
+var tria = document.getElementById('tria-capa');
+if (tria) tria.addEventListener('change', function () { pinta(Number(tria.value)); });
+
+/* La fitxa del municipi tocat, i el ressalt.
+   Amb el dit, el primer toc a un municipi obre la fitxa en lloc de seguir
+   l'enllaç; el segon toc al mateix municipi sí que el segueix. Es reconeix el
+   dit pel «pointerdown» i no per la mida de la pantalla: una tauleta gran és
+   tàctil i un portàtil estret no. El ratolí i el teclat no canvien: l'etiqueta
+   comuna en passar-hi o en arribar-hi amb el tabulador, i l'enllaç en fer-hi
+   clic o prémer Retorn. Mentre el dit mana, el focus que el navegador posa a
+   l'enllaç tocat no arriba a l'etiqueta comuna, que sortiria sota el dit i
+   repetiria el que diu la fitxa. */
+var svg = document.querySelector('.mapa947');
+var ressalt = svg.querySelector('.mapa-ressalt');
+var fitxa = document.getElementById('mapa-fitxa');
+var triat = null;
+var tactil = false;
+function ressalta(a) {
+  if (!a) { ressalt.classList.remove('actiu'); return; }
+  var d = a.querySelector('path').getAttribute('d');
+  var ps = ressalt.querySelectorAll('path');
+  for (var k = 0; k < ps.length; k++) ps[k].setAttribute('d', d);
+  ressalt.classList.add('actiu');
+}
+function omple(a) {
+  var nom = a.getAttribute('data-nom');
+  var any = a.getAttribute('data-any');
+  var mediana = a.getAttribute('data-mediana');
+  var dades = {};
+  (a.getAttribute('data-extres') || '').split('‖').forEach(function (linia) {
+    var parts = linia.split('¦');
+    if (parts.length > 1) dades[parts[0]] = parts.slice(1).join('¦');
+  });
+  fitxa.querySelector('.mapa-fitxa-nom').textContent = nom;
+  fitxa.querySelector('.mapa-fitxa-dada').textContent = (any ? any + ' · ' : '') + a.getAttribute('data-valor');
+  var seus = fitxa.querySelector('.mapa-fitxa-seus');
+  seus.textContent = mediana ? 'mediana dels municipis de la seva mida: ' + mediana : '';
+  seus.hidden = !mediana;
+  fitxa.querySelector('.mapa-fitxa-extres').textContent =
+    [dades.comarca, dades.habitants ? dades.habitants + ' habitants' : ''].filter(Boolean).join(' · ');
+  var slug = a.getAttribute('href').split('/m/')[1].split('/')[0];
+  var enllacFitxa = fitxa.querySelector('.mapa-fitxa-enllac');
+  enllacFitxa.href = '../m/' + slug + '/';
+  enllacFitxa.textContent = 'Obre la fitxa de ' + nom;
+}
+function obre(a) {
+  triat = a;
+  omple(a);
+  ressalta(a);
+  fitxa.hidden = false;
+  situa(a);
+}
+/* Al racó del mapa que menys tapa el municipi tocat. Es proven els quatre i
+   es queda el que trepitja menys superfície del municipi; la clau de dins del
+   dibuix, quan es veu, també compta, però deu vegades menys. A igualtat guanya
+   el de baix a la dreta, que és el mar. */
+function situa(a) {
+  var m = svg.getBoundingClientRect();
+  var r = a.querySelector('path').getBoundingClientRect();
+  var clau = svg.querySelector('.clau-mapa[data-clau="' + svg.getAttribute('data-capa') + '"]');
+  var c = clau ? clau.getBoundingClientRect() : null;
+  var w = fitxa.offsetWidth, h = fitxa.offsetHeight, marge = 8;
+  function tros(x, y, o) {
+    if (!o || !o.width) return 0;
+    var dx = Math.min(x + w, o.right - m.left) - Math.max(x, o.left - m.left);
+    var dy = Math.min(y + h, o.bottom - m.top) - Math.max(y, o.top - m.top);
+    return dx > 0 && dy > 0 ? dx * dy : 0;
+  }
+  var racons = [[m.width - w - marge, m.height - h - marge], [marge, marge], [m.width - w - marge, marge], [marge, m.height - h - marge]];
+  var millor = racons[0], menys = Infinity;
+  for (var k = 0; k < racons.length; k++) {
+    var cost = 10 * tros(racons[k][0], racons[k][1], r) + tros(racons[k][0], racons[k][1], c);
+    if (cost < menys) { menys = cost; millor = racons[k]; }
+  }
+  fitxa.style.left = Math.max(marge, millor[0]) + 'px';
+  fitxa.style.top = Math.max(marge, millor[1]) + 'px';
+  fitxa.style.bottom = 'auto';
+}
+function tanca() {
+  triat = null;
+  fitxa.hidden = true;
+  ressalta(null);
+}
+svg.addEventListener('pointerdown', function (e) { tactil = e.pointerType === 'touch'; });
+document.addEventListener('keydown', function (e) {
+  tactil = false;
+  if (e.key === 'Escape' && triat) tanca();
+}, true);
+svg.addEventListener('focusin', function (e) {
+  var a = e.target.closest ? e.target.closest('a') : null;
+  if (!a) return;
+  if (tactil) { e.stopPropagation(); return; }
+  if (!triat) ressalta(a);
+});
+svg.addEventListener('focusout', function () { if (!triat) ressalta(null); });
+svg.addEventListener('click', function (e) {
+  if (!tactil) return;
+  e.stopPropagation();
+  var a = e.target.closest ? e.target.closest('a') : null;
+  if (!a) { tanca(); return; }
+  if (a === triat) return;
+  e.preventDefault();
+  obre(a);
+});
+fitxa.querySelector('.mapa-fitxa-tanca').addEventListener('click', tanca);
+/* Un toc fora del mapa la tanca, tret que sigui per canviar de capa: amb la
+   fitxa oberta es pot passar de capa en capa i veure com canvia la xifra del
+   mateix poble, que és una de les coses que el mapa fa millor que una llista. */
+document.addEventListener('click', function (e) {
+  var t = e.target;
+  if (!triat || fitxa.contains(t) || svg.contains(t)) return;
+  if (t.closest && t.closest('.tries, .mapa-tria')) return;
+  tanca();
+});
 pinta(0);
 </script>
 ${GRAFICS_JS}

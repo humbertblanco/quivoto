@@ -11,9 +11,10 @@ import { atributsEtiqueta, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from ".
 import { MASCOTA_CSS, papereta } from "./mascota";
 import { icona } from "./icones";
 import {
-  renderMapaTerritori, renderPoder, renderUllada,
+  pastillaGent, renderMapaTerritori, renderPoder, renderUllada,
   type ComarcaData, type ComarcaMunicipi, type Pastilla,
 } from "./comarques";
+import { TIRA_POBLE_CSS, tiraDelPoble } from "./tira-poble";
 import { GLOSSARI_CSS, esClauGlossari, renderGlossari } from "./glossari";
 import { TERRITORI_CSS, renderBlocsPoder } from "./territori";
 import { projecta } from "./mapa";
@@ -830,7 +831,7 @@ function renderSituacio(punts: readonly PuntSituacio[], habitants: number): stri
 /** Els tres grups d'indicadors, amb el títol que diu de qui és la decisió. */
 const GRUPS: ReadonlyArray<readonly [AmbQui, string, string]> = [
   ["amb", "Ho decideix l'AMB", "Ho fixa el Consell Metropolità, no el ple que vas votar."],
-  ["ajuntament", "Ho decideix el teu ajuntament", "Aquí sí que la papereta del 23-M hi arriba."],
+  ["ajuntament", "Ho decideix el teu ajuntament", "Aquí sí que hi arriba la papereta de les municipals."],
   ["cap-dels-dos", "No ho decideix cap dels dos", "Hi posen condicions, però el número el fa el mercat."],
 ];
 
@@ -862,13 +863,11 @@ function renderIndicadors(data: AmbData): string {
     return `<li class="indicador">
       <span class="nom">${escape(indicador.label)}</span>
       <span class="gran">${metropolita}</span>
-      <span class="secundari">mediana metropolitana · ${indicador.ambDada} de ${data.municipis.length}
-        ${plural(indicador.ambDada, "municipi amb dada", "municipis amb dada")}</span>
-      ${catalana ? `<span class="referencia">Mediana catalana: <b>${catalana}</b>
-        <span class="secundari">(${number(indicador.ambDadaCatalunya)} municipis)</span></span>` : ""}
+      <span class="secundari">el del municipi metropolità del mig · ${indicador.ambDada} de ${data.municipis.length} amb dada</span>
+      ${catalana ? `<span class="referencia">A Catalunya, el del mig: <b>${catalana}</b></span>` : ""}
       ${indicador.percentilGrup === null
         ? ""
-        : `<span class="percentil">Percentil <b>${Math.round(indicador.percentilGrup)}</b> entre els de la seva mida</span>`}
+        : `<span class="percentil">Per sobre de <b>${Math.round(indicador.percentilGrup)}</b> de cada 100 de la seva mida</span>`}
       ${punta
         ? `<span class="puntes">
           <span>Més alt: <a href="../m/${escape(punta.alt.slug)}/">${escape(punta.alt.name)}</a>,
@@ -893,9 +892,10 @@ function renderIndicadors(data: AmbData): string {
   // del final, una sola vegada i amb la font, que és el que la targeta no deia.
   const glossari = renderGlossari(data.indicadors.map((i) => i.key).filter(esClauGlossari));
   return `${grups}
-  <p class="nota">Les medianes són sobre municipis, no sobre habitants: Barcelona hi compta un cop,
-  com el Papiol. El <b>percentil</b> mesura cada municipi només amb els del seu tram de població de
-  la LOREG: 80 és estar per sobre de quatre de cada cinc de la seva mida.</p>
+  <p class="nota">Cada xifra és la del municipi que queda al mig quan s'ordenen de menys a més:
+  Barcelona hi compta un cop, com el Papiol. «Per sobre de 80 de cada 100 de la seva mida» compara
+  el municipi del mig d'aquí només amb els municipis catalans del seu tram de població (la llei
+  electoral els agrupa per habitants): 50 és quedar al mig.</p>
   ${glossari}`;
 }
 
@@ -953,7 +953,7 @@ function renderMunicipis(data: AmbData): string {
     const part = (100 * (valor - escala.min)) / (escala.max - escala.min || 1);
     const escrit = columna.key === "preu-aigua" ? decimal(valor, 2) : columna.key === "selectiva" ? decimal(valor) : number(Math.round(valor));
     return `<td class="xifra dada ${columna.classe}"><span class="v">${escrit}</span>
-      <span class="barra" aria-hidden="true"><i style="--p:${part.toFixed(0)}%"></i></span></td>`;
+      <span class="amb-barra" aria-hidden="true"><i style="--p:${part.toFixed(0)}%"></i></span></td>`;
   };
 
   const rows = data.municipis
@@ -965,13 +965,18 @@ function renderMunicipis(data: AmbData): string {
             ? ""
             : '<span class="marca-minoria">ple sense majoria</span>';
       const canvi = m.mayorChanged ? '<span class="marca-canvi">canvi a mig mandat</span>' : "";
+      // La tira del poble va dins de la cel·la de l'alcaldia, sota qui la té
+      // ara: qui hi mana avui i qui hi ha manat des del 1979, a la mateixa
+      // cel·la. Una columna pròpia, com a la comarca, no hi cabria: aquesta
+      // taula ja en té vuit.
+      const tira = m.tira ? `<span class="amb-tira">${tiraDelPoble(m.tira, { mida: "fina" })}</span>` : "";
       return `<tr>
       <th scope="row"><a href="../m/${escape(m.slug)}/">${escape(m.name)}</a></th>
       <td class="secundari com">${escape(m.comarca ?? "—")}</td>
       <td class="xifra pob">${number(m.population ?? 0)}</td>
       <td class="xifra reg">${m.seats}</td>
       ${columnes.map((c) => cella(m, c)).join("")}
-      <td class="secundari alc">${escape(m.mayorName ?? "—")} · ${escape(m.mayorSigles ?? "—")} ${marca} ${canvi}</td>
+      <td class="secundari alc">${escape(m.mayorName ?? "—")} · ${escape(m.mayorSigles ?? "—")} ${marca} ${canvi}${tira}</td>
     </tr>`;
     })
     .join("");
@@ -998,19 +1003,21 @@ function renderMunicipis(data: AmbData): string {
  */
 const AMB_CSS = TERRITORI_CSS + GLOSSARI_CSS + `
 .diners-amb li{font-size:.94rem}
-.cita{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--coral-text);margin:6px 0 0}
+.cita{font-size:.82rem;font-weight:800;color:var(--coral-text);margin:6px 0 0}
 
 /* Què decideix l'AMB: el bloc que aquesta pàgina té i les de comarca no. Dues
-   columnes i no «auto-fit»: amb nou targetes l'ajust automàtic feia files de
+   columnes i no «auto-fit»: amb nou matèries l'ajust automàtic feia files de
    tres i de dos i el bloc ocupava dues pantalles. On s'acaba cada matèria va
    plegat —és la línia que es llegeix quan cal reclamar, no sempre— i sota de
-   tot hi ha sempre l'article, que porta al text de la llei. */
-.competencies{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2);
+   tot hi ha sempre l'article, que porta al text de la llei.
+   Sense caixa ni ombra: eren nou targetes idèntiques amb ombra, que és
+   justament el patró que la casa evita, i al mòbil cada marc es menjava
+   quaranta píxels. Un filet a dalt separa una matèria de l'altra. */
+.competencies{list-style:none;margin:0;padding:0;display:grid;column-gap:var(--e3);
   grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (max-width:640px){ .competencies{grid-template-columns:1fr} }
-.competencia{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:2px}
+.competencia{border-top:2px solid var(--ink);padding:var(--e2) 0 var(--e3);display:flex;
+  flex-direction:column;gap:2px}
 .competencia .cap{display:flex;align-items:center;gap:var(--e1);margin-bottom:var(--e1)}
 .competencia .cap .icona{flex:0 0 auto;width:38px;height:38px}
 .competencia h3{font-family:var(--display);font-weight:900;font-size:1.08rem;letter-spacing:-.02em;margin:0;min-width:0}
@@ -1059,17 +1066,29 @@ const AMB_CSS = TERRITORI_CSS + GLOSSARI_CSS + `
 .puntes b{font-variant-numeric:tabular-nums;color:var(--ink)}
 
 /* Les tres columnes comparables de la taula dels 36. La barreta hi es perque
-   «2,29» tot sol no diu si es car o barat. */
+   «2,29» tot sol no diu si es car o barat. Porta nom propi (amb-barra): la
+   «.barra» nua és la de les columnes d'eleccions de la fitxa, de 46 px i
+   amb vora, i se li escolava la vora negra. */
 .municipis .dada .v{font-weight:800}
-.municipis .barra{display:block;height:6px;background:var(--vora);border-radius:var(--r-max);
-  margin-top:3px;min-width:44px}
-.municipis .barra i{display:block;height:100%;width:var(--p);min-width:3px;background:var(--coral);
+.amb-barra{display:block;height:6px;background:var(--vora);border-radius:var(--r-max);
+  margin-top:3px;min-width:44px;overflow:hidden}
+.amb-barra i{display:block;height:100%;width:var(--p);min-width:3px;background:var(--coral);
   border-radius:var(--r-max)}
+
+/* La tira del poble, sota l'alcaldia, amb els dos anys als costats: en
+   aquesta taula no té capçalera pròpia, i sense anys una franja de colors no
+   diu de quan és. */
+.amb-tira{display:flex;align-items:center;gap:6px;margin-top:6px;max-width:22rem}
+.amb-tira::before{content:"1979"}
+.amb-tira::after{content:"2027"}
+.amb-tira::before,.amb-tira::after{font-size:.72rem;font-weight:700;color:var(--ink-suau);
+  font-variant-numeric:tabular-nums}
+.amb-tira .tp-fina{flex:1 1 auto;height:8px}
 @media (max-width:640px){
   /* Sense capcalera de taula cal dir la unitat al costat, com ja fan la
      poblacio i les regidories. La barreta no hi cap en linia i se'n va. */
   .municipis .dada{display:inline;font-weight:400;color:var(--ink-suau);font-size:.86rem}
-  .municipis .dada .barra{display:none}
+  .municipis .dada .amb-barra{display:none}
   .municipis .aig::after{content:" €/m³ · "}
   .municipis .res::after{content:" kg · "}
   .municipis .sel::after{content:" % de selectiva"}
@@ -1117,7 +1136,7 @@ function ulladaAmb(data: AmbData): string {
       peu: `dels ${number(cat.municipis)} de Catalunya, repartits entre ${data.comarques.length}
         ${plural(data.comarques.length, "comarca", "comarques")}`.replace(/\s+/g, " "),
       on: "#municipis",
-      tema: "urbanisme",
+      tema: "municipis",
     },
     {
       etq: "Habitants",
@@ -1125,29 +1144,22 @@ function ulladaAmb(data: AmbData): string {
       part: null,
       peu: `el ${decimal((100 * data.habitants) / Math.max(1, cat.habitants))} % dels de Catalunya`,
       on: "#municipis",
-      tema: "serveis socials",
+      tema: "habitants",
     },
     {
-      etq: "Regidories en joc el 23-M",
+      etq: "Regidories en joc el 2027",
       xifra: number(data.regidories),
       part: null,
       peu: `de les ${number(cat.regidories)} de Catalunya`,
       on: "#municipis",
-      tema: "el ple",
+      tema: "regidories",
     },
   ];
 
+  // La gent que viu on mana la primera força, i no les seves alcaldies: les
+  // alcaldies ja les diu la frase de just a sobre («PSC té 20 alcaldies…»).
   const primera = data.forces[0];
-  if (primera && primera.brandId !== SENSE_MARCA) {
-    pastilles.push({
-      etq: "La força amb més alcaldies",
-      xifra: number(primera.alcaldies),
-      part: (100 * primera.alcaldies) / total,
-      peu: `${primera.label}, el ${decimal((100 * primera.alcaldies) / total)} % dels municipis`,
-      on: "#alcaldies",
-      tema: "participació",
-    });
-  }
+  if (primera && primera.brandId !== SENSE_MARCA) pastilles.push(pastillaGent(primera, data.habitants));
 
   pastilles.push({
     etq: "Governa qui no va guanyar",
@@ -1155,7 +1167,7 @@ function ulladaAmb(data: AmbData): string {
     part: (100 * data.pacte) / total,
     peu: `de ${data.municipis.length}; a Catalunya, el ${decimal((100 * cat.pacte) / Math.max(1, cat.municipis))} %`,
     on: "#pactes",
-    tema: "seguretat",
+    tema: "vots",
   });
 
   pastilles.push({
@@ -1204,7 +1216,7 @@ export function renderAmb(data: AmbData, generatedAt: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${cap}
 ${tipografia("../")}
-<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${AMB_CSS}</style>
+<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${AMB_CSS}${data.municipis.some((m) => m.tira) ? TIRA_POBLE_CSS : ""}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -1261,7 +1273,7 @@ ${cercador("../")}
   <p>El Consell Metropolità aprova el pressupost, les ordenances i <b>les tarifes dels serveis
   metropolitans</b>. El formen els alcaldes dels ${data.municipis.length} municipis, membres nats,
   i regidors que tria el ple de cada ajuntament.</p>
-  <p><b>Ningú no el vota en una papereta.</b> El 23-M tries el ple, i és el ple qui tria qui hi va.
+  <p><b>Ningú no el vota en una papereta.</b> A les municipals tries el ple, i és el ple qui tria qui hi va.
   Per això un canvi d'alcaldia a mig mandat també canvia qui seu a l'AMB.</p>
   <p>Quants representants hi té cada municipi ho fixa la llei per trams de població:</p>
   <ul class="escala">
@@ -1300,8 +1312,8 @@ ${renderBlocsPoder(data, { base: "../", ambit: "amb" })}
 ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
   <h2>Què costa viure-hi, i qui ho decideix</h2>
   <p class="entrada-bloc">${data.indicadors.length} indicadors sobre els ${data.municipis.length}
-  municipis, amb la mediana dels ${number(data.catalunya.municipis)} al costat i <b>ordenats per
-  qui pren la decisió</b>.</p>
+  municipis, amb el municipi del mig dels ${number(data.catalunya.municipis)} al costat i <b>ordenats
+  per qui pren la decisió</b>.</p>
   ${renderIndicadors(data)}
 </section>` : ""}
 
@@ -1315,7 +1327,13 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
 <section class="bloc" id="municipis">
   <h2>Els ${data.municipis.length} municipis</h2>
   <p class="entrada-bloc">Aquí és on trobes el teu: ordenats per població${gran ? `, i per tant
-  comença ${escape(gran.name)}` : ""}, amb les tres xifres comparables al costat.</p>
+  comença ${escape(gran.name)}` : ""}, amb les tres xifres comparables al costat.${
+    data.municipis.some((m) => m.tira)
+      ? ` Sota cada alcaldia, <b>la tira del poble</b>: qui ha tingut l'alcaldia de cada mandat des
+  del 1979, del color de la seva força; una osca és un relleu a mig mandat, i el blanc, un mandat
+  del qual cap font no diu res.`
+      : ""
+  }</p>
   ${renderMunicipis(data)}
 </section>
 
@@ -1340,7 +1358,9 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
     <li>Padró, comarca i alcaldia de cada municipi: <code>6nei-4b44</code>.</li>
     <li>Vots i regidories del 2023, i les sigles de cada candidatura: <code>ntc4-rnwr</code>.</li>
     <li>Participació i cens del 2023: <code>irrv-2mfc</code>.</li>
-    <li>Historial d'alcaldies, d'on surten els canvis a mig mandat: <code>2v2p-vu4h</code>.</li>
+    <li>Historial d'alcaldies des del 1979, d'on surten els canvis a mig mandat i la tira de cada
+      poble: Generalitat de Catalunya, <code>2v2p-vu4h</code>, completat amb Wikidata i amb el Sistema
+      d'Informació Local del Ministeri de Política Territorial.</li>
     <li>Sexe de les persones elegides: <code>xnfg-weec</code>.</li>
     <li>Liquidació pressupostària i deute viu: Consorci AOC, <code>81f18313</code> i <code>34db8dc5</code>.</li>
     <li>Preu de l'aigua: Observatori del preu de l'aigua, Agència Catalana de l'Aigua.</li>
@@ -1350,8 +1370,9 @@ ${data.indicadors.length > 0 ? `<section class="bloc" id="indicadors">
     <li>Lloguer mitjà: Agència de l'Habitatge de Catalunya, <code>qww9-bvhh</code>.</li>
     <li>Transparència: segell Infoparticipa, Consorci AOC.</li>
   </ul>
-  <p class="nota">Les alcaldies per força, els pactes, els canvis i els percentils són càlculs
-  nostres sobre aquestes fonts, repetibles amb el codi del projecte. Cap xifra no ve d'una
+  <p class="nota">Les alcaldies per força, els pactes, els canvis, la tira de cada poble i les
+  comparacions amb els municipis de la mateixa mida són càlculs nostres sobre aquestes fonts,
+  repetibles amb el codi del projecte. Cap xifra no ve d'una
   estimació, i cap frase sobre què decideix l'AMB no ve d'enlloc més que de la llei.</p>
 </section>
 

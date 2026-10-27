@@ -24,6 +24,7 @@ import {
   type HistorialAlcaldies,
 } from "./alcaldia-historica";
 import type { Els947Row } from "./els947";
+import type { DadesEns, TipusEns } from "./ens-tipus";
 
 /**
  * L'índex per anar a qualsevol lloc de l'Observatori sense passar per la portada.
@@ -94,7 +95,19 @@ export type IndexCerca = {
   mun: FilaCerca[];
   /** nom de la marca, sigla curta amb què la busca la gent, alcaldies i habitants governats */
   par: [string, string, number, number][];
+  /**
+   * Les diputacions i els consells comarcals: nom, mena, slug, habitants de
+   * l'àmbit (0 si no consta) i municipis. **És opcional a posta**: un
+   * `cerca.json` d'abans no el porta, i el guió del navegador ha de continuar
+   * funcionant amb un índex vell que encara sigui a la memòria cau d'algú.
+   * L'adreça no hi va escrita: la deriva el navegador amb `adrecaEns()`, la
+   * mateixa funció que decideix el directori de cada fitxa.
+   */
+  ens?: FilaEns[];
 };
+
+/** Una fila d'ens a l'índex: [nom, mena, slug, habitants, municipis]. */
+export type FilaEns = [string, TipusEns, string, number, number];
 
 /** Sense accents, sense article inicial i sense signes. La mateixa d'els947. */
 export function clauCerca(text: string): string {
@@ -128,6 +141,7 @@ export const TIPUS = {
   Municipi: 5,
   Alcaldia: 4,
   Comarca: 3,
+  Ens: 3,
   Partit: 3,
   Candidatura: 2,
   Regidor: 1,
@@ -228,7 +242,27 @@ function diccionari(): { id: (text: string | null) => number; llista: string[] }
   };
 }
 
-export function indexDeCerca(files: readonly Els947Row[]): IndexCerca {
+/**
+ * Les 44 fitxes d'ens com a files de l'índex.
+ *
+ * Hi van amb el nom sencer —«Consell Comarcal del Bages»— perquè és el que
+ * la gent copia d'una carta o d'una notícia, i el territori ja hi és a dins:
+ * qui escriu «bages» troba primer la comarca (el nom hi comença) i just
+ * darrere el consell (hi comença una paraula). La població és el pes, com a
+ * tota la resta; si no consta s'hi posa 0, que només vol dir «va al final
+ * dels empats», no que l'ens no tingui veïns.
+ */
+export function filesEnsDeCerca(ens: readonly DadesEns[]): FilaEns[] {
+  return ens
+    .map((e): FilaEns => [e.nom, e.tipus, e.slug, e.poblacio ?? 0, e.municipis.length])
+    .sort((a, b) => clauCerca(a[0]).localeCompare(clauCerca(b[0]), "ca"));
+}
+
+/**
+ * `ens` és opcional: sense, l'índex surt exactament com sortia abans, sense
+ * ni tan sols la clau buida, perquè el fitxer no canviï de mida per res.
+ */
+export function indexDeCerca(files: readonly Els947Row[], ens?: readonly DadesEns[]): IndexCerca {
   const sigles = diccionari();
   const mun: FilaCerca[] = files
     .map((f) => {
@@ -261,11 +295,17 @@ export function indexDeCerca(files: readonly Els947Row[]): IndexCerca {
     })
     .sort((a, b) => b[2] - a[2]);
 
-  return { sig: sigles.llista, mun, par };
+  const index: IndexCerca = { sig: sigles.llista, mun, par };
+  if (ens && ens.length > 0) index.ens = filesEnsDeCerca(ens);
+  return index;
 }
 
-export async function escriuCerca(files: readonly Els947Row[], cami: string): Promise<number> {
-  const index = indexDeCerca(files);
+export async function escriuCerca(
+  files: readonly Els947Row[],
+  cami: string,
+  ens?: readonly DadesEns[],
+): Promise<number> {
+  const index = indexDeCerca(files, ens);
   await writeFile(cami, JSON.stringify(index), "utf8");
   return index.mun.length;
 }

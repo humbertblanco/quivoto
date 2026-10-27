@@ -5,6 +5,8 @@ import {
   type HistorialAlcaldies, type PersonaAlcaldia, type ResultatsPerEleccio,
 } from "./alcaldia-historica";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
+import { RADIOGRAFIA_CSS } from "./estil";
+import { FOTOS_WIKIMEDIA_CSS } from "./fotos-wikidata";
 
 /**
  * Un historial inventat amb la forma exacta que desa `derive/mayor-changes.ts`,
@@ -54,6 +56,10 @@ const RESULTATS: ResultatsPerEleccio = {
 };
 
 const MUNICIPI = { nom: "Alcanar", slug: "alcanar", comarca: "Montsià" };
+
+/** El full propi de la pàgina: el de `<style>` sense el compartit (estil.ts) ni el dels retrats. */
+const fullPropi = (html: string): string =>
+  html.slice(html.indexOf("<style>") + 7, html.indexOf("</style>")).replace(RADIOGRAFIA_CSS, "").replace(FOTOS_WIKIMEDIA_CSS, "");
 const AVUI = "2026-09-02";
 
 const persones = () => alcaldiesHistoriques(HISTORIAL, { results: RESULTATS, avui: AVUI });
@@ -270,7 +276,9 @@ describe("renderAlcaldiaHistorica", () => {
     expect(html).toContain('<meta property="og:type" content="profile">');
     expect(html).toContain('"@type":"Person"');
     expect(html).toContain('"jobTitle":"Titular de l\'alcaldia d\'Alcanar"');
-    expect(html).toContain('"@type":"GovernmentOrganization","name":"Ajuntament d\'Alcanar"');
+    // L'ajuntament porta l'@id del graf entre el tipus i el nom: el mateix que la fitxa del municipi.
+    expect(html).toMatch(/"@type":"GovernmentOrganization",("@id":"https:\/\/quivoto\.cat\/observatori\/m\/alcanar\/#ajuntament",)?"name":"Ajuntament d'Alcanar"/);
+    expect(html).toContain('"@id":"https://quivoto.cat/observatori/m/alcanar/#ajuntament"');
     expect(html).toContain('"@type":"BreadcrumbList"');
     expect(html).toContain('"name":"Montsià"');
   });
@@ -287,6 +295,22 @@ describe("renderAlcaldiaHistorica", () => {
     const amb = jsonLd(ambHtml).find((o) => o["@type"] === "Person")!;
     expect(amb.sameAs).toEqual(["https://www.wikidata.org/wiki/Q1", "https://ca.wikipedia.org/wiki/Joan_Roig"]);
     expect(amb.birthDate).toBe("1960-03-12");
+  });
+
+  it("el Person és el del graf: @id de la pàgina d'alcaldia, l'ajuntament i el partit amb els seus @id", () => {
+    const jsonLd = (h: string) => [...h.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]!) as Record<string, unknown>);
+    const nodes = jsonLd(html);
+    const persona = nodes.find((o) => o["@type"] === "Person")!;
+    expect(persona["@id"]).toBe("https://quivoto.cat/observatori/m/alcanar/alcaldia/joan-roig-castell/#persona");
+    expect((persona.worksFor as Record<string, unknown>)["@id"]).toBe("https://quivoto.cat/observatori/m/alcanar/#ajuntament");
+    expect(persona.memberOf).toMatchObject({ "@type": "PoliticalParty", "@id": "https://quivoto.cat/observatori/partit/erc/#partit" });
+    // El ProfilePage parla d'aquesta persona.
+    const pagina = nodes.find((o) => o["@type"] === "ProfilePage")!;
+    expect((pagina.mainEntity as Record<string, unknown>)["@id"]).toBe(persona["@id"]);
+    // Una llista local, sense pàgina de partit, va com a Organization amb les sigles.
+    const local = jsonLd(renderAlcaldiaHistorica({ ...roig(), sigles: "AxA" }, MUNICIPI, { generatedAt: "avui", genere: null, avui: AVUI }))
+      .find((o) => o["@type"] === "Person")!;
+    expect(local.memberOf).toEqual({ "@type": "Organization", name: "AxA" });
   });
 
   it("amb gènere conegut el càrrec va amb totes les lletres", () => {
@@ -355,6 +379,31 @@ describe("renderAlcaldiaHistorica", () => {
     expect(html).toContain('<a href="../../#alcaldies"><b>Les alcaldies des del 1979</b>');
     expect(html).toContain('href="../../../../partit/erc/"><b>Esquerra Republicana de Catalunya a tot Catalunya</b>');
     expect(html).toContain('href="../../../../c/montsia/"><b>Montsià</b>');
+  });
+
+  /*
+   * La marca (vegeu «les pastilles» a estil.ts): els apartats de la fitxa són
+   * navegació i van subratllats («.navega»), les etiquetes del costat del nom
+   * són estats plans, i res no va en majúscules espaiades.
+   */
+  it("els apartats de la fitxa són enllaços subratllats, no pastilles", () => {
+    const nav = html.slice(html.indexOf('<ul class="nav-fitxa">'), html.indexOf("</ul>", html.indexOf('<ul class="nav-fitxa">')));
+    expect(nav).toContain('<a class="navega" href="#mandats">');
+    expect(nav).toContain('<a class="navega" href="#fonts">');
+    expect(nav).not.toMatch(/<a href=/);
+    const css = fullPropi(html);
+    expect(css).not.toContain(".nav-fitxa a{display:block;border");
+    expect(css).not.toContain("999px");
+  });
+
+  it("les etiquetes del costat del nom són estats plans, en minúscula", () => {
+    const css = fullPropi(html);
+    expect(css).not.toContain("text-transform:uppercase");
+    expect(css).not.toMatch(/letter-spacing:\.\d/);
+    const regla = css.slice(css.indexOf(".etiquetes span:not(.sigla){"), css.indexOf("}", css.indexOf(".etiquetes span:not(.sigla){")));
+    expect(regla).toContain("border:0");
+    expect(regla).toContain("border-radius:5px");
+    expect(html).toContain('<span class="alcaldia-etiqueta">alcaldia ');
   });
 });
 

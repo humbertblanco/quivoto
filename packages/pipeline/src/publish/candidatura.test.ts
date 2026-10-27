@@ -401,8 +401,9 @@ describe("una sola manera d'escriure cada nom", () => {
 
   it("el nom porta l'accent de la seu electrònica", () => {
     const html = renderCandidatura(sabadell, "2026-08-30");
-    // A la taula del ple i a la frase de l'alcaldia: les dues.
-    expect([...html.matchAll(/Marta Farrés Falgueras/g)]).toHaveLength(2);
+    // A la taula del ple, a la pastilla de l'alcaldia de l'ullada i a la frase
+    // de l'alcaldia: les tres, escrites igual.
+    expect([...html.matchAll(/Marta Farrés Falgueras/g)]).toHaveLength(3);
     expect(html).not.toContain("Farres Falgueras");
   });
 
@@ -420,6 +421,40 @@ describe("una sola manera d'escriure cada nom", () => {
     );
     expect(html).toContain("Marta Farres Falgueras");
     expect(html).not.toContain("Marta Farrés Falgueras");
+  });
+});
+
+describe("la portada i les xifres del 2023", () => {
+  it("obre amb l'ullada compartida: vots, regidories i alcaldia, sense targetes amb ombra", () => {
+    const html = renderCandidatura(mostra(), "2026-08-29");
+    expect(html).toContain('<section class="ullada"');
+    expect(html).not.toContain('class="cand-resultat"');
+    expect(html).toContain('<span class="etq">Alcaldia</span>');
+    expect(html).toContain('href="#alcaldia"');
+  });
+
+  it("si la font no diu de qui és l'alcaldia, l'ullada diu «no consta» i no «no»", () => {
+    const html = renderCandidatura(mostra({ hasMayoralty: null }), "2026-08-29");
+    expect(html).toContain('<span class="xifra">No consta</span>');
+  });
+
+  it("el fil d'Ariadna va en minúscula, sense fletxa, i passa per la comarca", () => {
+    const html = renderCandidatura(mostra(), "2026-08-29");
+    expect(html).toContain('<nav class="cand-fil" aria-label="On ets">');
+    expect(html).toContain('href="../../../c/baix-llobregat/"');
+    expect(html).not.toMatch(/→<\/a>/);
+    expect(html).not.toContain('class="cand-tornar"');
+  });
+
+  it("la taula del ple té tantes columnes a la capçalera com a les files", () => {
+    const html = renderCandidatura(mostra(), "2026-08-29");
+    expect(html).toContain('<thead><tr><th scope="col">Nom</th><th scope="col">Càrrec</th></tr></thead>');
+    expect(html).not.toContain("<th>A la llista</th>");
+  });
+
+  it("cap color de veredicte quan la llista no té l'alcaldia", () => {
+    const html = renderCandidatura(mostra({ hasMayoralty: false, mayorSigles: "ERC-AM" }), "2026-08-29");
+    expect(html).not.toContain('class="veredicte pacte"');
   });
 });
 

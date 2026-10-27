@@ -211,3 +211,11 @@ describe("curiositatsCens", () => {
     expect(curiositatsCens([fila("Sense", {})])).toEqual([]);
   });
 });
+
+describe("el full del cens segueix la marca", () => {
+  it("cap etiqueta en majúscules espaiades: el títol de cada dibuix va en minúscula", () => {
+    expect(CENS_FITXA_CSS).not.toContain("text-transform:uppercase");
+    expect(CENS_FITXA_CSS).not.toMatch(/letter-spacing:\.\d/);
+    expect(CENS_FITXA_CSS).toContain(".cens-titol{");
+  });
+});

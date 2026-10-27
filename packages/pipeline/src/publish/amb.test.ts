@@ -10,6 +10,7 @@ import {
   type AmbMunicipi,
 } from "./amb";
 import type { PeerGroup } from "../derive/peers";
+import { tiraDesDeHistorial } from "./tira-poble";
 
 /**
  * La pàgina es genera sense cap model pel mig, i el que s'ha de provar no és que
@@ -157,7 +158,7 @@ describe("renderAmb", () => {
     expect(renderAmb(amb({ indicadors: [] }), "2026-08-29")).not.toContain('id="indicadors"');
   });
 
-  it("posa la mediana catalana al costat de la metropolitana, mai sola", () => {
+  it("posa el municipi del mig de Catalunya al costat del metropolità, mai sol", () => {
     const html = renderAmb(
       amb({
         indicadors: [{
@@ -169,9 +170,13 @@ describe("renderAmb", () => {
       }),
       "2026-08-29",
     );
-    expect(html).toContain("Mediana catalana");
-    expect(html).toContain("Percentil");
+    // Sense «mediana» ni «percentil» a la vista, com a les comarques.
+    expect(html).toContain("A Catalunya, el del mig: <b>285 €</b>");
+    expect(html).toContain("Per sobre de <b>61</b> de cada 100 de la seva mida");
     expect(html).toContain("34 de 1");
+    const targeta = html.slice(html.indexOf('<li class="indicador">'), html.indexOf("</li>", html.indexOf('<li class="indicador">')));
+    // El text que es llegeix, sense les etiquetes (la classe «percentil» no compta).
+    expect(targeta.replace(/<[^>]+>/g, "")).not.toMatch(/mediana|percentil/i);
     // La definició ja no va sota la targeta: va al glossari, amb la font.
     expect(html).not.toContain("Deute viu a 31 de desembre.</span>");
     expect(html).toContain('<details class="nota glossari">');
@@ -553,5 +558,42 @@ describe("el cap SEO de l'Àrea Metropolitana", () => {
 
   it("té un sol <h1>", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+});
+
+describe("la tira del poble a la taula dels 36", () => {
+  const tira = tiraDesDeHistorial(
+    { history: [{ term: "2023-2027", name: "ANTONIO BALMON ARÉVALO", partyRaw: "PSC-CP", tookOfficeOn: "2023-06-17" }] },
+    "Cornellà de Llobregat",
+    "2026-10-27",
+  );
+
+  it("va dins de la cel·la de l'alcaldia, sota qui la té ara, amb el seu full d'estil", () => {
+    const html = renderAmb(amb({ municipis: [municipi({ tira })] }), "2026-08-29");
+    const cela = html.slice(html.indexOf('<td class="secundari alc">'), html.indexOf("</td>", html.indexOf('<td class="secundari alc">')));
+    expect(cela).toContain("Antonio Balmón");
+    expect(cela).toContain('<span class="amb-tira"><span class="tp tp-fina" role="img"');
+    expect(html.split(".tp-mandat{").length - 1).toBe(1);
+    // I l'entrada del bloc explica què és, un cop.
+    expect(html).toContain("<b>la tira del poble</b>");
+  });
+
+  it("sense historial no hi ha ni tira ni full d'estil", () => {
+    const html = renderAmb(amb(), "2026-08-29");
+    expect(html).not.toContain('class="amb-tira"');
+    expect(html).not.toContain(".tp-mandat{");
+  });
+
+  it("la barreta de les xifres té nom propi i no hereta la vora de la «.barra» de la fitxa", () => {
+    const municipis = ["a", "b", "c", "d"].map((slug, i) => municipi({ slug, name: slug, valors: { "preu-aigua": i + 1 } }));
+    const html = renderAmb(amb({ municipis }), "2026-08-29");
+    expect(html).toContain('<span class="amb-barra" aria-hidden="true">');
+    expect(html).not.toContain('<span class="barra"');
+  });
+
+  it("la quarta pastilla diu la gent que viu on mana la primera força", () => {
+    const html = renderAmb(amb(), "2026-08-29");
+    expect(html).toContain("Viuen on mana PSC");
+    expect(html).not.toContain("23-M");
   });
 });

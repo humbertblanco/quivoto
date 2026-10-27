@@ -42,7 +42,20 @@ import { curiositatsVehicles, esFlota } from "./vehicles-fitxa";
 import { curiositatsCens } from "./cens-fitxa";
 import { curiositatsLlistesObertes, type ResumLlistesObertes } from "./llistes-obertes-fitxa";
 import { CURIOSITATS_CSS, preparaCuriositats, renderCuriositats, type DadesCuriositats } from "./curiositats";
-import { atributsEtiqueta, GRAFICS_CSS, GRAFICS_JS, textEtiqueta, type DadaEtiqueta } from "./grafics";
+import {
+  atributsEtiqueta,
+  eixDispersio,
+  etiquetaTall,
+  GRAFICS_CSS,
+  GRAFICS_JS,
+  NOTA_ESCALA_LOG,
+  posicioEscala,
+  tallsEscala,
+  textEtiqueta,
+  type DadaEtiqueta,
+  type EscalaRegle,
+} from "./grafics";
+import { codiPerAlNavegador } from "./comparador";
 import { peu } from "./peu";
 import { RADIOGRAFIA_CSS } from "./estil";
 
@@ -110,6 +123,14 @@ export type Metrica = {
   font: string;
   metode: string;
   cautela: string;
+  /**
+   * L'escala del regle de dispersió (vegeu `EscalaRegle` a `grafics.ts`).
+   * Lineal si no es diu. La població, els vehicles i el creixement del cens
+   * són les tres xifres esbiaixades: uns quants municipis molt grans o que
+   * han crescut molt estiren el regle i, en lineal, 900 marques queden
+   * amuntegades a l'esquerra.
+   */
+  escala?: EscalaRegle;
 };
 
 const finit = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -118,7 +139,7 @@ export const METRIQUES: readonly Metrica[] = [
   {
     id: "poblacio", titol: "Població",
     valor: (r) => (finit(r.p) ? r.p : null), periode: () => "padró vigent",
-    decimals: 0, sufix: "",
+    decimals: 0, sufix: "", escala: "log",
     font: "Generalitat de Catalunya · dades generals dels ens locals",
     metode: "Habitants del padró vigent, en nombres absoluts.",
     cautela: "La població és context: no valora cap govern municipal.",
@@ -173,7 +194,7 @@ export const METRIQUES: readonly Metrica[] = [
     // Una flota de rènting domiciliada (Rajadell: 44.737 per 1.000) no és
     // comparable amb res: es deixa fora del rànquing i es diu a les curiositats.
     valor: (r) => (finit(r.veh) && !esFlota(r.veh) ? r.veh : null), periode: (r) => r.veha,
-    decimals: 0, sufix: " per 1.000 hab.",
+    decimals: 0, sufix: " per 1.000 hab.", escala: "log",
     font: "Idescat, a partir de la DGT · parc de vehicles",
     metode: "Vehicles amb permís de circulació domiciliats al municipi, per cada 1.000 habitants del padró de l'any de la dada. " +
       "Els municipis amb més de dos vehicles per habitant queden fora: són flotes d'empreses de rènting domiciliades, no els vehicles dels veïns, i surten a les curiositats.",
@@ -186,7 +207,7 @@ export const METRIQUES: readonly Metrica[] = [
     // ha de ser el mateix per a tothom perquè el rànquing digui una cosa.
     valor: (r) => (finit(r.creixCens) && r.censDes === 1979 ? r.creixCens : null),
     periode: (r) => (r.censDes === 1979 ? "1979-2023" : null),
-    decimals: 1, sufix: " %",
+    decimals: 1, sufix: " %", escala: "log-creixement",
     font: "Generalitat de Catalunya · processos electorals, participació",
     metode: "El cens electoral de les municipals del 2023 respecte del de les del 1979, en percentatge. Els municipis que el 1979 encara no existien queden fora i surten a les curiositats.",
     cautela: "El cens creix amb la gent que arriba i fa divuit anys, i minva amb la que marxa o mor: és demografia, no gestió, i als pobles petits pocs centenars d'electors mouen molt el percentatge.",
@@ -397,7 +418,11 @@ function regle(r: RanquingPreparat): string {
   const alt = asc[asc.length - 1]!;
   if (alt.valor === baix.valor) return "";
   const mig = medianaDe(asc.map((f) => f.valor));
-  const on = (v: number): string => (4 + (92 * (v - baix.valor)) / (alt.valor - baix.valor)).toFixed(1);
+  // On cau cada xifra, amb l'escala de la mètrica: la mateixa funció que el
+  // navegador fa servir quan refà el regle.
+  const escala = r.metrica.escala ?? "lineal";
+  const on = (v: number): string => posicioEscala(v, baix.valor, alt.valor, escala).toFixed(1);
+  const eix = eixDispersio(baix.valor, alt.valor, escala, escape(fmt(baix.valor)), escape(fmt(alt.valor)));
   // La posició de cada fila és la de la llista, que va de més a menys.
   const posicio = new Map(r.files.map((f, i) => [f, i + 1]));
   const perPosicio = new Map<string, FilaRanquing[]>();
@@ -432,8 +457,11 @@ function regle(r: RanquingPreparat): string {
     ],
   };
   return `<figure class="dispersio">
-  <figcaption class="titol">Del més baix al més alt <span class="secundari">${n(r.files.length)} municipis amb dada</span></figcaption>
-  <div class="regle-dispersio" aria-hidden="true"><i class="mig" style="--p:${on(mig)}%"${etiqueta(mediana)}></i>${marques}</div>
+  <figcaption class="titol">Del més baix al més alt <span class="secundari">${n(r.files.length)} municipis amb dada</span>${
+    eix.log ? `<span class="escala">${NOTA_ESCALA_LOG}</span>` : ""
+  }</figcaption>
+  <div class="regle-dispersio" aria-hidden="true">${eix.linies}<i class="mig" style="--p:${on(mig)}%"${etiqueta(mediana)}></i>${marques}</div>
+  ${eix.eix}
   <ul class="extrems">
     <li><span class="cap">El més baix</span>${fitxa(baix.fila)}<b>${escape(fmt(baix.valor))}</b></li>
     <li><span class="cap">La mediana</span><span class="secundari">el municipi del mig</span><b>${escape(fmt(mig))}</b></li>
@@ -447,6 +475,19 @@ const etiqueta = (dada: DadaEtiqueta): string => `${atributsEtiqueta(dada)} titl
 
 /** Quantes files escriu el servidor i quantes n'afegeix cada «Mostra'n més». */
 export const PAS = 40;
+
+/**
+ * Quantes files de dalt i quantes de baix es veuen sense obrir res.
+ *
+ * Cada rànquing escrivia 40 files obertes: a 360 px eren 4.100 px per
+ * indicador, i la pàgina sencera passava dels 95.000. El que la gent busca
+ * d'un rànquing és qui és a dalt de tot i qui a baix de tot; el mig es
+ * consulta. Per això es veuen els cinc primers i els cinc últims, i entre
+ * mig hi ha un `<details>` «Veure'n els 40 primers» amb la resta. Les 40
+ * files continuen escrites a l'HTML —dins del calaix— perquè sense
+ * JavaScript, i per als cercadors, la llista hi sigui sencera.
+ */
+export const VISIBLES = 5;
 
 /**
  * Una fila de la llista. El valor ja és visible; l'etiqueta que surt en
@@ -472,8 +513,21 @@ function seccio(r: RanquingPreparat, grups: readonly PeerGroup[]): string {
   const fmt = format(m);
   const opcions = grups.map((g) => `<option value="${escape(g.key)}">${escape(g.label)}</option>`).join("");
   const mediana = medianaDe(r.files.map((f) => f.valor));
-  const files = r.files.slice(0, PAS).map((f, i) => filaHtml(f, i + 1, r.files.length, mediana, fmt)).join("\n    ");
-  const resta = r.files.length - Math.min(PAS, r.files.length);
+  const total = r.files.length;
+  const fila = (f: FilaRanquing, i: number): string => filaHtml(f, i + 1, total, mediana, fmt);
+  /*
+   * Tres trossos d'una mateixa llista: els cinc de dalt, el mig fins a la
+   * fila 40 (plegat) i els cinc de baix. Els de baix comencen on acaba el mig
+   * i mai no se solapen: amb dotze municipis, el mig són les files 6 i 7.
+   * Amb deu o menys no hi ha mig ni calaix: tot es veu.
+   */
+  const iniciBaix = Math.max(VISIBLES, total - VISIBLES);
+  const dalt = r.files.slice(0, VISIBLES).map((f, i) => fila(f, i)).join("\n    ");
+  const fiMig = Math.min(PAS, iniciBaix);
+  const mig = r.files.slice(VISIBLES, fiMig).map((f, i) => fila(f, i + VISIBLES)).join("\n      ");
+  const baix = r.files.slice(iniciBaix).map((f, i) => fila(f, i + iniciBaix)).join("\n    ");
+  const titolLlista = escape(m.titol.toLocaleLowerCase("ca"));
+  const resta = total - fiMig - (total - iniciBaix);
   return `<section class="bloc ranquing" id="${escape(m.id)}" data-metrica="${escape(m.id)}">
   <p class="micro">${escape(r.periode)} · ${escape(m.font)}</p>
   <h2>${escape(m.titol)}</h2>
@@ -483,12 +537,21 @@ function seccio(r: RanquingPreparat, grups: readonly PeerGroup[]): string {
     <label>Àmbit <select data-ambit><option value="cat">Tot Catalunya</option>${opcions}</select></label>
     <label>Cerca <input data-cerca type="search" autocomplete="off" placeholder="Municipi o comarca"></label>
   </div>
-  <ol class="llista-ranquing" aria-label="Rànquing de ${escape(m.titol.toLocaleLowerCase("ca"))}">
-    ${files}
+  <ol class="llista-ranquing rq-dalt" data-dalt aria-label="Rànquing de ${titolLlista}: els de dalt">
+    ${dalt}
   </ol>
-  <p class="mes-fila"><button type="button" class="mes" data-mes hidden>Mostra'n ${PAS} més</button>
-    <noscript>${resta > 0 ? `Aquí surten els ${PAS} primers de ${n(r.files.length)}; la llista sencera és a <a href="../dades/">les dades</a>.` : ""}</noscript>
-    <span class="buit" data-buit hidden>Cap municipi no coincideix amb la cerca en aquest àmbit.</span></p>
+  <details class="rq-calaix" data-calaix${mig ? "" : " hidden"}>
+    <summary class="rq-obre"><span data-obre>Veure'n els ${n(fiMig)} primers</span><span class="secundari"> de ${n(total)}</span></summary>
+    <ol class="llista-ranquing rq-mig" data-mig start="${VISIBLES + 1}" aria-label="Rànquing de ${titolLlista}: el mig">
+      ${mig}
+    </ol>
+    <p class="mes-fila"><button type="button" class="mes" data-mes hidden>Mostra'n ${PAS} més</button>
+      <noscript>${resta > 0 ? `Aquí surten els ${PAS} primers i els ${VISIBLES} últims de ${n(total)}; la llista sencera és a <a href="../dades/">les dades</a>.` : ""}</noscript></p>
+  </details>
+  <ol class="llista-ranquing rq-baix" data-baix start="${iniciBaix + 1}" aria-label="Rànquing de ${titolLlista}: els de baix"${baix ? "" : " hidden"}>
+    ${baix}
+  </ol>
+  <p class="buit" data-buit hidden>Cap municipi no coincideix amb la cerca en aquest àmbit.</p>
   <p class="nota">${escape(m.cautela)}</p>
 </section>`;
 }
@@ -505,7 +568,12 @@ function dadesJson(rows: readonly RankingRow[], preparats: readonly RanquingPrep
   const metriques = Object.fromEntries(
     preparats.map((r) => [
       r.metrica.id,
-      { d: r.metrica.decimals, s: r.metrica.sufix, files: r.files.map((f) => [index.get(f.fila), f.valor]) },
+      {
+        d: r.metrica.decimals,
+        s: r.metrica.sufix,
+        e: r.metrica.escala ?? "lineal",
+        files: r.files.map((f) => [index.get(f.fila), f.valor]),
+      },
     ]),
   );
   return JSON.stringify({ municipis, grups: Object.fromEntries(grups.map((g) => [g.key, g.label])), metriques })
@@ -526,7 +594,7 @@ const CSS = `${GRAFICS_CSS}${CURIOSITATS_CSS}
 .extrem .quina b{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em;line-height:1.15}
 .extrem .quina:hover b{color:var(--coral-text)}
 .extrem .pol{display:grid;gap:2px;min-width:0;border-left:2px solid var(--vora);padding-left:var(--e2)}
-.extrem .cap{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-suau)}
+.extrem .cap{font-size:.78rem;font-weight:800;color:var(--ink-suau)}
 .extrem .pol b{font-family:var(--display);font-weight:900;font-size:1.35rem;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1}
 .extrem .qui{font-size:.86rem;color:var(--ink-suau);overflow-wrap:anywhere}
 .extrem .qui i{font-style:normal;font-weight:800;color:var(--ink)}
@@ -549,6 +617,24 @@ const CSS = `${GRAFICS_CSS}${CURIOSITATS_CSS}
 .llista-ranquing .municipi small a{color:inherit;font-weight:600;text-decoration-color:var(--vora)}
 .llista-ranquing .municipi small a:hover{color:var(--coral-text)}
 .llista-ranquing .dada{font-family:var(--display);font-weight:900;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* --- cinc de dalt, el mig plegat, cinc de baix ---------------------------
+   El resum del calaix fa de pont entre les dues puntes: diu quantes files hi
+   ha amagades i de quantes, i al mòbil és l'únic que separa el cinquè del
+   943è. Per això va amb vora discontínua —és un tros que falta, no una fila
+   més— i amb un «+» que gira en obrir-lo. */
+.rq-calaix{margin:8px 0}
+.rq-calaix[hidden]{display:none}
+.rq-obre{display:flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;cursor:pointer;list-style:none;
+  border:2px dashed var(--ink);border-radius:var(--r-m);font-weight:800;font-size:.92rem}
+.rq-obre::-webkit-details-marker{display:none}
+.rq-obre::after{content:"+";margin-left:auto;font-size:1.3rem;line-height:1;transition:transform .15s ease}
+.rq-calaix[open]>.rq-obre::after{transform:rotate(45deg)}
+.rq-obre:focus-visible{outline:3px solid var(--coral-text);outline-offset:2px}
+.rq-obre .secundari{font-weight:600;color:var(--ink-suau)}
+.rq-calaix .rq-mig{margin-top:8px}
+.llista-ranquing[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.rq-obre::after{transition:none}}
+.ranquing .buit{color:var(--ink-suau);margin:var(--e2) 0 0}
 .mes-fila{margin:var(--e2) 0 0;display:flex;gap:var(--e2);align-items:center;flex-wrap:wrap;color:var(--ink-suau);font-size:.9rem}
 .mes{font:inherit;font-weight:800;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:var(--r-max);
   padding:9px 18px;cursor:pointer;box-shadow:var(--ombra)}
@@ -642,13 +728,22 @@ const JS = `<script>
   // El mateix dibuix que fa el servidor: mediana de tots, marques resumides,
   // i a cada marca els data-* de l'etiqueta flotant. Les files arriben de més
   // a menys, i la posició és la d'aquest ordre.
-  const regle = (files, d, s) => {
+  // L'escala del regle: les mateixes tres funcions de grafics.ts que fa servir
+  // el servidor, incrustades tal qual perquè no n'hi pugui haver dues versions.
+  const posicioEscala = ${codiPerAlNavegador(posicioEscala)};
+  const tallsEscala = ${codiPerAlNavegador(tallsEscala)};
+  const etiquetaTall = ${codiPerAlNavegador(etiquetaTall)};
+  const eixDispersio = ${codiPerAlNavegador(eixDispersio)};
+  const NOTA_ESCALA_LOG = ${JSON.stringify(NOTA_ESCALA_LOG)};
+
+  const regle = (files, d, s, escala) => {
     if (files.length < 4) return "";
     const asc = files.map((f, i) => ({ s: f.s, n: f.n, valor: f.valor, pos: i + 1 })).reverse();
     const baix = asc[0], alt = asc[asc.length - 1];
     if (alt.valor === baix.valor) return "";
     const mig = mediana(asc);
-    const on = (v) => (4 + (92 * (v - baix.valor)) / (alt.valor - baix.valor)).toFixed(1);
+    const on = (v) => posicioEscala(v, baix.valor, alt.valor, escala).toFixed(1);
+    const eix = eixDispersio(baix.valor, alt.valor, escala, esc(fmt(baix.valor, d, s)), esc(fmt(alt.valor, d, s)));
     const perPosicio = new Map();
     for (const f of asc) {
       const p = on(f.valor);
@@ -671,9 +766,10 @@ const JS = `<script>
         { etq: "del més baix al més alt", valor: "de " + fmt(baix.valor, d, s) + " a " + fmt(alt.valor, d, s) },
       ],
     });
-    return '<figcaption class="titol">Del més baix al més alt <span class="secundari">' + fmt(files.length, 0, "") + ' municipis amb dada</span></figcaption>' +
-      '<div class="regle-dispersio" aria-hidden="true"><i class="mig" style="--p:' + on(mig) + '%"' + laMediana + "></i>" +
-      marques + "</div>" +
+    return '<figcaption class="titol">Del més baix al més alt <span class="secundari">' + fmt(files.length, 0, "") + ' municipis amb dada</span>' +
+      (eix.log ? '<span class="escala">' + NOTA_ESCALA_LOG + "</span>" : "") + "</figcaption>" +
+      '<div class="regle-dispersio" aria-hidden="true">' + eix.linies + '<i class="mig" style="--p:' + on(mig) + '%"' + laMediana + "></i>" +
+      marques + "</div>" + eix.eix +
       '<ul class="extrems"><li><span class="cap">El més baix</span>' + enllac(baix) + "<b>" + esc(fmt(baix.valor, d, s)) + "</b></li>" +
       '<li><span class="cap">La mediana</span><span class="secundari">el municipi del mig</span><b>' + esc(fmt(mig, d, s)) + "</b></li>" +
       '<li><span class="cap">El més alt</span>' + enllac(alt) + "<b>" + esc(fmt(alt.valor, d, s)) + "</b></li></ul>";
@@ -688,11 +784,23 @@ const JS = `<script>
     });
     const ambit = seccio.querySelector("[data-ambit]");
     const cerca = seccio.querySelector("[data-cerca]");
-    const llista = seccio.querySelector(".llista-ranquing");
+    const dalt = seccio.querySelector("[data-dalt]");
+    const migLlista = seccio.querySelector("[data-mig]");
+    const baix = seccio.querySelector("[data-baix]");
+    const calaix = seccio.querySelector("[data-calaix]");
+    const obre = seccio.querySelector("[data-obre]");
+    const de = calaix.querySelector(".rq-obre .secundari");
     const mes = seccio.querySelector("[data-mes]");
     const buit = seccio.querySelector("[data-buit]");
+    const VISIBLES = ${VISIBLES};
     let figura = seccio.querySelector(".dispersio");
     let visibles = PAS;
+
+    // «Mostra'n N més (en queden M)», o res quan ja no en queden.
+    const pintaMes = (resten) => {
+      mes.hidden = resten <= 0;
+      mes.textContent = "Mostra'n " + Math.min(PAS, resten) + " més (en queden " + resten + ")";
+    };
 
     const pinta = () => {
       const grup = ambit.value;
@@ -705,7 +813,7 @@ const JS = `<script>
       // La mediana és la de l'àmbit, com el regle: la cerca troba, no compara.
       const mig = delAmbit.length ? mediana(delAmbit) : 0;
       // Cada fila porta la mateixa etiqueta que escriu filaHtml() al servidor.
-      llista.innerHTML = trobats.slice(0, visibles).map((f) =>
+      const li = (f) =>
         "<li" + atributs({
           nom: f.n,
           valor: fmt(f.valor, m.d, m.s),
@@ -715,13 +823,41 @@ const JS = `<script>
             { etq: "respecte a la mediana", valor: ambSigne(f.valor - mig, m.d, m.s) },
           ],
         }) + '><span class="pos">' + f.pos + '</span><span class="municipi">' + enllac(f) + '<small><a class="comarca" href="../c/' + esc(f.cs) + '/">' + esc(f.c) + "</a></small></span>" +
-        '<b class="dada">' + esc(fmt(f.valor, m.d, m.s)) + "</b></li>").join("");
-      const resten = trobats.length - Math.min(visibles, trobats.length);
-      mes.hidden = resten <= 0;
-      mes.textContent = "Mostra'n " + Math.min(PAS, resten) + " més (en queden " + resten + ")";
+        '<b class="dada">' + esc(fmt(f.valor, m.d, m.s)) + "</b></li>";
+      if (terme) {
+        /*
+         * Cercant, el que es busca són les trobades i no els extrems: les
+         * cinc primeres a dalt i la resta dins del calaix, que s'obre sol
+         * perquè no quedi amagat el que s'acaba de demanar. Els de baix no hi
+         * pinten res.
+         */
+        const fins = Math.min(visibles, trobats.length);
+        dalt.innerHTML = trobats.slice(0, VISIBLES).map(li).join("");
+        migLlista.innerHTML = trobats.slice(VISIBLES, fins).map(li).join("");
+        calaix.hidden = fins <= VISIBLES;
+        if (!calaix.hidden) calaix.open = true;
+        obre.textContent = "Veure'n les " + fmt(fins, 0, "") + " primeres trobades";
+        de.textContent = " de " + fmt(trobats.length, 0, "");
+        baix.innerHTML = "";
+        baix.hidden = true;
+        pintaMes(trobats.length - fins);
+      } else {
+        // Sense cerca, com el servidor: cinc de dalt, el mig plegat i cinc de baix.
+        const iniciBaix = Math.max(VISIBLES, trobats.length - VISIBLES);
+        const fiMig = Math.min(visibles, iniciBaix);
+        dalt.innerHTML = trobats.slice(0, VISIBLES).map(li).join("");
+        migLlista.innerHTML = trobats.slice(VISIBLES, fiMig).map(li).join("");
+        calaix.hidden = fiMig <= VISIBLES;
+        obre.textContent = "Veure'n els " + fmt(fiMig, 0, "") + " primers";
+        de.textContent = " de " + fmt(trobats.length, 0, "");
+        baix.innerHTML = trobats.slice(iniciBaix).map(li).join("");
+        baix.hidden = iniciBaix >= trobats.length;
+        baix.setAttribute("start", String(iniciBaix + 1));
+        pintaMes(iniciBaix - fiMig);
+      }
       buit.hidden = trobats.length > 0;
       // El regle és el de l'àmbit, no el de la cerca: la cerca troba, no compara.
-      const dibuix = regle(delAmbit, m.d, m.s);
+      const dibuix = regle(delAmbit, m.d, m.s, m.e || "lineal");
       if (!figura && dibuix) {
         figura = document.createElement("figure");
         figura.className = "dispersio";
@@ -734,9 +870,7 @@ const JS = `<script>
     mes.addEventListener("click", () => { visibles += PAS; pinta(); });
     // Sense canviar res, la pàgina ja és la que ha escrit el servidor: només cal
     // el botó, que sense JavaScript no faria res i per això arriba amagat.
-    const resten = files.length - Math.min(PAS, files.length);
-    mes.hidden = resten <= 0;
-    mes.textContent = "Mostra'n " + Math.min(PAS, resten) + " més (en queden " + resten + ")";
+    pintaMes(Math.max(VISIBLES, files.length - VISIBLES) - Math.min(PAS, Math.max(VISIBLES, files.length - VISIBLES)));
   });
 })();
 </script>`;
@@ -823,7 +957,7 @@ ${renderCuriositats(fets)}
   tant no els hem triat nosaltres. Els empats surten sencers i per ordre alfabètic.</p>
   <p>Les curiositats no són rànquings i no passen pel llindar del 90 %: són llistes curtes, i
   cadascuna diu sobre quants municipis o persones s'ha mirat. Si una dada no hi és, el fet no surt.</p>
-  <p><a href="../dades/">Les dades sencera i l'esquema de cada camp →</a></p>
+  <p><a href="../dades/">Les dades senceres i l'esquema de cada camp</a></p>
 </section>
 </main>
 ${peu("../", generatedAt)}

@@ -14,6 +14,7 @@ import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
+import { renderUllada, type Pastilla } from "./comarques";
 
 /**
  * La pàgina d'**una candidatura a un municipi**.
@@ -386,7 +387,7 @@ function renderRegidors(data: CandidaturaData, oficials: ReadonlyMap<string, str
 
   return `<table class="cand-ple">
     <caption class="nomes-lectors">Regidors d'aquesta candidatura al ple 2023-2027</caption>
-    <thead><tr><th>Nom</th><th>Càrrec</th><th>A la llista</th></tr></thead>
+    <thead><tr><th scope="col">Nom</th><th scope="col">Càrrec</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   ${capNoHiEs}
@@ -430,7 +431,7 @@ function renderAlcaldia(data: CandidaturaData, oficials: ReadonlyMap<string, str
           data.isWinner ? "" : ` I això que la llista més votada va ser ${escape(data.winnerSigles)}.`
         }`}</p>`;
   }
-  return `<p class="veredicte pacte">Aquesta llista no té l'alcaldia${data.mayorSigles ? `: la té ${escape(data.mayorSigles)}` : ""}.</p>
+  return `<p class="veredicte">Aquesta llista no té l'alcaldia${data.mayorSigles ? `: la té ${escape(data.mayorSigles)}` : ""}.</p>
   <p class="nota">${data.isWinner
     ? `Va ser <b>la llista més votada</b> i tot i així no governa: vol dir que la resta del ple va pactar.`
     : `És a l'oposició del mandat 2023-2027.`}${
@@ -473,6 +474,61 @@ function renderRecents(data: CandidaturaData): string {
   Quan un any no hi surt és que la marca no s'hi va presentar.</p>`;
 }
 
+/**
+ * Les tres xifres del 2023 amb el component compartit de l'ullada: vots,
+ * regidories i alcaldia.
+ *
+ * Eren tres targetes amb vora i ombra —vots, percentatge i regidories— i el
+ * percentatge repetia els vots amb una altra unitat. Amb l'ullada, el
+ * percentatge passa a ser la barra dels vots (que és el que és: una part del
+ * total) i el lloc que queda el pren l'alcaldia, que és la pregunta que porta
+ * la majoria de gent a aquesta pàgina. Cada pastilla porta al bloc que
+ * l'explica.
+ *
+ * «No consta» quan la font no diu de qui és l'alcaldia: un buit és un buit, i
+ * un «no» seria afirmar que aquesta llista és a l'oposició.
+ */
+function ulladaCandidatura(data: CandidaturaData, oficials: ReadonlyMap<string, string>): string {
+  const alcalde = data.mayorName ? nomPreferit(oficials, data.mayorName) : null;
+  const ambMajoria = data.seats >= data.majority;
+  const pastilles: Pastilla[] = [
+    {
+      etq: "Vots",
+      xifra: number(data.votes),
+      part: data.share,
+      peu: `el ${percent(data.share)} de ${number(data.totalVotes)} · ${
+        data.isWinner ? "la llista més votada" : `per darrere de ${data.winnerSigles}`
+      }`,
+      on: mostraSerie(data) || data.historyMismatch ? "#serie" : "#resultat",
+      tema: "vots",
+    },
+    {
+      etq: "Regidories",
+      xifra: String(data.seats),
+      part: data.totalSeats > 0 ? (100 * data.seats) / data.totalSeats : null,
+      peu: `de ${data.totalSeats} · en calen ${data.majority} per governar sol`,
+      on: "#ple",
+      tema: "regidories",
+    },
+    {
+      etq: "Alcaldia",
+      xifra: data.hasMayoralty === null ? "No consta" : data.hasMayoralty ? "Sí" : "No",
+      part: null,
+      peu:
+        data.hasMayoralty === null
+          ? "la font no diu de quina llista és"
+          : data.hasMayoralty
+            ? `${alcalde ? `${alcalde}, ` : ""}${ambMajoria ? "amb" : "sense"} majoria absoluta`
+            : data.mayorSigles
+              ? `la té ${data.mayorSigles}`
+              : "és a l'oposició",
+      on: "#alcaldia",
+      tema: "alcaldia",
+    },
+  ];
+  return renderUllada(pastilles, `${data.sigles} el 2023 en tres xifres`);
+}
+
 // -------------------------------------------------------------------- estil
 
 /**
@@ -485,9 +541,12 @@ function renderRecents(data: CandidaturaData): string {
 const CANDIDATURA_CSS = `
 .cand-dalt{height:10px;background:var(--accent);border-bottom:2.5px solid var(--ink)}
 .cand-portada{padding:var(--e3) 0 var(--e4)}
-.cand-tornar{font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--ink-suau);text-decoration:none;display:inline-block;margin-bottom:var(--e2)}
-.cand-tornar:hover{color:var(--ink)}
+/* On ets, com a fil d'Ariadna en minúscula i enllaçat: observatori, comarca i
+   poble. Era un rètol en versaletes espaiades amb fletxa («← RUBÍ · VALLÈS
+   OCCIDENTAL») que només enllaçava el poble. */
+.cand-fil{font-size:.86rem;font-weight:700;color:var(--ink-suau);margin:0 0 var(--e2)}
+.cand-fil a{color:inherit;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
+.cand-fil a:hover{color:var(--ink)}
 .cand-sigles{display:inline-block;background:var(--accent);color:var(--accent-tinta);
   border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
   padding:6px 16px;margin:0 0 var(--e2);font-family:var(--display);font-weight:900;
@@ -496,18 +555,10 @@ const CANDIDATURA_CSS = `
 .cand-denominacio{font-size:1.15rem;color:var(--ink-suau);margin:0 0 var(--e2);max-width:44ch}
 .cand-marca{list-style:none;margin:var(--e3) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:var(--e2)}
 .cand-marca li{display:flex;flex-direction:column;gap:2px;font-size:.9rem}
-.cand-marca .etq{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-suau)}
-.cand-marca .mostra-color{display:inline-flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums}
-.cand-marca .mostra-color i{width:15px;height:15px;border-radius:4px;background:var(--accent);
-  border:1.5px solid var(--ink);display:inline-block}
+.cand-marca .etq{font-size:.82rem;font-weight:800;color:var(--ink-suau)}
 
-/* --- el resultat del 2023: la xifra gran i el pes al ple --- */
-.cand-resultat{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:var(--e2);
-  grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
-.cand-resultat li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:3px}
-.cand-resultat .etq{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-suau)}
-.cand-resultat .gran{font-family:var(--display);font-weight:900;font-size:2.1rem;line-height:1;letter-spacing:-.03em}
+/* --- el resultat del 2023: les xifres (l'ullada compartida) i el pes al ple --- */
+#resultat .ullada{margin:0 0 var(--e3)}
 .cand-pes{display:flex;height:34px;border:2.5px solid var(--ink);border-radius:var(--r-s);overflow:hidden;margin:0 0 var(--e1)}
 .cand-pes .seu{flex:1 1 0;border-right:1.5px solid var(--ink);background:var(--paper-2)}
 .cand-pes .seu:last-child{border-right:0}
@@ -544,7 +595,7 @@ const CANDIDATURA_CSS = `
 .cand-ple,.cand-recents{width:100%;border-collapse:collapse;font-size:.95rem}
 .cand-ple th,.cand-ple td,.cand-recents th,.cand-recents td{text-align:left;padding:10px 12px 10px 0;
   border-bottom:1px solid var(--vora);vertical-align:top}
-.cand-ple thead th,.cand-recents thead th{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;
+.cand-ple thead th,.cand-recents thead th{font-size:.82rem;font-weight:800;
   color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
 .cand-ple tbody th,.cand-recents tbody th{font-weight:800}
 .cand-recents .xifra{font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -552,18 +603,22 @@ const CANDIDATURA_CSS = `
 .cand-ple tbody tr:first-child th::before{content:"";position:absolute;left:0;top:14px;width:7px;height:7px;
   border-radius:50%;background:var(--accent);border:1.5px solid var(--ink)}
 
-/* --- els altres grups del mateix ple --- */
-.cand-germanes{list-style:none;margin:0;padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
-.cand-germanes a{display:flex;align-items:center;gap:9px;background:var(--paper-2);
-  border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);padding:11px var(--e2);
-  text-decoration:none;color:inherit;transition:transform .12s ease,box-shadow .12s ease}
-.cand-germanes a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+/* --- els altres grups del mateix ple ---
+   Navegació, i dibuixada com a navegació: la mostra de color (la marca de
+   dada), les sigles i les regidories, en files amb filet que fan una, dues o
+   tres columnes. Eren pastilles amb vora i ombra que, a mòbil, ocupaven tota
+   l'amplada amb el contingut centrat i la xifra arraconada a la dreta. */
+.cand-germanes{list-style:none;margin:0;padding:0;display:grid;column-gap:var(--e3);
+  grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr));border-top:2.5px solid var(--ink)}
+.cand-germanes li{display:flex;border-bottom:1.5px solid var(--vora)}
+.cand-germanes a{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;padding:6px 0;
+  text-decoration:none;color:inherit}
+.cand-germanes a:hover b,.cand-germanes a:focus-visible b{text-decoration:underline;text-decoration-thickness:2px}
 .cand-germanes .mostra{width:14px;height:14px;border-radius:4px;background:var(--c);
   border:1.5px solid var(--ink);flex:none}
 .cand-germanes b{font-weight:800;overflow-wrap:anywhere}
-.cand-germanes span{margin-left:auto;color:var(--ink-suau);font-size:.86rem;white-space:nowrap}
-@media (prefers-reduced-motion:reduce){.cand-germanes a{transition:none}}
+.cand-germanes span:not(.mostra){margin-left:auto;padding-left:8px;color:var(--ink-suau);font-size:.84rem;
+  white-space:nowrap;font-variant-numeric:tabular-nums}
 
 .cand-fitxa{display:inline-block;background:var(--ink);color:var(--paper);text-decoration:none;
   border-radius:var(--r-max);padding:9px 20px;font-weight:800;font-size:.95rem;margin-top:var(--e2)}
@@ -607,13 +662,29 @@ const CANDIDATURA_CSS = `
 .cara-cand.inicials{display:inline-flex;align-items:center;justify-content:center;
   font-family:var(--display);font-weight:900;font-size:.78rem;
   background:var(--inicial-fons);color:var(--inicial-tinta)}
-.cand-ple th[scope="row"]{display:flex;align-items:center;gap:0;flex-wrap:wrap}
+/* La cara i el nom no es separen mai de línia: amb «flex-wrap» un nom llarg
+   amb el seu «núm. 5 de la llista» saltava a sota de la cara i la fila doblava
+   l'alçada. El que es parteix és el text, dins de la seva columna. */
+.cand-ple th[scope="row"]{display:flex;align-items:center;gap:0;flex-wrap:nowrap}
 /* Els noms llargs es parteixen dins de la seva columna en comptes d'estirar la
    taula: «Maria del Carme Fernández-Villaverde» no ha de desplaçar la pàgina. */
-.cand-ple .qui-cand{min-width:0;overflow-wrap:anywhere}
+.cand-ple .qui-cand{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
 /* La taula de les eleccions anteriors mai no estreny les seves columnes: si no
    hi cap, es desplaça la caixa (vegeu «renderRecents»). */
 .taula-envolta .cand-recents{width:auto;min-width:100%}
+/* A mòbil, la taula del ple es plega en files: el nom (amb la cara i el número
+   de llista) a dalt i el càrrec a sota, en cos petit. En dues columnes de 170
+   px, «1r Tinent d'Alcalde» partia en dues línies i cada fila feia el doble
+   d'alçada; la capçalera, que diu el mateix que la fila, s'amaga a la vista i
+   no als lectors de pantalla. */
+@media (max-width:560px){
+  .cand-ple thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .cand-ple tr{display:block;border-bottom:1px solid var(--vora);padding:9px 0}
+  .cand-ple th,.cand-ple td{border:0;padding:0}
+  .cand-ple td{display:block;padding-left:45px;font-size:.84rem;color:var(--ink-suau);margin-top:2px}
+  .cand-ple tbody tr:first-child th{padding-left:0}
+  .cand-ple tbody tr:first-child th::before{display:none}
+}
 .taula-envolta:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
 `;
 
@@ -735,7 +806,11 @@ ${cercador("../../../")}
 <main id="contingut">
 
 <section class="cand-portada">
-  <a class="cand-tornar" href="../">← ${escape(m.name)}${m.comarca ? ` · ${escape(m.comarca)}` : ""}</a>
+  <nav class="cand-fil" aria-label="On ets"><a href="../../../">Observatori</a>${
+    m.comarca
+      ? ` <span aria-hidden="true">·</span> <a href="../../../c/${escape(slugify(m.comarca))}/">${escape(m.comarca)}</a>`
+      : ""
+  } <span aria-hidden="true">·</span> <a href="../">${escape(m.name)}</a></nav>
   <!-- El títol diu també de quin poble parla. Amb les sigles soles, aquesta
        pàgina i les altres 2.625 tenien un encapçalament que no distingia
        «PSC-CP» de Vic del de Reus: ni per a qui hi arriba des d'un cercador ni
@@ -756,15 +831,13 @@ ${cercador("../../../")}
           ? `<a href="${escape(capAlPartit)}">${escape(marca)}</a>`
           : escape(marca)}${data.brandKind ? ` · ${escape(NOM_TIPUS[data.brandKind] ?? data.brandKind)}` : ""}</span>`
       : "<span>sense marca supramunicipal</span>"}</li>
-    <li><span class="etq">Color oficial</span>
-      <span class="mostra-color"><i></i>${escape(data.color.toUpperCase())}</span></li>
     <li><span class="etq">Municipi</span><span><a href="../">${escape(m.name)}</a>${m.population !== null ? ` · ${number(m.population)} hab.` : ""}</span></li>
   </ul>
   <!-- Les tres sortides, just sota del titular: la fitxa del municipi, qui
        seu al seu ple i la marca a tot Catalunya. Són les mateixes pastilles
        del final de la pàgina, aquí perquè es vegin sense haver-hi d'arribar. -->
   <ul class="cand-sortides dalt">
-    <li><a class="cand-fitxa" href="../">La fitxa ${escape(de(m.name))} →</a></li>
+    <li><a class="cand-fitxa" href="../">La fitxa ${escape(de(m.name))}</a></li>
     <li><a class="cand-fitxa buida" href="../#regidors">Qui seu al ple</a></li>
     ${capAlPartit
       ? `<li><a class="cand-fitxa buida" href="${escape(capAlPartit)}">${escape(siglesMarca)} a tot Catalunya</a></li>`
@@ -782,14 +855,7 @@ ${cercador("../../../")}
 
 <section class="bloc" id="resultat">
   <h2>Què va treure el 2023</h2>
-  <ul class="cand-resultat">
-    <li><span class="etq">Vots</span><span class="gran">${number(data.votes)}</span>
-      <span class="secundari">de ${number(data.totalVotes)} vots a candidatures</span></li>
-    <li><span class="etq">Percentatge</span><span class="gran">${percent(data.share)}</span>
-      <span class="secundari">${data.isWinner ? "la llista més votada" : `per darrere de ${escape(data.winnerSigles)}`}</span></li>
-    <li><span class="etq">Regidories</span><span class="gran">${data.seats}</span>
-      <span class="secundari">de ${data.totalSeats} · en calen ${data.majority} per governar sol</span></li>
-  </ul>
+  ${ulladaCandidatura(data, oficials)}
   <div class="cand-pes" role="img" aria-label="${data.seats} de ${data.totalSeats} regidories del ple">${caselles}</div>
   <p class="cand-pes-peu">Cada casella és una regidoria del ple; les del color de la llista són seves.</p>
   <p class="nota">${data.isWinner

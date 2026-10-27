@@ -9,8 +9,10 @@ import { buildPeerGroups, medianOf } from "../derive/peers";
 import { nomLlegible, normalizePersonName, slugify } from "../lib/text";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
+import { partitLd } from "./seo-ld";
 import { tintaSobre as tintaDeContrast } from "./contrast";
 import { cara } from "./cara";
+import { renderUllada, type Pastilla } from "./comarques";
 import { RADIOGRAFIA_CSS } from "./estil";
 import { atributsEtiqueta, GRAFICS_JS, serieTemporal, textEtiqueta, type DadaEtiqueta } from "./grafics";
 import { geometria } from "./mapa-catalunya";
@@ -74,6 +76,8 @@ const ELECCIO = "M20231";
 /** El mandat que va obrir aquella elecció, tal com l'escriu la taula d'alcaldes. */
 const MANDAT_ARA = "2023-2027";
 const ANY_ARA = 2023;
+/** Els municipis de Catalunya: el denominador de les alcaldies i de les barres de l'ullada. */
+const MUNICIPIS_CATALUNYA = 947;
 
 /**
  * Quant s'han de semblar les dues fonts perquè dibuixem la sèrie llarga.
@@ -1047,115 +1051,58 @@ const VISIBLES = 12;
 const euros = (n: number): string => `${Math.round(n).toLocaleString("ca-ES")} €`;
 
 /**
- * Les seves alcaldies més grans: les vuit de més població, amb cara i nom.
- *
- * **Per què hi és.** «ERC té 330 alcaldies» és una xifra que no es pot mirar.
- * Qui són aquelles persones no es veu ni al mapa, que pinta termes municipals,
- * ni a la llista, que és text. Aquesta tira ensenya el partit com el que és:
- * gent concreta que governa pobles concrets, començant pels que tenen més
- * habitants, que és el mateix ordre que mana a la llista de sota i el que evita
- * que 121 pobles de 300 habitants semblin el mateix que 121 ciutats.
- *
- * **El criteri és només la població, i no qui publica retrat.** Abans la tira
- * era de vint-i-quatre cares i només hi entraven les alcaldies amb fotografia,
- * de manera que el criteri real era «els municipis més grans *dels que
- * publiquen retrat*», i Santa Coloma de Gramenet —124.000 habitants, sense seu
- * electrònica— no hi sortia mai mentre hi sortia un poble de 3.000. Amb
- * `cara()`, qui no té retrat porta les inicials al mateix cercle i de la
- * mateixa mida, i la tira pot ser el que diu el títol.
- *
- * Són vuit i no més perquè la llista de sota ja en porta dotze amb el detall
- * electoral, i la resta és a la llista dels 947. Amb menys de vuit alcaldies
- * la tira no es dibuixa: seria la mateixa llista de sota, sense el detall.
- *
- * **Cada caixa porta dos destins**, i cap dins de l'altre: el nom de la persona
- * va a la seva fitxa —o a l'apartat d'alcaldies de la fitxa municipal quan el
- * nom que dona la font de govern no lliga amb cap dels noms del ple— i el nom
- * del municipi va a la fitxa municipal. La cara és decorativa i no enllaça:
- * el que enllaça és sempre el text, com a tot l'Observatori.
- */
-const MES_GRANS = 8;
-
-function renderMesGrans(data: PartitData): string {
-  const mana = data.llocs.filter((m) => m.alcaldia);
-  if (mana.length < MES_GRANS) return "";
-  const color = colorSegur(data.color);
-  const grans = [...mana].sort((a, b) => b.population - a.population).slice(0, MES_GRANS);
-  const caixa = (m: PartitMunicipi): string => {
-    const nom = m.mayorName ? nomLlegible(m.mayorName) : null;
-    const fitxa = m.mayorSlug
-      ? `../../m/${escape(m.slug)}/regidor/${escape(m.mayorSlug)}/`
-      : `../../m/${escape(m.slug)}/#alcaldies`;
-    return `<li>
-      ${cara(nom ?? m.name, m.mayorPhoto, { mida: 44, color })}
-      ${
-        nom === null
-          ? '<span class="qui sense-nom">Sense nom a la font</span>'
-          : `<a class="qui" href="${fitxa}">${escape(nom)}</a>`
-      }
-      <a class="on" href="../../m/${escape(m.slug)}/">${escape(m.name)}</a>
-      <span class="hab">${number(m.population)} hab.</span>
-    </li>`;
-  };
-  return `<h3 class="subtitol">Les seves alcaldies més grans</h3>
-  <ul class="partit-grans">${grans.map(caixa).join("")}</ul>
-  <p class="nota">Les ${MES_GRANS} alcaldies d'aquesta marca als municipis amb més habitants${
-    data.poblacioAny ? ` al padró del ${data.poblacioAny}` : ""
-  }, de ${number(mana.length)} en total. Qui surt amb les inicials i no amb el retrat és perquè
-  el seu ajuntament no en publica cap a la seu electrònica, o perquè la font que el publica i la
-  que diu qui és l'alcaldia encara no diuen el mateix nom; cap retrat no ve d'enlloc que no sigui
-  el web del seu propi ajuntament.</p>`;
-}
-
-/**
- * On mana, de més gent a menys.
+ * On mana, de més gent a menys: una sola llista, amb la cara de qui hi mana.
  *
  * Ordenat per població i no alfabèticament perquè l'ordre ja és una dada: dir
  * que una marca té 121 alcaldies no distingeix 121 pobles de 300 habitants de
  * 121 ciutats, i aquesta llista comença per on viu més gent justament per no
  * amagar aquella diferència.
+ *
+ * **Per què una llista i no dues.** Hi havia una tira de vuit targetes grans
+ * amb les «alcaldies més grans» i, just a sota, dotze targetes més que
+ * començaven… per les mateixes vuit. A ERC eren 3.000 píxels de mòbil per dir
+ * dotze municipis, i la meitat repetits. Ara cada fila fa les dues feines: la
+ * cara i el nom de qui hi mana (el que la tira volia ensenyar: que el partit és
+ * gent concreta) i el detall electoral (sigles, escons, majoria i comarca). El
+ * criteri continua sent només la població, i no qui publica retrat: amb
+ * `cara()`, qui no en té porta les inicials al mateix cercle i de la mateixa
+ * mida, i Santa Coloma de Gramenet hi surt encara que no tingui seu
+ * electrònica.
+ *
+ * **Cada fila porta tres enllaços i cap dins de l'altre**: el municipi (a la
+ * fitxa d'aquesta marca en aquell poble), la persona (a la seva fitxa) i la
+ * comarca. Una àncora dins d'una altra no és HTML vàlid i el navegador la desfà
+ * com vol. La cara és decorativa i no enllaça: el que enllaça és sempre el
+ * text, com a tot l'Observatori. Qui no té fitxa de persona porta el nom en
+ * text pla, i una alcaldia sense nom a la font no s'inventa cap cara.
  */
 function renderOnMana(data: PartitData): string {
   const mana = data.llocs.filter((m) => m.alcaldia);
   if (mana.length === 0) {
-    return `<p class="veredicte pacte">No té cap alcaldia al mandat ${MANDAT_ARA}.</p>
+    return `<p class="veredicte">No té cap alcaldia al mandat ${MANDAT_ARA}.</p>
     <p class="nota">Té ${number(data.regidories)} ${plural(data.regidories, "regidoria", "regidories")}
     repartides per ${number(data.municipis)} ${plural(data.municipis, "municipi", "municipis")},
     totes a l'oposició.</p>`;
   }
 
   const color = colorSegur(data.color);
-  /**
-   * Cada fila porta tres enllaços i no un: el municipi, la comarca i la persona.
-   *
-   * Anaven tots dins d'un sol `<a>` i no s'hi podien posar: una àncora dins
-   * d'una altra no és HTML vàlid i el navegador la desfà com vol. El detall
-   * —sigles, escons i comarca— va fora de l'àncora del municipi justament
-   * perquè la comarca pugui enllaçar la seva pàgina, i qui no té fitxa de
-   * persona porta el nom en text pla; qui no té retrat porta les inicials amb
-   * el color de la marca, amb la mateixa `cara()` que la fitxa municipal.
-   */
   const fila = (m: PartitMunicipi): string => {
     const on = m.candidatura ? `../../m/${m.slug}/${m.candidatura}/` : `../../m/${m.slug}/`;
     const nom = m.mayorName ? nomLlegible(m.mayorName) : null;
-    const dins = `${cara(nom ?? "", m.mayorPhoto, { mida: 34, color })}<span class="nom">${escape(nom ?? "")}</span>`;
+    const qui =
+      nom === null
+        ? `<span class="lloc-qui sense-nom">Sense nom a la font</span>`
+        : m.mayorSlug
+          ? `<a class="lloc-qui" href="../../m/${escape(m.slug)}/regidor/${escape(m.mayorSlug)}/">${escape(nom)}</a>`
+          : `<span class="lloc-qui">${escape(nom)}</span>`;
     return `<li>
-      <a class="lloc-on" href="${escape(on)}">
-        <b>${escape(m.name)}</b>
-        <span class="hab">${number(m.population)} hab.</span>
-      </a>
+      ${nom === null && !m.mayorPhoto ? '<span class="lloc-sense-cara" aria-hidden="true"></span>' : cara(nom ?? "", m.mayorPhoto, { mida: 40, color })}
+      <a class="lloc-on" href="${escape(on)}"><b>${escape(m.name)}</b></a>
+      <span class="hab">${number(m.population)} hab.</span>
+      ${qui}
       <span class="detall">${escape(m.sigles)} · ${m.seats} de ${m.totalSeats}${
         m.majoria ? " · majoria absoluta" : ""
       }${m.comarca ? ` · <a href="../../c/${escape(slugify(m.comarca))}/">${escape(m.comarca)}</a>` : ""}</span>
-      ${
-        nom === null
-          ? ""
-          : m.mayorSlug
-            ? `<a class="lloc-qui" href="../../m/${escape(m.slug)}/regidor/${escape(
-                m.mayorSlug,
-              )}/">${dins}</a>`
-            : `<span class="lloc-qui">${dins}</span>`
-      }
     </li>`;
   };
 
@@ -1168,17 +1115,21 @@ function renderOnMana(data: PartitData): string {
    * marca. Plegada dins d'un «details», la pàgina d'ERC portava tres-centes
    * targetes que ningú no obria i que pesaven més que el mapa; el mapa de dalt
    * ja les ensenya totes, i la llista dels 947 té el cercador i els filtres que
-   * aquí no hi són.
+   * aquí no hi són. L'enllaç és text subratllat i no una pastilla amb fletxa:
+   * és navegació, i a l'Observatori la navegació es distingeix pel subratllat.
    */
   return `<ul class="partit-llocs">${davant}</ul>
   ${
     resta > 0
-      ? `<p class="crida"><a href="../../els947.html?partit=${escape(data.id)}">Els altres ${number(resta)} municipis, a la llista dels 947 →</a></p>`
+      ? `<p class="partit-resta-947"><a href="../../els947.html?partit=${escape(data.id)}">Els altres ${number(resta)} municipis, a la llista dels 947</a></p>`
       : ""
   }
-  <p class="nota">Cada fila porta a dos llocs: el nom del municipi, a la fitxa d'aquesta marca en
-  aquell poble —què hi va treure, qui la representa al ple i si hi va caldre pacte—, i la cara, a
-  la fitxa de qui hi mana${
+  <p class="nota">${
+    mana.length > VISIBLES ? `Les ${VISIBLES} alcaldies d'aquesta marca als municipis amb més habitants${
+      data.poblacioAny ? ` al padró del ${data.poblacioAny}` : ""
+    }, de ${number(mana.length)} en total. ` : ""
+  }El nom del municipi porta a la fitxa d'aquesta marca en aquell poble —què hi va treure, qui
+  la representa al ple i si hi va caldre pacte—, i el de la persona, a la seva fitxa${
     ambFitxa < mana.length
       ? `. ${number(mana.length - ambFitxa)} ${plural(
           mana.length - ambFitxa,
@@ -1186,10 +1137,12 @@ function renderOnMana(data: PartitData): string {
           "alcaldies no hi porten",
         )}, perquè el nom que en dona la font de govern no lliga amb cap dels noms del ple`
       : ""
-  }. ${data.majories} d'aquestes
-  ${plural(data.majories, "alcaldia", "alcaldies")} ${plural(data.majories, "surt", "surten")} d'una
-  llista que tota sola ja tenia la majoria absoluta; les altres ${data.alcaldies - data.majories}
-  van necessitar un pacte, o com a mínim que algú s'abstingués.</p>`;
+  }. Qui surt amb les inicials i no amb el retrat és perquè el seu ajuntament no en publica cap a
+  la seu electrònica; cap retrat no ve d'enlloc que no sigui el web del seu propi ajuntament.
+  ${data.majories} d'aquestes ${plural(data.majories, "alcaldia", "alcaldies")}
+  ${plural(data.majories, "surt", "surten")} d'una llista que tota sola ja tenia la majoria
+  absoluta; les altres ${data.alcaldies - data.majories} van necessitar un pacte, o com a mínim
+  que algú s'abstingués.</p>`;
 }
 
 /**
@@ -1225,10 +1178,13 @@ function barresTrams(trams: PartitTramRetribucio[]): string {
     ...trams.flatMap((t) => [t.mediana ?? 0, t.medianaTram ?? 0]),
   );
   const amplada = (valor: number): string => `${((100 * valor) / maxim).toFixed(1)}%`;
+  // La classe és «partit-barra» i no «barra» a seques: el full compartit ja té
+  // una «.barra» (la del repartiment del ple, de 46 px amb vora de tinta), i
+  // aquella regla s'escolava aquí i dibuixava una capsa al voltant de cada fila.
   const barra = (classe: string, etq: string, valor: number | null, extra = ""): string =>
     valor === null
-      ? `<div class="barra ${classe} buida"><span class="etq">${etq}</span><span class="xifra">sense dada</span></div>`
-      : `<div class="barra ${classe}"><span class="etq">${etq}</span>
+      ? `<div class="partit-barra ${classe} buida"><span class="etq">${etq}</span><span class="xifra">sense dada</span></div>`
+      : `<div class="partit-barra ${classe}"><span class="etq">${etq}</span>
         <i style="--w:${amplada(valor)}" aria-hidden="true"></i>
         <span class="xifra">${euros(valor)}${extra}</span></div>`;
   return `<ul class="partit-trams">${trams
@@ -1238,7 +1194,7 @@ function barresTrams(trams: PartitTramRetribucio[]): string {
       <p class="quantes">${number(t.ambImport)} de ${number(t.alcaldies)}
       ${plural(t.alcaldies, "alcaldia seva", "alcaldies seves")} amb import comunicat</p>
       ${barra("marca", "Aquesta marca", t.mediana)}
-      ${barra("tram", "Tot el tram", t.medianaTram, ` <span class="buit">(${number(t.alcaldiesTram)})</span>`)}
+      ${barra("tram", "Totes les del tram", t.medianaTram, ` <span class="buit">(${number(t.alcaldiesTram)})</span>`)}
     </li>`,
     )
     .join("")}</ul>`;
@@ -1276,14 +1232,14 @@ function renderRetribucions(data: PartitData): string {
   const resumXifres = prou
     ? `<ul class="partit-dues">
     <li>
-      <span class="etq">Mediana</span>
+      <span class="etq">L'alcaldia del mig</span>
       <span class="gran">${euros(r.mediana!)}</span>
       <span class="secundari">l'any, a les ${number(r.ambImport)}
       ${plural(r.ambImport, "alcaldia", "alcaldies")} d'aquesta marca que consten a l'inventari.
-      La meitat en tenen assignat més i l'altra meitat, menys</span>
+      La meitat en tenen assignat més i l'altra meitat, menys: és el que s'anomena la mediana</span>
     </li>
-    <li class="governa">
-      <span class="etq">Mitjana</span>
+    <li>
+      <span class="etq">La mitjana</span>
       <span class="gran">${euros(r.media!)}</span>
       <span class="secundari">l'any. ${
         // Les dues xifres hi van juntes perquè la distància entre elles és una
@@ -1292,14 +1248,14 @@ function renderRetribucions(data: PartitData): string {
         // o no cobren res. Dir sempre el mateix seria fals la meitat de les
         // vegades, i és exactament la frase que un lector no pot comprovar.
         Math.round(r.media!) > Math.round(r.mediana!)
-          ? "Passa de la mediana perquè unes quantes alcaldies grans estiren la xifra amunt"
+          ? "Passa de la xifra del mig perquè unes quantes alcaldies grans estiren la xifra amunt"
           : Math.round(r.media!) < Math.round(r.mediana!)
-            ? "Queda per sota de la mediana: hi ha alcaldies que cobren molt poc, o res, i l'estiren avall"
-            : "Va a la par de la mediana: les seves alcaldies cobren xifres semblants"
+            ? "Queda per sota de la xifra del mig: hi ha alcaldies que cobren molt poc, o res, i l'estiren avall"
+            : "Va a la par de la xifra del mig: les seves alcaldies cobren xifres semblants"
       }</span>
     </li>
   </ul>`
-    : `<p class="veredicte pacte">Amb ${number(r.ambImport)}
+    : `<p class="veredicte">Amb ${number(r.ambImport)}
     ${plural(r.ambImport, "alcaldia", "alcaldies")} amb import comunicat, una mediana no diria res
     d'aquesta marca: seria la xifra d'una persona o dues. Les tens una per una a la fitxa de cada
     municipi.</p>`;
@@ -1369,8 +1325,9 @@ function renderRetribucions(data: PartitData): string {
       ? `<h3>Com queda, tram per tram</h3>
   <p>La retribució d'una alcaldia la marca la mida del municipi molt abans que el color de qui
   la té. Comparar la xifra global d'una marca amb la d'una altra és comparar la mida dels pobles
-  que governen, i per això aquí cada tram es compara amb ell mateix: al costat de la mediana
-  d'aquesta marca hi va la de <b>totes</b> les alcaldies del tram, siguin de qui siguin.</p>
+  que governen, i per això aquí cada tram es compara amb ell mateix: al costat de l'alcaldia del
+  mig d'aquesta marca hi va la del mig de <b>totes</b> les alcaldies del tram, siguin de qui
+  siguin.</p>
   ${barresTrams(r.trams)}
   <p class="nota">Només hi surten els trams on aquesta marca té tres o més alcaldies amb
   import comunicat. Les barres van totes a la mateixa escala, i el nombre entre parèntesis és
@@ -1420,7 +1377,7 @@ function renderRenda(data: PartitData): string {
       <span class="secundari">de renda neta per persona l'any ${r.any}, al municipi que queda
       al mig dels ${number(r.ambDada)} que governa i que tenen xifra</span>
     </li>
-    <li class="governa">
+    <li>
       <span class="etq">Els 947, per comparar</span>
       <span class="gran">${cat === null ? "—" : euros(cat)}</span>
       <span class="secundari">${
@@ -1452,6 +1409,64 @@ function renderRenda(data: PartitData): string {
 }
 
 /**
+ * Les tres xifres que obren la pàgina, amb el mateix component que obre la
+ * fitxa del poble, la de la comarca i les dels ens (`renderUllada()`).
+ *
+ * Eren tres targetes amb vora i ombra, cadascuna amb l'etiqueta en versaletes:
+ * una quarta manera de dibuixar «una xifra gran amb el seu peu», diferent de la
+ * de la fitxa municipal que la mateixa persona acabava de veure. Amb l'ullada,
+ * cada xifra porta la seva barra —la part dels 947 municipis o dels habitants
+ * de Catalunya, que és el que fa que 331 vulgui dir alguna cosa— i és un enllaç
+ * al bloc que l'explica.
+ *
+ * La barra de les regidories és la part dels 947 municipis on en té alguna, i
+ * no la part de les regidories de Catalunya: aquella xifra viu a la sèrie de
+ * sota, amb l'any al costat, i aquí hauria estat una proporció sense
+ * denominador a la vista.
+ */
+function ulladaPartit(data: PartitData): string {
+  const pctPoblacio =
+    data.poblacioCatalunya > 0 ? (100 * data.poblacioGovernada) / data.poblacioCatalunya : null;
+  const pastilles: Pastilla[] = [
+    {
+      etq: "Alcaldies",
+      xifra: number(data.alcaldies),
+      part: (100 * data.alcaldies) / MUNICIPIS_CATALUNYA,
+      peu:
+        data.alcaldies === 0
+          ? `de ${MUNICIPIS_CATALUNYA} municipis: no en governa cap`
+          : `de ${MUNICIPIS_CATALUNYA} municipis, a ${number(data.comarques)} ${plural(data.comarques, "comarca", "comarques")}`,
+      on: "#mana",
+      tema: "alcaldia",
+    },
+    {
+      etq: "Regidories",
+      xifra: number(data.regidories),
+      part: (100 * data.municipis) / MUNICIPIS_CATALUNYA,
+      peu: `a ${number(data.municipis)} ${plural(data.municipis, "municipi", "municipis")} de ${MUNICIPIS_CATALUNYA}`,
+      on: "#mapa",
+      tema: "regidories",
+    },
+    {
+      etq: "Població governada",
+      xifra: number(data.poblacioGovernada),
+      part: pctPoblacio,
+      // El percentatge és el que fa comparable una marca amb l'altra: 947.665
+      // habitants no diuen si això és molt o poc fins que no se sap que
+      // Catalunya en té 7,9 milions. La xifra absoluta hi queda perquè és la
+      // que es pot comprovar sumant els municipis de la llista de sota.
+      peu:
+        pctPoblacio === null
+          ? "habitants als municipis on té l'alcaldia"
+          : `habitants, el ${percent(pctPoblacio)} de Catalunya`,
+      on: "#poblacio",
+      tema: "habitants",
+    },
+  ];
+  return renderUllada(pastilles, `${data.sigles} en tres xifres`);
+}
+
+/**
  * Les dues poblacions, que no són la mateixa i que sovint es confonen.
  *
  * És la distinció que fa que la xifra gran de la capçalera no enganyi: un
@@ -1470,7 +1485,7 @@ function renderPoblacio(data: PartitData): string {
       <span class="secundari">vots a les municipals del ${ANY_ARA}, el ${percent(pctVots)}
       dels ${number(data.votsCatalunya)} vots a candidatures de tot Catalunya</span>
     </li>
-    <li class="governa">
+    <li>
       <span class="etq">La població que governa</span>
       <span class="gran">${number(data.poblacioGovernada)}</span>
       <span class="secundari">${
@@ -1505,23 +1520,23 @@ function renderPoblacio(data: PartitData): string {
 export const PARTIT_CSS = `
 .partit-dalt{height:10px;background:var(--accent);border-bottom:2.5px solid var(--ink)}
 .partit-portada{padding:var(--e3) 0 var(--e4)}
-.partit-tornar{font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--ink-suau);text-decoration:none;display:inline-block;margin-bottom:var(--e2)}
-.partit-tornar:hover{color:var(--ink)}
+/* On ets, com a fil d'Ariadna en minúscula i enllaçat. Era un rètol en
+   versaletes espaiades («← OBSERVATORI MUNICIPAL»), que és el tic que la marca
+   de la casa vol fora de les pàgines, i saltava l'índex de partits, que és
+   l'esglaó que hi ha entremig. */
+.partit-fil{font-size:.86rem;font-weight:700;color:var(--ink-suau);margin:0 0 var(--e2)}
+.partit-fil a{color:inherit;text-decoration:underline;text-decoration-thickness:1.5px;
+  text-underline-offset:3px}
+.partit-fil a:hover{color:var(--ink)}
 .partit-sigles{display:inline-block;background:var(--accent);color:var(--accent-tinta);
   border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
   padding:6px 16px;margin:0 0 var(--e2);font-family:var(--display);font-weight:900;
   letter-spacing:-.03em;font-size:clamp(1.9rem,7vw,3.4rem);line-height:1.12;max-width:100%;
   overflow-wrap:anywhere}
 .partit-nom{font-size:1.15rem;color:var(--ink-suau);margin:0 0 var(--e2);max-width:46ch}
-.partit-xifres{list-style:none;margin:var(--e3) 0 0;padding:0;display:grid;gap:var(--e2);
-  grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
-.partit-xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:3px}
-.partit-xifres .gran{font-family:var(--display);font-weight:900;font-size:2.1rem;line-height:1;
-  letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.partit-xifres .etq,.partit-dues .etq{font-size:.68rem;font-weight:800;text-transform:uppercase;
-  letter-spacing:.1em;color:var(--ink-suau)}
+/* Les etiquetes de les xifres d'aquesta pàgina van en minúscula: un nom curt,
+   fosc i en negreta fa la mateixa feina que les versaletes sense cridar. */
+.partit-dues .etq{font-size:.84rem;font-weight:800;color:var(--ink-suau)}
 
 /* --- el mapa dels 947, amb dues capes i un sol dibuix --------------------- */
 /* Els dos botons són els mateixos que les tries del mapa dels 947, perquè fan
@@ -1532,7 +1547,10 @@ export const PARTIT_CSS = `
   box-shadow:var(--ombra)}
 .partit-tries button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .partit-mapa{margin:var(--e2) 0 0;padding:0}
-.partit-mapa svg{width:100%;height:auto;display:block;max-width:900px;margin:0 auto}
+/* El mapa fa com a molt 760 px d'ample: a tota la columna d'un escriptori feia
+   880 d'alt i ocupava la pantalla sencera, de manera que la clau i el peu que
+   l'expliquen quedaven sempre a sota de la línia de flotació. */
+.partit-mapa svg{width:100%;height:auto;display:block;max-width:760px;margin:0 auto}
 .partit-mapa path{stroke:var(--ink);stroke-width:.7;stroke-linejoin:round}
 .partit-mapa .municipis path{fill:#DED8CB}
 .partit-mapa a:hover path,.partit-mapa a:focus path{stroke-width:3.5}
@@ -1588,24 +1606,24 @@ export const PARTIT_CSS = `
 .partit-serie{width:100%;min-width:420px;border-collapse:collapse;font-size:.95rem}
 .partit-serie th,.partit-serie td{text-align:left;padding:9px 12px 9px 0;
   border-bottom:1px solid var(--vora);vertical-align:top}
-.partit-serie thead th{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
+.partit-serie thead th{font-size:.82rem;font-weight:800;color:var(--ink-suau);
+  border-bottom:2.5px solid var(--ink)}
 .partit-serie tbody th{font-weight:800;font-variant-numeric:tabular-nums}
 .partit-serie .xifra{font-variant-numeric:tabular-nums;white-space:nowrap}
-/* Les tres corbes de costat i no l'una sota l'altra: a tota amplada eren tres
-   pantalles per dir tres xifres. La cel·la fa uns 230 px i el dibuix està fet
-   a 720: el que s'hi ensenya és la versió estreta, la que el gràfic ja fa per
-   a una finestra de mòbil, sigui quina sigui l'amplada de la finestra, perquè
-   el que és estret aquí és la cel·la i no la pantalla. */
-.partit-series{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--e2);
-  margin-top:var(--e2)}
+/* Les tres corbes, l'una sota l'altra i com a molt a 720 px.
+   Van estar de costat, en tres cel·les d'uns 280 px, amb el dibuix estret de
+   720 unitats encongit a dins: a escriptori les xifres dels eixos sortien a
+   cinc píxels i el 2023 no es llegia enlloc. A 720 px el dibuix es veu a la
+   mida per a la qual està fet (text de 12) i, com que la sèrie «mitjana» fa
+   180 d'alt, les tres juntes no arriben a dues pantalles. Sota 480 px és el
+   gràfic compartit qui tria el dibuix estret i el fa lliscar dins de la seva
+   caixa, com a la fitxa del poble. */
+.partit-series{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--e3);
+  margin-top:var(--e2);max-width:720px}
 .partit-series .partit-grafic{min-width:0}
 .partit-series .subtitol{margin:0 0 var(--e1)}
 .font-series{font-size:.82rem;color:var(--ink-suau)}
 .partit-series .grafic{margin:0}
-.partit-series .grafic svg{max-width:100%;height:auto}
-.partit-series .grafic .ample{display:none}
-.partit-series .grafic .estret{display:block}
 /* Les taules van plegades: són la comprovació de les corbes, no la lectura. El
    full compartit estreny el que hi ha dins d'un «details.nota» a setanta
    caràcters de text, i una taula de cinc columnes no hi cap. */
@@ -1619,85 +1637,54 @@ export const PARTIT_CSS = `
    marca i de cap altra. Mai amb el color de fons: el text llarg damunt del
    color de partit és el que fa que un portal deixi de ser de ningú. */
 .partit-llinatge{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);border-left-width:10px;border-left-color:var(--accent);
+  border-left-width:10px;border-left-color:var(--accent);
   padding:var(--e2) var(--e2) 2px;margin:var(--e3) 0 0}
 .partit-llinatge > .subtitol{margin:0 0 var(--e2)}
 .partit-llinatge ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--e2)}
 .partit-llinatge li{display:flex;gap:12px;align-items:baseline;font-size:.92rem}
 .partit-llinatge .quan{font-family:var(--display);font-weight:900;font-size:1.05rem;
   font-variant-numeric:tabular-nums;flex:none}
-.partit-llinatge .cap{font-size:.68rem;font-weight:800;text-transform:uppercase;
-  letter-spacing:.1em;color:var(--ink-suau)}
+.partit-llinatge .cap{font-size:.84rem;font-weight:800;color:var(--ink-suau)}
 .partit-llinatge .que a{font-weight:800;color:inherit}
 .partit-llinatge .que b{font-weight:800}
 
-/* --- les seves alcaldies més grans ---------------------------------------
-   Vuit caixes de la mateixa mida: quatre columnes a escriptori i dues a mòbil,
-   fixes i no automàtiques, perquè amb vuit peces l'ajust automàtic feia files
-   de tres i cinc segons l'amplada i la tira semblava escapçada. La cara és la
-   de cara.ts, que fa 44 px tant si és retrat com si són inicials, i el nom
-   té dues línies reservades: així la caixa d'un nom curt i la d'un de llarg
-   fan la mateixa alçada i la graella no balla. */
-.partit-grans{list-style:none;margin:var(--e2) 0 var(--e3);padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(4,minmax(0,1fr))}
-.partit-grans li{display:flex;flex-direction:column;gap:6px;min-width:0;
-  background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);padding:12px 12px 10px}
-.partit-grans .cara-alcaldia{margin-bottom:2px}
-.partit-grans .qui{font-weight:800;font-size:.9rem;line-height:1.25;min-height:2.5em;
-  color:inherit;text-decoration:none;overflow-wrap:anywhere}
-.partit-grans a.qui:hover{text-decoration:underline}
-.partit-grans .sense-nom{color:var(--ink-suau);font-weight:700}
-.partit-grans .on{font-family:var(--display);font-weight:900;font-size:.95rem;letter-spacing:-.02em;
-  line-height:1.2;color:inherit;text-decoration:none;overflow-wrap:anywhere}
-.partit-grans a.on:hover{text-decoration:underline}
-.partit-grans .hab{font-size:.78rem;font-weight:800;color:var(--ink-suau);
-  font-variant-numeric:tabular-nums;white-space:nowrap}
-@media (max-width:640px){
-  .partit-grans{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-
 /* --- on mana -------------------------------------------------------------
-   La targeta és el <li> i ja no l'enllaç: ara hi ha dos destins a cada fila
-   —la candidatura en aquell poble i la fitxa de qui hi mana— i una àncora dins
-   d'una altra no és HTML vàlid. */
-.partit-llocs{list-style:none;margin:0;padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))}
-.partit-llocs li{display:flex;flex-direction:column;background:var(--paper-2);
-  border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
-  transition:transform .12s ease,box-shadow .12s ease}
-.partit-llocs li:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-.partit-llocs .lloc-on{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px;
-  padding:11px var(--e2) 4px;text-decoration:none;color:inherit}
-.partit-llocs .lloc-on:hover b{text-decoration:underline}
-.partit-llocs b{font-family:var(--display);font-weight:900;font-size:1.02rem;letter-spacing:-.02em;
+   Files amb filet i no targetes amb ombra: dotze targetes idèntiques amb
+   vora i ombra de tinta eren el patró que la marca vol fora, i a mòbil feien
+   2.000 píxels. Cada fila és una graella de dues columnes —la cara a
+   l'esquerra, el text a la dreta— i a partir de 700 px de columna les files
+   van de dues en dues. El filet de dalt de cada fila és el mateix que separa
+   les pastilles de l'ullada. */
+.partit-llocs{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;column-gap:var(--e3);
+  grid-template-columns:minmax(0,1fr);border-top:2.5px solid var(--ink)}
+@media (min-width:760px){ .partit-llocs{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.partit-llocs li{display:grid;grid-template-columns:40px minmax(0,1fr) auto;column-gap:12px;
+  row-gap:1px;align-items:baseline;padding:12px 0;border-bottom:1.5px solid var(--vora)}
+.partit-llocs li > .cara-alcaldia,.partit-llocs .lloc-sense-cara{grid-row:1 / span 3;align-self:start}
+.partit-llocs .lloc-sense-cara{display:block;width:40px;height:40px;border-radius:50%;
+  border:2px dashed var(--vora)}
+.partit-llocs .lloc-on{grid-column:2;color:inherit;text-decoration:none;min-width:0}
+.partit-llocs .lloc-on:hover b,.partit-llocs .lloc-on:focus-visible b{text-decoration:underline;
+  text-decoration-thickness:2px}
+.partit-llocs b{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.02em;
   overflow-wrap:anywhere}
-.partit-llocs .hab{margin-left:auto;font-size:.82rem;font-weight:800;color:var(--ink-suau);
+.partit-llocs .hab{grid-column:3;font-size:.82rem;font-weight:800;color:var(--ink-suau);
   font-variant-numeric:tabular-nums;white-space:nowrap}
+.partit-llocs .lloc-qui{grid-column:2 / -1;font-size:.9rem;font-weight:800;color:inherit;
+  overflow-wrap:anywhere}
+.partit-llocs a.lloc-qui{text-decoration:underline;text-decoration-thickness:1.5px;
+  text-decoration-color:var(--vora);text-underline-offset:3px}
+.partit-llocs a.lloc-qui:hover{text-decoration-color:currentColor}
+.partit-llocs .lloc-qui.sense-nom{color:var(--ink-suau);font-weight:700}
 /* El detall va fora de l'àncora del municipi perquè la comarca hi pugui
    enllaçar la seva pàgina: dues àncores, una al costat de l'altra i cap dins
    de l'altra. */
-.partit-llocs .detall{display:block;padding:0 var(--e2) 10px;font-size:.78rem;color:var(--ink-suau);
-  overflow-wrap:anywhere}
+.partit-llocs .detall{grid-column:2 / -1;font-size:.78rem;color:var(--ink-suau);overflow-wrap:anywhere}
 .partit-llocs .detall a{color:inherit;font-weight:800}
-/* Qui hi mana, a peu de targeta i separat amb un filet: són dos destins i s'ha
-   de veure que ho són. La cara va a l'esquerra i el nom al costat, com a la
-   composició del ple, perquè la mateixa persona es reconegui a les dues pàgines. */
-.partit-llocs .lloc-qui{display:flex;align-items:center;gap:9px;margin-top:auto;
-  padding:8px var(--e2) 10px;border-top:2px solid var(--vora);text-decoration:none;color:inherit}
-.partit-llocs .lloc-qui .cara-alcaldia{box-shadow:none}
-.partit-llocs .lloc-qui .nom{font-size:.82rem;font-weight:800;overflow-wrap:anywhere;min-width:0}
-.partit-llocs a.lloc-qui:hover .nom{text-decoration:underline}
-/* La crida a la llista dels 947 amb la marca ja filtrada: una pastilla de tinta
-   i no del color de la marca, perquè és un enllaç del portal i no una peça del
-   partit. */
-#mana .crida{margin:var(--e2) 0 0}
-#mana .crida a{display:inline-flex;align-items:center;min-height:44px;padding:8px 18px;
-  background:var(--ink);color:var(--paper);text-decoration:none;border-radius:var(--r-max);
-  font-weight:800;font-size:.95rem;box-shadow:var(--ombra);
-  transition:transform .12s ease,box-shadow .12s ease}
-#mana .crida a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-@media (prefers-reduced-motion:reduce){.partit-llocs li,#mana .crida a{transition:none}}
+/* La resta, a la llista dels 947: un enllaç de text, sense pastilla ni
+   fletxa, perquè és navegació del portal i no una peça del partit. */
+.partit-resta-947{margin:var(--e2) 0 0;font-weight:800}
+.partit-resta-947 a{color:var(--ink);text-decoration-thickness:2px;text-underline-offset:4px}
 
 /* --- el desglossament de les retribucions --------------------------------
    L'última fila va marcada amb una vora discontínua a posta: és la que es
@@ -1713,64 +1700,64 @@ export const PARTIT_CSS = `
    Dues barres per tram i no una taula: la de la marca va del seu color i la
    del conjunt del tram, de tinta esvaïda, perquè es vegi qui és qui sense
    llegir la clau. La xifra va al costat de la barra i no a dins: a dins no hi
-   cabia quan la barra era curta. */
-.partit-trams{list-style:none;margin:var(--e2) 0 0;padding:0;display:grid;gap:var(--e2)}
-.partit-trams li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);padding:var(--e2)}
+   cabia quan la barra era curta. Cada tram és una fila amb filet i no una
+   targeta amb ombra: eren set targetes iguals, una sota l'altra, i a mòbil
+   feien més de dues pantalles. */
+.partit-trams{list-style:none;margin:var(--e2) 0 0;padding:0;border-top:2.5px solid var(--ink)}
+.partit-trams li{padding:12px 0 14px;border-bottom:1.5px solid var(--vora)}
 .partit-trams h4{font-family:var(--display);font-weight:900;font-size:1.02rem;letter-spacing:-.02em;
-  margin:0 0 2px}
-.partit-trams .quantes{margin:0 0 10px;font-size:.82rem;color:var(--ink-suau);font-weight:700}
-.partit-trams .barra{display:grid;grid-template-columns:7.5em minmax(0,1fr) auto;align-items:center;
-  gap:10px;font-size:.88rem;font-variant-numeric:tabular-nums}
-.partit-trams .barra + .barra{margin-top:6px}
-.partit-trams .barra .etq{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--ink-suau)}
-.partit-trams .barra i{display:block;height:18px;width:var(--w);min-width:3px;
-  border:2px solid var(--ink);border-radius:5px;background:var(--accent)}
-.partit-trams .barra.tram i{background:var(--vora)}
-.partit-trams .barra.buida .xifra{grid-column:2 / span 2;color:var(--ink-suau);font-weight:700;font-size:.8rem}
-.partit-trams .xifra{font-weight:800;white-space:nowrap}
-.partit-trams .buit{color:var(--ink-suau);font-weight:700;font-size:.8rem}
-@media (max-width:420px){
-  .partit-trams .barra{grid-template-columns:1fr auto}
-  .partit-trams .barra .etq{grid-column:1 / -1}
+  margin:0}
+.partit-trams .quantes{margin:2px 0 0;font-size:.8rem;color:var(--ink-suau);font-weight:700}
+.partit-barra{display:grid;grid-template-columns:9.5em minmax(0,1fr) 7.5em;align-items:center;
+  gap:10px;font-size:.88rem;font-variant-numeric:tabular-nums;margin-top:8px}
+.partit-barra + .partit-barra{margin-top:5px}
+.partit-barra .etq{font-size:.8rem;font-weight:700;color:var(--ink-suau);line-height:1.2}
+.partit-barra i{display:block;height:14px;width:var(--w);min-width:3px;
+  border:1.5px solid var(--ink);border-radius:4px;background:var(--accent)}
+.partit-barra.tram i{background:var(--vora)}
+.partit-barra.buida .xifra{grid-column:2 / span 2;color:var(--ink-suau);font-weight:700;font-size:.8rem;
+  text-align:left}
+.partit-barra .xifra{font-weight:800;white-space:nowrap;text-align:right}
+.partit-trams .buit{color:var(--ink-suau);font-weight:700;font-size:.78rem}
+/* A mòbil l'etiqueta va a sobre i la barra i la xifra comparteixen la línia:
+   la columna de 9,5em deixava la barra en 90 px. */
+@media (max-width:520px){
+  .partit-barra{grid-template-columns:minmax(0,1fr) auto;row-gap:2px;margin-top:6px}
+  .partit-barra .etq{grid-column:1 / -1}
 }
 
-/* --- les dues poblacions ------------------------------------------------- */
-.partit-dues{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:var(--e2);
-  grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-.partit-dues li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:var(--ombra);padding:var(--e2);display:flex;flex-direction:column;gap:4px}
-/* La targeta de la població governada porta el filet del color de la marca:
-   és l'única de les dues que depèn de qui té l'alcaldia. */
-.partit-dues li.governa{border-left-width:10px;border-left-color:var(--accent)}
-.partit-dues .gran{font-family:var(--display);font-weight:900;font-size:2.4rem;line-height:1;
+/* --- les dues xifres de costat (vots i habitants, la del mig i la mitjana,
+   la renda) ----------------------------------------------------------------
+   Amb el filet de l'ullada i sense caixa: eren targetes amb vora i ombra, i
+   una de les dues portava a més un filet del color de la marca que, a la de la
+   mitjana o a la dels 947, no volia dir res. Cap de les dues xifres no és més
+   «del partit» que l'altra, i el color de la marca no hi ha de fer de
+   subratllador. */
+.partit-dues{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;column-gap:var(--e3);
+  grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr));border-top:2.5px solid var(--ink)}
+.partit-dues li{padding:var(--e2) 0;border-bottom:1.5px solid var(--vora);display:flex;
+  flex-direction:column;gap:4px;min-width:0}
+.partit-dues .gran{font-family:var(--display);font-weight:900;font-size:2.2rem;line-height:1;
   letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .partit-dues .secundari{font-size:.84rem;color:var(--ink-suau)}
 
-/* --- les altres marques -------------------------------------------------- */
-/* Les targetes de les altres marques.
-   Els 200px de mínim no donaven per a «Independents de Catalunya», i com que el
-   nom portava un tall d'emergència que parteix DINS de la paraula, la targeta
-   escrivia «Ciutadan / s» i «Tots per l'Empord / à». Aquell tall és per a una
-   paraula que de debò no hi cap, no per a un nom que només necessita dues
-   línies: amb el tall normal, «Ciutadans» hi cap sencer. La columna puja a 230,
-   i com que el nom pot ocupar una línia o dues, les targetes s'estiren totes a
-   l'alçada de la seva fila en comptes de quedar cadascuna de la seva mida. */
-.partit-altres{list-style:none;margin:0;padding:0;display:grid;gap:var(--e1);
-  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:stretch}
-.partit-altres li{display:flex}
-.partit-altres a{display:flex;align-items:center;gap:9px;width:100%;background:var(--paper-2);
-  border:2.5px solid var(--ink);border-radius:var(--r-m);box-shadow:var(--ombra);
-  padding:11px var(--e2);text-decoration:none;color:inherit;
-  transition:transform .12s ease,box-shadow .12s ease}
-.partit-altres a:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+/* --- les altres marques --------------------------------------------------
+   És navegació i es dibuixa com a navegació: text amb la mostra de color
+   (la marca de dada) i el nombre d'alcaldies, en files amb filet que fan dues,
+   tres o quatre columnes segons l'amplada. Eren quinze pastilles amb vora i
+   ombra, una per fila a mòbil, i entre totes feien 800 píxels. */
+.partit-altres{list-style:none;margin:0;padding:0;display:grid;column-gap:var(--e3);
+  grid-template-columns:repeat(auto-fill,minmax(min(190px,100%),1fr));border-top:2.5px solid var(--ink)}
+.partit-altres li{display:flex;border-bottom:1.5px solid var(--vora)}
+.partit-altres a{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;padding:6px 0;
+  text-decoration:none;color:inherit}
+.partit-altres a:hover b,.partit-altres a:focus-visible b{text-decoration:underline;
+  text-decoration-thickness:2px}
 .partit-altres .mostra{width:14px;height:14px;border-radius:4px;background:var(--c);
   border:1.5px solid var(--ink);flex:none}
 .partit-altres b{font-weight:800;overflow-wrap:break-word;line-height:1.25}
 .partit-altres span.quantes{margin-left:auto;padding-left:8px;color:var(--ink-suau);
-  font-size:.84rem;white-space:nowrap}
-@media (prefers-reduced-motion:reduce){.partit-altres a{transition:none}}
+  font-size:.82rem;white-space:nowrap;font-variant-numeric:tabular-nums}
 `;
 
 // -------------------------------------------------------------------- pàgina
@@ -1784,8 +1771,12 @@ export function renderPartit(data: PartitData, generatedAt: string): string {
   /*
    * El cap per al cercador. La descripció és el resum d'obertura —que ja
    * porta les tres xifres— i una frase de què més hi ha. La marca va com a
-   * `Organization` amb el nom sencer i les sigles; sense `url`, perquè la
-   * de la pàgina no és la seva i la seva no la tenim.
+   * `PoliticalParty` amb el nom sencer i les sigles, i amb el mateix `@id`
+   * estable que li donen les fitxes de candidatura i de persona quan
+   * l'esmenten (`partitLd()` de `seo-ld.ts`): així el cercador entén que és
+   * un sol node i no quinze organitzacions diferents amb el mateix nom. La
+   * data de modificació és la de la generació, perquè les xifres canvien
+   * cada cop que es publica i no quan algú toca el text.
    */
   const url = `${SITE}/observatori/partit/${data.id}/`;
   const cap = capSeo({
@@ -1794,15 +1785,10 @@ export function renderPartit(data: PartitData, generatedAt: string): string {
     url,
     imatge: imatgeOg(FITXER_OG.partit(data.id)),
     tipus: "article",
+    dataModificacio: generatedAt,
     jsonLd: [
       filAriadna([...ARREL_OBSERVATORI, { nom: "Els partits", url: `${SITE}/observatori/partit/` }, { nom: data.sigles, url }]),
-      {
-        "@type": "Organization",
-        "@id": `${url}#partit`,
-        name: data.name,
-        alternateName: data.sigles,
-        mainEntityOfPage: url,
-      },
+      partitLd({ id: data.id, nom: data.name, sigles: data.sigles }),
     ],
   });
   // Els dos blocs que poden no existir es dibuixen un sol cop: l'índex de dalt i
@@ -1841,33 +1827,14 @@ ${cercador("../../")}
 <main id="contingut">
 
 <section class="partit-portada">
-  <a class="partit-tornar" href="../../">← Observatori municipal</a>
+  <nav class="partit-fil" aria-label="On ets"><a href="../../">Observatori</a>
+    <span aria-hidden="true">·</span> <a href="../">Els partits</a></nav>
   <h1><span class="partit-sigles">${escape(data.sigles)}</span></h1>
   <p class="partit-nom">${escape(data.name)}${
     NOM_TIPUS[data.kind] ? ` · ${escape(NOM_TIPUS[data.kind]!)}` : ""
   }</p>
   <p class="resum">${escape(resum)}</p>
-  <ul class="partit-xifres">
-    <li><span class="etq">Alcaldies</span><span class="gran">${number(data.alcaldies)}</span>
-      <span class="secundari">${
-        data.alcaldies === 0
-          ? "de 947 municipis: no en governa cap"
-          : `de 947 municipis, a ${number(data.comarques)} ${plural(data.comarques, "comarca", "comarques")}`
-      }</span></li>
-    <li><span class="etq">Regidories</span><span class="gran">${number(data.regidories)}</span>
-      <span class="secundari">a ${number(data.municipis)}
-      ${plural(data.municipis, "municipi", "municipis")} amb representació</span></li>
-    <li><span class="etq">Població governada</span><span class="gran">${number(data.poblacioGovernada)}</span>
-      <span class="secundari">${
-        // El percentatge és el que fa comparable una marca amb l'altra: 947.665
-        // habitants no diuen si això és molt o poc fins que no se sap que
-        // Catalunya en té 7,9 milions. La xifra absoluta hi queda perquè és la
-        // que es pot comprovar sumant els municipis de la llista de sota.
-        data.poblacioCatalunya > 0
-          ? `habitants, el ${percent((100 * data.poblacioGovernada) / data.poblacioCatalunya)} de Catalunya, als municipis on té l'alcaldia`
-          : "habitants als municipis on té l'alcaldia"
-      }</span></li>
-  </ul>
+  ${ulladaPartit(data)}
 </section>
 
 <nav class="index" aria-label="Seccions d'aquesta pàgina">
@@ -1905,7 +1872,6 @@ ${cercador("../../")}
   <h2>On mana</h2>
   <p class="entrada-bloc">Els municipis amb l'alcaldia, del que té més habitants al que en té
   menys, i qui hi mana.</p>
-  ${renderMesGrans(data)}
   ${renderOnMana(data)}
 </section>
 

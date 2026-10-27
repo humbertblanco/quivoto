@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
   ambSigne, extrems, medianaDe, nomsMarca, ordinal, PAS, posicioMarca, preparaRanquings, renderRanquings, respecteMediana,
-  valorMarca, type RankingRow,
+  valorMarca, VISIBLES, type RankingRow,
 } from "./ranquings";
 
 /**
@@ -85,6 +85,11 @@ describe("renderRanquings", () => {
     expect(html).toContain("El més baix");
   });
 
+  it("l'enllaç a les dades no porta fletxa al final, com cap enllaç de la casa", () => {
+    expect(html).toContain('<a href="../dades/">Les dades senceres i l\'esquema de cada camp</a>');
+    expect(html.slice(html.indexOf("<body"))).not.toMatch(/→\s*<\/a>/);
+  });
+
   it("escriu els empats sencers i en resumeix la cua a partir de cinc", () => {
     const rows = files();
     for (let i = 0; i < 7; i++) rows[i]!.pt = -1;
@@ -105,15 +110,15 @@ describe("renderRanquings", () => {
   it("no repeteix la llista: cap top 10 a part, i el servidor només escriu les primeres files", () => {
     expect(html).not.toContain('class="top"');
     const participacio = html.slice(html.indexOf('id="participacio"'), html.indexOf('id="renda"'));
-    expect(participacio.match(/<li [^>]*><span class="pos">/g)).toHaveLength(PAS);
+    // Les 40 primeres i les cinc últimes: res més.
+    expect(participacio.match(/<li [^>]*><span class="pos">/g)).toHaveLength(PAS + VISIBLES);
     expect(participacio).toContain('<span class="pos">1</span>');
     expect(participacio).toContain("../m/poble-99/");
     expect(participacio).toContain('<a class="comarca" href="../c/comarca/">Comarca</a>');
-    // Poble 000 és el darrer de participació: surt al regle com «el més baix»,
-    // però no a les primeres files; el JSON amb què el navegador completa la
-    // llista sí que el porta.
-    const llista = participacio.slice(participacio.indexOf('<ol class="llista-ranquing"'), participacio.indexOf("</ol>"));
-    expect(llista).not.toContain("../m/poble-0/");
+    // Poble 010 és el 90è: ni entre els 40 primers ni entre els cinc últims.
+    // El JSON amb què el navegador completa la llista sí que el porta.
+    expect(participacio).not.toContain('"../m/poble-10/"');
+    expect(participacio).not.toContain('<span class="pos">90</span>');
     expect(html).toContain('<script type="application/json" id="dades-ranquings">');
     expect(html).toContain('"poble-0"');
   });
@@ -297,5 +302,184 @@ describe("el cap SEO dels rànquings", () => {
 
   it("té un sol <h1>", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// Cinc de dalt, cinc de baix, i el mig plegat
+// ───────────────────────────────────────────────────────────────────────────
+
+describe("cada rànquing ensenya les dues puntes i plega el mig", () => {
+  const html = renderRanquings(files(), "2026-10-27");
+  const participacio = html.slice(html.indexOf('id="participacio"'), html.indexOf('id="renda"'));
+  const tros = (de: string): string => participacio.slice(participacio.indexOf(de), participacio.indexOf("</ol>", participacio.indexOf(de)));
+
+  it("els cinc primers a la vista, de l'1 al 5", () => {
+    const dalt = tros('<ol class="llista-ranquing rq-dalt"');
+    expect(dalt.match(/<span class="pos">/g)).toHaveLength(VISIBLES);
+    expect(dalt).toContain('<span class="pos">1</span>');
+    expect(dalt).toContain('<span class="pos">5</span>');
+  });
+
+  it("del 6 al 40 dins d'un <details> «Veure'n els 40 primers», escrits per als cercadors i per a qui no té JavaScript", () => {
+    const calaix = participacio.slice(participacio.indexOf('<details class="rq-calaix"'), participacio.indexOf("</details>"));
+    expect(calaix).toContain("Veure'n els 40 primers");
+    expect(calaix).toContain(" de 100");
+    expect(calaix.match(/<span class="pos">/g)).toHaveLength(PAS - VISIBLES);
+    expect(calaix).toContain('<span class="pos">6</span>');
+    expect(calaix).toContain('<span class="pos">40</span>');
+    // Plegat: sense «open».
+    expect(participacio).not.toContain('<details class="rq-calaix" data-calaix open');
+    expect(calaix).toContain("data-mes hidden");
+  });
+
+  it("els cinc últims a la vista, amb la seva posició de debò", () => {
+    const baix = tros('<ol class="llista-ranquing rq-baix"');
+    expect(baix).toContain('start="96"');
+    expect(baix.match(/<span class="pos">/g)).toHaveLength(VISIBLES);
+    expect(baix).toContain('<span class="pos">96</span>');
+    expect(baix).toContain('<span class="pos">100</span>');
+    expect(baix).toContain('href="../m/poble-0/"');
+  });
+
+  it("amb poques files no hi ha calaix ni repeticions: cada municipi surt un sol cop", () => {
+    // Vint-i-dos municipis: 5 de dalt, del 6 al 17 al calaix, 5 de baix.
+    const petit = renderRanquings(files(22), "avui");
+    const p = petit.slice(petit.indexOf('id="participacio"'), petit.indexOf('id="renda"'));
+    const posicions = [...p.matchAll(/<span class="pos">(\d+)<\/span>/g)].map((m) => Number(m[1]));
+    expect(posicions).toEqual(Array.from({ length: 22 }, (_, i) => i + 1));
+    expect(p).toContain("Veure'n els 17 primers");
+  });
+
+  it("el resum del calaix és un objectiu de 44 px amb el focus visible", () => {
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css).toMatch(/\.rq-obre\{[^}]*min-height:44px/);
+    expect(css).toContain(".rq-obre:focus-visible{outline:3px solid");
+  });
+});
+
+// ─────────────────────────────── el JavaScript de la pàgina, amb un DOM fals
+
+type NodeR = {
+  innerHTML: string; textContent: string; hidden: boolean; open: boolean; value: string;
+  attrs: Record<string, string>; oients: Record<string, (() => void)[]>;
+  dataset: Record<string, string>; className: string;
+  querySelector(sel: string): NodeR | null;
+  addEventListener(t: string, f: () => void): void;
+  setAttribute(k: string, v: string): void;
+  before(n: NodeR): void;
+};
+
+const nodeR = (fills: Record<string, NodeR> = {}): NodeR => {
+  const n: NodeR = {
+    innerHTML: "", textContent: "", hidden: false, open: false, value: "", attrs: {}, oients: {},
+    dataset: {}, className: "",
+    querySelector: (sel) => fills[sel] ?? null,
+    addEventListener: (t, f) => { (n.oients[t] ??= []).push(f); },
+    setAttribute: (k, v) => { n.attrs[k] = v; },
+    before: () => {},
+  };
+  return n;
+};
+
+/** Obre el guió de la pàgina amb una sola secció de mentida, la de la mètrica `id`. */
+function obreRanquings(html: string, id: string) {
+  const de = nodeR();
+  const calaix = nodeR({ ".rq-obre .secundari": de });
+  const n = {
+    ambit: Object.assign(nodeR(), { value: "cat" }), cerca: nodeR(), dalt: nodeR(), mig: nodeR(), baix: nodeR(),
+    calaix, obre: nodeR(), de, mes: nodeR(), buit: nodeR(), figura: nodeR(), controls: nodeR(),
+  };
+  const seccio = nodeR({
+    "[data-ambit]": n.ambit, "[data-cerca]": n.cerca, "[data-dalt]": n.dalt, "[data-mig]": n.mig,
+    "[data-baix]": n.baix, "[data-calaix]": n.calaix, "[data-obre]": n.obre, "[data-mes]": n.mes,
+    "[data-buit]": n.buit, ".dispersio": n.figura, ".controls": n.controls,
+  });
+  seccio.dataset.metrica = id;
+  const json = /<script type="application\/json" id="dades-ranquings">([\s\S]*?)<\/script>/.exec(html)![1]!;
+  const inici = html.indexOf("<script>\n(() => {\n  const bloc");
+  const script = html.slice(inici + 8, html.indexOf("</script>", inici));
+  const document = {
+    getElementById: () => ({ textContent: json }),
+    querySelectorAll: () => [seccio],
+    createElement: () => nodeR(),
+  };
+  new Function("document", script)(document);
+  const pinta = (on: NodeR, t: string): void => { for (const f of on.oients[t] ?? []) f(); };
+  const posicions = (llista: NodeR): number[] =>
+    [...llista.innerHTML.matchAll(/<span class="pos">(\d+)<\/span>/g)].map((m) => Number(m[1]));
+  return { n, pinta, posicions };
+}
+
+describe("el navegador refà les dues puntes igual que el servidor", () => {
+  const html = renderRanquings(files(), "2026-10-27");
+
+  it("en carregar, només ensenya el botó si al mig en queden d'amagats", () => {
+    const { n } = obreRanquings(html, "participacio");
+    expect(n.mes.hidden).toBe(false);
+    expect(n.mes.textContent).toBe("Mostra'n 40 més (en queden 55)");
+  });
+
+  it("canviar d'àmbit torna a fer cinc de dalt, el mig plegat i cinc de baix", () => {
+    const { n, pinta, posicions } = obreRanquings(html, "participacio");
+    pinta(n.ambit, "change");
+    expect(posicions(n.dalt)).toEqual([1, 2, 3, 4, 5]);
+    expect(posicions(n.mig)).toEqual(Array.from({ length: 35 }, (_, i) => i + 6));
+    expect(posicions(n.baix)).toEqual([96, 97, 98, 99, 100]);
+    expect(n.baix.attrs.start).toBe("96");
+    expect(n.obre.textContent).toBe("Veure'n els 40 primers");
+    // «Mostra'n més» allarga el mig fins a tocar els de baix, i llavors s'amaga.
+    pinta(n.mes, "click");
+    pinta(n.mes, "click");
+    expect(posicions(n.mig).at(-1)).toBe(95);
+    expect(n.mes.hidden).toBe(true);
+  });
+
+  it("cercant, les trobades van juntes, el calaix s'obre i els de baix s'amaguen", () => {
+    const { n, pinta, posicions } = obreRanquings(html, "participacio");
+    n.cerca.value = "poble 00";
+    pinta(n.cerca, "input");
+    // Poble 000 … Poble 009: deu trobades, amb la seva posició a tot Catalunya.
+    expect([...posicions(n.dalt), ...posicions(n.mig)]).toEqual([91, 92, 93, 94, 95, 96, 97, 98, 99, 100]);
+    expect(n.calaix.open).toBe(true);
+    expect(n.baix.hidden).toBe(true);
+    expect(n.de.textContent).toBe(" de 10");
+  });
+
+  it("el regle de la població, refet al navegador, va en escala logarítmica i amb els extrems etiquetats", () => {
+    const { n, pinta } = obreRanquings(html, "poblacio");
+    pinta(n.ambit, "change");
+    expect(n.figura.innerHTML).toContain('<div class="regle-eix" aria-hidden="true"><span class="ini">1.000</span>');
+    expect(n.figura.innerHTML).toContain('<span class="fi">60.400</span>');
+    expect(n.figura.innerHTML).toContain('class="tall" style="--p:');
+    expect(n.figura.innerHTML).toContain("cada ratlla multiplica per deu");
+  });
+});
+
+describe("l'escala del regle als rànquings", () => {
+  const html = renderRanquings(files(), "2026-10-27");
+  const seccio = (id: string, seguent: string): string => html.slice(html.indexOf(`id="${id}"`), html.indexOf(`id="${seguent}"`));
+
+  it("la població va en logarítmica: el més petit al 4 %, el més gran al 96 %, i les marques de 10.000 al mig", () => {
+    const p = seccio("poblacio", "participacio");
+    expect(p).toContain("cada ratlla multiplica per deu");
+    expect(p).toContain('<i class="tall" style="--p:');
+    expect(p).toContain(">10 mil</span>");
+    expect(p).toContain('<span class="ini">1.000</span>');
+    expect(p).toContain('<span class="fi">60.400</span>');
+    // log10(1.000)=3, log10(60.400)≈4,781: 10.000 cau al 4 + 92·(1/1,781) ≈ 55,7 %.
+    expect(p).toContain('<span class="tall" style="--p:55.7%">10 mil</span>');
+  });
+
+  it("la participació continua en lineal, sense ratlles, però amb els dos extrems etiquetats", () => {
+    const p = seccio("participacio", "renda");
+    expect(p).not.toContain("multiplica per deu");
+    expect(p).not.toContain('class="tall"');
+    expect(p).toContain('<div class="regle-eix" aria-hidden="true"><span class="ini">0,00%</span><span class="fi">99,00%</span></div>');
+  });
+
+  it("el JSON diu l'escala de cada mètrica perquè el navegador la refaci igual", () => {
+    expect(html).toContain('"poblacio":{"d":0,"s":"","e":"log"');
+    expect(html).toContain('"participacio":{"d":2,"s":"%","e":"lineal"');
   });
 });

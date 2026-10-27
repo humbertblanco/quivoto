@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { clauCerca, classifica, qualitat, TIPUS } from "./cerca";
 import { de, normalize, slugify } from "../lib/text";
 import { CERCADOR_CSS, senseComentaris } from "./estil";
+import { adrecaEns } from "./ens-tipus";
 
 /**
  * La casella per anar a qualsevol lloc, a totes les pàgines.
@@ -22,6 +23,13 @@ import { CERCADOR_CSS, senseComentaris } from "./estil";
  * setena són les 4.400 persones que han tingut l'alcaldia des del 1979 i avui
  * no seuen al ple: «roig castell» troba en Joan Roig Castell, alcalde
  * d'Alcanar del 2003 al 2023, amb el càrrec i els anys al costat del nom.
+ *
+ * La vuitena són els ens de per sobre de l'ajuntament: les quatre diputacions
+ * i els consells comarcals. Van dins de `cerca.json` (són 44 files) i només
+ * si l'índex les porta: un fitxer vell sense la clau `ens` continua servint,
+ * simplement no les troba. L'adreça la deriva `adrecaEns()`, serialitzada com
+ * les altres funcions, perquè l'enllaç vagi exactament al directori que
+ * escriu el generador.
  *
  * ## El rànquing, i per què no n'hi ha prou amb «comença per»
  *
@@ -152,6 +160,7 @@ export const CERCADOR_JS = `(function(){
   var TIPUS = ${JSON.stringify(TIPUS)};
   var qualitat = ${qualitat.toString()};
   var classifica = ${classifica.toString()};
+  var adrecaEns = ${adrecaEns.toString()};
 
   // Els blocs d'aquesta pàgina surten de l'índex, quan la pàgina en té.
   var blocs = [].map.call(document.querySelectorAll(".index a[href^='#']"), function(a){
@@ -206,6 +215,13 @@ export const CERCADOR_JS = `(function(){
       for (i = 0; i < dades.par.length; i++) {
         tots.push({ m: "Partit", k: clau(dades.par[i][0]), t: dades.par[i][0], w: dades.par[i][3], i: i });
         tots.push({ m: "Partit", k: clau(dades.par[i][1]), t: dades.par[i][0], w: dades.par[i][3], i: i });
+      }
+      // Les diputacions i els consells, si l'índex en porta: un cerca.json
+      // d'abans no té la clau i la cerca ha de continuar igual.
+      if (dades.ens) {
+        for (i = 0; i < dades.ens.length; i++) {
+          tots.push({ m: "Ens", k: clau(dades.ens[i][0]), t: dades.ens[i][0], w: dades.ens[i][3], i: i });
+        }
       }
       if (electes) {
         for (i = 0, n = electes.cand.length; i < n; i++) {
@@ -308,6 +324,12 @@ export const CERCADOR_JS = `(function(){
       return { mena: "Partit", text: p[0],
                sub: p[2] + (p[2] === 1 ? " alcaldia" : " alcaldies"),
                on: BASE + "partit/" + p[1] + "/" };
+    }
+    if (f.m === "Ens") {
+      var en = dades.ens[f.i];
+      return { mena: en[1] === "diputacio" ? "Diputació" : "Consell", text: en[0],
+               sub: en[4] + (en[4] === 1 ? " municipi" : " municipis"),
+               on: BASE + adrecaEns(en[1], en[2]) };
     }
     if (f.m === "Candidatura") {
       var cc = electes.cand[f.i];

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import {
-  marcaDe, renderPartit, tintaSobre,
+  marcaDe, PARTIT_CSS, renderPartit, tintaSobre,
   type PartitData, type PartitMunicipi, type PartitRenda, type PartitRetribucions,
 } from "./partit";
 
@@ -352,7 +352,7 @@ describe("renderPartit", () => {
     expect(html).not.toContain('<figure class="grafic');
   });
 
-  it("dibuixa les tres sèries llargues, de costat, quan les fonts s'hi assemblen", () => {
+  it("dibuixa les tres sèries llargues, l'una sota l'altra, quan les fonts s'hi assemblen", () => {
     const html = renderPartit(mostra(), "2026-08-30");
     expect(html).toContain("Regidories, elecció a elecció");
     expect(html).toContain("Alcaldies, mandat a mandat");
@@ -640,11 +640,11 @@ describe("les cares de les alcaldies", () => {
       }),
     );
 
-  /** El tros de pàgina entre l'obertura de la tira i el seu tancament. */
-  const tiraDe = (html: string): string =>
+  /** El tros de pàgina de la llista d'on mana. */
+  const llistaDe = (html: string): string =>
     html.slice(
-      html.indexOf('<ul class="partit-grans">'),
-      html.indexOf("</ul>", html.indexOf('<ul class="partit-grans">')),
+      html.indexOf('<ul class="partit-llocs">'),
+      html.indexOf("</ul>", html.indexOf('<ul class="partit-llocs">')),
     );
 
   it("posa la cara de qui mana a cada fila i l'enllaça amb la seva fitxa", () => {
@@ -685,52 +685,65 @@ describe("les cares de les alcaldies", () => {
     expect(html).toContain('<a href="../../c/baix-llobregat/">Baix Llobregat</a>');
   });
 
-  it("dibuixa les vuit alcaldies més grans, en quatre columnes i totes amb cara", () => {
-    // Amb menys de vuit, la tira seria la llista de sota sense el detall.
-    const poques = renderPartit(mostra({ llocs: ambCares(5), alcaldies: 5 }), "2026-08-30");
-    expect(poques).not.toContain('class="partit-grans"');
-
-    const moltes = renderPartit(
-      mostra({ llocs: ambCares(30), alcaldies: 30, municipis: 30 }),
-      "2026-08-30",
-    );
-    expect(moltes).toContain("Les seves alcaldies més grans");
-    const tira = tiraDe(moltes);
-    expect(tira.match(/<li>/g)).toHaveLength(8);
-    expect(tira.match(/--mida:44px/g)).toHaveLength(8);
-    // Les vuit més poblades i cap altra, en ordre.
-    expect(tira).toContain("Poble 0");
-    expect(tira).toContain("Poble 7");
-    expect(tira).not.toContain("Poble 8");
-    expect(tira.indexOf("Poble 0")).toBeLessThan(tira.indexOf("Poble 7"));
-    // Cada caixa porta la persona a la seva fitxa, el municipi a la seva i els habitants.
-    expect(tira).toContain('<a class="qui" href="../../m/poble-0/regidor/alcalde-0-cognom/">Alcalde 0 Cognom</a>');
-    expect(tira).toContain('<a class="on" href="../../m/poble-0/">Poble 0</a>');
-    expect(tira).toContain("40.000 hab.");
-    // I el peu diu el criteri, el denominador i l'any del padró.
-    expect(moltes).toContain("als municipis amb més habitants al padró del 2025, de 30 en total");
-    expect(moltes).toContain("grid-template-columns:repeat(4,minmax(0,1fr))");
-    expect(moltes).toContain("grid-template-columns:repeat(2,minmax(0,1fr))");
-  });
-
-  it("a la tira, qui no té retrat hi surt igualment, amb les inicials, i no es queda fora", () => {
-    const llocs = ambCares(10).map((m, i) => (i === 0 ? { ...m, mayorPhoto: null, mayorSlug: null } : m));
-    const html = renderPartit(mostra({ llocs, alcaldies: 10 }), "2026-08-30");
-    const tira = tiraDe(html);
-    // El municipi més gran hi és encara que no publiqui la fotografia…
-    expect(tira).toContain("Poble 0");
-    expect(tira).toContain(">A0<");
-    expect(tira.match(/<img/g)).toHaveLength(7);
-    // …i sense fitxa de persona, el nom porta a les alcaldies de la fitxa municipal.
-    expect(tira).toContain('<a class="qui" href="../../m/poble-0/#alcaldies">Alcalde 0 Cognom</a>');
-  });
-
-  it("la tira no porta cap escut de municipi, que competiria amb el mapa", () => {
+  it("una sola llista, sense la tira de targetes que repetia les mateixes vuit", () => {
+    // Abans hi havia una tira de les vuit alcaldies més grans i, a sota, dotze
+    // targetes que començaven per les mateixes vuit. Ara és una llista i prou.
     const html = renderPartit(
       mostra({ llocs: ambCares(30), alcaldies: 30, municipis: 30 }),
       "2026-08-30",
     );
-    expect(tiraDe(html)).not.toContain("escut");
+    expect(html).not.toContain('class="partit-grans"');
+    expect(html).not.toContain("Les seves alcaldies més grans");
+    const llista = llistaDe(html);
+    expect(llista.match(/<li>/g)).toHaveLength(12);
+    expect(llista.match(/--mida:40px/g)).toHaveLength(12);
+    // Les més poblades i en ordre, cadascuna amb la persona, el municipi i els habitants.
+    expect(llista.indexOf("Poble 0")).toBeLessThan(llista.indexOf("Poble 11"));
+    expect(llista).not.toContain("Poble 12");
+    expect(llista).toContain('<a class="lloc-qui" href="../../m/poble-0/regidor/alcalde-0-cognom/">Alcalde 0 Cognom</a>');
+    expect(llista).toContain('<a class="lloc-on" href="../../m/poble-0/psc-cp/"><b>Poble 0</b></a>');
+    expect(llista).toContain("40.000 hab.");
+    // I el peu diu el criteri, el denominador i l'any del padró.
+    expect(html).toContain("als municipis amb més habitants al padró del 2025, de 30 en total");
+  });
+
+  it("ni targetes amb ombra ni fletxa a la crida dels 947", () => {
+    const html = renderPartit(
+      mostra({ llocs: ambCares(30), alcaldies: 30, municipis: 30 }),
+      "2026-08-30",
+    );
+    expect(PARTIT_CSS).not.toMatch(/\.partit-llocs li\{[^}]*box-shadow/);
+    expect(html).toContain('<p class="partit-resta-947">');
+    expect(html).not.toContain("a la llista dels 947 →");
+  });
+
+  it("qui no té retrat hi surt igualment, amb les inicials, i no es queda fora", () => {
+    const llocs = ambCares(10).map((m, i) => (i === 0 ? { ...m, mayorPhoto: null, mayorSlug: null } : m));
+    const html = renderPartit(mostra({ llocs, alcaldies: 10 }), "2026-08-30");
+    const llista = llistaDe(html);
+    // El municipi més gran hi és encara que no publiqui la fotografia…
+    expect(llista).toContain("Poble 0");
+    expect(llista).toContain(">A0<");
+    expect(llista.match(/<img/g)).toHaveLength(9);
+    // …i sense fitxa de persona, el nom va en text pla i no porta enlloc.
+    expect(llista).toContain('<span class="lloc-qui">Alcalde 0 Cognom</span>');
+  });
+
+  it("una alcaldia sense nom a la font no s'inventa cap cara ni cap nom", () => {
+    const html = renderPartit(
+      mostra({ llocs: [lloc({ mayorPhoto: null, mayorName: null, mayorSlug: null })] }),
+      "2026-08-30",
+    );
+    expect(llistaDe(html)).toContain('<span class="lloc-sense-cara" aria-hidden="true"></span>');
+    expect(llistaDe(html)).toContain("Sense nom a la font");
+  });
+
+  it("la llista no porta cap escut de municipi, que competiria amb el mapa", () => {
+    const html = renderPartit(
+      mostra({ llocs: ambCares(30), alcaldies: 30, municipis: 30 }),
+      "2026-08-30",
+    );
+    expect(llistaDe(html)).not.toContain("escut");
   });
 });
 
@@ -761,7 +774,9 @@ describe("què cobren les seves alcaldies", () => {
     const html = renderPartit(mostra({ retribucions: retribucions() }), "2026-08-30");
     expect(html).toContain('class="partit-trams"');
     // La xifra més alta de tota la llista omple l'amplada; la resta n'és la part.
-    expect(html).toContain('<div class="barra marca"><span class="etq">Aquesta marca</span>');
+    expect(html).toContain('<div class="partit-barra marca"><span class="etq">Aquesta marca</span>');
+    // «.barra» és del full compartit (el repartiment del ple) i s'hi escolava.
+    expect(html).not.toContain('class="barra ');
     expect(html).toContain('style="--w:100.0%"');
     expect(html).toContain(`style="--w:${((100 * 39_025) / 42_340).toFixed(1)}%"`);
     expect(html).toContain(`style="--w:${((100 * 13_617) / 42_340).toFixed(1)}%"`);
@@ -779,7 +794,7 @@ describe("què cobren les seves alcaldies", () => {
       }),
       "2026-08-30",
     );
-    expect(html).toContain('class="barra marca buida"');
+    expect(html).toContain('class="partit-barra marca buida"');
     expect(html).toContain("sense dada");
   });
 
@@ -858,12 +873,18 @@ describe("el cap SEO del partit", () => {
     expect(descripcioDe(sense)).toBe("PSC no té cap alcaldia a Catalunya: hi té 40 regidories, totes a l'oposició. On mana i com li ha anat des del 1979.");
   });
 
-  it("passa per l'índex de partits al fil d'Ariadna i declara l'Organization amb el nom sencer", () => {
+  it("passa per l'índex de partits al fil d'Ariadna i declara el PoliticalParty amb el nom sencer i @id estable", () => {
     expect(filDe(html).map((i) => i.name)).toEqual(["quivoto", "Observatori municipal", "Els partits", "PSC"]);
-    const org = jsonLdDe(html).find((o) => o["@type"] === "Organization")!;
-    expect(org.name).toBe("Partit dels Socialistes de Catalunya");
-    expect(org.alternateName).toBe("PSC");
-    expect(org.url).toBeUndefined();
+    const partit = jsonLdDe(html).find((o) => o["@type"] === "PoliticalParty")!;
+    expect(partit.name).toBe("Partit dels Socialistes de Catalunya");
+    expect(partit.alternateName).toBe("PSC");
+    expect(partit["@id"]).toBe("https://quivoto.cat/observatori/partit/psc/#partit");
+    expect(partit.url).toBe("https://quivoto.cat/observatori/partit/psc/");
+    expect(jsonLdDe(html).some((o) => o["@type"] === "Organization")).toBe(false);
+  });
+
+  it("diu quan es va generar, com a data de modificació de l'article", () => {
+    expect(html).toContain('<meta property="article:modified_time" content="2026-08-30">');
   });
 
   it("el títol i la descripció caben on el cercador els talla, i la descripció no s'ha hagut de retallar", () => {

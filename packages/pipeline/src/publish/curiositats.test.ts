@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  DADES_BUIDES, hrefAlcaldia, mandatsSeguits, preparaCuriositats, primers, renderCuriositats,
+  CURIOSITATS_CSS, DADES_BUIDES, hrefAlcaldia, mandatsSeguits, preparaCuriositats, primers, renderCuriositats,
+  respostaCuriositat, targetaCuriositat,
   type DadesCuriositats, type FilaCuriositat, type PasAlcaldia,
 } from "./curiositats";
 
@@ -337,5 +338,45 @@ describe("renderCuriositats", () => {
     expect(html).toContain('<p class="cobertura">S&#39;ha mirat el nom oficial de 12 municipis.</p>'.replace("&#39;", "'"));
     expect(html).toContain('<p class="nota">Quantes regidories té un ple ho fixa la llei per trams de població: no ho tria cap ajuntament.</p>');
     expect(html).toContain('<p class="secundari">i 2 més amb la mateixa xifra.</p>');
+  });
+});
+
+describe("cada curiositat, plegada", () => {
+  const fets = preparaCuriositats(files(), dades());
+  const html = renderCuriositats(fets);
+
+  it("és un <details> tancat amb el títol i la resposta d'una línia a la vista", () => {
+    expect(html.match(/<details class="cur-plec">/g)).toHaveLength(fets.length);
+    expect(html).not.toContain('<details class="cur-plec" open');
+    const primer = html.slice(html.indexOf('<summary class="cur-obre">'), html.indexOf("</summary>"));
+    expect(primer).toContain(`<h3>${fets[0]!.titol}</h3>`);
+    expect(primer).toContain('<span class="cur-resposta">');
+    // A la vista no hi ha llistes: són dins del calaix.
+    expect(primer).not.toContain("llista-curiosa");
+  });
+
+  it("la resposta diu qui encapçala la primera llista i amb quina xifra, en text pla", () => {
+    const qui = fets.find((f) => f.llistes[0]?.files[0]?.persona)!;
+    const fila = qui.llistes[0]!.files[0]!;
+    expect(respostaCuriositat(qui)).toBe(`${qui.llistes[0]!.cap}: ${fila.persona!.nom}, a ${fila.municipi.n} · ${fila.valor}`);
+    // Dins del <summary> no hi ha enllaços: un toc hi faria dues coses.
+    for (const m of html.matchAll(/<summary class="cur-obre">([\s\S]*?)<\/summary>/g)) expect(m[1]).not.toContain("<a ");
+  });
+
+  it("sense cap fila no s'inventa cap resposta", () => {
+    const buit = { ...fets[0]!, llistes: [{ cap: "Res", files: [] }] };
+    expect(respostaCuriositat(buit)).toBe("");
+    expect(targetaCuriositat(buit)).not.toContain("cur-resposta");
+  });
+
+  it("l'article i el seu id es queden, perquè hi ha enllaços a #cur-… i altres pàgines que el pinten", () => {
+    expect(html).toContain(`<article class="curiositat" id="cur-${fets[0]!.id}">`);
+  });
+
+  it("el resum és un objectiu de 44 px amb el focus visible, i cap rètol en majúscules espaiades", () => {
+    expect(CURIOSITATS_CSS).toMatch(/\.cur-obre\{[^}]*min-height:44px/);
+    expect(CURIOSITATS_CSS).toContain(".cur-obre:focus-visible{outline:3px solid");
+    expect(CURIOSITATS_CSS).not.toContain("text-transform:uppercase");
+    expect(CURIOSITATS_CSS).not.toContain("box-shadow");
   });
 });

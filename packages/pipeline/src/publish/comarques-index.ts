@@ -3,6 +3,7 @@ import { cercador } from "./cercador";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { RADIOGRAFIA_CSS } from "./estil";
+import type { DadesEns } from "./ens-tipus";
 import { peu } from "./peu";
 import { sigla } from "./sigla";
 
@@ -105,23 +106,22 @@ export function quiManaMes(
 export const COMARQUES_INDEX_CSS = `
 .cx-portada{padding:var(--e3) 0 var(--e4)}
 .cx-portada h1{margin-bottom:var(--e2)}
-.cx-portada .resum{font-size:1.15rem;max-width:34em}
-/* L'AMB no és cap comarca i no va a la taula: és un ens que agafa municipis
-   de quatre. Va aquí, a la vista, perquè és l'altra pàgina de territori que
-   hi ha i abans no s'hi arribava des d'enlloc que no fos el peu. */
-.cx-amb{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;margin-top:var(--e2);
-  border:2.5px solid var(--ink);border-radius:var(--r-max);background:var(--paper-2);
-  box-shadow:var(--ombra);font-weight:800;text-decoration:none;
-  transition:transform .12s ease,box-shadow .12s ease}
-.cx-amb:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-@media (prefers-reduced-motion:reduce){.cx-amb{transition:none}}
-
+/* L'entrada és una frase per llegir, no un titular: pes normal i el gris de
+   les entrades de la resta de pàgines (la «.resum» de la casa és en negreta
+   de titular, i aquí feia dos titulars seguits). */
+.cx-resum{font-size:1.15rem;max-width:34em;color:var(--ink-suau);margin:0}
+/* L'AMB i els ens no són cap comarca i no van a la taula. Van aquí, a la
+   vista, com a frase amb enllaços: eren dos botons amb ombra, i un enllaç de
+   navegació ja es diu amb el subratllat. */
+.cx-salts{margin:var(--e2) 0 0;display:flex;flex-direction:column;gap:6px;font-size:1rem}
+.cx-salts a{font-weight:800}
 .cx-taula{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.95rem}
 .cx-taula th,.cx-taula td{padding:10px 12px;text-align:right;vertical-align:middle;
   border-bottom:2px solid var(--vora);white-space:nowrap}
 .cx-taula th[scope="row"],.cx-taula .cx-mana{text-align:left}
-.cx-taula thead th{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--ink-suau);border-bottom:2.5px solid var(--ink)}
+.cx-taula thead th{font-size:.8rem;font-weight:800;color:var(--ink-suau);border-bottom:2.5px solid var(--ink);
+  vertical-align:bottom;white-space:normal}
+.cx-taula thead th:first-child,.cx-taula thead .cx-mana-cap{text-align:left}
 .cx-taula th[scope="row"] a{font-family:var(--display);font-weight:900;font-size:1.05rem;
   letter-spacing:-.01em;text-decoration:none}
 .cx-taula th[scope="row"] a:hover{text-decoration:underline;text-decoration-thickness:2.5px;text-underline-offset:4px}
@@ -133,10 +133,57 @@ export const COMARQUES_INDEX_CSS = `
 .cx-mig{color:var(--ink-suau)}
 .cx-mana{display:flex;align-items:center;gap:8px}
 .cx-mana .sec{font-size:.78rem;color:var(--ink-suau);font-weight:700;white-space:nowrap}
-.cx-nota{font-size:.86rem;color:var(--ink-suau);max-width:44em}
+.cx-nota{font-size:.86rem;color:var(--ink-suau);max-width:44em;margin-bottom:var(--e4)}
 .cx-buit{background:var(--paper-2);border:2.5px dashed var(--ink);border-radius:var(--r-m);
   padding:var(--e3);font-weight:700}
 `;
+
+/**
+ * La taula, que al mòbil es desmunta en fitxes.
+ *
+ * A 390 px les set columnes no hi cabien i la taula lliscava de costat: qui la
+ * mirava des del telèfon veia el nom i els habitants i havia d'endevinar que
+ * qui hi mana era tres pantalles a la dreta. Al mòbil cada fila és una fitxa:
+ * el nom, la pastilla de qui hi mana amb quantes de quantes, i una línia amb la
+ * resta de xifres escrites amb les seves paraules (`.cx-mobil`, que a
+ * l'escriptori no es veu i que les cel·les numèriques substitueixen).
+ */
+const TAULA_CSS = `
+.cx-mobil{display:none}
+@media (max-width:640px){
+  .cx-taula,.cx-taula tbody,.cx-taula tfoot,.cx-taula tr,.cx-taula th,.cx-taula td{display:block}
+  .cx-taula thead{display:none}
+  .cx-taula tr{padding:12px 0;border-bottom:2px solid var(--vora)}
+  .cx-taula tfoot tr{border-top:2.5px solid var(--ink);border-bottom:0}
+  .cx-taula th,.cx-taula td,.cx-taula tfoot th,.cx-taula tfoot td{border:0;padding:0;text-align:left;white-space:normal}
+  .cx-taula td:not(.cx-mana-cela){display:none}
+  .cx-taula .cx-mana-cela{margin-top:6px}
+  .cx-taula .cx-mana{flex-wrap:wrap}
+  .cx-mobil{display:block;margin-top:4px;font-size:.88rem;color:var(--ink-suau);font-weight:400}
+  .cx-taula tbody tr:hover{background:none}
+}
+`;
+
+/**
+ * La línia de xifres de la fitxa del mòbil: el mateix que diuen les cel·les
+ * numèriques de la fila, però amb les seves paraules, perquè sense capçalera
+ * «30 · 187.977 · 2 · 8» no es pot llegir.
+ */
+function resumMobil(
+  c: Pick<ComarcaFila, "municipis" | "habitants" | "pacte" | "canvisAlcaldia" | "poblacioMediana">,
+  ambMediana: boolean,
+): string {
+  const parts = [
+    `${number(c.municipis)} ${plural(c.municipis, "municipi", "municipis")}`,
+    `${number(c.habitants)} habitants`,
+    ambMediana && typeof c.poblacioMediana === "number"
+      ? `el del mig en té ${number(Math.round(c.poblacioMediana))}`
+      : "",
+    `${number(c.pacte)} ${plural(c.pacte, "pacte", "pactes")}`,
+    `${number(c.canvisAlcaldia)} ${plural(c.canvisAlcaldia, "canvi", "canvis")} d'alcaldia`,
+  ].filter(Boolean);
+  return `<span class="cx-mobil">${parts.join(" · ")}</span>`;
+}
 
 /** La cel·la de qui mana més: la pastilla de la força i quantes de quantes. */
 function celaMana(c: Pick<ComarcaFila, "forces" | "municipis">, base: string): string {
@@ -147,18 +194,21 @@ function celaMana(c: Pick<ComarcaFila, "forces" | "municipis">, base: string): s
     sigla(f.label, { base, brandId: f.brandId, color: f.color });
   return `<span class="cx-mana">${xip(primera)}${empat ? ` ${xip(empat)}` : ""}<span class="sec">${
     empat ? "empat a " : ""
-  }${number(primera.alcaldies)} de ${number(c.municipis)}</span></span>`;
+  }${number(primera.alcaldies)} de ${number(c.municipis)} alcaldies</span></span>`;
 }
 
 /**
  * @param comarques Les 43, en qualsevol ordre.
  * @param generatedAt Quan s'ha escrit la pàgina.
  * @param amb L'Àrea Metropolitana, si s'ha publicat; `null` si no (llavors no s'hi enllaça).
+ * @param ens Les fitxes de diputacions i consells (`loadEns`). Sense, o buida,
+ *   no s'enllaça l'índex d'ens: seria enviar a una pàgina que no s'ha escrit.
  */
 export function renderComarquesIndex(
   comarques: readonly ComarcaFila[],
   generatedAt: string,
   amb: AmbResum | null = null,
+  ens?: readonly DadesEns[],
 ): string {
   const base = "../";
   const ordenades = ordena(comarques);
@@ -209,7 +259,7 @@ export function renderComarquesIndex(
       <td>${number(c.municipis)}</td>
       <td>${number(c.habitants)}</td>
       ${celaMediana(c)}
-      <td class="cx-mana-cela">${celaMana(c, base)}</td>
+      <td class="cx-mana-cela">${celaMana(c, base)}${resumMobil(c, ambMediana)}</td>
       <td>${number(c.pacte)}</td>
       <td>${number(c.canvisAlcaldia)}</td>
     </tr>`,
@@ -227,7 +277,7 @@ export function renderComarquesIndex(
       <th scope="col">Municipis</th>
       <th scope="col">Habitants</th>
       ${ambMediana ? '<th scope="col">El municipi del mig</th>' : ""}
-      <th scope="col">Qui hi mana més</th>
+      <th scope="col" class="cx-mana-cap">Qui hi mana més</th>
       <th scope="col">Pactes</th>
       <th scope="col">Canvis d'alcaldia</th>
     </tr></thead>
@@ -241,7 +291,7 @@ export function renderComarquesIndex(
         // buida i no s'hi posa cap xifra que no s'hagi calculat.
         ambMediana ? '<td class="cx-mig"></td>' : ""
       }
-      <td class="cx-mana-cela">${celaMana({ forces: forcesCatalunya, municipis: total.municipis }, base)}</td>
+      <td class="cx-mana-cela">${celaMana({ forces: forcesCatalunya, municipis: total.municipis }, base)}${resumMobil({ ...total, poblacioMediana: null }, false)}</td>
       <td>${number(total.pacte)}</td>
       <td>${number(total.canvisAlcaldia)}</td>
     </tr></tfoot>
@@ -255,7 +305,7 @@ export function renderComarquesIndex(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${cap}
 ${tipografia(base)}
-<style>${RADIOGRAFIA_CSS}${COMARQUES_INDEX_CSS}</style>
+<style>${RADIOGRAFIA_CSS}${COMARQUES_INDEX_CSS}${TAULA_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -267,12 +317,29 @@ ${cercador(base)}
 
 <section class="cx-portada">
   <h1>Les ${number(ordenades.length)} comarques</h1>
-  <p class="resum">${escape(resum)}</p>
-  ${
-    amb
-      ? `<a class="cx-amb" href="${base}amb/">I l'Àrea Metropolitana, ${number(amb.municipis)} municipis de ${number(amb.comarques)} ${plural(amb.comarques, "comarca", "comarques")} <span aria-hidden="true">&nbsp;&rarr;</span></a>`
-      : ""
-  }
+  <p class="cx-resum">${escape(resum)}</p>
+  ${(() => {
+    const salts = [
+      amb
+        ? `<span>I l'<a href="${base}amb/">Àrea Metropolitana</a>, ${number(amb.municipis)} municipis de ${number(amb.comarques)} ${plural(amb.comarques, "comarca", "comarques")}.</span>`
+        : "",
+      // La comarca té un govern que no es vota —el consell comarcal— i la
+      // província, un altre —la diputació—. Les seves fitxes viuen a l'índex
+      // d'ens, i aquí només s'hi enllaça si s'han publicat.
+      ens && ens.length > 0
+        ? (() => {
+            const consells = ens.filter((e) => e.tipus === "consell").length;
+            const diputacions = ens.filter((e) => e.tipus === "diputacio").length;
+            const quins = [
+              consells > 0 ? (consells === 1 ? "el consell comarcal" : `els ${number(consells)} consells comarcals`) : "",
+              diputacions > 0 ? (diputacions === 1 ? "la diputació" : `les ${number(diputacions)} diputacions`) : "",
+            ].filter(Boolean).join(" i ");
+            return quins ? `<span>Qui governa <a href="${base}ens/">${quins}</a>.</span>` : "";
+          })()
+        : "",
+    ].filter(Boolean);
+    return salts.length > 0 ? `<p class="cx-salts">${salts.join("")}</p>` : "";
+  })()}
 </section>
 
 <section>

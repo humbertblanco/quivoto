@@ -540,6 +540,9 @@ describe("el que no es pot comparar es diu, i es diu per què", () => {
   it("dues lligues diferents no tenen una mediana comuna, i el regle no se n'inventa cap", () => {
     const html = obre(pagina(), ["esplugues-de-llobregat", "abella-de-la-conca"])["escales-cos"]!.innerHTML;
     expect(html).toContain("Sense mediana: aquests municipis són de 2 grups de mida diferents");
+    // I es diu un sol cop, a dalt, i no a peu de cada regle.
+    expect(html.match(/Sense mediana: aquests municipis/g)).toHaveLength(1);
+    expect(html.indexOf("Sense mediana")).toBeLessThan(html.indexOf('<article class="escala"'));
     const bloc = html.slice(html.indexOf("Deute per habitant"));
     const regle = bloc.slice(0, bloc.indexOf("</article>"));
     expect(regle).not.toContain("escala-mediana");
@@ -913,5 +916,29 @@ describe("el cap SEO del comparador", () => {
 
   it("té un sol <h1>", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+});
+
+describe("la cara de la pàgina", () => {
+  it("cap rètol en versaletes damunt del títol, i un fil d'Ariadna en minúscula", () => {
+    const html = pagina();
+    expect(html).not.toContain('<p class="micro">Comparador</p>');
+    expect(html).toContain('<nav class="cmp-fil" aria-label="On ets">');
+  });
+
+  it("cap regle és una targeta amb ombra, i cap etiqueta va en majúscules espaiades", () => {
+    const html = pagina();
+    expect(html).not.toMatch(/\.escala\{[^}]*box-shadow/);
+    expect(html).not.toMatch(/\.escala-seccio\{[^}]*text-transform:uppercase/);
+    expect(html).not.toMatch(/\.marca-extrem\{[^}]*text-transform:uppercase/);
+  });
+
+  it("un arrodoniment a zero no s'escriu mai «-0»", () => {
+    const html = obre(
+      renderComparador([municipi("a", "A", { estalvi: -0.04 }), municipi("b", "B", { estalvi: 3 }), ...FARCIMENT], "2026-08-30"),
+      ["a", "b"],
+    )["escales-cos"]!.innerHTML;
+    expect(html).not.toMatch(/-0 %|−0 %/);
+    expect(html).toContain(">0 %<");
   });
 });

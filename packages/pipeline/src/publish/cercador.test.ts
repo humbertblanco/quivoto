@@ -274,3 +274,29 @@ describe("el cercador compartit: el mateix a l'Observatori i a la landing", () =
     expect(files(caixa.innerHTML).map((f) => f[1])).toEqual(["Joan Roig Castell"]);
   });
 });
+
+describe("el guió del cercador troba les diputacions i els consells", () => {
+  const AMB_ENS: IndexCerca = {
+    ...MUNICIPIS,
+    ens: [
+      ["Consell Comarcal del Montsià", "consell", "montsia", 70_000, 12],
+      ["Diputació de Tarragona", "diputacio", "tarragona", 820_000, 183],
+    ],
+  };
+
+  it("cada ens va a la seva fitxa, amb l'adreça que fa adrecaEns()", async () => {
+    const { busca } = await obre({ ...TOTS, "cerca.json": AMB_ENS });
+    expect(files(busca("consell comarcal"))).toEqual([
+      ["Consell", "Consell Comarcal del Montsià", "12 municipis", "/observatori/c/montsia/consell/"],
+    ]);
+    expect(files(busca("diputacio"))).toEqual([
+      ["Diputació", "Diputació de Tarragona", "183 municipis", "/observatori/diputacio/tarragona/"],
+    ]);
+  });
+
+  it("un cerca.json d'abans, sense la clau «ens», continua trobant els pobles", async () => {
+    const { busca } = await obre(TOTS);
+    expect(files(busca("alcanar")).map((f) => [f[0], f[1]])).toEqual([["Municipi", "Alcanar"]]);
+    expect(files(busca("diputacio"))).toEqual([]);
+  });
+});

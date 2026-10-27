@@ -334,12 +334,15 @@ export function renderCens(dades: CensElectoralMetric | null): string {
  * L'estil propi del bloc. Les línies, els nusos, la graella i els forats
  * són els de `GRAFICS_CSS` (classe `grafic`); aquí només hi ha el que no hi
  * és: la barra del cens, el títol de cada dibuix i la fila buida de la taula.
+ *
+ * El títol de cada dibuix va en minúscula com una frase: les etiquetes en
+ * majúscules espaiades no són de la marca. Els comentaris van aquí i no dins
+ * del full perquè la fitxa del municipi l'enganxa tal qual i hi vol el CSS net.
  */
 export const CENS_FITXA_CSS = `
 .cens-grafic{margin:var(--e2) 0 0}
 .cens-grafic + .cens-grafic{margin-top:var(--e1)}
-.cens-titol{font-family:var(--display);font-weight:900;font-size:.8rem;letter-spacing:.03em;
-  text-transform:uppercase;color:var(--ink-suau);margin:0 0 4px}
+.cens-titol{font-family:var(--display);font-weight:800;font-size:.9rem;color:var(--ink-suau);margin:0 0 4px}
 .cens-grafic .cens-barra{fill:var(--lavanda);stroke:var(--ink);stroke-width:1.5}
 .cens-grafic .cens-barra.ara{fill:var(--coral)}
 .cens-grafic .cens-punt:hover .cens-barra,.cens-grafic .cens-punt:focus-visible .cens-barra{stroke:var(--coral-text);stroke-width:3}

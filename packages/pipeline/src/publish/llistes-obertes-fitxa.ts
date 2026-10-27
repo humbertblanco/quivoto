@@ -158,6 +158,12 @@ export function renderLlistesObertes(dades: LlistesObertesMetric | null | undefi
 </section>`;
 }
 
+/**
+ * L'estil propi del bloc de les llistes obertes. El títol de cada elecció
+ * anterior va en minúscula com una frase: les etiquetes en majúscules
+ * espaiades no són de la marca. Sense comentaris dins del full: la fitxa del
+ * municipi l'enganxa tal qual i hi vol el CSS net.
+ */
 export const LLISTES_OBERTES_CSS = `
 .llo-frase{margin:var(--e1) 0}
 .llo-taula td{font-variant-numeric:tabular-nums}
@@ -168,7 +174,7 @@ export const LLISTES_OBERTES_CSS = `
 .llo-punt{display:inline-block;width:.7em;height:.7em;border-radius:50%;border:1.5px solid var(--ink);margin-right:.35em;vertical-align:-.05em}
 .llo-suplent{font-size:.8rem;font-weight:400;color:var(--ink-suau);background:var(--presec);border-radius:var(--r-max);padding:0 .5em;margin-left:.3em}
 .llo-anteriors{margin:var(--e2) 0 0}
-.llo-titol{font-family:var(--display);font-weight:900;font-size:.8rem;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-suau);margin:0 0 4px}
+.llo-titol{font-family:var(--display);font-weight:800;font-size:.9rem;color:var(--ink-suau);margin:0 0 4px}
 .llo-detall{margin:var(--e1) 0 0;border-top:1px solid var(--vora);padding-top:var(--e1)}
 .llo-detall summary{cursor:pointer;font-weight:700}
 `;

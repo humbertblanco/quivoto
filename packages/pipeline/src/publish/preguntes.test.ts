@@ -3,6 +3,8 @@ import { DESCRIPCIO_MAXIMA, TITOL_MAXIM } from "./seo";
 import { vi } from "vitest";
 import { validaConjunt, type Afirmacio } from "./llindar";
 import { renderIndexPreguntes, renderPreguntes, type ConjuntAmbSlug } from "./preguntes";
+import { RADIOGRAFIA_CSS } from "./estil";
+import { MASCOTA_CSS } from "./mascota";
 
 /**
  * Les preguntes i la seva portada eren les úniques pàgines del web amb una
@@ -100,7 +102,7 @@ describe("renderIndexPreguntes", () => {
   });
 
   it("enllaça la fitxa municipal de cada municipi, no només les seves preguntes", () => {
-    expect(html).toContain('<a class="prova-enllac" href="../m/poble-de-prova/">La fitxa de Poble de Prova →</a>');
+    expect(html).toContain('<a class="prova-enllac" href="../m/poble-de-prova/">La fitxa de Poble de Prova</a>');
     // La targeta és només l'enllaç al conjunt; les pastilles de sota no la
     // poden heretar, que és el que passava amb «.llista-municipis a».
     expect(html).toContain('<a class="conjunt" href="poble-de-prova/">');
@@ -161,4 +163,40 @@ describe("el cap SEO de les preguntes", () => {
       expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
     });
   }
+});
+
+/**
+ * La marca (vegeu «les pastilles» a estil.ts): cap enllaç acaba amb «→» i cap
+ * etiqueta —el número de la pregunta, el tema, els noms dels camps, «En
+ * revisió»— va en majúscules espaiades.
+ */
+describe("les preguntes segueixen la marca", () => {
+  const pagines = [
+    renderPreguntes(conjunt(true), "avui"),
+    renderPreguntes(conjunt(false), "avui"),
+    renderIndexPreguntes([conjunt(true), conjunt(false)], "avui"),
+  ];
+  /** El full propi de la pàgina, sense el compartit ni el de la mascota. */
+  const fullPropi = (html: string): string =>
+    html.slice(html.indexOf("<style>") + 7, html.indexOf("</style>")).replace(RADIOGRAFIA_CSS, "").replace(MASCOTA_CSS, "");
+
+  it("cap enllaç acaba amb la fletxa «→»", () => {
+    for (const html of pagines) expect(html.slice(html.indexOf("<body"))).not.toMatch(/→\s*<\/a>/);
+    expect(pagines[0]).toContain('<a class="boto-prova" href="prova/">Respon-les i mira amb qui coincideixes</a>');
+  });
+
+  it("cap etiqueta en majúscules ni espaiada", () => {
+    for (const html of pagines) {
+      const css = fullPropi(html);
+      expect(css).not.toContain("text-transform:uppercase");
+      expect(css).not.toMatch(/letter-spacing:\.\d/);
+    }
+  });
+
+  it("«En revisió» és un estat pla, no una pastilla", () => {
+    const css = fullPropi(pagines[2]!);
+    const regla = css.slice(css.indexOf(".llista-municipis .bloquejada{"), css.indexOf("}", css.indexOf(".llista-municipis .bloquejada{")));
+    expect(regla).toContain("border-radius:5px");
+    expect(regla).not.toContain("var(--r-max)");
+  });
 });

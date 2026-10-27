@@ -676,6 +676,50 @@ export function llistaDestins(families: SaltWikidata["families"]): string {
 const anyDe = (iso: string | null): string => (iso === null ? "" : iso.slice(0, 4));
 
 /**
+ * Els noms de pila compostos més corrents, perquè «Joan Maria Roig» no vagi a
+ * la M. Només fan falta quan el nom no porta la «i» entre cognoms, que és el
+ * que delata on comencen: amb «Josep Maria Graells i Forcada», la «i» ja diu
+ * que el primer cognom és Graells.
+ */
+const NOMS_COMPOSTOS: ReadonlySet<string> = new Set([
+  "josep maria", "joan maria", "anna maria", "maria angels", "maria dolors", "maria teresa",
+  "maria rosa", "maria carme", "maria jose", "maria jesus", "maria antonia", "joan carles",
+  "joan josep", "joan manuel", "joan ramon", "joan antoni", "josep lluis", "josep antoni",
+  "josep miquel", "josep ramon", "francesc xavier", "miquel angel", "lluis miquel", "pere joan",
+  "jose maria", "juan carlos", "jose luis", "juan jose", "jose antonio", "juan antonio",
+]);
+
+/**
+ * La lletra del primer cognom, per saltar per lletra a «Qui són».
+ *
+ * Els noms arriben com els escriu Wikidata o l'historial: «Montserrat Candini
+ * i Puig», «Josep Maria Vila d'Abadal i Serra», «Román Ruiz Llamas». La
+ * regla, de més segura a menys:
+ *  - si hi ha una «i» entre cognoms, el primer cognom és la paraula d'abans
+ *    (o les dues d'abans, si l'última comença amb «d'»: Vila d'Abadal);
+ *  - si no n'hi ha, és la penúltima paraula, tret que el nom de pila sigui
+ *    compost i només hi hagi un cognom («Joan Maria Roig»);
+ *  - amb dues paraules, la segona.
+ * És una eina per navegar, no una dada: si algun nom cau a la lletra que no
+ * toca, la cerca el troba igual, i per això la cerca va primer.
+ * Torna una lletra de la A a la Z sense accent, o «#» si no en surt cap.
+ */
+export function inicialCognom(nom: string): string {
+  const paraules = nom.trim().split(/\s+/).filter(Boolean);
+  const net = (w: string): string => w.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  let on = -1;
+  const i = paraules.findIndex((w, k) => k > 1 && net(w) === "i");
+  if (i > 1) on = i - 1;
+  else if (paraules.length === 3 && NOMS_COMPOSTOS.has(net(`${paraules[0]} ${paraules[1]}`))) on = 2;
+  else if (paraules.length >= 3) on = paraules.length - 2;
+  else if (paraules.length === 2) on = 1;
+  else on = 0;
+  if (on > 1 && /^d['’]/i.test(paraules[on] ?? "")) on -= 1;
+  const lletra = net(paraules[on] ?? "").replace(/^d['’]/, "").charAt(0).toUpperCase();
+  return /^[A-Z]$/.test(lletra) ? lletra : "#";
+}
+
+/**
  * El pas d'una persona: d'on venia i on va arribar.
  *
  * Les famílies i el nom normalitzat van a atributs de dades de la mateixa
@@ -708,7 +752,7 @@ export function fitxaPersona(p: SaltPersona): string {
   // targeta que ensenya la cara, i mai darrere d'un «title».
   const credit = p.foto === null && p.retrat !== null ? ` · ${creditRetrat(p.retrat)}` : "";
   const anys = p.primerAny === 0 ? "" : p.ultimAny > p.primerAny ? `${p.primerAny}–${p.ultimAny}` : `${p.primerAny}`;
-  return `<li class="persona" data-families="${escape(p.families.join(" "))}" data-nom="${escape(normalizePersonName(p.nom))}">
+  return `<li class="persona" data-families="${escape(p.families.join(" "))}" data-nom="${escape(normalizePersonName(p.nom))}" data-lletra="${inicialCognom(p.nom)}">
   <div class="cap">${retrat}
     <p class="qui"><b><a href="${escape(p.fitxa)}">${escape(p.nom)}</a></b>
     <span class="alcaldia">alcaldia a ${on}${anys === "" ? "" : ` · ${anys}`}</span></p></div>
@@ -821,11 +865,42 @@ export const TRAJECTORIA_CSS = `
    sense JavaScript. Les dues regles s'escriuen aquí perquè el [hidden] valgui. */
 .gent > .persona[hidden],.filtra[hidden]{display:none}
 .quants-gent{margin:var(--e2) 0 0;font-size:.86rem;color:var(--ink-suau);font-weight:700}
+
+/* --- «Qui són»: la cerca primer, el salt per lletra i les pàgines ---------
+   La cerca ocupa tota la fila i va primer: és com es busca algú concret. Les
+   lletres van en una tira que llisca de costat quan no hi caben, en lloc de
+   fer tres files de botons abans de la primera targeta; la tira té el seu
+   propi desplaçament i la pàgina no se'n mou. Cada lletra és un objectiu de
+   44 px. Les famílies, a sota, com abans. */
+.filtra label{flex-basis:100%}
+.tj-lletres{display:flex;gap:4px;flex:1 1 100%;overflow-x:auto;padding:2px 2px 6px;
+  scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.tj-lletres button{min-width:44px;min-height:44px;padding:0 10px;flex:none;border-radius:var(--r-s)}
+.tj-families{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 100%}
+.filtra button:focus-visible{outline:3px solid var(--coral-text);outline-offset:2px}
+.tj-mes-fila{margin:var(--e3) 0 0}
+.tj-mes{font:inherit;font-weight:800;color:var(--ink);background:var(--paper);border:2px solid var(--ink);
+  border-radius:var(--r-max);padding:0 18px;min-height:44px;cursor:pointer}
+.tj-mes:hover{background:var(--ink);color:var(--paper)}
+.tj-mes:focus-visible{outline:3px solid var(--coral-text);outline-offset:2px}
+.tj-mes[hidden]{display:none}
 `;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // La pàgina
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Quantes targetes es veuen de cop a «Qui són», i quantes n'afegeix cada
+ * «Mostra'n més».
+ *
+ * La llista eren totes les targetes obertes —908 en algun moment, 77.000 px a
+ * 360—, i qui hi arriba o busca algú concret o en vol veure uns quants. Ara
+ * la cerca va primer, sota hi ha el salt per lletra del primer cognom i la
+ * llista es veu de 24 en 24. Sense JavaScript no hi ha ni cerca ni pàgines, i
+ * la llista surt sencera: és el mínim que la pàgina ha de complir sempre.
+ */
+export const PAS_GENT = 24;
 
 const FILTRE = `
 <script>
@@ -835,12 +910,17 @@ const FILTRE = `
   var caixa = document.querySelector(".filtra");
   var gent = document.querySelector(".gent");
   var quants = document.querySelector(".quants-gent");
+  var mes = document.querySelector(".tj-mes");
   if (!caixa || !gent) return;
   caixa.hidden = false;
+  var PAS = ${PAS_GENT};
   var botons = caixa.querySelectorAll("button[data-familia]");
+  var lletres = caixa.querySelectorAll("button[data-lletra]");
   var cerca = caixa.querySelector("input[type=search]");
   var targetes = gent.querySelectorAll(".persona[data-families]");
   var clau = "tots";
+  var lletra = "totes";
+  var fins = PAS;
   // La mateixa neteja que el nom porta a data-nom: sense accents ni majúscules.
   var neteja = function(s){
     return (s || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\\s+/g, " ").trim();
@@ -848,29 +928,47 @@ const FILTRE = `
   var aplica = function(){
     var text = neteja(cerca ? cerca.value : "");
     var visibles = 0;
+    var trobades = 0;
     targetes.forEach(function(li){
       // Famílies senceres i no un tros de text: «senat» no ha de trobar res
       // dins de cap altra clau, ara ni quan se n'afegeixi una.
       var families = (li.getAttribute("data-families") || "").split(" ");
       var amaga = (clau !== "tots" && families.indexOf(clau) === -1)
+        || (lletra !== "totes" && li.getAttribute("data-lletra") !== lletra)
         || (text !== "" && (li.getAttribute("data-nom") || "").indexOf(text) === -1);
+      if (!amaga) trobades += 1;
+      // Les que hi entren però passen de la pàgina també s'amaguen: es veuen
+      // en tocar «Mostra'n més», sense haver de tornar a buscar.
+      if (!amaga && trobades > fins) amaga = true;
       li.hidden = amaga;
       if (!amaga) visibles += 1;
     });
     if (quants) {
-      quants.textContent = clau === "tots" && text === ""
+      quants.textContent = clau === "tots" && lletra === "totes" && text === "" && visibles === targetes.length
         ? "Es mostren les " + visibles + " persones."
-        : "Es mostren " + visibles + " de " + targetes.length + " persones.";
+        : "Es mostren " + visibles + " de " + (trobades === targetes.length ? targetes.length : trobades + " trobades, de " + targetes.length) + " persones.";
+    }
+    if (mes) {
+      var resten = trobades - visibles;
+      mes.hidden = resten <= 0;
+      mes.textContent = "Mostra'n " + Math.min(PAS, resten) + " més (en queden " + resten + ")";
     }
   };
+  var tria = function(grup, b, desa){
+    grup.forEach(function(o){ o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
+    desa();
+    fins = PAS;
+    aplica();
+  };
   botons.forEach(function(b){
-    b.addEventListener("click", function(){
-      clau = b.getAttribute("data-familia");
-      botons.forEach(function(o){ o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
-      aplica();
-    });
+    b.addEventListener("click", function(){ tria(botons, b, function(){ clau = b.getAttribute("data-familia"); }); });
   });
-  if (cerca) cerca.addEventListener("input", aplica);
+  lletres.forEach(function(b){
+    b.addEventListener("click", function(){ tria(lletres, b, function(){ lletra = b.getAttribute("data-lletra"); }); });
+  });
+  if (cerca) cerca.addEventListener("input", function(){ fins = PAS; aplica(); });
+  if (mes) mes.addEventListener("click", function(){ fins += PAS; aplica(); });
+  aplica();
 })();
 </script>`;
 
@@ -927,6 +1025,11 @@ function seccioGent(salt: SaltWikidata, persones: readonly SaltPersona[]): strin
   // nostra sobre què val més, i no és una cosa que sàpiga cap dada.
   const gent = [...persones].sort((a, b) => b.primerAny - a.primerAny || a.nom.localeCompare(b.nom, "ca"));
   const ambRetrat = gent.filter((p) => p.foto === null && p.retrat !== null).length;
+  // Només les lletres que tenen algú: un botó «Q» que no troba ningú és un
+  // carreró sense sortida.
+  const lletres = [...new Set(gent.map((p) => inicialCognom(p.nom)))].sort((a, b) =>
+    a === "#" ? 1 : b === "#" ? -1 : a.localeCompare(b, "ca"),
+  );
   const botons = [
     `<button type="button" data-familia="tots" aria-pressed="true">Tots (${nombre(persones.length)})</button>`,
     ...salt.families
@@ -949,10 +1052,16 @@ function seccioGent(salt: SaltWikidata, persones: readonly SaltPersona[]): strin
   }</p>
   <div class="filtra" hidden>
     <label>Busca un nom <input type="search" autocomplete="off" placeholder="Nom o cognom"></label>
-    ${botons}
+    <div class="tj-lletres" role="group" aria-label="Salta per la lletra del primer cognom">
+      <button type="button" data-lletra="totes" aria-pressed="true">Totes</button>${lletres
+        .map((l) => `<button type="button" data-lletra="${l}" aria-pressed="false">${l}</button>`)
+        .join("")}
+    </div>
+    <div class="tj-families" role="group" aria-label="Quina mena de càrrec">${botons}</div>
   </div>
   <p class="quants-gent" aria-live="polite">Es mostren les ${nombre(persones.length)} persones.</p>
   <ul class="gent">${gent.map(fitxaPersona).join("")}</ul>
+  <p class="tj-mes-fila"><button type="button" class="tj-mes" hidden></button></p>
 </section>`;
 }
 

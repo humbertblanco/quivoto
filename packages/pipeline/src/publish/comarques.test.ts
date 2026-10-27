@@ -5,6 +5,10 @@ import {
   type ComarcaData, type ComarcaMunicipi,
 } from "./comarques";
 import { geometria } from "./mapa";
+import { ensDeProva, membreDeProva } from "./ens-prova-enllacos";
+import { renderComarquesIndex } from "./comarques-index";
+import { aLaComarca, comarcaAmbArticle } from "./comarques";
+import { tiraDesDeHistorial } from "./tira-poble";
 
 /**
  * La pàgina es genera sense cap model pel mig, així que el que s'ha de provar
@@ -87,7 +91,7 @@ describe("renderComarca", () => {
     expect(html).not.toContain('id="indicadors"');
   });
 
-  it("posa la mediana catalana al costat de la comarcal, mai sola", () => {
+  it("posa el municipi del mig de Catalunya al costat del de la comarca, mai sol", () => {
     const html = renderComarca(
       comarca({
         indicadors: [{
@@ -98,8 +102,13 @@ describe("renderComarca", () => {
       }),
       "2026-08-29",
     );
-    expect(html).toContain("Mediana catalana");
-    expect(html).toContain("Percentil");
+    // Sense «mediana» ni «percentil» a la vista: el veí no fa servir cap de
+    // les dues paraules, i el regle dels rànquings ja diu «el municipi del mig».
+    expect(html).toContain("A Catalunya, el del mig: <b>2 €</b>");
+    expect(html).toContain("Per sobre de <b>35</b> de cada 100 de la seva mida");
+    const targeta = html.slice(html.indexOf('<ul class="indicadors">'), html.indexOf("</ul>", html.indexOf('<ul class="indicadors">')));
+    // El text que es llegeix, sense les etiquetes (la classe «percentil» no compta).
+    expect(targeta.replace(/<[^>]+>/g, "")).not.toMatch(/mediana|percentil/i);
     // La definició ja no va sota la targeta: va al glossari, amb la font.
     expect(html).not.toContain("Deute viu a 31 de desembre.</span>");
     expect(html).toContain('<details class="nota glossari">');
@@ -605,7 +614,7 @@ describe("el cap SEO de la comarca", () => {
   it("es titula amb la comarca i els seus municipis, i descriu les xifres de la ullada", () => {
     expect(titolDe(html)).toBe("Priorat: qui mana als 2 municipis · quivoto");
     expect(descripcioDe(html)).toBe(
-      "Qui mana a Priorat: alcaldies per força als 2 municipis (9.376 habitants), 1 governat per qui no va guanyar i 0 canvis d'alcaldia.",
+      "Qui mana al Priorat: alcaldies per força als 2 municipis (9.376 habitants), 1 governat per qui no va guanyar i 0 canvis d'alcaldia.",
     );
     expect(html).toContain('<link rel="canonical" href="https://quivoto.cat/observatori/c/priorat/">');
   });
@@ -622,7 +631,10 @@ describe("el cap SEO de la comarca", () => {
     const area = jsonLdDe(html).find((o) => o["@type"] === "AdministrativeArea")!;
     const dins = area.containsPlace as { "@type": string; name: string; url: string }[];
     expect(dins).toHaveLength(2);
-    expect(dins[1]).toEqual({ "@type": "City", name: "B", url: "https://quivoto.cat/observatori/m/b/" });
+    // Cada municipi és el mateix node que declara la seva fitxa: el mateix `@id`.
+    expect(dins[1]).toEqual({
+      "@type": "City", "@id": "https://quivoto.cat/observatori/m/b/#municipi", name: "B", url: "https://quivoto.cat/observatori/m/b/",
+    });
     expect(dins.every((m) => m["@type"] === "City")).toBe(true);
   });
 
@@ -643,5 +655,209 @@ describe("el cap SEO de la comarca", () => {
 
   it("té un sol <h1>", () => {
     expect(html.match(/<h1[\s>]/g)).toHaveLength(1);
+  });
+});
+
+describe("el consell comarcal a la pàgina de comarca", () => {
+  const bages = comarca({ slug: "bages", name: "Bages" });
+  const consell = ensDeProva({
+    slug: "bages",
+    comarca: { slug: "bages", nom: "Bages" },
+    seients: 33,
+    composicio: [
+      { partit: "ERC", seients: 14, color: "#ffb232" },
+      { partit: "PSC", seients: 12, color: "#e3001b" },
+      { partit: "", seients: 7, color: null },
+    ],
+    presidencia: membreDeProva({
+      nom: "Anna Puig Serra",
+      carrec: "Presidenta",
+      rol: "presidencia",
+      municipi: { slug: "manresa", nom: "Manresa" },
+      adreca: "regidor/anna-puig-serra/",
+      alcaldia: true,
+    }),
+  });
+  const diputacio = ensDeProva({ tipus: "diputacio", comarques: [{ slug: "bages", nom: "Bages" }] });
+
+  it("sense ens, la pàgina queda exactament com era", () => {
+    expect(renderComarca(bages, "avui", undefined)).toBe(renderComarca(bages, "avui"));
+    expect(renderComarca(bages, "avui", [])).toBe(renderComarca(bages, "avui"));
+    expect(renderComarca(bages, "avui")).not.toContain('id="consell"');
+  });
+
+  it("presenta el consell just després de «Qui mana», amb l'enllaç a la seva fitxa i a l'índex", () => {
+    const html = renderComarca(bages, "avui", [consell, diputacio]);
+    const alcaldies = html.indexOf('id="alcaldies"');
+    const bloc = html.indexOf('id="consell"');
+    expect(bloc).toBeGreaterThan(alcaldies);
+    expect(bloc).toBeLessThan(html.indexOf('id="pactes"') === -1 ? Infinity : html.indexOf('id="pactes"'));
+    expect(html).toContain('<a href="#consell">El consell comarcal</a>');
+    expect(html).toContain('<a href="consell/">La fitxa del consell</a>');
+    expect(html).toContain("Consell Comarcal del Bages té 33 escons");
+  });
+
+  it("la presidència porta la cara, el càrrec literal i la fitxa de la persona", () => {
+    const html = renderComarca(bages, "avui", [consell]);
+    expect(html).toContain('<span class="ens-carrec">Presidenta</span>');
+    expect(html).toContain('href="../../m/manresa/regidor/anna-puig-serra/"');
+    expect(html).toContain("té l'alcaldia de Manresa");
+    expect(html).toMatch(/class="cara-alcaldia inicials petita"[^>]*>AP</);
+  });
+
+  it("sense aparellament únic, el nom de qui presideix no s'enllaça", () => {
+    const html = renderComarca(bages, "avui", [
+      { ...consell, presidencia: membreDeProva({ nom: "Joan Riera", carrec: "President", municipi: null, adreca: null }) },
+    ]);
+    expect(html).toContain('<b class="ens-nom">Joan Riera</b>');
+  });
+
+  it("la composició és una cinta amb llegenda; qui no té partit conegut no es reparteix", () => {
+    const html = renderComarca(bages, "avui", [consell]);
+    expect(html).toContain('aria-label="Composició del ple, 33 escons: ERC 14, PSC 12, sense partit conegut 7"');
+    expect(html).toContain("flex:14;--c:#ffb232");
+    // Sense color de dada, gris neutre: cap color de veredicte.
+    expect(html).toContain("flex:7;--c:#8b8b8b");
+  });
+
+  it("enllaça la diputació, o les dues quan la comarca en té dues", () => {
+    const una = renderComarca(bages, "avui", [consell, diputacio]);
+    expect(una).toContain('la <a href="../../diputacio/barcelona/">Diputació de Barcelona</a>');
+    const girona = ensDeProva({ tipus: "diputacio", nom: "Diputació de Girona", slug: "girona", comarques: [{ slug: "bages", nom: "Bages" }] });
+    const dues = renderComarca(bages, "avui", [consell, diputacio, girona]);
+    expect(dues).toContain("Diputació de Barcelona</a> i la <a href=\"../../diputacio/girona/\">");
+    expect(dues).toContain("que tampoc no es voten");
+  });
+
+  it("al Barcelonès diu que el consell es va dissoldre el 2019, i no enllaça cap fitxa", () => {
+    const html = renderComarca(comarca({ slug: "barcelones", name: "Barcelonès" }), "avui", [consell, diputacio]);
+    expect(html).toContain("no té consell comarcal des del 2019");
+    expect(html).toContain("Llei 1/2019");
+    expect(html).not.toContain('href="consell/"');
+  });
+
+  it("al Lluçanès diu que no en tindrà fins després del maig del 2027", () => {
+    const html = renderComarca(comarca({ slug: "llucanes", name: "Lluçanès" }), "avui", [consell]);
+    expect(html).toContain("maig del 2027");
+    expect(html).not.toContain('href="consell/"');
+  });
+});
+
+describe("l'índex de comarques enllaça l'índex d'ens", () => {
+  // El peu compartit ja enllaça l'índex d'ens a totes les pàgines: el que es
+  // prova és la crida del cos, al costat de la de l'AMB.
+  const cos = (html: string): string => html.slice(html.indexOf('<main id="contingut">'), html.indexOf("</main>"));
+  it("només si hi ha fitxes d'ens publicades", () => {
+    expect(cos(renderComarquesIndex([], "avui", null))).not.toContain('href="../ens/"');
+    expect(cos(renderComarquesIndex([], "avui", null, []))).not.toContain('href="../ens/"');
+    const html = cos(renderComarquesIndex([], "avui", null, [ensDeProva(), ensDeProva({ tipus: "diputacio" })]));
+    expect(html).toContain('<a href="../ens/">el consell comarcal i la diputació</a>');
+    const molts = cos(renderComarquesIndex([], "avui", null, [ensDeProva(), ensDeProva({ slug: "anoia" }), ensDeProva({ tipus: "diputacio" })]));
+    expect(molts).toContain("els 2 consells comarcals i la diputació");
+  });
+});
+
+/**
+ * «La tira del poble» a la llista de municipis: qui ha tingut l'alcaldia de
+ * cada mandat des del 1979, en una columna pròpia perquè els mandats quedin
+ * l'un sota l'altre.
+ */
+describe("la tira del poble a la llista de municipis", () => {
+  const tira = tiraDesDeHistorial(
+    {
+      history: [
+        { term: "2023-2027", name: "MARIA PUIG SOLER", partyRaw: "ERC-AM", tookOfficeOn: "2023-06-17" },
+        { term: "2019-2023", name: "JOAN ROIG CASTELL", partyRaw: "CiU", tookOfficeOn: "2019-06-15" },
+      ],
+    },
+    "un Poble",
+    "2026-10-27",
+  );
+
+  it("porta una columna amb els dos extrems a la capçalera i la tira fina a cada fila", () => {
+    const html = renderComarca(comarca({ municipis: [municipi({ tira })] }), "2026-08-29");
+    expect(html).toContain('<th class="historia"><span class="historia-titol">Alcaldies des del 1979</span>');
+    expect(html).toContain("<span>1979</span><span>2027</span>");
+    const cela = html.slice(html.indexOf('<td class="historia">'), html.indexOf("</td>", html.indexOf('<td class="historia">')));
+    expect(cela).toContain('class="tp tp-fina" role="img"');
+    // La frase per als lectors de pantalla diu qui i de quin partit.
+    expect(cela).toContain("Qui ha tingut l&#39;alcaldia d&#39;un Poble".replace(/&#39;/g, "'"));
+    // I el full d'estil de la tira hi és, un sol cop.
+    expect(html.split(".tp-mandat{").length - 1).toBe(1);
+  });
+
+  it("deixa la cel·la buida, sense ni un espai, al poble que no té historial", () => {
+    const html = renderComarca(
+      comarca({ municipis: [municipi({ tira }), municipi({ slug: "altre", name: "Altre", tira: null })] }),
+      "2026-08-29",
+    );
+    expect(html).toContain('<td class="historia"></td>');
+  });
+
+  it("sense cap tira, ni columna ni full d'estil: la pàgina queda com era", () => {
+    const html = renderComarca(comarca(), "2026-08-29");
+    expect(html).not.toContain('class="historia"');
+    expect(html).not.toContain(".tp-mandat{");
+  });
+});
+
+describe("la ullada no repeteix ni la frase d'entrada ni la icona", () => {
+  const html = renderComarca(
+    comarca({
+      habitants: 10_000,
+      forces: [{ brandId: "erc", label: "ERC", color: "#ffb232", alcaldies: 1, habitants: 6_000 }],
+    }),
+    "2026-08-29",
+  );
+  const ullada = html.slice(html.indexOf('<section class="ullada"'), html.indexOf("</section>", html.indexOf('<section class="ullada"')));
+
+  it("la quarta pastilla diu la gent que viu on mana la primera força, no les seves alcaldies", () => {
+    expect(ullada).toContain("Viuen on mana ERC");
+    expect(ullada).toContain("60,0 %");
+    expect(ullada).toContain("6.000 dels 10.000 habitants");
+    expect(ullada).not.toContain("La força amb més alcaldies");
+  });
+
+  it("el canvi d'alcaldia porta la mà alçada, i no la mateixa medalla que la força", () => {
+    expect(ullada.split('aria-label="Alcaldia"').length - 1).toBe(1);
+    expect(ullada).toContain('aria-label="Participació"');
+  });
+
+  it("parla del maig del 2027 i no d'una sigla", () => {
+    expect(ullada).toContain("Regidories en joc el 2027");
+    expect(ullada).not.toContain("23-M");
+  });
+});
+
+describe("l'article de cada comarca", () => {
+  it("contrau la preposició com toca", () => {
+    expect(aLaComarca("Pla d'Urgell")).toBe("al Pla d'Urgell");
+    expect(aLaComarca("Selva")).toBe("a la Selva");
+    expect(aLaComarca("Anoia")).toBe("a l'Anoia");
+    expect(aLaComarca("Garrigues")).toBe("a les Garrigues");
+    expect(aLaComarca("Osona")).toBe("a Osona");
+  });
+
+  it("no s'inventa l'article d'una comarca que no coneix", () => {
+    expect(comarcaAmbArticle("Comarca Nova")).toBe("Comarca Nova");
+  });
+
+  it("escriu bé la comarca dins de les frases de la pàgina", () => {
+    const html = renderComarca(comarca({ slug: "bages", name: "Bages" }), "2026-08-29");
+    expect(html).toContain("ajuntaments</b> del Bages");
+    expect(html).toContain("Qui mana al Bages:");
+  });
+
+  it("diu al cercador de quin dia són les dades", () => {
+    const html = renderComarca(comarca(), "2026-08-29");
+    expect(html).toContain('"dateModified":"2026-08-29"');
+  });
+});
+
+describe("cap fletxa als enllaços", () => {
+  it("ni al peu del mapa ni enlloc del cos", () => {
+    const html = renderComarca(comarca(), "2026-08-29");
+    const cos = html.slice(html.indexOf('<main id="contingut">'), html.indexOf("</main>"));
+    expect(cos).not.toContain("→");
   });
 });

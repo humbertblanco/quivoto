@@ -19,8 +19,11 @@ import {
 import { loadAmb } from "./amb";
 import { inicials } from "./cara";
 import { loadComarques, renderMapaComarca, type TacaComarca } from "./comarques";
+import { SENSE_PARTIT } from "./ens-dades";
+import type { DadesEns } from "./ens-tipus";
 import { sobreColor } from "./contrast";
 import type { Retrat } from "./fotos-wikidata";
+import { hemicycle, seientsHemicicle } from "./hemicycle";
 import { geometria, renderSilueta } from "./mapa";
 import { catalunya, papereta } from "./mascota";
 import { loadPartits } from "./partit";
@@ -121,7 +124,7 @@ export type DadesImatge =
     }
   | {
       tipus: "territori";
-      /** «Comarca», «Àrea metropolitana». */
+      /** «Comarca», «Àrea metropolitana», «Diputació», «Consell comarcal». */
       ambit: string;
       nom: string;
       /** «30 municipis · 812.000 habitants». */
@@ -1190,6 +1193,111 @@ export function feinaTerritori(t: TerritoriOg, ambit: "comarca" | "amb"): Feina 
   };
 }
 
+// ------------------------------------------------ diputacions i consells
+
+/**
+ * L'hemicicle d'un ens, per a la imatge: un cercle per escó, del color de
+ * dada de cada partit i en l'ordre de la composició. És el que respon «qui hi
+ * mana» d'una ullada, i el que una diputació té i una comarca no.
+ *
+ * Es fa amb la suma dels escons de la composició i no amb `seients` del
+ * registre: si no quadren, el dibuix ha de ser fidel als grups que ensenya.
+ * Un color que no és hexadecimal no entra a l'atribut (el mateix gris que a
+ * `feinaPartit`). Sense composició, no hi ha hemicicle.
+ */
+export function hemicicleEns(d: Pick<DadesEns, "nom" | "composicio">): string {
+  const grups = d.composicio
+    .filter((g) => g.seients > 0)
+    .map((g) => ({
+      nom: g.partit,
+      regidories: g.seients,
+      color: g.color && /^#[0-9a-f]{6}$/i.test(g.color) ? g.color : "#8b8b8b",
+    }));
+  const total = grups.reduce((suma, g) => suma + g.regidories, 0);
+  const sala = hemicycle(total, { width: 360 });
+  if (sala.seats.length === 0) return "";
+  return `<svg class="ens-hemicicle" viewBox="0 0 ${sala.width} ${sala.height}" width="${sala.width}" height="${sala.height}" role="img" aria-label="${escapa(`${d.nom}: ${xifra(total)} escons`)}">
+    ${seientsHemicicle(sala.seats, grups, total)}</svg>`;
+}
+
+/**
+ * La imatge d'una diputació o d'un consell comarcal.
+ *
+ * Reaprofita la plantilla del territori —la de les comarques i l'AMB— per no
+ * tocar el document de Chrome: canviar-lo canviaria el resum de les deu mil
+ * imatges que ja hi ha i les tornaria a dibuixar totes. La figura és
+ * l'hemicicle; si la font no dona prou per fer-lo, Catalunya amb els
+ * municipis de l'ens encesos.
+ *
+ * La frase diu qui té la presidència i quin partit hi té més escons, i res
+ * més: cap valoració. Si no se sap qui la presideix (Barcelona i Girona no
+ * publiquen els noms al registre de plens), se'n diu només la composició.
+ */
+export function feinaEns(d: DadesEns): Feina {
+  const quants = d.municipis.length;
+  const escons = d.seients > 0 ? d.seients : d.composicio.reduce((suma, g) => suma + g.seients, 0);
+  // El partit amb més escons, si se sap: la fila «sense partit conegut» va
+  // al final de la composició i no és cap partit que pugui tenir-ne més.
+  // Si dos partits empaten al capdamunt, la frase ho diu: triar-ne un seria
+  // l'ordre alfabètic fent de resultat (Osona, ERC 11 i Junts 11).
+  const coneguts = d.composicio.filter((g) => g.seients > 0 && g.partit !== SENSE_PARTIT);
+  const maxim = coneguts.reduce((m, g) => Math.max(m, g.seients), 0);
+  const capdamunt = coneguts.filter((g) => g.seients === maxim);
+  const primer = capdamunt.length === 1 ? capdamunt[0]! : null;
+  const pres = d.presidencia;
+  const trossos: string[] = [];
+  if (pres) {
+    trossos.push(`<b>${escapa(nomLlegible(pres.nom))}</b> en té la presidència${pres.partit ? ` (${escapa(pres.partit)})` : ""}.`);
+  }
+  if (primer && escons > 0) {
+    trossos.push(`${pres ? "" : "<b>"}${escapa(primer.partit)}${pres ? "" : "</b>"} hi té ${xifra(primer.seients)} dels ${xifra(escons)} escons.`);
+  } else if (capdamunt.length > 1 && escons > 0) {
+    const noms = capdamunt.map((g) => escapa(g.partit));
+    const llista = `${noms.slice(0, -1).join(", ")} i ${noms[noms.length - 1]}`;
+    trossos.push(`${llista} hi empaten amb ${xifra(maxim)} dels ${xifra(escons)} escons.`);
+  }
+  const frase = trossos.length > 0
+    ? trossos.join(" ")
+    : "Qui hi seu, com hi arriba i què gasta, amb la font de cada xifra.";
+  const taques: TacaComarca[] = d.municipis.map((m) => ({
+    slug: m.slug, name: m.nom, mayorName: null, mayorSigles: null, mayorBrandId: null,
+  }));
+  return {
+    fitxer: d.tipus === "diputacio" ? FITXER_OG.diputacio(d.slug) : FITXER_OG.consell(d.slug),
+    format: "png",
+    dades: {
+      tipus: "territori",
+      ambit: d.tipus === "diputacio" ? "Diputació" : "Consell comarcal",
+      nom: d.nom,
+      // Sense escons coneguts no es diu «0 escons»: un buit és un buit.
+      xifres: `${xifra(quants)} ${quants === 1 ? "municipi" : "municipis"}${escons > 0 ? ` · ${xifra(escons)} escons` : ""}`,
+      frase,
+      banda: d.tipus === "diputacio" ? COLORS_BANDA.lavanda : COLORS_BANDA.presec,
+      figura: hemicicleEns(d) || senyalTerritori(taques),
+    },
+  };
+}
+
+/** La imatge de l'índex `ens/`: quantes diputacions i quants consells hi ha. */
+export function feinaIndexEns(llista: readonly Pick<DadesEns, "tipus">[]): Feina {
+  const diputacions = llista.filter((e) => e.tipus === "diputacio").length;
+  const consells = llista.filter((e) => e.tipus === "consell").length;
+  return {
+    fitxer: FITXER_OG.ens(),
+    format: "png",
+    dades: {
+      tipus: "global",
+      titol: "Diputacions i consells comarcals",
+      sota: "Els ens que decideixen per sobre de l'ajuntament",
+      figura: catalunya(280, "felic", null),
+      frase: `<b>${xifra(diputacions)} ${diputacions === 1 ? "diputació" : "diputacions"}</b> i ${xifra(consells)} ${
+        consells === 1 ? "consell comarcal" : "consells comarcals"
+      }: qui hi seu, com hi arriba i què gasta cadascun.`,
+      banda: COLORS_BANDA.menta,
+    },
+  };
+}
+
 /** El mínim que cal d'un partit per fer-ne la imatge: el que porta `PartitData`. */
 export type PartitOg = {
   id: string; sigles: string; name: string; color: string;
@@ -1270,11 +1378,17 @@ export function feinesGlobals(x: XifresGlobals): Feina[] {
  * (`slugs`); sense `slugs`, per als 947. Les de les comarques, els partits i
  * les pàgines globals es fan sempre, perquè canvien amb qualsevol municipi.
  * Retorna quantes n'ha escrit i quant ocupen, per poder-ho dir al registre.
+ *
+ * Les diputacions i els consells (`ens`) les rep ja carregades de la
+ * publicació, que és qui en té la llista: tornar-la a llegir aquí voldria dir
+ * lligar un altre cop membres, sous i finances de quaranta-quatre ens. Sense
+ * llista (J38 no ha corregut), no se'n fa cap, ni la de l'índex.
  */
 export async function writeOgImages(
   db: Db,
   outDir: string,
   slugs?: readonly string[],
+  ens: readonly DadesEns[] = [],
 ): Promise<{ images: number; bytes: number }> {
   const municipis = await loadOgMunicipis(db, slugs);
   // El sexe del registre de candidatures, per escriure «alcaldessa» quan la
@@ -1291,6 +1405,8 @@ export async function writeOgImages(
   if (amb) feines.push(feinaTerritori({ ...amb, slug: "amb", name: amb.nom }, "amb"));
   const partits = await loadPartits(db);
   for (const p of partits) feines.push(feinaPartit(p));
+  for (const e of ens) feines.push(feinaEns(e));
+  if (ens.length > 0) feines.push(feinaIndexEns(ens));
   feines.push(...feinesGlobals(await loadXifresGlobals(db, comarques.length, partits.length)));
 
   const fet = await generaImatges(feines, outDir);
