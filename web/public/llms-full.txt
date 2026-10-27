@@ -1045,10 +1045,11 @@
 - [Consell Comarcal del Vallès Occidental](https://quivoto.cat/observatori/c/valles-occidental/consell/)
 - [Consell Comarcal del Vallès Oriental](https://quivoto.cat/observatori/c/valles-oriental/consell/)
 
-## Partits (15)
+## Partits (17)
 
 - [Aliança Catalana](https://quivoto.cat/observatori/partit/aliancacat/)
 - [Convergéncia Democratica Aranesa](https://quivoto.cat/observatori/partit/cda/): CDA
+- [Convergència i Unió](https://quivoto.cat/observatori/partit/ciu/): CiU
 - [Comuns](https://quivoto.cat/observatori/partit/comuns/)
 - [Ciutadans](https://quivoto.cat/observatori/partit/cs/)
 - [Candidatura d'Unitat Popular](https://quivoto.cat/observatori/partit/cup/): CUP
@@ -1058,6 +1059,7 @@
 - [Independents de la Selva](https://quivoto.cat/observatori/partit/idselva/)
 - [Junts per Catalunya](https://quivoto.cat/observatori/partit/junts/): Junts
 - [PDeCAT / PNC](https://quivoto.cat/observatori/partit/pdecat/): PDeCAT
+- [Podem](https://quivoto.cat/observatori/partit/podem/)
 - [Partit Popular](https://quivoto.cat/observatori/partit/pp/): PP
 - [Partit dels Socialistes de Catalunya](https://quivoto.cat/observatori/partit/psc/): PSC
 - [Tots per l'Empordà](https://quivoto.cat/observatori/partit/te/)

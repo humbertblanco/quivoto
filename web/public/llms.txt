@@ -40,7 +40,7 @@ Catalan-language, non-partisan open-data site about the municipal governments of
 ## Patrons d'adreça
 
 - Municipi: https://quivoto.cat/observatori/m/<municipi>/ (el nom sense article ni accents, amb guions: «prat-de-llobregat», «sant-cugat-del-valles»).
-- Regidor o regidora d'avui: https://quivoto.cat/observatori/m/<municipi>/regidor/<persona>/ (14.228 fitxes de persona, amb les alcaldies històriques).
+- Regidor o regidora d'avui: https://quivoto.cat/observatori/m/<municipi>/regidor/<persona>/ (13.820 fitxes de persona, amb les alcaldies històriques).
 - Alcaldia històrica: https://quivoto.cat/observatori/m/<municipi>/alcaldia/<persona>/
 - Candidatura de les municipals del 2023: https://quivoto.cat/observatori/m/<municipi>/<sigles>/ (2.626 candidatures).
 - Comarca: https://quivoto.cat/observatori/c/<comarca>/ · Consell comarcal: https://quivoto.cat/observatori/c/<comarca>/consell/

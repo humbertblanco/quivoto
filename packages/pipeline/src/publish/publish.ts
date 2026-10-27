@@ -42,6 +42,8 @@ import { verifica } from "./verificacio";
 import { renderPortada } from "./portada";
 import { renderMapaCatalunya } from "./mapa-catalunya";
 import { renderRanquings } from "./ranquings";
+import { renderMunicipals } from "./municipals";
+import type { LlistesObertesMetric } from "../jobs/j37-llistes-obertes";
 import { loadCuriositats } from "./curiositats";
 import { loadVotsPartit } from "./vots-partit";
 import { loadPortadaMostra } from "./portada-mostra";
@@ -145,7 +147,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     // fitxa hi pugui enllaçar: és el pas de «mira les dades» a «jutja-ho tu».
     const conjunts = carregaPreguntes();
     const preguntesPerSlug = new Map(
-      conjunts.map((c) => [c.slug, { jugable: verifica(c).jugable, quantes: c.afirmacions.length }]),
+      conjunts.map((c) => [c.slug, { jugable: verifica(c).jugable && c.veredicte.avaluable, quantes: c.afirmacions.length }]),
     );
     /**
      * L'índex dels 947 i el mapa es generen **abans** de les fitxes.
@@ -276,6 +278,29 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     await mkdir(`${OUT_DIR}../ranquings`, { recursive: true });
     await writeFile(`${OUT_DIR}../ranquings/index.html`, renderRanquings(carregats, generatedAt, curiositats), "utf8");
     run.say("pàgina de rànquings");
+
+    /*
+     * La pàgina «Com funcionen les municipals»: calendari, qui pot votar i com
+     * es reparteixen les regidories. L'única dada que llegeix de la base són
+     * els municipis que el 2023 van votar en consell obert (una sola
+     * regidoria, l'alcaldia, segons J37), per anomenar-los i enllaçar-los.
+     */
+    const consellObert = (
+      await db
+        .select({ slug: municipalities.slug, nom: municipalities.name, data: municipalityMetrics.data })
+        .from(municipalityMetrics)
+        .innerJoin(municipalities, eq(municipalities.id, municipalityMetrics.municipalityId))
+        .where(eq(municipalityMetrics.kind, "llistesObertes"))
+    )
+      .filter((f) => {
+        const darrera = (f.data as LlistesObertesMetric).eleccions?.at(-1);
+        return darrera?.any === 2023 && darrera.regidors === 1;
+      })
+      .map((f) => ({ slug: f.slug, nom: f.nom }))
+      .sort((a, b) => a.nom.localeCompare(b.nom, "ca"));
+    await mkdir(`${OUT_DIR}../municipals`, { recursive: true });
+    await writeFile(`${OUT_DIR}../municipals/index.html`, renderMunicipals(generatedAt, { consellObert }), "utf8");
+    run.say("pàgina de les municipals");
 
     /*
      * Les fitxes de trajectòria, totes de cop i abans del bucle: són 947 files
@@ -690,7 +715,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
     const seccions: Pendent[] = [
       fitxaDe(""),
       fitxaDe("els947.html", `${OUT_DIR}../els947.html`),
-      ...["mapa/", "ranquings/", "dades/", "comparador/", "partit/"].map((cami) => fitxaDe(cami)),
+      ...["mapa/", "ranquings/", "municipals/", "dades/", "comparador/", "partit/"].map((cami) => fitxaDe(cami)),
       ...partits.map((p) => fitxaDe(`partit/${p.id}/`)),
       fitxaDe("c/"),
       ...filesComarques.map((c) => fitxaDe(`c/${c.slug}/`)),
@@ -856,7 +881,7 @@ export async function publish(db: Db, slugs: readonly string[] = []): Promise<vo
           fitxersDades: downloads.files,
           conjuntsPreguntes: preguntes.length,
           amb: amb?.municipis.length ?? null,
-          partits: partits.length,
+          partits: partits.filter((p) => !p.historica).length,
           trajectoria: trajectoria?.persones.length ?? null,
           exemple: preguntes[0]
             ? { slug: preguntes[0].slug, nom: preguntes[0].municipi }

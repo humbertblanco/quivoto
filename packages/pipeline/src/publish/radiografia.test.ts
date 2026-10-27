@@ -22,6 +22,9 @@ import {
   renderTrajectoria,
   renderVeinsTria,
   titolMunicipi,
+  avaluaParitat,
+  fraseCanviDelPle,
+  pleDel2027,
   type RadiografiaData,
 } from "./radiografia";
 import { adjacenciaMunicipal } from "./veins";
@@ -805,7 +808,8 @@ describe("quant gasta l'ajuntament, en total i per habitant", () => {
   it("diu el total i el que surt per habitant", () => {
     expect(html).toContain("268.910.400 €");
     expect(html).toContain("1.200 €");
-    expect(html).toContain("224.092 habitants");
+    // Són els empadronats de l'any liquidat, no el padró d'ara: es diu.
+    expect(html).toContain("224.092 empadronats aquell any");
   });
 
   it("avisa que això és una liquidació i no un pressupost", () => {
@@ -1010,6 +1014,10 @@ describe("les escombraries: euros contra resultat", () => {
     expect(html).toContain('<td class="buit">—</td>');
     expect(html).not.toContain("0,0 %");
     expect(html).toContain("Un import de 0 € vol dir que l'ajuntament ha presentat els comptes");
+    // El text desat per una J15 antiga parlava de «liquidacio: false»: la
+    // fitxa escriu sempre el del codi, el que entén el veí.
+    expect(html).toContain("Un any sense dada vol dir que aquell exercici encara no s'ha liquidat");
+    expect(html).not.toContain("liquidacio: false");
   });
 
   it("diu «sense liquidar» i no 0 € quan l'exercici no s'ha liquidat", () => {
@@ -1049,7 +1057,9 @@ describe("com ha anat aquests quatre anys", () => {
   it("hi afegeix l'aigua, l'IBI, la població i els programes de despesa", () => {
     expect(html).toContain("Preu de l'aigua");
     expect(html).toContain("Rebut mitjà d'IBI");
-    expect(html).toContain("Gent que hi viu");
+    // El padró de la fixtura no porta el canvi del mandat: llavors va el cens,
+    // i l'etiqueta diu que és el cens, no el padró de la capçalera.
+    expect(html).toContain("Població censada (INE)");
     expect(html).toContain("On han posat els diners, servei a servei");
     expect(html).toContain("Escombraries i residus");
   });
@@ -1063,9 +1073,23 @@ describe("com ha anat aquests quatre anys", () => {
     // subtítol de «Els comptes».
     const on = html.indexOf('id="mandat"');
     const seccio = html.slice(on, html.indexOf("<section", on));
-    const files = seccio.split("<li").filter((f) => /aigua|IBI|Gent que hi viu/.test(f));
+    const files = seccio.split("<li").filter((f) => /aigua|IBI|Població censada|Gent empadronada/.test(f));
     expect(files.length).toBeGreaterThan(0);
     for (const f of files) expect(f).not.toMatch(/class="(millora|empitjora)"/);
+  });
+
+  it("la població del mandat és la del padró, la mateixa xifra que la capçalera", () => {
+    const amb = poblacio();
+    amb.indicadors = amb.indicadors.map((i) =>
+      i?.clau === "padroHabitants" ? { ...i, mandat: variacio(2023, 2025, 220_312, 224_512) } : i,
+    );
+    const ambPadro = renderRadiografia(fitxa({ poblacio: amb }));
+    const on = ambPadro.indexOf('id="mandat"');
+    const seccio = ambPadro.slice(on, ambPadro.indexOf("<section", on));
+    expect(seccio).toContain("Gent empadronada");
+    expect(seccio).not.toContain("Població censada (INE)");
+    expect(seccio).toContain("224.512");
+    expect(seccio).not.toContain("224.092");
   });
 
   it("diu al costat de la població que no la decideix l'ajuntament", () => {
@@ -1473,9 +1497,11 @@ describe("què contracta, i amb quanta competència", () => {
 
   it("la xifra d'una sola oferta va amb el regle i amb la mediana del grup", () => {
     const html = renderContractacio(contractacio());
-    expect(html).toContain("40,0 %");
+    // J10 la dona arrodonida a l'enter: «40 %», no un «40,0 %» que no sap.
+    expect(html).toContain('<span class="gran">40 %</span>');
+    expect(html).not.toContain("40,0 %");
     expect(html).toContain('class="regle"');
-    expect(html).toContain("31,0 %");
+    expect(html).toContain("el del mig: 31 %");
     expect(html).toContain("78 licitacions");
   });
 
@@ -2765,7 +2791,7 @@ describe("la banda «Què t'hi jugues»", () => {
     expect(b).toContain('<span class="xifra">2</span>');
     expect(b).toContain("en 12 eleccions");
     expect(b).toContain('class="boto-joc" href="../../preguntes/sabadell/prova/"');
-    expect(b).toContain('href="/#avisa"');
+    expect(b).toContain('href="/#avisam"');
     expect(b).toContain("el quart diumenge de maig");
     expect(b).toContain('class="pastilles-context"');
     // Ja no és una secció del registre ni de l'índex, però l'àncora vella hi arriba.
@@ -2783,7 +2809,7 @@ describe("la banda «Què t'hi jugues»", () => {
     const res = banda(renderRadiografia(fitxa({ government: govern() })));
     expect(res).toContain("Estem preparant una brúixola electoral per a Sabadell");
     expect(res).not.toContain('class="boto-joc"');
-    expect(res).toContain('href="/#avisa"');
+    expect(res).toContain('href="/#avisam"');
   });
 
   it("en minoria ho diu, i sense història no s'inventa cap canvi de mans", () => {
@@ -2793,6 +2819,109 @@ describe("la banda «Què t'hi jugues»", () => {
     const cap = banda(renderRadiografia(fitxa({ government: govern(), history: history(0) })));
     expect(cap).toContain('<span class="xifra">Cap</span>');
     expect(cap).toContain("la mateixa força ha guanyat les 12 eleccions");
+  });
+});
+
+describe("el ple del 2027, deduït del padró", () => {
+  const barcelona = { population: 1_731_649, populationYear: 2025, electoralSystem: "llistes tancades" };
+
+  it("Barcelona passa de 41 a 43 regidories, i la majoria de 21 a 22", () => {
+    const ple = pleDel2027(barcelona, 41)!;
+    expect(ple).toMatchObject({ regidories: 43, majoria: 22, sistema: "llistes tancades", canviaMida: true, canviaSistema: false });
+    const frase = fraseCanviDelPle(ple, "Barcelona");
+    expect(frase).toContain("El 2023 el ple tenia 41 regidories; amb el padró de l'1 de gener del 2025");
+    expect(frase).toContain("en tindrà 43");
+    expect(frase).toMatch(/passa de\s+21 a 22/);
+    expect(frase).toContain("xifres oficials de població vigents quan es convoquin");
+  });
+
+  it("si no canvia res no hi ha cap frase", () => {
+    const ple = pleDel2027({ population: 224_092, populationYear: 2025, electoralSystem: "llistes tancades" }, 27)!;
+    expect(ple).toMatchObject({ regidories: 27, majoria: 14, canviaMida: false, canviaSistema: false });
+    expect(fraseCanviDelPle(ple, "Sabadell")).toBe("");
+  });
+
+  it("per sobre de 250 habitants les llistes obertes passen a tancades, i al revés", () => {
+    const amunt = pleDel2027({ population: 263, populationYear: 2025, electoralSystem: "Llistes obertes" }, 5)!;
+    expect(amunt).toMatchObject({ regidories: 7, sistema: "llistes tancades", sistema2023: "llistes obertes", canviaMida: true, canviaSistema: true });
+    expect(fraseCanviDelPle(amunt, "Rocafort")).toContain("El 2023 Rocafort votava amb llistes obertes");
+    const avall = pleDel2027({ population: 250, populationYear: 2025, electoralSystem: "llistes tancades" }, 7)!;
+    expect(avall).toMatchObject({ regidories: 5, sistema: "llistes obertes", canviaSistema: true });
+  });
+
+  it("el consell obert no depèn de la població: es conserva, i no s'hi compten regidories", () => {
+    const ple = pleDel2027({ population: 28, populationYear: 2025, electoralSystem: "Consell obert" }, 1)!;
+    expect(ple).toMatchObject({ sistema: "consell obert", regidories: 1, canviaMida: false, canviaSistema: false });
+  });
+
+  it("sense padró no s'inventa res", () => {
+    expect(pleDel2027({ population: null, electoralSystem: "llistes tancades" }, 41)).toBeNull();
+  });
+
+  const banda = (html: string): string => {
+    const on = html.indexOf('<section class="joc-banda" id="joc"');
+    return on < 0 ? "" : html.slice(on, html.indexOf("</section>", on));
+  };
+
+  it("la banda «Què t'hi jugues» diu les regidories del 2027 i les d'ara", () => {
+    const base = fitxa({ government: govern({ mayorSeats: 10, winnerSeats: 11, totalSeats: 41, majority: 21, winnerHasMajority: false }) });
+    const b = banda(renderRadiografia({
+      ...base,
+      municipality: { ...base.municipality, ...barcelona, councilSeats: 43 } as RadiografiaData["municipality"],
+      results: { M20231: { totalVotes: 600_000, seats: 41, candidatures: [] } },
+    }));
+    expect(b).toContain('<span class="xifra">43</span>');
+    expect(b).toContain('<span class="xifra">22</span>');
+    expect(b).toContain("ara en són 41");
+    expect(b).toContain("de 41 al ple d'ara");
+    expect(b).toContain("El ple canvia.");
+    expect(b).toContain("LOREG, art. 179");
+  });
+
+  it("en consell obert la banda diu que es vota l'alcaldia", () => {
+    const base = fitxa({ government: govern({ mayorSeats: 1, winnerSeats: 1, totalSeats: 1, majority: 1 }) });
+    const b = banda(renderRadiografia({
+      ...base,
+      municipality: { ...base.municipality, population: 28, populationYear: 2025, electoralSystem: "Consell obert" } as RadiografiaData["municipality"],
+      results: { M20231: { totalVotes: 20, seats: 1, candidatures: [] } },
+    }));
+    expect(b).toContain("L'alcaldia");
+    expect(b).not.toContain('<span class="etq">En calen</span>');
+    expect(b).toContain("funciona amb consell obert");
+  });
+});
+
+describe("paritat: sense dada quan la font no porta les llistes senceres", () => {
+  const base = { candidates: 984, womenCandidates: 468, womenCandidatesPct: 48, elected: 41, womenElected: 20, womenElectedPct: 49, heads: 24, womenHeads: 7, expectedElected: 43, complet: false };
+
+  it("el denominador del ple són les regidories del 2023, no les del padró d'ara", () => {
+    const a = avaluaParitat(base, { seients2023: 41, llistes2023: 24 });
+    expect(a).toMatchObject({ completa: true, escons: 41, llistesSenceres: true, capsFiables: true });
+    // Sense el recompte del 2023, com abans: el de la mètrica.
+    expect(avaluaParitat(base).completa).toBe(false);
+  });
+
+  it("caps de llista «0 de 0» i llistes de dues persones són sense dada", () => {
+    const pobre = { candidates: 2, womenCandidates: 0, womenCandidatesPct: 0, elected: 2, womenElected: 0, womenElectedPct: 0, heads: 0, womenHeads: 0, expectedElected: 7, complet: false };
+    const a = avaluaParitat(pobre, { seients2023: 7, llistes2023: 2 });
+    expect(a).toMatchObject({ completa: false, llistesSenceres: false, capsFiables: false });
+    const html = renderRadiografia(fitxa({
+      parity: pobre,
+      results: { M20231: { totalVotes: 300, seats: 7, candidatures: [] } },
+    }));
+    const on = html.indexOf('<ul class="paritat">');
+    const bloc = html.slice(on, html.indexOf("</ul>", on));
+    expect(bloc).not.toContain("0 de 0");
+    expect(bloc).not.toMatch(/<span class="gran">0 %<\/span>/);
+    expect(bloc.match(/Sense dada/g)?.length).toBe(3);
+    expect(bloc).toContain("no marca qui encapçalava cada llista");
+  });
+
+  it("amb llistes tancades, menys titulars que llistes per regidories és una llista incompleta", () => {
+    const curta = { ...base, candidates: 500, expectedElected: 41, complet: true };
+    expect(avaluaParitat(curta, { seients2023: 41, llistes2023: 24 }).llistesSenceres).toBe(false);
+    // I els caps, si no quadren amb les candidatures que es van presentar, tampoc.
+    expect(avaluaParitat({ ...base, heads: 20 }, { seients2023: 41, llistes2023: 24 }).capsFiables).toBe(false);
   });
 });
 
@@ -3780,6 +3909,8 @@ describe("el ple compacte: el nom a la vista i el càrrec només de qui mana", (
         carrec("Pol Gibert Horcas", "Quart Tinent d'Alcalde i regidor de Cultura", "Grup Municipal del PSC"),
         carrec("Joan Tinença Curta", "5aTta.Alcaldessa", "Grup Municipal del PSC"),
         carrec("Josep Maria Pérez Garcia", "Regidor de l'àrea de Promoció Econòmica", "Grup Municipal del PSC"),
+        carrec("Joan Pérez i Soler", "Regidor d'Esports", "Grup Municipal del PSC"),
+        carrec("Víctor Martí de la Rosa", "Regidor d'Hisenda", "Grup Municipal del PSC"),
       ],
     } as unknown as RadiografiaData["carrecs"],
   }));
@@ -3788,9 +3919,17 @@ describe("el ple compacte: el nom a la vista i el càrrec només de qui mana", (
 
   it("cada cara porta el nom i el primer cognom a sota", () => {
     expect(ple).toContain('<span class="fx-nom" aria-hidden="true">Marta Farrés</span>');
-    expect(ple).toContain('<span class="fx-nom" aria-hidden="true">Josep Maria Pérez</span>');
+    // El mateix nom curt que les fitxes de regidor (`nomCurt()` de regidor.ts):
+    // el nom de pila i el primer cognom.
+    expect(ple).toContain('<span class="fx-nom" aria-hidden="true">Josep Pérez</span>');
     // El nom sencer continua a l'enllaç, per a qui llegeix amb veu.
     expect(ple).toContain('aria-label="Marta Farrés Falgueras · Alcaldessa"');
+  });
+
+  it("les partícules van amb el cognom: mai «Joan Pérez i» ni «Víctor Martí de»", () => {
+    expect(ple).toContain('<span class="fx-nom" aria-hidden="true">Joan Pérez</span>');
+    expect(ple).toContain('<span class="fx-nom" aria-hidden="true">Víctor Martí</span>');
+    expect(ple).not.toMatch(/class="fx-nom"[^>]*>[^<]*\s(i|de|del|de la|y)<\/span>/);
   });
 
   it("el càrrec només de l'alcaldia i de les tinences, en curt", () => {
@@ -3938,10 +4077,10 @@ describe("els capítols: qui mana, els diners, com és el poble i d'on surt", ()
   const ON_VA: Record<string, string> = {
     ple: "qui-mana", "per-sobre": "qui-mana", mandat: "qui-mana", historia: "qui-mana",
     "llistes-obertes": "qui-mana", "dones-i-homes": "qui-mana", participacio: "qui-mana", cens: "qui-mana",
-    "preguntes-rapides": "qui-mana",
+    "preguntes-rapides": "qui-mana", gaip: "qui-mana", "altres-eleccions": "qui-mana", "ultim-regidor": "qui-mana",
     comptes: "diners", diners: "diners", "diners-generalitat": "diners", "que-paga": "diners",
     sous: "diners", contractacio: "diners", escombraries: "diners",
-    "qui-hi-viu": "poble", urbanisme: "poble", "serveis-socials": "poble", seguretat: "poble",
+    "qui-hi-viu": "poble", "feina-i-renda": "poble", urbanisme: "poble", "serveis-socials": "poble", seguretat: "poble",
     vehicles: "poble", agermanaments: "poble", nascuts: "poble",
     dades: "fonts", fonts: "fonts",
   };

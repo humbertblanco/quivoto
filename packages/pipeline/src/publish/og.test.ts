@@ -252,10 +252,10 @@ describe("les feines", () => {
     expect((feinaPartit({ id: "x", sigles: "X", name: "X", color: "red;", alcaldies: 0, regidories: 0, poblacioGovernada: 0 }).dades as { fons: string }).fons).toBe("#8b8b8b");
   });
 
-  it("les globals són vuit, una per pàgina, amb el nom que les plantilles demanen a FITXER_OG", () => {
+  it("les globals són nou, una per pàgina, amb el nom que les plantilles demanen a FITXER_OG", () => {
     const feines = feinesGlobals({ municipis: 947, comarques: 43, partits: 15, regidories: 9146, habitants: 8000000, preguntes: 12 });
     expect(feines.map((f) => f.fitxer)).toEqual(
-      ["observatori", "els947", "mapa", "ranquings", "comparador", "dades", "preguntes", "trajectoria"].map(FITXER_OG.global),
+      ["observatori", "els947", "mapa", "ranquings", "municipals", "comparador", "dades", "preguntes", "trajectoria"].map(FITXER_OG.global),
     );
     for (const f of feines) {
       if (f.dades.tipus !== "global") throw new Error("tipus");

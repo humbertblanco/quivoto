@@ -1302,6 +1302,8 @@ export function feinaIndexEns(llista: readonly Pick<DadesEns, "tipus">[]): Feina
 export type PartitOg = {
   id: string; sigles: string; name: string; color: string;
   alcaldies: number; regidories: number; poblacioGovernada: number;
+  /** Marca que ja no es presenta (CiU…): la imatge no diu «0 alcaldies». */
+  historica?: boolean;
 };
 
 /** La imatge d'un partit: les sigles amb el seu color i les tres xifres de la pàgina. */
@@ -1317,7 +1319,9 @@ export function feinaPartit(p: PartitOg): Feina {
       nom: p.name,
       fons,
       tinta,
-      frase: `<b>${xifra(p.alcaldies)} ${p.alcaldies === 1 ? "alcaldia" : "alcaldies"}</b> · ${xifra(p.regidories)} regidories · ${xifra(p.poblacioGovernada)} habitants governats`,
+      frase: p.historica
+        ? "Marca històrica: com li va anar des del 1979"
+        : `<b>${xifra(p.alcaldies)} ${p.alcaldies === 1 ? "alcaldia" : "alcaldies"}</b> · ${xifra(p.regidories)} regidories · ${xifra(p.poblacioGovernada)} habitants governats`,
       banda: fons,
     },
   };
@@ -1355,6 +1359,8 @@ export function feinesGlobals(x: XifresGlobals): Feina[] {
       frase: `${municipis} amb els seus límits: cada terme porta a la fitxa del seu poble.` },
     { nom: "ranquings", titol: "Rànquings municipals", sota: "Qui és a dalt i qui a baix de cada indicador", figura: paperetaFelic,
       frase: `${municipis} ordenats per deute, IBI, residus, habitatge i més, amb l'any i la font de cada xifra.` },
+    { nom: "municipals", titol: "Com funcionen les municipals", sota: "Diumenge 23 de maig del 2027", figura: papereta(280, "pregunta"),
+      frase: "El calendari, qui pot votar i com es tria l'alcaldia, amb l'article de la llei." },
     { nom: "comparador", titol: "Comparador de municipis", sota: "De dos a quatre, costat a costat", figura: paperetaFelic,
       frase: `Tria fins a quatre dels ${municipis} i compara'n el govern, el deute, l'IBI i la resta d'indicadors.` },
     { nom: "dades", titol: "Dades obertes", sota: "CSV i JSON, amb la font de cada camp", figura: paperetaFelic,
@@ -1407,7 +1413,7 @@ export async function writeOgImages(
   for (const p of partits) feines.push(feinaPartit(p));
   for (const e of ens) feines.push(feinaEns(e));
   if (ens.length > 0) feines.push(feinaIndexEns(ens));
-  feines.push(...feinesGlobals(await loadXifresGlobals(db, comarques.length, partits.length)));
+  feines.push(...feinesGlobals(await loadXifresGlobals(db, comarques.length, partits.filter((p) => !p.historica).length)));
 
   const fet = await generaImatges(feines, outDir);
   return { images: fet.images, bytes: fet.bytes };

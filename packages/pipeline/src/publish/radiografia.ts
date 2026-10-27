@@ -4,7 +4,7 @@ import {
   municipalityMetrics, people, politicalGroups, type Db,
 } from "@quivoto/db";
 import { BRANDS_BY_ID, PARTY_BRANDS, sameForce, siglesFamily } from "@quivoto/shared-schemas/brands";
-import { absoluteMajority } from "@quivoto/shared-schemas/seats";
+import { absoluteMajority, councilSeats } from "@quivoto/shared-schemas/seats";
 import { sobreColor } from "./contrast";
 import { CRIMINALITAT_CSS, renderCriminalitat, type GrupCriminalitat } from "./criminalitat";
 import type { CriminalitatMetric } from "../jobs/j29-criminalitat";
@@ -25,6 +25,15 @@ import { WIKIDATA_FITXA_CSS, renderAgermanaments, renderNascuts } from "./wikida
 import type { FitxaCuriositatsWikidata } from "../jobs/j33-municipi-wikidata";
 import { renderVehiclesBloc } from "./vehicles-fitxa";
 import type { VehiclesMetric } from "../jobs/j34-vehicles";
+import { ALTRES_ELECCIONS_CSS, renderAltresEleccionsBloc } from "./altres-eleccions-fitxa";
+import type { AltresEleccionsMetric } from "../jobs/j43-altres-eleccions";
+import { MARGES_CSS, renderMargesBloc } from "./marges-fitxa";
+import type { MargesMetric } from "../derive/marges";
+import { SOCIOECONOMIA_CSS, renderSocioeconomiaBloc } from "./socioeconomia-fitxa";
+import type { SocioeconomiaMetric } from "../jobs/j44-socioeconomia";
+import type { GaipMetric } from "../jobs/j45-gaip";
+import type { EstablimentsTuristicsMetric } from "../jobs/j46-habitatges-turistics";
+import { GAIP_FITXA_CSS, TITOL_GAIP, renderGaipBloc } from "./gaip-fitxa";
 import { LLISTES_OBERTES_CSS, adrecesDelPle, renderLlistesObertesBloc } from "./llistes-obertes-fitxa";
 import type { LlistesObertesMetric } from "../jobs/j37-llistes-obertes";
 import { CENS_FITXA_CSS, renderCensBloc } from "./cens-fitxa";
@@ -41,7 +50,7 @@ import type { TerritoriMetric } from "../jobs/j32-territori";
 import { icona } from "./icones";
 import { renderMapa, type PuntMapa } from "./mapa";
 import { assignaSlugs } from "./candidatura";
-import { adrecesRegidors, carrecCurt, frasesQueCaben, titolQueCap } from "./regidor";
+import { adrecesRegidors, carrecCurt, frasesQueCaben, nomCurt, titolQueCap } from "./regidor";
 import { ARREL_OBSERVATORI, capSeo, filAriadna } from "./seo";
 import { GEO_CSS, ajuntamentLd, municipiLd, preguntesMunicipi, preguntesRapides } from "./seo-ld";
 import { esAlcaldia, resolAlcaldia } from "./alcaldia";
@@ -50,7 +59,7 @@ import { familiaDelPartit, motiuFinalEscrit, type PasAlcaldia } from "../derive/
 import { FOTOS_WIKIMEDIA_CSS, creditsRetrats, retratsPerNom, type Retrat } from "./fotos-wikidata";
 import type { FitxaFotosExalcaldes } from "../jobs/j28-fotos-exalcaldes";
 import {
-  dataCurta, de, delDia, elDia, nomLlegible, nomPreferit, nomsOficials, normalize, normalizePersonName, slugify,
+  consultatEl, dataCurta, de, delDia, elDia, nomLlegible, nomPreferit, nomsOficials, normalize, normalizePersonName, slugify,
 } from "../lib/text";
 import { SITE } from "./config";
 import { RADIOGRAFIA_CSS, senseComentaris } from "./estil";
@@ -58,12 +67,15 @@ import { MASCOTA_CSS, papereta } from "./mascota";
 import { PAPERETA_POSTURES_CSS, vinyetaPapereta } from "./mascota-postures";
 import { capcalera, tipografia } from "./capcalera";
 import { credit, escutMunicipi, type ImatgesMunicipi } from "./escut";
-import { sigla } from "./sigla";
+import { sigla, siglesConegudes } from "./sigla";
 import { cara } from "./cara";
 import { cercador } from "./cercador";
 import { peu } from "./peu";
 import { adrecaEns, type DadesEns } from "./ens-tipus";
 import { esSeientSenseNom } from "../jobs/j38-ens-supramunicipals";
+// El text de «zero i buit» es llegeix del codi i no del JSON desat: el que hi
+// va desar una J15 antiga parlava de «liquidacio: false», que no és per a ningú.
+import { ZERO_I_BUIT } from "../jobs/j15-despesa-serveis";
 import { SENSE_CONSELL } from "./comarques";
 
 /**
@@ -904,6 +916,18 @@ const number = (n: number): string => n.toLocaleString("ca-ES");
 const percent = (n: number): string => `${n.toFixed(1).replace(".", ",")} %`;
 
 /**
+ * Un percentatge que la font ja dona arrodonit a l'enter: «57 %», i no
+ * «57,0 %».
+ *
+ * Les dones al ple (J-mètriques) i les licitacions d'una sola oferta (J10)
+ * arriben com a enters, i passar-los per `percent()` hi afegia un decimal que
+ * no existeix: un «57,0 %» fa creure que se sap fins a la desena, i 4 de 7
+ * regidores són un 57,1 %. Les medianes del grup, que poden caure entre dos
+ * enters, conserven el ,5 quan el tenen.
+ */
+const percentEnter = (n: number): string => (Number.isInteger(n) ? `${number(n)} %` : percent(n));
+
+/**
  * De quina força és un grup municipal, pel seu nom llarg.
  *
  * Només dues evidències, i totes dues són literals: que el nom sencer del
@@ -981,6 +1005,25 @@ export function colorDeCandidatura(candidature: CandidatureShare): string {
  * comarques.
  */
 const formatDate = dataCurta;
+
+/**
+ * «al 21 d'agost del 2026», i «a l'1 de gener» o «a l'11 de juny» quan el dia
+ * s'apostrofa. Es fa a partir d'`elDia()` perquè la regla de quins dies porten
+ * apòstrof visqui en un sol lloc —`lib/text.ts`— i no se'n faci aquí una còpia
+ * que s'oblidi de l'11 com s'havia oblidat abans.
+ */
+function alDia(data: string | null): string {
+  const text = elDia(data);
+  return text.startsWith("el ") ? `al ${text.slice(3)}` : text ? `a ${text}` : "";
+}
+
+/**
+ * La primera lletra en majúscula, per quan una frase de `lib/text.ts` obre una
+ * oració: «Consultat el 27 d'octubre del 2026.» a la lletra petita.
+ */
+function majuscula(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 // ---------------------------------------------------------------- fragments
 
@@ -1771,7 +1814,7 @@ export function renderQuantGasta(
     <li>
       <span class="etq">El que gasta en total</span>
       <span class="gran">${total === null ? "—" : `${number(Math.round(total))} €`}</span>
-      <span class="sub">liquidat el ${any}${habitants === null ? "" : ` · ${number(habitants)} habitants`}</span>
+      <span class="sub">liquidat el ${any}${habitants === null ? "" : ` · ${number(habitants)} empadronats aquell any`}</span>
     </li>
     <li>
       <span class="etq">Per habitant</span>
@@ -1949,20 +1992,18 @@ const inicialsDe = (nom: string): string =>
  * forat que queda quan falta una foto, és una peça dissenyada. I qui llegeix
  * amb veu sent el nom i el càrrec de cadascú, que van dins de l'enllaç.
  */
-/**
- * El nom que es veu sota la cara: el nom i el primer cognom.
+/*
+ * El nom que es veu sota la cara és el `nomCurt()` de `regidor.ts`: el nom de
+ * pila i el primer cognom, el mateix que fa servir el bloc «Al mateix grup» de
+ * cada fitxa de regidor.
  *
- * El nom sencer només era al `title`, i al mòbil no es veia mai: el ple era
- * una filera de cares sense nom. Sencer no hi cap (la columna fa 60 px), i
- * per això es treu l'última paraula quan n'hi ha tres o més, que en els noms
- * d'aquí és el segon cognom: «Marta Farrés Falgueras» → «Marta Farrés»,
- * «Josep Maria Pérez Garcia» → «Josep Maria Pérez». El CSS el talla a dues
- * línies. El nom complet continua a l'enllaç i a la fitxa de la persona.
+ * Aquí n'hi havia una còpia que treia l'última paraula quan n'hi havia tres o
+ * més, i això trencava els cognoms amb partícula: «Joan Pérez i Soler» sortia
+ * «Joan Pérez i» i «Víctor Martí de la Rosa», «Víctor Martí de la». La de
+ * `regidor.ts` enganxa les partícules (i, de, del, de la, y…) al cognom que
+ * les segueix, i fer servir la mateixa vol dir que la mateixa persona es diu
+ * igual a totes dues pàgines. El nom complet continua a l'enllaç i a la fitxa.
  */
-function nomCurt(nom: string): string {
-  const paraules = nom.trim().split(/\s+/).filter(Boolean);
-  return (paraules.length >= 3 ? paraules.slice(0, -1) : paraules).join(" ");
-}
 
 /**
  * La tinença d'alcaldia en curt: «Primer tinent d'alcalde de Cultura» →
@@ -2436,11 +2477,14 @@ function renderMayors(
       m.interina ? ' <span class="marca-canvi">alcaldia interina</span>' : "",
       motiu ? ` <span class="marca-canvi" title="segons Wikidata">${escape(motiu)}</span>` : "",
       !motiu && m.finsA && m.fontFi === "ministeri"
-        ? ` <span class="marca-canvi" title="segons el Ministeri">fins al ${formatDate(m.finsA)}</span>`
+        ? ` <span class="marca-canvi" title="segons el Ministeri">fins ${alDia(m.finsA)}</span>`
         : "",
     ].join("");
-    const partit = m.partyRaw
-      ? `${escape(m.partyRaw)}${m.partitWikidata ? ` <span class="secundari" title="nom complet segons Wikidata">(${escape(m.partitWikidata)})</span>` : ""}`
+    // «N/A» al camp del partit és un buit amb disfressa: no s'escriu com si
+    // fos un partit, i la fila passa a Wikidata, al Ministeri o al guionet.
+    const siglesPas = siglesConegudes(m.partyRaw);
+    const partit = siglesPas
+      ? `${escape(siglesPas)}${m.partitWikidata ? ` <span class="secundari" title="nom complet segons Wikidata">(${escape(m.partitWikidata)})</span>` : ""}`
       : m.partitWikidata
         ? `${escape(m.partitWikidata)} <span class="secundari">segons Wikidata</span>`
         : m.llistaMinisteri
@@ -2576,10 +2620,20 @@ export type RadiografiaData = {
   curiositatsWikidata?: FitxaCuriositatsWikidata | null;
   /** Parc de vehicles per mil habitants (J34, Idescat a partir de la DGT). */
   vehicles?: VehiclesMetric | null;
+  /** Atur registrat (SEPE) i context socioeconòmic de l'Idescat (J44). Context, no balanç. */
+  socioeconomia?: SocioeconomiaMetric | null;
+  /** Reclamacions a la GAIP contra l'ajuntament i incompliments (J45). */
+  gaip?: GaipMetric | null;
+  /** Registre de Turisme viu: pisos turístics i altres establiments (J46). */
+  establimentsTuristics?: EstablimentsTuristicsMetric | null;
   /** El vot per persona a les llistes obertes, només als municipis que n'han tingut (J37). */
   llistesObertes?: LlistesObertesMetric | null;
   /** El cens i la participació de les dotze municipals des del 1979 (J36). */
   censElectoral?: CensElectoralMetric | null;
+  /** Com vota el municipi al Parlament, al Congrés i al Parlament Europeu (J43). */
+  altresEleccions?: AltresEleccionsMetric | null;
+  /** Per quants vots es va decidir cada regidoria: marges de d'Hondt (derive/marges.ts). */
+  marges?: MargesMetric | null;
   /** El pla urbanístic, els pisos turístics, l'habitatge protegit i la zona tensa (J40). */
   urbanismeHabitatge?: UrbanismeHabitatgeMetric | null;
   /** El Fons de Cooperació Local, les obres del PUOSC, els pendents i les trameses de comptes (J41). */
@@ -2702,7 +2756,7 @@ function renderAlcaldia(
   relleu: RelleuAlcaldia | null = null,
 ): string {
   const etiqueta = `${escape(carrec)}${sigles ? ` · ${sigla(sigles, { base: BASE, color })}` : ""}`;
-  const desDe = relleu?.desDe ? `des del ${formatDate(relleu.desDe)}` : "va arribar a mig mandat";
+  const desDe = relleu?.desDe ? `des ${delDia(relleu.desDe)}` : "va arribar a mig mandat";
   const abans = relleu && relleu.anteriors.length > 0
     ? ` · abans, ${relleu.anteriors.map(escape).join(" i ")}`
     : "";
@@ -3738,7 +3792,7 @@ export function renderSous(
       ? ` ${escape(ministeri.advertiment)} El que declara aquest ajuntament al Ministeri:
          <a href="${escape(ministeri.font.urls[0] ?? ministeri.font.pagina)}" rel="noopener nofollow">${escape(
            ministeri.font.nom,
-         )}</a>, ${escape(ministeri.font.organisme)}, consultat el ${escape(ministeri.font.consultat)}.`
+         )}</a>, ${escape(ministeri.font.organisme)}, ${escape(consultatEl(ministeri.font.consultat))}.`
       : "";
     parts.push(`${targetes.length > 0 ? `<ul class="preus">${targetes.join("")}</ul>` : ""}
     ${quants}
@@ -3798,7 +3852,7 @@ export function renderSous(
     <p>Aquí no hi ha cap import, i no és un descuit.</p>
     ${cos}
     <p class="avis-dada">${escape(t.advertiment)}</p>
-    <details class="nota"><summary>La lletra petita</summary>Consultat el ${escape(t.consultat)} a
+    <details class="nota"><summary>La lletra petita</summary>${escape(majuscula(consultatEl(t.consultat)))} a
       <a href="${escape(t.url)}" rel="noopener nofollow">${escape(t.font)}</a>.</details>`);
   }
 
@@ -3973,13 +4027,13 @@ export function renderSous(
       acumulats
         ? `A tot Catalunya, ${number(acumulats.catalunya.alcaldiesAmbSegonCarrec)} alcaldies tenen un
     segon càrrec i només ${number(acumulats.catalunya.alcaldiesAmbImportPublicat)} en tenen l'import publicat
-    per qui el paga. Consultat el ${escape(acumulats.consultat)}.`
+    per qui el paga. ${escape(majuscula(consultatEl(acumulats.consultat)))}.`
         : ""
     }${
       diputacions
         ? ` De les diputacions: ${number(diputacions.catalunya.diputatsQueTambeSonRegidors)} diputats són alhora
     regidors, i ${number(diputacions.catalunya.ambImportPublicat)} tenen l'import publicat per la seva diputació.
-    Consultat el ${escape(diputacions.catalunya.consultat)}.`
+    ${escape(majuscula(consultatEl(diputacions.catalunya.consultat)))}.`
         : ""
     }</details>`);
   }
@@ -4024,7 +4078,7 @@ export function renderContractacio(c: ContractacioMetric | null): string {
   const comp = c.comparacio;
   const finestra =
     c.finestraDates.desDe && c.finestraDates.finsA
-      ? `${delDia(c.finestraDates.desDe)} al ${dataCurta(c.finestraDates.finsA)}`
+      ? `${delDia(c.finestraDates.desDe)} ${alDia(c.finestraDates.finsA)}`
       : "de la finestra que publica la font";
 
   const targetes: string[] = [];
@@ -4054,10 +4108,10 @@ export function renderContractacio(c: ContractacioMetric | null): string {
   if (solitari && comp) {
     targetes.push(`<li>
       <span class="etq">Licitacions amb una sola oferta</span>
-      <span class="gran">${percent(c.finestra.unaOfertaPct!)}</span>
+      <span class="gran">${percentEnter(c.finestra.unaOfertaPct!)}</span>
       ${reglePercentatge(c.finestra.unaOfertaPct!, comp.medianaUnaOferta, true)}
       <span class="comparativa">entre els ${number(comp.municipisUnaOferta)} municipis
-      ${escape(comp.grup)}, el del mig: ${percent(comp.medianaUnaOferta!)}</span>
+      ${escape(comp.grup)}, el del mig: ${percentEnter(comp.medianaUnaOferta!)}</span>
       <span class="sub">sobre ${number(c.finestra.licitacionsAmbOfertes)} licitacions amb el nombre d'ofertes informat</span>
     </li>`);
   } else if (c.finestra.licitacions > 0) {
@@ -4416,7 +4470,7 @@ export function renderEscombraries(
       ? ` Dels ${cobertura.ambLiquidacio} ajuntaments que van liquidar el ${despesa!.anyComparable},
          ${cobertura.ambImport} hi destinen alguna cosa i ${cobertura.ambZero} no hi destinen ni un euro.`
       : ""
-  } <b>${escape(despesa!.zeroIBuit)}</b></details>
+  } <b>${escape(ZERO_I_BUIT)}</b></details>
   <p class="nota oberta">No hi posem cap veredicte: gastar-hi més no vol dir fer-ho millor, i reciclar més
   amb menys diners tampoc no vol dir que la despesa sobri. Hi són les dues sèries i les dels seus.</p>`;
 }
@@ -4532,13 +4586,21 @@ function renderMandat(data: RadiografiaData): string {
   }
   // Quanta gent hi viu tampoc no ho decideix l'ajuntament, i per això hi va amb
   // la mateixa advertència que el lloguer: és el context on ha governat.
-  const cens = data.poblacio ? indicadorDe(data.poblacio, "censHabitants") : null;
-  if (cens?.mandat && data.poblacio && !data.poblacio.context.decideixLAjuntament) {
+  //
+  // La xifra és la del padró, la mateixa que la capçalera i que «Qui hi viu».
+  // Abans era la del cens de població de l'INE, que és una altra font i dona
+  // una altra xifra: a Juncosa la capçalera deia 377 habitants i aquesta fila
+  // 379, sense dir que eren dues coses diferents. Només quan el padró no porta
+  // el canvi del mandat es fa servir el cens, i llavors l'etiqueta ho diu.
+  const padroMandat = data.poblacio ? indicadorDe(data.poblacio, "padroHabitants") : null;
+  const censMandat = data.poblacio ? indicadorDe(data.poblacio, "censHabitants") : null;
+  const poblacioMandat = padroMandat?.mandat ? padroMandat : censMandat?.mandat ? censMandat : null;
+  if (poblacioMandat?.mandat && data.poblacio && !data.poblacio.context.decideixLAjuntament) {
     files.push({
-      etiqueta: "Gent que hi viu",
+      etiqueta: poblacioMandat === padroMandat ? "Gent empadronada" : "Població censada (INE)",
       unitat: "persones",
-      mandat: cens.mandat,
-      grup: cens.mandatDelGrup,
+      mandat: poblacioMandat.mandat,
+      grup: poblacioMandat.mandatDelGrup,
       amuntEsMillor: null,
       decimals: 0,
       decimalsBase: 0,
@@ -4592,7 +4654,8 @@ function renderMandat(data: RadiografiaData): string {
     "Rebut mitjà d'IBI": "fiscalitat",
     "Deute per habitant": "deute public",
     "Preu del lloguer": "habitatge",
-    "Gent que hi viu": "habitants",
+    "Gent empadronada": "habitants",
+    "Població censada (INE)": "habitants",
   };
   const fila = (f: Fila): string => {
     const m = f.mandat!;
@@ -5209,6 +5272,11 @@ type FilaComparat = {
    * mediana i el percentil i prou, i a l'etiqueta hi va només la posició.
    */
   extrems?: { minim: number; maxim: number } | null;
+  /**
+   * Per què no hi ha xifra, quan no és que no en tinguem cap: «massa poques
+   * licitacions…». Sense, la fila diu «d'aquest municipi no en tenim la xifra».
+   */
+  motiuSenseDada?: string;
 };
 
 /**
@@ -5320,7 +5388,8 @@ function filesComparat(data: RadiografiaData, medianes?: MedianesMunicipi): Fila
   const dones = medianes?.donesAlPle ?? null;
   // Només compta com a paritat el que és una paritat de debò: amb menys electes
   // que regidories, el percentatge és d'una llista incompleta (vegeu medianes.ts).
-  const donesPct = data.parity?.complet === true ? (data.parity.womenElectedPct ?? null) : null;
+  const donesPct =
+    data.parity && avaluaParitat(data.parity, contextParitat(data)).completa ? (data.parity.womenElectedPct ?? null) : null;
   const unaOferta = contractacio?.comparacio ?? null;
   const finestra = contractacio?.finestraDates ?? null;
   const anyFinestra =
@@ -5371,8 +5440,19 @@ function filesComparat(data: RadiografiaData, medianes?: MedianesMunicipi): Fila
       any: anyFinestra,
       font: "PSCP",
       on: "#contractacio",
-      valor: contractacio?.finestra.unaOfertaPct ?? null,
-      format: percent,
+      // Amb menys de cinc licitacions amb les ofertes informades J10 no la
+      // situa al grup (amb tres, els valors possibles són 0, 33, 67 i 100), i
+      // el bloc de contractació ja no l'ensenya. Aquí sortia igualment, com a
+      // «0,0 % sense comparació» a quasi dues-centes fitxes: és el mateix
+      // criteri que el bloc, i sense posició és «sense dada».
+      valor: unaOferta?.percentilUnaOferta != null ? (contractacio?.finestra.unaOfertaPct ?? null) : null,
+      motiuSenseDada:
+        contractacio && contractacio.finestra.licitacions > 0
+          ? contractacio.finestra.licitacionsAmbOfertes === 0
+            ? "cap licitació no publica quantes ofertes va rebre"
+            : "massa poques licitacions amb les ofertes informades per fer-ne un percentatge"
+          : undefined,
+      format: percentEnter,
       percentil: unaOferta?.percentilUnaOferta ?? null,
       mediana: unaOferta?.medianaUnaOferta ?? null,
       quants: unaOferta?.municipisUnaOferta ?? null,
@@ -5395,7 +5475,7 @@ function filesComparat(data: RadiografiaData, medianes?: MedianesMunicipi): Fila
       font: "Generalitat",
       on: "#dones-i-homes",
       valor: donesPct,
-      format: percent,
+      format: percentEnter,
       percentil: dones?.percentil ?? null,
       mediana: dones?.mediana ?? null,
       quants: dones?.quants ?? null,
@@ -5498,7 +5578,7 @@ export function renderComparat(data: RadiografiaData, medianes?: MedianesMunicip
       return `<li class="sense">${etq}
       <span class="xifra buit">sense dada</span>
       <span class="comparat-barra buida" aria-hidden="true"></span>
-      <span class="frase">d'aquest municipi no en tenim la xifra</span></li>`;
+      <span class="frase">${escape(f.motiuSenseDada ?? "d'aquest municipi no en tenim la xifra")}</span></li>`;
     }
     const valor = f.format(f.valor);
     if (f.percentil === null || f.mediana === null) {
@@ -5996,9 +6076,93 @@ const FITXA_CSS = senseComentaris(`
  * als 152 plens de cinc regidories sense excepció. Una xifra així no es
  * corregeix arrodonint-la: o es diu de quantes persones parla, o no es diu.
  */
-function renderParitat(paritat: ParityMetric, medianes?: MedianesMunicipi): string {
-  const completa = paritat.complet !== false && (paritat.expectedElected ?? paritat.elected) === paritat.elected;
-  const escons = paritat.expectedElected ?? paritat.elected;
+/** El que la paritat necessita saber del 2023: regidories, candidatures i sistema. */
+function contextParitat(data: RadiografiaData): { seients2023: number | null; llistes2023: number | null; llistesObertes: boolean } {
+  const r = data.results.M20231;
+  return {
+    seients2023: r?.seats ?? data.government?.totalSeats ?? null,
+    llistes2023: r && r.candidatures.length > 0 ? r.candidatures.length : null,
+    llistesObertes: !/tancades/i.test(data.municipality.electoralSystem ?? ""),
+  };
+}
+
+/**
+ * Què se'n pot dir, de les tres xifres de paritat, amb el que porta la font.
+ *
+ * El denominador del ple són les regidories que es van elegir el 2023, i no
+ * `expectedElected`: J-mètriques el calcula amb el padró d'ara
+ * (`councilSeats`), i a la cinquantena de municipis que han canviat de mida
+ * —Barcelona en tenia 41 i amb el padró del 2025 en tocarien 43— deixava el
+ * ple sencer per incomplet. Sense el recompte del 2023 es fa com abans.
+ *
+ * Les llistes tenen el mateix problema que el ple, i més amagat: a 212
+ * municipis el conjunt de candidatures només porta dues o tres persones, i el
+ * «0 % de dones a les llistes» que hi sortia era el d'aquelles dues o tres.
+ * Amb llistes tancades cada candidatura porta tants titulars com regidories,
+ * i per això es pot saber si hi són totes; amb llistes obertes (fins a 250
+ * habitants) una candidatura pot dur-ne menys, i llavors només es dona per
+ * bona si el ple quadra i hi ha, com a mínim, tantes persones com escons.
+ * Els caps de llista, igual: sense cap cap marcat («0 de 0») o amb un
+ * nombre que no és el de candidatures que es van presentar, no es diu res.
+ */
+export function avaluaParitat(
+  paritat: ParityMetric,
+  context: { seients2023?: number | null; llistes2023?: number | null; llistesObertes?: boolean } = {},
+): { completa: boolean; escons: number; llistesSenceres: boolean; llistesEsperades: number | null; capsFiables: boolean } {
+  const seients = context.seients2023 && context.seients2023 > 0 ? context.seients2023 : null;
+  const escons = seients ?? paritat.expectedElected ?? paritat.elected;
+  const completa =
+    paritat.elected > 0 &&
+    paritat.elected === escons &&
+    (seients !== null || paritat.complet !== false);
+  const llistes = context.llistes2023 && context.llistes2023 > 0 ? context.llistes2023 : null;
+  const nombreDeLlistes = llistes ?? (paritat.heads > 0 ? paritat.heads : null);
+  const llistesEsperades = !context.llistesObertes && nombreDeLlistes !== null ? nombreDeLlistes * escons : null;
+  const llistesSenceres =
+    paritat.candidates > 0 &&
+    paritat.womenCandidatesPct !== null &&
+    completa &&
+    (llistesEsperades !== null ? paritat.candidates >= llistesEsperades : paritat.candidates >= escons);
+  const capsFiables = paritat.heads > 0 && (llistes === null || paritat.heads === llistes);
+  return { completa, escons, llistesSenceres, llistesEsperades, capsFiables };
+}
+
+function renderParitat(
+  paritat: ParityMetric,
+  medianes?: MedianesMunicipi,
+  context: { seients2023?: number | null; llistes2023?: number | null; llistesObertes?: boolean } = {},
+): string {
+  const { completa, escons, llistesSenceres, llistesEsperades, capsFiables } = avaluaParitat(paritat, context);
+  const persones = (n: number): string => `${number(n)} ${n === 1 ? "persona" : "persones"}`;
+  const llistesHtml = llistesSenceres
+    ? `<li><span class="etq">De dones a les llistes</span>
+      <span class="gran">${paritat.womenCandidatesPct} %</span>
+      ${reglePercentatge(paritat.womenCandidatesPct!, null, false)}
+      <span class="secundari">${number(paritat.womenCandidates)} de ${number(paritat.candidates)} candidatures</span></li>`
+    : `<li><span class="etq">De dones a les llistes</span>
+      <span class="gran">Sense dada</span>
+      <span class="secundari">${
+        paritat.candidates === 0
+          ? "el conjunt de candidatures no en dona cap persona"
+          : llistesEsperades !== null && paritat.candidates < llistesEsperades
+            ? `el conjunt de candidatures només en dona ${persones(paritat.candidates)} de les ${number(llistesEsperades)}
+               que portaven les llistes, i un percentatge sobre aquestes no seria el de les llistes`
+            : `el conjunt de candidatures només en dona ${persones(paritat.candidates)}, i amb la llista d'electes
+               incompleta no se sap si hi són totes`
+      }</span></li>`;
+  const capsHtml = capsFiables
+    ? `<li><span class="etq">Caps de llista</span>
+      <span class="gran">${number(paritat.womenHeads)} de ${number(paritat.heads)}</span>
+      ${reglePercentatge((100 * paritat.womenHeads) / paritat.heads, null, false)}
+      <span class="secundari">eren dones</span></li>`
+    : `<li><span class="etq">Caps de llista</span>
+      <span class="gran">Sense dada</span>
+      <span class="secundari">${
+        paritat.heads === 0
+          ? "el conjunt de candidatures no marca qui encapçalava cada llista"
+          : `el conjunt de candidatures en marca ${number(paritat.heads)} i es van presentar
+             ${number(context.llistes2023 ?? 0)} ${context.llistes2023 === 1 ? "llista" : "llistes"}`
+      }</span></li>`;
   return `<ul class="paritat">
     ${completa ? `<li><span class="etq">De dones al ple</span>
       <span class="gran">${paritat.womenElectedPct ?? "—"} %</span>
@@ -6007,23 +6171,21 @@ function renderParitat(paritat: ParityMetric, medianes?: MedianesMunicipi): stri
       <span class="secundari">${paritat.womenElected} de ${paritat.elected} regidories</span></li>`
     : `<li><span class="etq">De dones al ple</span>
       <span class="gran">Sense dada</span>
-      <span class="secundari">el conjunt de candidatures només en dona ${number(paritat.elected)}
+      <span class="secundari">${
+        paritat.elected === 0
+          ? `el conjunt de candidatures no marca cap persona electa de les ${number(escons)} regidories d'aquest ple`
+          : `el conjunt de candidatures només en dona ${number(paritat.elected)}
       ${paritat.elected === 1 ? "persona electa" : "persones electes"} de les ${number(escons)} regidories
       d'aquest ple, i un percentatge sobre aquestes ${paritat.elected === 1 ? "una" : number(paritat.elected)}
-      no seria el del ple</span></li>`}
-    <li><span class="etq">De dones a les llistes</span>
-      <span class="gran">${paritat.womenCandidatesPct ?? "—"} %</span>
-      ${paritat.womenCandidatesPct === null ? "" : reglePercentatge(paritat.womenCandidatesPct, null, false)}
-      <span class="secundari">${paritat.womenCandidates} de ${paritat.candidates} candidatures</span></li>
-    <li><span class="etq">Caps de llista</span>
-      <span class="gran">${paritat.womenHeads} de ${paritat.heads}</span>
-      ${paritat.heads === 0 ? "" : reglePercentatge((100 * paritat.womenHeads) / paritat.heads, null, false)}
-      <span class="secundari">eren dones</span></li>
+      no seria el del ple`
+      }</span></li>`}
+    ${llistesHtml}
+    ${capsHtml}
   </ul>
   ${
     completa && paritat.womenElectedPct !== null && medianes?.donesAlPle
       ? distribucioGrup(medianes.donesAlPle.valors, paritat.womenElectedPct, {
-          format: (v) => percent(v),
+          format: percentEnter,
           titol: "Dones al ple",
           grup: medianes.donesAlPle.etiqueta,
           unitat: "de dones al ple",
@@ -6124,11 +6286,11 @@ function delPleALens(e: DadesEns, slug: string, municipi: string): string {
       // Un escó que la font dona amb partit i sense nom (`NOM_NO_PUBLICAT` de
       // la J38) es diu pel que és, i el partit ja va al nom.
       if (esSeientSenseNom(x.nom)) {
-        return `<li>Seient de ${escape(x.partit ?? "partit no conegut")} <span class="ens-detall">la font no en dona el nom</span></li>`;
+        return `<li>Seient de ${escape(siglesConegudes(x.partit) ?? "partit no consta")} <span class="ens-detall">la font no en dona el nom</span></li>`;
       }
       // `adreca` és relativa a `m/<slug>/`, que és on és aquesta pàgina.
       const nom = x.adreca ? `<a href="${escape(x.adreca)}">${escape(x.nom)}</a>` : escape(x.nom);
-      const detall = [x.carrec, x.partit].filter((t): t is string => !!t && t.trim() !== "").map(escape).join(", ");
+      const detall = [x.carrec, siglesConegudes(x.partit)].filter((t): t is string => !!t && t.trim() !== "").map(escape).join(", ");
       return `<li>${nom}${detall ? ` <span class="ens-detall">${detall}</span>` : ""}</li>`;
     })
     .join("");
@@ -6258,6 +6420,116 @@ export function pastillesContext(
   return `<ul class="pastilles-context">${pastilles.join("")}</ul>`;
 }
 
+/** Com es vota en un municipi: els tres règims de la llei electoral. */
+export type SistemaElectoral = "llistes tancades" | "llistes obertes" | "consell obert";
+
+/**
+ * El ple que s'elegirà el 23 de maig del 2027, deduït del padró d'ara.
+ *
+ * La banda «Què t'hi jugues» deia «Regidories 41 · es voten el maig del 2027»
+ * amb les regidories del 2023. Però la mida del ple no és fixa: la dona la
+ * taula de l'article 179 de la LOREG a partir de la població (`councilSeats()`
+ * de shared-schemas, la mateixa que fa servir J1), i Barcelona, amb el padró
+ * de l'1 de gener del 2025, en passa a tenir 43. Amb el padró del 2025 hi ha
+ * una cinquantena de municipis que canvien de mida.
+ *
+ * El sistema també es mou amb el padró: fins a 250 habitants es vota amb
+ * llistes obertes (LOREG art. 184) i per sobre amb llistes tancades. El 2023
+ * el sabem pel conjunt de dades de la Generalitat que carrega J5; per al 2027
+ * s'aplica la regla de població, que és la mateixa que hi ha darrere d'aquell
+ * conjunt. El consell obert és l'excepció: no depèn de la població sinó de la
+ * tradició del municipi (LBRL art. 29), i qui el tenia el conserva. Allà no
+ * s'elegeixen regidories, només l'alcaldia.
+ *
+ * Tot plegat és una deducció, no una xifra oficial: el nombre definitiu surt
+ * de les xifres oficials de població vigents quan es convoquin les eleccions,
+ * i qui ho llegeix ho ha de saber. Sense padró es torna `null` i la fitxa es
+ * queda amb el ple del 2023.
+ */
+export type Ple2027 = {
+  regidories: number;
+  majoria: number;
+  sistema: SistemaElectoral;
+  /** Les regidories que es van elegir el 2023, si les sabem. */
+  regidories2023: number | null;
+  sistema2023: SistemaElectoral;
+  canviaMida: boolean;
+  canviaSistema: boolean;
+  poblacio: number;
+  /** L'any del padró (a 1 de gener) del qual surt la població. */
+  anyPadro: number | null;
+};
+
+/** «Llistes obertes», «Consell obert»… tal com venen de J5, en un dels tres règims. */
+export function sistemaElectoral(text: string | null | undefined): SistemaElectoral {
+  if (/consell obert/i.test(text ?? "")) return "consell obert";
+  if (/llistes obertes/i.test(text ?? "")) return "llistes obertes";
+  return "llistes tancades";
+}
+
+/** Fins a 250 habitants les llistes són obertes (LOREG art. 184). */
+const MAXIM_LLISTES_OBERTES = 250;
+
+export function pleDel2027(
+  m: { population: number | null; populationYear?: number | null; electoralSystem: string | null },
+  regidories2023: number | null,
+): Ple2027 | null {
+  if (m.population === null || !Number.isFinite(m.population) || m.population < 0) return null;
+  const sistema2023 = sistemaElectoral(m.electoralSystem);
+  const sistema: SistemaElectoral =
+    sistema2023 === "consell obert"
+      ? "consell obert"
+      : m.population <= MAXIM_LLISTES_OBERTES
+        ? "llistes obertes"
+        : "llistes tancades";
+  // En consell obert no hi ha regidories que repartir: s'elegeix l'alcaldia,
+  // i el recompte del 2023 ja ho reflecteix (una sola «regidoria»).
+  const regidories = sistema === "consell obert" ? (regidories2023 ?? 1) : councilSeats(m.population);
+  const r2023 = regidories2023 !== null && regidories2023 > 0 ? regidories2023 : null;
+  return {
+    regidories,
+    majoria: absoluteMajority(regidories),
+    sistema,
+    regidories2023: r2023,
+    sistema2023,
+    canviaMida: r2023 !== null && r2023 !== regidories,
+    canviaSistema: sistema !== sistema2023,
+    poblacio: m.population,
+    anyPadro: m.populationYear ?? null,
+  };
+}
+
+/**
+ * La frase que diu què canvia del 2023 al 2027, o res si no canvia res.
+ *
+ * Neutra i amb la font a la vista: «El 2023 el ple tenia 41 regidories; amb
+ * el padró de l'1 de gener del 2025 en tindrà 43». I sempre amb la cautela
+ * que la xifra definitiva no és nostra.
+ */
+export function fraseCanviDelPle(ple: Ple2027, nom: string): string {
+  if (!ple.canviaMida && !ple.canviaSistema) return "";
+  const padro = ple.anyPadro !== null ? `el padró ${delDia(`${ple.anyPadro}-01-01`)}` : "el padró d'ara";
+  const habitants = `${number(ple.poblacio)} ${ple.poblacio === 1 ? "habitant" : "habitants"}`;
+  const frases: string[] = [];
+  if (ple.canviaMida && ple.regidories2023 !== null) {
+    frases.push(
+      `El 2023 el ple tenia ${number(ple.regidories2023)} ${ple.regidories2023 === 1 ? "regidoria" : "regidories"}; amb ${padro}
+      (${habitants}) en tindrà ${number(ple.regidories)}, i la majoria absoluta passa de
+      ${number(absoluteMajority(ple.regidories2023))} a ${number(ple.majoria)}.`,
+    );
+  }
+  if (ple.canviaSistema) {
+    frases.push(
+      `El 2023 ${escape(nom)} votava amb ${ple.sistema2023}; amb ${padro}${ple.canviaMida ? "" : ` (${habitants})`}
+      el 2027 hi tocaran ${ple.sistema}.`,
+    );
+  }
+  frases.push(
+    "És el que en surt aplicant la llei electoral al padró: el nombre definitiu el fixen les xifres oficials de població vigents quan es convoquin les eleccions.",
+  );
+  return `<p class="nota-linia"><b>El ple canvia.</b> ${frases.join(" ")}</p>`;
+}
+
 /**
  * Què t'hi jugues el 23 de maig del 2027: la banda que fa que això no sigui un
  * dossier d'estadística.
@@ -6284,8 +6556,21 @@ export function renderJoc(
   const government = data.government;
   const tires: string[] = [];
 
-  if (totalSeats > 0) {
-    tires.push(tira({ etq: "Regidories", xifra: number(totalSeats), peu: "es voten el maig del 2027" }));
+  // Les dues primeres tires parlen del ple del 2027, que no és per força el
+  // d'ara: es dedueixen del padró (`pleDel2027`). `totalSeats` i `majority`
+  // continuen sent els del ple d'avui, que és el que mesura «Les té».
+  const ple = pleDel2027(m, totalSeats > 0 ? totalSeats : null);
+  if (ple?.sistema === "consell obert") {
+    tires.push(tira({ etq: "Es vota", xifra: "L'alcaldia", peu: "en consell obert no s'elegeixen regidories" }));
+  } else if (ple) {
+    tires.push(tira({
+      etq: "Regidories",
+      xifra: number(ple.regidories),
+      peu: ple.canviaMida ? `es voten el maig del 2027 · ara en són ${number(ple.regidories2023!)}` : "es voten el maig del 2027",
+    }));
+    tires.push(tira({ etq: "En calen", xifra: number(ple.majoria), peu: "per governar sense pactar amb ningú" }));
+  } else if (totalSeats > 0) {
+    tires.push(tira({ etq: "Regidories", xifra: number(totalSeats), peu: "les del ple del 2023" }));
     tires.push(tira({ etq: "En calen", xifra: number(majority), peu: "per governar sense pactar amb ningú" }));
   }
 
@@ -6302,7 +6587,7 @@ export function renderJoc(
       tira({
         etq: "Les té",
         xifra: sigla(sigles, { base: BASE, color: colorPer(sigles) }),
-        peu: `${seients !== null ? `${number(seients)} de ${number(totalSeats)} · ` : ""}${teMajoria ? "majoria absoluta" : "en minoria"}`,
+        peu: `${seients !== null ? `${number(seients)} de ${number(totalSeats)}${ple?.canviaMida ? " al ple d'ara" : ""} · ` : ""}${teMajoria ? "majoria absoluta" : "en minoria"}`,
         classe: "les-te",
       }),
     );
@@ -6326,11 +6611,15 @@ export function renderJoc(
     );
   }
 
+  // El sistema que compta és el del 2027; si canvia respecte del 2023, la
+  // frase del canvi ho explica a sota.
+  const sistema = ple?.sistema ?? sistemaElectoral(m.electoralSystem);
   const votaDiferent =
-    m.electoralSystem !== "llistes tancades"
-      ? `<p class="nota-linia"><b>Aquí es vota diferent.</b> ${escape(m.name)} funciona amb ${escape(m.electoralSystem.toLowerCase())}:
+    sistema !== "llistes tancades"
+      ? `<p class="nota-linia"><b>Aquí es vota diferent.</b> ${escape(m.name)} ${ple?.canviaSistema ? "votarà" : "funciona"} amb ${sistema}:
          no es tria una llista tancada, i per això la brúixola hi tindrà un altre format.</p>`
       : "";
+  const canviDelPle = ple ? fraseCanviDelPle(ple, m.name) : "";
 
   // El botó porta a la prova quan es pot respondre, a les preguntes quan
   // només es poden llegir, i quan no hi ha res encara es diu que s'està
@@ -6349,10 +6638,18 @@ export function renderJoc(
     <h2 id="joc-titol">Què t'hi jugues el 23 de maig del 2027</h2>
     ${tires.length > 0 ? `<ul class="tires">${tires.join("")}</ul>` : ""}
     ${votaDiferent}
-    <p class="crida">${crida} <a class="avisa" href="/#avisa">Avisa'm quan s'obri</a></p>
+    ${canviDelPle}
+    <p class="crida">${crida} <a class="avisa" href="/#avisam">Avisa'm quan s'obri</a></p>
     <details class="nota"><summary>La lletra petita</summary>La data és la del calendari electoral: les eleccions municipals se celebren
     el quart diumenge de maig, i el 2027 cau el 23. Les candidatures no es coneixeran fins a
-    finals d'abril del 2027, quan la Junta Electoral les proclami.</details>
+    finals d'abril del 2027, quan la Junta Electoral les proclami.${
+      ple && ple.sistema !== "consell obert"
+        ? ` Les regidories del 2027 surten d'aplicar la taula de la llei electoral (LOREG, art. 179) al padró${
+            ple.anyPadro !== null ? ` ${delDia(`${ple.anyPadro}-01-01`)}` : ""
+          }, ${number(ple.poblacio)} habitants; el nombre definitiu el fixen les xifres oficials de població
+          vigents quan es convoquin les eleccions.`
+        : ""
+    }</details>
     ${pastillesContext(data, preguntes)}
   </div>
 </section>`;
@@ -6720,7 +7017,7 @@ export function renderRadiografia(
   const coverageLevel = (m.minutesCount ?? 0) >= 20 ? "bo" : (m.minutesCount ?? 0) > 0 ? "parcial" : "cap";
   const coverageText =
     coverageLevel === "bo"
-      ? `Tenim indexades ${m.minutesCount} actes de sessions des del juny del 2023, l'última del ${formatDate(m.minutesLastDate)}.`
+      ? `Tenim indexades ${m.minutesCount} actes de sessions des del juny del 2023, l'última ${delDia(m.minutesLastDate)}.`
       : coverageLevel === "parcial"
         ? `Només tenim indexades ${m.minutesCount} actes des del juny del 2023. És poc per explicar un mandat sencer.`
         : "No hi ha cap acta d'aquest ajuntament al portal de dades obertes de l'AOC.";
@@ -6948,7 +7245,7 @@ export function renderRadiografia(
 
   const participacio = renderTurnout(data.participation, medianes);
   const quiHiViu = data.poblacio ? renderQuiHiViu(data.poblacio, data.riquesa) : "";
-  const donesIHomes = data.parity ? renderParitat(data.parity, medianes) : "";
+  const donesIHomes = data.parity ? renderParitat(data.parity, medianes, contextParitat(data)) : "";
   /*
    * Els dos blocs de Wikidata vénen amb la seva pròpia <section> i el seu h2
    * (wikidata-fitxa.ts els fa autònoms per a qualsevol pàgina); aquí el
@@ -7144,6 +7441,7 @@ export function renderRadiografia(
   ${mandat}`
           : "",
       },
+      { id: "gaip", capitol: "qui-mana", titol: TITOL_GAIP, curt: "Accés a la informació", html: renderGaipBloc(data.gaip ?? null, m.population, m.name) },
       { id: "historia", capitol: "qui-mana", titol: "El ple, elecció a elecció", curt: "Elecció a elecció", html: historia },
       {
         // Només als municipis que han votat en llista oberta o consell obert
@@ -7160,12 +7458,20 @@ export function renderRadiografia(
           adrecesDelPle(data.carrecs?.carrecs?.length ? data.carrecs.carrecs : data.councillors.map((c) => ({ nom: c.name }))),
         ),
       },
+      // Als pobles de llistes obertes el marge ja surt a «Aquí es vota persones».
+      { id: "ultim-regidor", capitol: "qui-mana", titol: "L'últim regidor: per quants vots", curt: "L'últim regidor",
+        html: data.marges?.eleccions.at(-1)?.sistema === "dhondt" ? renderMargesBloc(data.marges ?? null) : "" },
       // Dones i homes va amb qui mana i no amb com és el poble: no parla del
       // padró sinó de les llistes, dels caps de llista i de qui seu al ple.
       { id: "dones-i-homes", capitol: "qui-mana", titol: "Dones i homes", html: donesIHomes },
       { id: "participacio", capitol: "qui-mana", titol: "Qui hi va anar a votar", curt: "Participació", icona: "participació", html: participacio },
       // Mai buit: sense J36 executat diu que no hi ha dada, que no és un zero.
       { id: "cens", capitol: "qui-mana", titol: "El cens i la participació des del 1979", curt: "Cens des del 1979", html: renderCensBloc(data.censElectoral ?? null) },
+      { id: "altres-eleccions", capitol: "qui-mana", titol: "Com vota aquest municipi a cada elecció", curt: "Altres eleccions",
+        html: renderAltresEleccionsBloc(data.altresEleccions ?? null, {
+          participacio: data.participation.find((p) => p.electionId === "M20231") ?? null,
+          resultats: data.results["M20231"] ?? null,
+        }) },
       // Al final de «Qui mana»: gairebé totes les preguntes són d'aquest
       // capítol (l'alcaldia, qui governa, el ple, les eleccions, el vot).
       { id: "preguntes-rapides", capitol: "qui-mana", titol: "Preguntes ràpides", classe: "geo-preguntes", html: rapides.cos },
@@ -7237,6 +7543,7 @@ export function renderRadiografia(
       },
       // ---- Com és el poble: qui hi viu, les cases, els serveis i el que hi passa.
       { id: "qui-hi-viu", capitol: "poble", titol: "Qui hi viu", icona: "habitants", html: quiHiViu },
+      { id: "feina-i-renda", capitol: "poble", titol: "Feina i renda", curt: "Feina i renda", html: renderSocioeconomiaBloc(data.socioeconomia ?? null, { nom: m.name }) },
       // Just després de qui hi viu, on viu: el pla urbanístic, els pisos
       // turístics i l'habitatge protegit. Mai buit: sense J40 diu el buit.
       {
@@ -7244,7 +7551,7 @@ export function renderRadiografia(
         capitol: "poble",
         titol: TITOL_URBANISME,
         curt: "La casa",
-        html: renderUrbanismeHabitatgeBloc(data.urbanismeHabitatge ?? null, { nom: m.name }),
+        html: renderUrbanismeHabitatgeBloc(data.urbanismeHabitatge ?? null, { nom: m.name, registre: data.establimentsTuristics ?? null }),
       },
       // Només als 67 municipis que són àrea bàsica de serveis socials pròpia
       // (J42): a la resta torna buit i el registre no el publica, perquè allà
@@ -7375,7 +7682,7 @@ ${capSeo({
   ],
 })}
 ${tipografia(BASE)}
-<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}${WIKIDATA_FITXA_CSS}${CENS_FITXA_CSS}${LLISTES_OBERTES_CSS}${perSobre ? PER_SOBRE_CSS : ""}${senseComentaris(CRIMINALITAT_CSS)}${senseComentaris(TIRA_POBLE_CSS)}${senseComentaris(PAPERETA_POSTURES_CSS)}${veins ? senseComentaris(VEINS_CSS) : ""}${senseComentaris(URBANISME_FITXA_CSS)}${senseComentaris(COOPERACIO_CSS)}${serveisSocials ? senseComentaris(SERVEIS_ENS_CSS) : ""}${rapides.cos ? senseComentaris(GEO_CSS) : ""}${FITXA_CSS}</style>
+<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}${WIKIDATA_FITXA_CSS}${CENS_FITXA_CSS}${ALTRES_ELECCIONS_CSS}${data.marges ? MARGES_CSS : ""}${data.socioeconomia ? senseComentaris(SOCIOECONOMIA_CSS) : ""}${data.gaip ? senseComentaris(GAIP_FITXA_CSS) : ""}${LLISTES_OBERTES_CSS}${perSobre ? PER_SOBRE_CSS : ""}${senseComentaris(CRIMINALITAT_CSS)}${senseComentaris(TIRA_POBLE_CSS)}${senseComentaris(PAPERETA_POSTURES_CSS)}${veins ? senseComentaris(VEINS_CSS) : ""}${senseComentaris(URBANISME_FITXA_CSS)}${senseComentaris(COOPERACIO_CSS)}${serveisSocials ? senseComentaris(SERVEIS_ENS_CSS) : ""}${rapides.cos ? senseComentaris(GEO_CSS) : ""}${FITXA_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -7402,7 +7709,11 @@ ${cercador(BASE)}
     `<div class="titol-amb-escut">${escutMunicipi(data.imatges, { municipi: m.name })}<h1>${escape(m.name)}</h1></div>`
   }
   <p class="entrada">
-    ${renderTerritori({ habitants: m.population, superficie: data.territori?.superficie?.valor ?? null, altitud: data.territori?.altitud?.valor ?? null, densitat: data.territori?.densitat?.valor ?? null, gentilici: data.territori?.gentilici ?? null }) || `${number(m.population ?? 0)} habitants`} · ${totalSeats} regidories al ple ·
+    ${renderTerritori({ habitants: m.population, superficie: data.territori?.superficie?.valor ?? null, altitud: data.territori?.altitud?.valor ?? null, densitat: data.territori?.densitat?.valor ?? null, gentilici: data.territori?.gentilici ?? null }) || `${number(m.population ?? 0)} habitants`} · ${
+      // En consell obert no hi ha ple de regidories («1 regidories al ple»
+      // sortia a sis fitxes): s'elegeix l'alcaldia, i el sistema ja ho diu.
+      sistemaElectoral(m.electoralSystem) === "consell obert" ? "" : `${number(totalSeats)} ${totalSeats === 1 ? "regidoria" : "regidories"} al ple ·`
+    }
     ${
       // «Llistes tancades» és el nom tècnic, i un veí no sap què vol dir:
       // es diu què vol dir. Els altres sistemes (llista oberta, consell
@@ -7580,8 +7891,13 @@ export async function loadRadiografia(db: Db, slug: string, generatedAt: string)
     territori: (byKind.get("territori") ?? null) as TerritoriMetric | null,
     curiositatsWikidata: (byKind.get("curiositatsWikidata") ?? null) as FitxaCuriositatsWikidata | null,
     vehicles: (byKind.get("vehicles") ?? null) as VehiclesMetric | null,
+    socioeconomia: (byKind.get("socioeconomia") ?? null) as SocioeconomiaMetric | null,
+    gaip: (byKind.get("gaip") ?? null) as GaipMetric | null,
+    establimentsTuristics: (byKind.get("establimentsTuristics") ?? null) as EstablimentsTuristicsMetric | null,
     llistesObertes: (byKind.get("llistesObertes") ?? null) as LlistesObertesMetric | null,
     censElectoral: (byKind.get("censElectoral") ?? null) as CensElectoralMetric | null,
+    altresEleccions: (byKind.get("altresEleccions") ?? null) as AltresEleccionsMetric | null,
+    marges: (byKind.get("marges") ?? null) as MargesMetric | null,
     urbanismeHabitatge: (byKind.get("urbanismeHabitatge") ?? null) as UrbanismeHabitatgeMetric | null,
     // L'adaptador comprova la forma: una fila d'una versió vella de J41 surt
     // com a `null` («no consta») i no com un bloc trencat.

@@ -33,6 +33,28 @@ describe("GLOSSARI", () => {
   });
 });
 
+describe("GLOSSARI: les regles electorals", () => {
+  const REGLES = [
+    "cens-electoral", "vot-correu", "llista-tancada", "llista-oberta", "dhondt", "barrera-5",
+    "eleccio-alcaldia", "mocio-censura", "questio-confianca",
+  ] as const;
+
+  it("hi són totes, citen la LOREG i porten a la pàgina de les municipals", () => {
+    for (const clau of REGLES) {
+      expect(esClauGlossari(clau), clau).toBe(true);
+      expect(GLOSSARI[clau].font, clau).toMatch(/LOREG/);
+      expect(GLOSSARI[clau].mesInfo, clau).toMatch(/^municipals\/#[a-z-]+$/);
+    }
+  });
+
+  it("amb base, «Com funciona» porta a l'apartat; sense, no hi ha enllaç", () => {
+    expect(renderGlossari(["dhondt"], { base: "../../" })).toContain('<a class="mes" href="../../municipals/#dhondt">Com funciona</a>');
+    expect(renderGlossari(["dhondt"])).not.toContain("<a ");
+    // Les xifres no en tenen: el glossari d'una comarca no canvia.
+    expect(renderGlossari(["renda"], { base: "../" })).not.toContain("<a ");
+  });
+});
+
 describe("renderGlossari", () => {
   it("surt plegat, amb un terme i una font per clau, en l'ordre demanat", () => {
     const html = renderGlossari(["renda", "deute-habitant"]);

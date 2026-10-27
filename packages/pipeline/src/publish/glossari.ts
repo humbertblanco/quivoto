@@ -50,6 +50,17 @@ export const CLAUS_GLOSSARI = [
   "dones-ple",
   "transparencia",
   "estrangera-pct",
+  // Les paraules de les eleccions: no són xifres sinó regles, i totes porten
+  // a la pàgina que les explica amb calma (`municipals.ts`).
+  "cens-electoral",
+  "vot-correu",
+  "llista-tancada",
+  "llista-oberta",
+  "dhondt",
+  "barrera-5",
+  "eleccio-alcaldia",
+  "mocio-censura",
+  "questio-confianca",
 ] as const;
 
 export type ClauGlossari = (typeof CLAUS_GLOSSARI)[number];
@@ -63,6 +74,13 @@ export type EntradaGlossari = {
   font: string;
   /** La unitat, quan no és evident pel nom. */
   unitat?: string;
+  /**
+   * On s'explica amb calma, relatiu a `/observatori/` («municipals/#dhondt»).
+   * Només el porten les regles electorals: la definició d'una línia diu què
+   * és, i la pàgina de les municipals, com funciona i amb un exemple. L'enllaç
+   * només surt si qui pinta el glossari diu des d'on (`opcions.base`).
+   */
+  mesInfo?: string;
 };
 
 /** Cada xifra sense la seva font i la seva unitat no és una dada, és un número. */
@@ -77,6 +95,7 @@ export const GLOSSARI: Record<ClauGlossari, EntradaGlossari> = {
     etiqueta: "Regidories al ple",
     que: "Les fixa la llei segons la població, per trams: no és una decisió de l'ajuntament.",
     font: "LOREG, article 179; composició dels plens, ntc4-rnwr",
+    mesInfo: "municipals/#escons",
   },
   participacio: {
     etiqueta: "Participació",
@@ -268,6 +287,85 @@ export const GLOSSARI: Record<ClauGlossari, EntradaGlossari> = {
     font: "Idescat, Cens de població de l'INE, taula censph/5992/5987",
     unitat: "% de la població",
   },
+  "cens-electoral": {
+    etiqueta: "Cens electoral",
+    que:
+      "La llista de qui pot votar a cada municipi. Surt del padró: hi és qui hi està empadronat, té " +
+      "18 anys el dia de votar i té la nacionalitat espanyola, o bé és d'un país de la Unió Europea o " +
+      "d'un país amb conveni i ha demanat votar. Es pot consultar durant vuit dies poc després de la convocatòria.",
+    font: "LOREG, articles 2, 39 i 176; Oficina del Cens Electoral (INE)",
+    mesInfo: "municipals/#qui-vota",
+  },
+  "vot-correu": {
+    etiqueta: "Vot per correu",
+    que:
+      "Votar sense anar a la mesa. Es demana a Correos des de la convocatòria fins al desè dia abans " +
+      "de votar; l'Oficina del Cens Electoral envia les paperetes a casa, i el vot es retorna per " +
+      "correu certificat abans del tercer dia previ a les eleccions.",
+    font: "LOREG, articles 72 i 73",
+    mesInfo: "municipals/#correu",
+  },
+  "llista-tancada": {
+    etiqueta: "Llista tancada",
+    que:
+      "La papereta dels municipis de més de 250 habitants: una candidatura amb els noms en un ordre " +
+      "fix. Es vota la llista sencera; una papereta amb noms ratllats, afegits o canviats d'ordre és un vot nul.",
+    font: "LOREG, articles 96 i 180",
+    mesInfo: "municipals/#escons",
+  },
+  "llista-oberta": {
+    etiqueta: "Llista oberta",
+    que:
+      "Als municipis de fins a 250 habitants es voten persones i no llistes: cada elector marca fins " +
+      "a dos noms (fins a 100 habitants) o fins a quatre (de 101 a 250), de la candidatura que vulgui, " +
+      "i surten elegides les persones més votades.",
+    font: "LOREG, article 184",
+    mesInfo: "municipals/#llista-oberta",
+  },
+  dhondt: {
+    etiqueta: "Llei d'Hondt",
+    que:
+      "La regla que reparteix les regidories entre les llistes: els vots de cada llista es divideixen " +
+      "per 1, 2, 3… fins al nombre de regidories, i les regidories van als quocients més grans. " +
+      "Tendeix a donar una mica més de pes a les llistes més votades.",
+    font: "LOREG, articles 163.1 i 180",
+    mesInfo: "municipals/#dhondt",
+  },
+  "barrera-5": {
+    etiqueta: "Barrera del 5 %",
+    que:
+      "Per entrar al repartiment, una llista ha de treure almenys el 5 % dels vots vàlids del municipi, " +
+      "que inclouen els vots en blanc. Per sota no té cap regidoria, encara que la divisió de la llei d'Hondt li'n donés.",
+    font: "LOREG, article 180",
+    mesInfo: "municipals/#dhondt",
+  },
+  "eleccio-alcaldia": {
+    etiqueta: "Elecció de l'alcaldia",
+    que:
+      "El ple nou tria l'alcaldia el mateix dia que es constitueix, el vintè dia després de les eleccions. " +
+      "Hi opten els caps de llista; si cap no té els vots de la majoria absoluta dels regidors, és alcalde " +
+      "o alcaldessa el cap de la llista més votada.",
+    font: "LOREG, articles 195 i 196",
+    mesInfo: "municipals/#alcaldia",
+  },
+  "mocio-censura": {
+    etiqueta: "Moció de censura",
+    que:
+      "La manera de canviar l'alcaldia a mig mandat: la majoria absoluta del ple signa un escrit amb un " +
+      "candidat alternatiu, i el ple el vota el desè dia hàbil després de registrar-lo. Cada regidor en " +
+      "pot signar una sola en tot el mandat.",
+    font: "LOREG, article 197",
+    mesInfo: "municipals/#canvis",
+  },
+  "questio-confianca": {
+    etiqueta: "Qüestió de confiança",
+    que:
+      "L'alcaldia lliga el càrrec a l'aprovació del pressupost, les ordenances fiscals, el reglament " +
+      "orgànic o el planejament general, després que el ple els hagi rebutjat. Si no surt, cessa i el ple " +
+      "en tria una altra; si era el pressupost, només cessa si en un mes prospera una moció de censura.",
+    font: "LOREG, article 197 bis",
+    mesInfo: "municipals/#canvis",
+  },
 };
 
 /** Els indicadors de comarca i d'AMB porten `key: string`: això diu si és del glossari. */
@@ -290,18 +388,28 @@ const escape = (text: string): string =>
  *
  * Amb cap clau no s'obre res: un glossari buit seria un desplegable que no
  * desplega res.
+ *
+ * `base` és el camí fins a `/observatori/` (el mateix de `capcalera()`). Amb
+ * ell, les entrades que tenen explicació llarga (`mesInfo`: les regles
+ * electorals) porten un «Com funciona» cap a la pàgina de les municipals.
  */
 export function renderGlossari(
   claus: readonly ClauGlossari[],
-  opcions: { titol?: string } = {},
+  opcions: { titol?: string; base?: string } = {},
 ): string {
   const uniques = [...new Set(claus)];
   if (uniques.length === 0) return "";
   const entrades = uniques
     .map((clau) => {
       const e = GLOSSARI[clau];
+      // L'enllaç a l'explicació llarga, només si se sap des d'on: un camí
+      // relatiu sense `base` portaria a un altre lloc segons la pàgina.
+      const mes =
+        e.mesInfo && opcions.base !== undefined
+          ? ` <a class="mes" href="${escape(opcions.base + e.mesInfo)}">Com funciona</a>`
+          : "";
       return `<dt>${escape(e.etiqueta)}${e.unitat ? ` <span class="unitat">${escape(e.unitat)}</span>` : ""}</dt>
-    <dd>${escape(e.que)} <span class="font">Font: ${escape(e.font)}.</span></dd>`;
+    <dd>${escape(e.que)}${mes} <span class="font">Font: ${escape(e.font)}.</span></dd>`;
     })
     .join("\n    ");
   return `<details class="nota glossari">
@@ -324,4 +432,5 @@ export const GLOSSARI_CSS = `
 .glossari dt .unitat{font-weight:400;color:var(--ink-suau)}
 .glossari dd{margin:0}
 .glossari .font{display:block;font-size:.8rem}
+.glossari .mes{font-weight:700;white-space:nowrap}
 `;

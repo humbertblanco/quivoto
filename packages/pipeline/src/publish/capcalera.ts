@@ -13,7 +13,7 @@
  * poder saber a casa de qui és. La secció, en canvi, és la primera entrada del
  * menú.
  *
- * El menú és curt a propòsit: vuit destins i cap desplegable (el full del mòbil,
+ * El menú és curt a propòsit: nou destins i cap desplegable (el full del mòbil,
  * més avall, és el mateix menú plegat, no un segon nivell). Amb això s'hi
  * arriba a tot el que és una pàgina de debò, i el que no hi cap no hi ha de ser.
  *
@@ -31,6 +31,27 @@
  * portada enviaven al Barcelonès i prou, com si fos l'única, i a la resta només
  * s'hi arribava pel cercador o des d'una fitxa. La capçalera ja fa embolcallar
  * la fila quan no hi cap, així que sis hi caben igual que cinc.
+ *
+ * «Com es vota» és la novena, i l'última, per la mateixa raó que les
+ * comarques: la pàgina que explica les municipals del 2027 (`municipals.ts`)
+ * —el calendari, qui pot votar, com es reparteixen les regidories i com es
+ * tria l'alcaldia— és la que busca qui vota per primera vegada, i no s'hi
+ * arribava des d'enlloc. Va al final perquè no és una manera de mirar les
+ * dades sinó d'entendre-les, i el nom és el verb que la gent escriu al
+ * cercador i no «Municipals 2027», que diu de què va però no què hi trobaràs.
+ * Al mòbil no canvia res: el full és una llista vertical i nou files de 48 px
+ * hi caben igual que vuit. A l'escriptori el menú ja baixava a la seva pròpia
+ * fila per sota de 900 px; per sobre, la fila es fa una mica més llarga.
+ *
+ * ## L'etiqueta
+ *
+ * Deia «Esborrany · dades obertes», i a qui arriba des d'un enllaç li deia que
+ * la pàgina no estava acabada i que potser no se la podia creure. No és així:
+ * les dades hi són, amb la font de cada xifra, i el que és provisional és la
+ * forma del web, que encara canvia. «Dades obertes · beta» diu les dues coses
+ * en tres paraules —què és i que encara millora— sense que sembli un text a
+ * mig escriure. Les pàgines que de debò són un esborrany (la demostració de
+ * les preguntes) ho continuen dient amb la seva pròpia etiqueta.
  *
  * ## Al mòbil, un botó «Menú»
  *
@@ -77,13 +98,24 @@
  * | Pàgina                            | `base`          |
  * |-----------------------------------|-----------------|
  * | `observatori/` i `els947.html`    | `./`            |
- * | `mapa/`, `comparador/`, `dades/`, `amb/`, `preguntes/` | `../` |
+ * | `mapa/`, `comparador/`, `dades/`, `amb/`, `preguntes/`, `municipals/` | `../` |
  * | `c/<slug>/`, `m/<slug>/`, `preguntes/<slug>/`          | `../../` |
  * | `m/<slug>/<candidatura>/`, `preguntes/<slug>/prova/`   | `../../../` |
  * | `m/<slug>/regidor/<persona>/`     | `../../../../`  |
  */
 
-export type Destí = "portada" | "947" | "mapa" | "comarques" | "comparador" | "partits" | "dades" | "trajectoria" | "ranquings" | "cap";
+export type Destí =
+  | "portada"
+  | "947"
+  | "mapa"
+  | "comarques"
+  | "comparador"
+  | "partits"
+  | "dades"
+  | "trajectoria"
+  | "ranquings"
+  | "municipals"
+  | "cap";
 
 /**
  * Les descàrregues **no hi són**, i no és un oblit: qui es baixa 1.897 fitxers
@@ -100,6 +132,7 @@ const DESTINS: ReadonlyArray<{ clau: Destí; text: string; on: string }> = [
   { clau: "partits", text: "Partits", on: "partit/" },
   { clau: "trajectoria", text: "Trajectòries", on: "trajectoria/" },
   { clau: "comparador", text: "Comparador", on: "comparador/" },
+  { clau: "municipals", text: "Com es vota", on: "municipals/" },
 ];
 
 const escape = (t: string): string =>
@@ -185,7 +218,7 @@ const PLEC_JS = `(function () {
  */
 const majusculaInicial = (t: string): string => t.charAt(0).toLocaleUpperCase("ca") + t.slice(1);
 
-export function capcalera(base: string, actual: Destí = "cap", etiqueta = "esborrany · dades obertes"): string {
+export function capcalera(base: string, actual: Destí = "cap", etiqueta = "dades obertes · beta"): string {
   const menu = DESTINS.map((d) =>
     d.clau === actual
       ? `<span class="ara" aria-current="page">${escape(d.text)}</span>`

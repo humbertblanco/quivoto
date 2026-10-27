@@ -364,6 +364,7 @@ MENU = [
   ('partits',     'Partits',      'partit/'),
   ('trajectoria', 'Trajectòries', 'trajectoria/'),
   ('comparador',  'Comparador',   'comparador/'),
+  ('municipals',  'Com es vota',  'municipals/'),
 ]
 
 

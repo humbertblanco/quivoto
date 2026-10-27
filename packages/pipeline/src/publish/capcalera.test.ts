@@ -22,15 +22,16 @@ describe("capcalera", () => {
   });
 
   /**
-   * Vuit destins, en aquest ordre, i cap més: el menú és curt a propòsit i el
-   * que s'hi afegeix s'hi afegeix aquí, amb el seu perquè al capçal.
+   * Nou destins, en aquest ordre, i cap més: el menú és curt a propòsit i el
+   * que s'hi afegeix s'hi afegeix aquí, amb el seu perquè al capçal. La landing
+   * (`tools/build_landing.py`, `MENU`) n'ha de dur una còpia exacta.
    */
-  it("té vuit destins, amb els rànquings entre el mapa i les comarques i les trajectòries abans del comparador", () => {
+  it("té nou destins, amb els rànquings entre el mapa i les comarques i «Com es vota» al final", () => {
     const html = capcalera("./", "cap");
     const textos = [...html.matchAll(/<a href="[^"]*">([^<]+)<\/a>/g)]
       .map((m) => m[1])
       .filter((t) => t !== "quivoto");
-    expect(textos).toEqual(["Observatori", "Els 947", "Mapa", "Rànquings", "Comarques", "Partits", "Trajectòries", "Comparador"]);
+    expect(textos).toEqual(["Observatori", "Els 947", "Mapa", "Rànquings", "Comarques", "Partits", "Trajectòries", "Comparador", "Com es vota"]);
   });
 
   it("marca Rànquings com a pàgina actual", () => {
@@ -62,6 +63,17 @@ describe("capcalera: trajectòries", () => {
   });
 });
 
+describe("capcalera: com es vota", () => {
+  /**
+   * La pàgina que explica les municipals del 2027 és a «municipals/», al
+   * mateix nivell que el mapa i els rànquings.
+   */
+  it("porta a la pàgina de les municipals i la marca quan hi som", () => {
+    expect(capcalera("../../")).toContain('href="../../municipals/">Com es vota</a>');
+    expect(capcalera("../", "municipals")).toContain('<span class="ara" aria-current="page">Com es vota</span>');
+  });
+});
+
 describe("capcalera: el botó «Menú» del mòbil", () => {
   /**
    * El botó no és a l'HTML: el crea el guió. Sense JavaScript, doncs, no hi ha
@@ -73,7 +85,7 @@ describe("capcalera: el botó «Menú» del mòbil", () => {
     const nav = html.slice(html.indexOf("<nav"), html.indexOf("</nav>"));
     expect(html).not.toContain("<button");
     expect(nav).not.toMatch(/hidden/);
-    expect([...nav.matchAll(/<a href=/g)]).toHaveLength(8);
+    expect([...nav.matchAll(/<a href=/g)]).toHaveLength(9);
   });
 
   /**
@@ -91,7 +103,17 @@ describe("capcalera: el botó «Menú» del mòbil", () => {
 
   it("l'etiqueta comença amb majúscula, com una frase", () => {
     expect(capcalera("../../../../", "cap", "càrrec electe")).toContain('<span class="etiqueta">Càrrec electe</span>');
-    expect(capcalera("./")).toContain('<span class="etiqueta">Esborrany · dades obertes</span>');
+    expect(capcalera("./")).toContain('<span class="etiqueta">Dades obertes · beta</span>');
+  });
+
+  /**
+   * «Esborrany» feia llegir les pàgines com a textos a mig fer. L'etiqueta per
+   * defecte ja no ho diu; qui de debò és un esborrany (la demostració de les
+   * preguntes) ho passa ell mateix.
+   */
+  it("per defecte l'etiqueta no diu «esborrany»", () => {
+    expect(capcalera("../")).not.toMatch(/sborrany/);
+    expect(capcalera("../", "cap", "esborrany")).toContain('<span class="etiqueta">Esborrany</span>');
   });
 });
 

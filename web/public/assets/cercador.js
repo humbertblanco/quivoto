@@ -282,23 +282,30 @@
   // amb guió, el primer clic o la primera lletra obren el diàleg amb aquest
   // text. No s'obre en rebre el focus perquè, en tancar el diàleg, el focus hi
   // torna i el tornaria a obrir.
-  var camps = document.querySelectorAll("[data-cerca-camp]");
-  for (var c = 0; c < camps.length; c++) {
-    (function(extern){
-      extern.addEventListener("click", function(){ obre(extern.value); });
-      extern.addEventListener("input", function(){ obre(extern.value); });
-      if (extern.form) extern.form.addEventListener("submit", function(e){ e.preventDefault(); obre(extern.value); });
-    })(camps[c]);
+  // El guió va just després de la capçalera, abans que el contingut de la
+  // pàgina existeixi: les caselles i els botons propis es lliguen quan el
+  // document ja és sencer, o tots els de dins del <main> es quedarien amagats.
+  function lligaPropis(){
+    var camps = document.querySelectorAll("[data-cerca-camp]");
+    for (var c = 0; c < camps.length; c++) {
+      (function(extern){
+        extern.addEventListener("click", function(){ obre(extern.value); });
+        extern.addEventListener("input", function(){ obre(extern.value); });
+        if (extern.form) extern.form.addEventListener("submit", function(e){ e.preventDefault(); obre(extern.value); });
+      })(camps[c]);
+    }
+    // Els botons que una pàgina posa dins del seu contingut —la portada en té
+    // un a la targeta de la fitxa: «Escriu el nom del teu poble»— neixen amb
+    // «hidden» i s'ensenyen aquí, per la mateixa regla que el de dalt: sense
+    // guió no hi ha cap control que no faci res.
+    var propis = document.querySelectorAll("[data-obre-cerca]");
+    for (var p = 0; p < propis.length; p++) {
+      propis[p].hidden = false;
+      propis[p].addEventListener("click", obre);
+    }
   }
-  // Els botons que una pàgina posa dins del seu contingut —la portada en té
-  // un a la targeta de la fitxa: «Escriu el nom del teu poble»— neixen amb
-  // «hidden» i s'ensenyen aquí, per la mateixa regla que el de dalt: sense
-  // guió no hi ha cap control que no faci res.
-  var propis = document.querySelectorAll("[data-obre-cerca]");
-  for (var p = 0; p < propis.length; p++) {
-    propis[p].hidden = false;
-    propis[p].addEventListener("click", obre);
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", lligaPropis);
+  else lligaPropis();
   camp.addEventListener("input", pinta);
   dialeg.addEventListener("keydown", function(e){
     if (e.key === "ArrowDown") { e.preventDefault(); mou(1); }
