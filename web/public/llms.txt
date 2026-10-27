@@ -1,0 +1,68 @@
+# quivoto: Observatori municipal de Catalunya
+
+> quivoto reuneix les dades obertes dels 947 ajuntaments de Catalunya: qui governa cada municipi i amb qui, què s'hi ha votat des del 1979, com estan els comptes i qui seu a les diputacions i als consells comarcals. Cada xifra porta la font oficial i l'any. No hi ha cap partit al darrere ni cap model de llenguatge al mig.
+
+Catalan-language, non-partisan open-data site about the municipal governments of Catalonia (Spain): mayors, councils, election results since 1979, budgets and debt, provincial councils (diputacions) and county councils (consells comarcals). Every figure cites its official source and year.
+
+Última publicació: 27 d'octubre del 2026. Idioma: català. Qui ho fa: quivoto (Humbert Blanco; titular legal Damos en el Blanco, S.L.). Contacte: hola@quivoto.cat.
+
+## Principis editorials
+
+- Neutral: no rep diners de cap candidatura, no fa campanya per ningú i no dona veredictes. Els colors de partit només marquen dades; no hi ha rànquings de «millors».
+- Un buit és un buit: si una font no publica una dada, la fitxa diu «no consta». Mai no és un zero ni una estimació.
+- Cada xifra amb la seva font i l'any. Les fonts són oficials i obertes: Generalitat de Catalunya (Dades Obertes), Consorci AOC, Ministeri d'Hisenda, Idescat, INE i Wikidata.
+- Càlculs deterministes i repetibles, amb el codi públic. Cap text ni cap xifra no l'escriu un model de llenguatge.
+- Una persona només s'enllaça a una altra fitxa si l'aparellament del nom és únic.
+- No se sumen imports de pagadors diferents (el sou d'un ajuntament i el d'una diputació van per separat).
+
+## Com citar
+
+- Format: «quivoto, Observatori municipal, 27 d'octubre del 2026. <adreça de la fitxa>».
+- Per a una dada concreta, enllaceu la fitxa i poseu-hi la data «Generat el…» que surt al peu de la pàgina.
+- Les xifres són càlculs de quivoto a partir de fonts oficials: no les presenteu com a xifres oficials, i citeu també la font original (cada fitxa la diu a «D'on surt tot això»).
+- Dades derivades: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Les dades originals mantenen la llicència de cada font.
+
+## Seccions
+
+- [Observatori](https://quivoto.cat/observatori/): la portada, amb el cercador de municipis, persones i ens.
+- [Els 947 municipis](https://quivoto.cat/observatori/els947.html): la llista sencera amb qui hi mana, els comptes i les actes del ple.
+- [Fitxa d'un municipi: Sabadell](https://quivoto.cat/observatori/m/sabadell/): qui governa, el ple, les alcaldies des del 1979, els comptes, el vot i les fonts. N'hi ha una per municipi.
+- [Comarques](https://quivoto.cat/observatori/c/): qui mana a cadascuna de les 43 comarques.
+- [Diputacions i consells comarcals](https://quivoto.cat/observatori/ens/): les 4 diputacions i els 40 consells comarcals: qui hi seu, com s'hi arriba sense passar per les urnes i què gasten.
+- [Partits](https://quivoto.cat/observatori/partit/): alcaldies, regidories i població governada de cada força.
+- [Mapa](https://quivoto.cat/observatori/mapa/): els municipis pintats per qui mana.
+- [Rànquings](https://quivoto.cat/observatori/ranquings/): cada indicador de dalt a baix, amb l'any i la font.
+- [Comparador](https://quivoto.cat/observatori/comparador/): de dos a quatre municipis costat a costat.
+- [Trajectòries](https://quivoto.cat/observatori/trajectoria/): quant duren les alcaldies des del 1979.
+- [Àrea Metropolitana de Barcelona](https://quivoto.cat/observatori/amb/): els seus municipis i què decideix.
+- [Brúixola electoral](https://quivoto.cat/): per a les eleccions municipals del 23 de maig del 2027.
+
+## Patrons d'adreça
+
+- Municipi: https://quivoto.cat/observatori/m/<municipi>/ (el nom sense article ni accents, amb guions: «prat-de-llobregat», «sant-cugat-del-valles»).
+- Regidor o regidora d'avui: https://quivoto.cat/observatori/m/<municipi>/regidor/<persona>/ (14.228 fitxes de persona, amb les alcaldies històriques).
+- Alcaldia històrica: https://quivoto.cat/observatori/m/<municipi>/alcaldia/<persona>/
+- Candidatura de les municipals del 2023: https://quivoto.cat/observatori/m/<municipi>/<sigles>/ (2.626 candidatures).
+- Comarca: https://quivoto.cat/observatori/c/<comarca>/ · Consell comarcal: https://quivoto.cat/observatori/c/<comarca>/consell/
+- Diputació: https://quivoto.cat/observatori/diputacio/<barcelona|girona|lleida|tarragona>/
+- Partit: https://quivoto.cat/observatori/partit/<partit>/
+- Cerca: https://quivoto.cat/observatori/?q=<text>
+
+## Dades obertes
+
+- [Dades de l'Observatori](https://quivoto.cat/observatori/dades/): totes les descàrregues, llicència CC BY 4.0.
+- [catalunya.csv](https://quivoto.cat/observatori/dades/catalunya.csv) i [catalunya.json](https://quivoto.cat/observatori/dades/catalunya.json): una fila per municipi amb els indicadors principals.
+- [ESQUEMA.md](https://quivoto.cat/observatori/dades/ESQUEMA.md): cada camp, amb les unitats, l'any i la font.
+- [fonts.json](https://quivoto.cat/observatori/dades/fonts.json): el registre de fonts, amb la llicència i els límits de cadascuna.
+- Un municipi sol: https://quivoto.cat/observatori/dades/m/<municipi>.csv i .json
+
+## Actualització
+
+- L'Observatori es regenera sencer quan les fonts publiquen dades noves; cada pàgina diu al peu el dia que es va generar. Aquesta publicació és del 27 d'octubre del 2026.
+- Sitemap: https://quivoto.cat/observatori/sitemap.xml (el lastmod de cada adreça és el dia que en va canviar el contingut).
+
+## Optional
+
+- [Directori complet](https://quivoto.cat/llms-full.txt): cada municipi, comarca, ens i partit amb l'adreça de la seva fitxa.
+- [Premsa](https://quivoto.cat/premsa.html): què és quivoto, qui el fa i com treballa.
+- [Avís legal](https://quivoto.cat/avis-legal.html)
