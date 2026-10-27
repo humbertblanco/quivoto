@@ -41,10 +41,17 @@ describe("llegeixCandidat", () => {
     ).toBe(null);
   });
 
-  it("el tipus per defecte és Titular i la posició buida és zero", () => {
+  it("el tipus per defecte és Titular i la posició buida no consta", () => {
     const c = llegeixCandidat(fila({ candidat_tipus: undefined, candidat_posicio: "" }));
     expect(c?.kind).toBe("Titular");
-    expect(c?.posicio).toBe(0);
+    // Abans era un 0, i la clau única (llista, posició, tipus) deixava passar
+    // només una persona per llista als municipis de llista oberta del 2023.
+    expect(c?.posicio).toBeNull();
+  });
+
+  it("un 0 de la font tampoc no és cap número de llista", () => {
+    expect(llegeixCandidat(fila({ candidat_posicio: "0" }))?.posicio).toBeNull();
+    expect(llegeixCandidat(fila({ candidat_posicio: "7" }))?.posicio).toBe(7);
   });
 });
 

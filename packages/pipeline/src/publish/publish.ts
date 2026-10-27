@@ -1585,7 +1585,7 @@ export type Candidatura2023 = {
   sigles: string;
   vots: number;
   regidories: number;
-  persones: { nom: string; clau: string; posicio: number; capDeLlista: boolean }[];
+  persones: { nom: string; clau: string; posicio: number | null; capDeLlista: boolean }[];
 };
 
 /**
@@ -1624,7 +1624,13 @@ async function carregaCandidatures2023(db: Db): Promise<Map<number, Candidatura2
   }
   const perMunicipi = new Map<number, Candidatura2023[]>();
   for (const { municipalityId, ...llista } of perCandidatura.values()) {
-    llista.persones.sort((a, b) => a.posicio - b.posicio);
+    // Sense número (llistes obertes) al final i per nom: no hi ha cap ordre de
+    // llista per respectar, i inventar-ne un posaria algú «primer».
+    llista.persones.sort((a, b) =>
+      a.posicio === null || b.posicio === null
+        ? (a.posicio === null ? 1 : 0) - (b.posicio === null ? 1 : 0) || a.nom.localeCompare(b.nom, "ca")
+        : a.posicio - b.posicio,
+    );
     const grup = perMunicipi.get(municipalityId);
     if (grup === undefined) perMunicipi.set(municipalityId, [llista]);
     else grup.push(llista);
@@ -1800,7 +1806,7 @@ async function carregaHistorialMandats(db: Db): Promise<Map<number, HistorialMun
     const anades = h.candidatures.get(clau) ?? [];
     // J4 desa un zero quan la font no porta el número (179 municipis del
     // 2023): és «no consta», no el número zero.
-    const posicio = f.posicio > 0 ? f.posicio : null;
+    const posicio = f.posicio !== null && f.posicio > 0 ? f.posicio : null;
     anades.push({ any, sigles: f.sigles, posicio, capDeLlista: f.capDeLlista, elegit: f.elegit });
     h.candidatures.set(clau, anades);
   }

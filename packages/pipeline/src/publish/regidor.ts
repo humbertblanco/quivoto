@@ -410,7 +410,8 @@ export type ContextRegidor = {
    */
   capDeLlista?: {
     es: boolean;
-    posicio: number;
+    /** `null` on la font no dona el número (llistes obertes del 2023). */
+    posicio: number | null;
     sigles: string;
     vots: number;
     regidories: number;

@@ -23,7 +23,8 @@ type CandidateRow = {
 export type CandidatLlegit = {
   fullName: string;
   normalized: string;
-  posicio: number;
+  /** `null` quan la font no dona el número (llistes obertes del 2023). Mai un 0 inventat. */
+  posicio: number | null;
   kind: string;
   elected: boolean;
 };
@@ -46,7 +47,11 @@ export function llegeixCandidat(row: CandidateRow): CandidatLlegit | null {
   return {
     fullName,
     normalized,
-    posicio: toInt(row.candidat_posicio) ?? 0,
+    // Un 0 o un buit no és cap número de llista: és que la font no el dona.
+    posicio: (() => {
+      const n = toInt(row.candidat_posicio);
+      return n !== null && n !== undefined && n > 0 ? n : null;
+    })(),
     kind: row.candidat_tipus ?? "Titular",
     elected: String(row.electe ?? "N").toUpperCase() === "S",
   };

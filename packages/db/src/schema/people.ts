@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean, date, index, integer, pgTable, serial, text, timestamp, uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -35,7 +36,14 @@ export const candidacies = pgTable(
     id: serial("id").primaryKey(),
     candidatureId: integer("candidature_id").notNull().references(() => candidatures.id, { onDelete: "cascade" }),
     personId: integer("person_id").notNull().references(() => people.id, { onDelete: "cascade" }),
-    listPosition: integer("list_position").notNull(),
+    /**
+     * El número a la llista. Pot no constar: a les municipals del 2023 el cens
+     * de candidatures (`xnfg-weec`) no el dona als 179 municipis de llista
+     * oberta, on no hi ha ordre de llista que valgui. Abans es desava un 0, i
+     * la clau única (llista, posició, tipus) en deixava passar només un per
+     * llista: s'hi perdien 742 persones.
+     */
+    listPosition: integer("list_position"),
     /** Cap de llista: l'alcaldable. */
     isHead: boolean("is_head").notNull().default(false),
     /** Titular · Suplent */
@@ -44,7 +52,17 @@ export const candidacies = pgTable(
     /** announced · proclaimed · withdrawn · elected */
     status: text("status").notNull().default("proclaimed"),
   },
-  (t) => [uniqueIndex("candidacies_key").on(t.candidatureId, t.listPosition, t.kind)],
+  (t) => [
+    // Amb número, la clau de sempre. Postgres no considera iguals dos NULL, de
+    // manera que les files sense número no hi xoquen mai.
+    uniqueIndex("candidacies_key").on(t.candidatureId, t.listPosition, t.kind),
+    // Sense número, la persona: és el que fa que tornar a passar J4 no dupliqui
+    // ningú. Només per a aquestes files, perquè dos homònims amb número diferent
+    // dins d'una mateixa llista comparteixen `personId` i s'han de conservar tots dos.
+    uniqueIndex("candidacies_sense_posicio_key")
+      .on(t.candidatureId, t.personId, t.kind)
+      .where(sql`${t.listPosition} is null`),
+  ],
 );
 
 /**
