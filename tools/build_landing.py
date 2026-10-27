@@ -33,27 +33,51 @@ T = {
   'form_titol':'Avisa’m quan la meva ciutat estigui llesta',
   'form_sub':'Un sol correu quan obrim el teu municipi. Res més, i te’n pots donar de baixa quan vulguis.',
   'email_ph':'El teu correu','muni_ph':'El teu municipi (opcional)',
-  'cerca_ph':'Busca el teu municipi, alcaldia o regidor',
+  'cerca_ph':'Busca el teu poble o un regidor',
   'consent':'Accepto rebre un avís quan quivoto obri el meu municipi i he llegit la <a href="/privadesa.html">política de privadesa</a>.',
   'boto':'Avisa’m','boto_ok':'Fet! Ens veiem aviat.','boto_error':'No ha funcionat. Torna-ho a provar.',
   'obs_url':'/observatori/',
   'obs_micro':'Això ja ho pots obrir avui',
   'obs_titol':'La brúixola és el 2027. L’Observatori ja hi és',
   'obs_text':'Qui mana al teu poble i amb qui, què s’hi ha votat des del 1979, com estan els comptes i què paga cadascú: els 947 municipis de Catalunya, un per un. Tot fet amb dades obertes i càlculs que qualsevol pot repetir —cap model de llenguatge pel mig— i cada xifra amb la seva font al costat.',
-  'obs_xifres':[('947','fitxes municipals'),('2.626','pàgines de candidatura'),('43','comarques'),('1.894','fitxers de dades')],
-  'obs_reixa':[
-    ('els947.html','tot Catalunya','Els 947',
-     'Tots els municipis en una llista, amb cercador i filtres: on hi va haver pacte, on ha canviat l’alcaldia a mig mandat, on mana sempre la mateixa força, on no hi ha oposició.'),
-    ('m/esplugues-de-llobregat/','una per municipi','La fitxa d’un poble',
-     'Qui mana i amb qui, el ple amb nom i cognoms, les dotze eleccions des del 1979, els comptes, els impostos, i què en sabem i què no.'),
-    ('comparador/','costat a costat','El comparador',
-     'Fins a quatre municipis mesurats amb la mateixa vara: deute, despesa per habitant, impostos, participació i fragmentació del ple.'),
-    ('c/barcelones/','43 comarques','Qui mana a la comarca',
-     'Quantes alcaldies té cada força, com queda cada municipi respecte de la mitjana comarcal i on són les excepcions.'),
-    ('dades/','obertes','Baixa’t les dades',
-     '1.894 fitxers en CSV i JSON, amb l’esquema documentat camp a camp i la font de cada xifra. Perquè ens puguis comprovar i reutilitzar.'),
-    ('preguntes/','demostració','Les preguntes',
-     'Les 25 preguntes que farà la brúixola, escrites llegint les actes del ple. Set municipis, i ja es poden respondre.'),
+  # Les xifres de la banda surten de xifres.json (vegeu obs_xifres()); aquí
+  # només hi ha què vol dir cada una, dit com ho diria un veí.
+  'obs_xifres_etq':{'municipis':'municipis, cadascun amb la seva fitxa',
+                    'electes':'electes que pots buscar pel nom',
+                    'diputacions':'diputacions i qui hi seu',
+                    'consells':'consells comarcals i qui hi seu'},
+  'obs_nou_titol':'Què hi ha de nou',
+  'obs_fitxa':{
+    'url':'m/esplugues-de-llobregat/','titol':'La fitxa del teu poble',
+    'entrada':'Qui mana i amb qui, el ple amb nom i cognoms, les eleccions des del 1979, els comptes i els impostos. I ara també:',
+    'items':[('La tira del poble','qui ha tingut l’alcaldia del 1979 al 2027, en una sola franja de colors.'),
+             ('Els teus veïns','el deute, l’IBI i la participació, al costat dels pobles que toquen de terme.'),
+             ('La casa','el pla urbanístic, els pisos turístics i el que costa viure-hi.'),
+             ('Els diners de la Generalitat','què rep l’ajuntament i si li envia els comptes.'),
+             ('Els serveis socials','quanta gent atenen i qui els presta.'),
+             ('On es vota persones','als pobles de menys de 250 habitants, quants vots va treure cada persona el 2023.')],
+    'enllac':'Mira la d’Esplugues de Llobregat'},
+  'obs_ens':{
+    'url':'ens/','titol':'Qui governa per sobre del teu ajuntament',
+    # {d} i {c}: «4 » i «40 » si xifres.json els porta; si no, res.
+    'entrada':'Les {d}diputacions i els {c}consells comarcals.',
+    'text':'Ningú no els vota directament: qui hi seu surt de les municipals. Hi trobaràs qui són, com hi han arribat, què cobren, què gasten i què reparteixen als ajuntaments.',
+    'enllac':'Busca el teu consell i la teva diputació',
+    'pisos':('Diputació','Consell comarcal','El teu ajuntament')},
+  'obs_resta_titol':'I el que ja hi era',
+  'obs_portes':[
+    ('els947.html','Els 947',
+     'Tots els municipis en una llista: on hi va haver pacte, on ha canviat l’alcaldia a mig mandat, on no hi ha oposició.'),
+    ('mapa/','El mapa',
+     'Els 947 pintats segons qui hi mana, amb els pactes, les majories i on es vota més cada partit.'),
+    ('comparador/','El comparador',
+     'Fins a quatre municipis mesurats amb la mateixa vara: deute, despesa per habitant, impostos i participació.'),
+    ('c/','Les comarques',
+     'Quantes alcaldies té cada força a cada comarca, i on són les excepcions.'),
+    ('dades/','Les dades',
+     'Tot en CSV i JSON, amb cada camp explicat i la font de cada xifra. Per comprovar-nos i reutilitzar-ho.'),
+    ('preguntes/','Les preguntes',
+     'Les 25 preguntes de la brúixola, escrites llegint les actes del ple. En set municipis ja es poden respondre.'),
   ],
   'obs_boto':'Obre l’Observatori',
   'obs_nota':'Gratuït i sense registre. Google Analytics només mesura visites de manera agregada. És un esborrany: hi treballem a la vista de tothom i encara no està revisat del tot.',
@@ -70,10 +94,10 @@ T = {
   'veinat_titol':'Tot el poble té alguna cosa a dir-te',
   'veinat_sub':'Cada tema municipal té el seu veí. Et parlen ells, no un formulari.',
   'dif_titol':'Per què no és una enquesta més',
-  'dif':[('Els partits responen, i si no responen també es veu','Convidem cada candidatura a contestar el mateix qüestionari. Qui no contesta, surt marcat com a “no ha respost”.'),
-         ('Diem què han dit i què han fet','Si el que un partit contesta no quadra amb el que va votar al ple, ho ensenyem tot dos.'),
+  'dif':[('Els partits responen, i si no responen també es veu','Convidem cada candidatura a contestar el mateix qüestionari. Qui no contesta surt marcat amb un «no ha respost».'),
+         ('Diem què han dit i què han fet','Si el que un partit contesta no quadra amb el que va votar al ple, t’ensenyem totes dues coses.'),
          ('Les teves respostes no surten del teu mòbil','No hi ha comptes ni perfils. El càlcul es fa al teu navegador.'),
-         ('Independent','Sense finançament de cap partit ni de cap administració. Metodologia pública i oberta a crítica.')],
+         ('Independent','Sense finançament de cap partit ni de cap administració. La metodologia és pública i oberta a la crítica.')],
   'qui_titol':'Qui hi ha al darrere',
   'qui':'Un projecte independent fet a Catalunya. Encara som pocs: si ets periodista local, treballes amb dades obertes o vols ajudar amb el teu municipi, escriu-nos.',
   'contacte':'hola@quivoto.cat',
@@ -103,27 +127,48 @@ T = {
   'form_titol':'Avísame cuando mi ciudad esté lista',
   'form_sub':'Un solo correo cuando abramos tu municipio. Nada más, y puedes darte de baja cuando quieras.',
   'email_ph':'Tu correo','muni_ph':'Tu municipio (opcional)',
-  'cerca_ph':'Busca tu municipio, alcaldía o concejal',
+  'cerca_ph':'Busca tu pueblo o un concejal',
   'consent':'Acepto recibir un aviso cuando quienvoto abra mi municipio y he leído la <a href="/privadesa.html">política de privacidad</a>.',
   'boto':'Avísame','boto_ok':'¡Hecho! Nos vemos pronto.','boto_error':'No ha funcionado. Inténtalo otra vez.',
   'obs_url':'https://quivoto.cat/observatori/',
   'obs_micro':'Esto ya lo puedes abrir hoy',
   'obs_titol':'La brújula es en 2027. El Observatorio ya está',
   'obs_text':'Quién manda en tu pueblo y con quién, qué se ha votado desde 1979, cómo están las cuentas y qué paga cada cual: los 947 municipios de Cataluña, uno a uno. Todo hecho con datos abiertos y cálculos que cualquiera puede repetir —ningún modelo de lenguaje de por medio— y cada cifra con su fuente al lado.',
-  'obs_xifres':[('947','fichas municipales'),('2.626','páginas de candidatura'),('43','comarcas'),('1.894','ficheros de datos')],
-  'obs_reixa':[
-    ('els947.html','toda Cataluña','Los 947',
-     'Todos los municipios en una lista, con buscador y filtros: dónde hubo pacto, dónde ha cambiado la alcaldía a mitad de mandato, dónde manda siempre la misma fuerza, dónde no hay oposición.'),
-    ('m/esplugues-de-llobregat/','una por municipio','La ficha de un pueblo',
-     'Quién manda y con quién, el pleno con nombres y apellidos, las doce elecciones desde 1979, las cuentas, los impuestos, y qué sabemos y qué no.'),
-    ('comparador/','lado a lado','El comparador',
-     'Hasta cuatro municipios medidos con la misma vara: deuda, gasto por habitante, impuestos, participación y fragmentación del pleno.'),
-    ('c/barcelones/','43 comarcas','Quién manda en la comarca',
-     'Cuántas alcaldías tiene cada fuerza, cómo queda cada municipio respecto de la media comarcal y dónde están las excepciones.'),
-    ('dades/','abiertos','Descarga los datos',
-     '1.894 ficheros en CSV y JSON, con el esquema documentado campo a campo y la fuente de cada cifra. Para que puedas comprobarnos y reutilizarlos.'),
-    ('preguntes/','demostración','Las preguntas',
-     'Las 25 preguntas que hará la brújula, escritas leyendo las actas del pleno. Siete municipios, y ya se pueden responder.'),
+  'obs_xifres_etq':{'municipis':'municipios, cada uno con su ficha',
+                    'electes':'electos que puedes buscar por su nombre',
+                    'diputacions':'diputaciones y quién se sienta en ellas',
+                    'consells':'consejos comarcales y quién se sienta en ellos'},
+  'obs_nou_titol':'Qué hay de nuevo',
+  'obs_fitxa':{
+    'url':'m/esplugues-de-llobregat/','titol':'La ficha de tu pueblo',
+    'entrada':'Quién manda y con quién, el pleno con nombres y apellidos, las elecciones desde 1979, las cuentas y los impuestos. Y ahora también:',
+    'items':[('La tira del pueblo','quién ha tenido la alcaldía de 1979 a 2027, en una sola franja de colores.'),
+             ('Tus vecinos','la deuda, el IBI y la participación, al lado de los pueblos con los que linda.'),
+             ('La casa','el plan urbanístico, los pisos turísticos y lo que cuesta vivir allí.'),
+             ('El dinero de la Generalitat','qué recibe el ayuntamiento y si le envía las cuentas.'),
+             ('Los servicios sociales','a cuánta gente atienden y quién los presta.'),
+             ('Donde se vota a personas','en los pueblos de menos de 250 habitantes, cuántos votos sacó cada persona en 2023.')],
+    'enllac':'Mira la de Esplugues de Llobregat'},
+  'obs_ens':{
+    'url':'ens/','titol':'Quién gobierna por encima de tu ayuntamiento',
+    'entrada':'Las {d}diputaciones y los {c}consejos comarcales.',
+    'text':'Nadie los vota directamente: quien se sienta en ellos sale de las municipales. Encontrarás quiénes son, cómo han llegado, qué cobran, qué gastan y qué reparten a los ayuntamientos.',
+    'enllac':'Busca tu consejo y tu diputación',
+    'pisos':('Diputación','Consejo comarcal','Tu ayuntamiento')},
+  'obs_resta_titol':'Y lo que ya estaba',
+  'obs_portes':[
+    ('els947.html','Los 947',
+     'Todos los municipios en una lista: dónde hubo pacto, dónde ha cambiado la alcaldía a mitad de mandato, dónde no hay oposición.'),
+    ('mapa/','El mapa',
+     'Los 947 pintados según quién manda, con los pactos, las mayorías y dónde se vota más a cada partido.'),
+    ('comparador/','El comparador',
+     'Hasta cuatro municipios medidos con la misma vara: deuda, gasto por habitante, impuestos y participación.'),
+    ('c/','Las comarcas',
+     'Cuántas alcaldías tiene cada fuerza en cada comarca, y dónde están las excepciones.'),
+    ('dades/','Los datos',
+     'Todo en CSV y JSON, con cada campo explicado y la fuente de cada cifra. Para comprobarnos y reutilizarlo.'),
+    ('preguntes/','Las preguntas',
+     'Las 25 preguntas de la brújula, escritas leyendo las actas del pleno. En siete municipios ya se pueden responder.'),
   ],
   'obs_boto':'Abre el Observatorio',
   'obs_nota':'Gratuito y sin registro. Google Analytics solo mide visitas de forma agregada. Las fichas están en catalán, que es la lengua de las fuentes oficiales. Es un borrador: trabajamos a la vista de todos y todavía no está revisado del todo.',
@@ -140,10 +185,10 @@ T = {
   'veinat_titol':'Todo el pueblo tiene algo que decirte',
   'veinat_sub':'Cada tema municipal tiene su vecino. Te hablan ellos, no un formulario.',
   'dif_titol':'Por qué no es una encuesta más',
-  'dif':[('Los partidos responden, y si no responden también se ve','Invitamos a cada candidatura a contestar el mismo cuestionario. Quien no contesta, aparece marcado como “no ha respondido”.'),
-         ('Decimos qué han dicho y qué han hecho','Si lo que un partido contesta no cuadra con lo que votó en el pleno, lo enseñamos todo.'),
+  'dif':[('Los partidos responden, y si no responden también se ve','Invitamos a cada candidatura a contestar el mismo cuestionario. Quien no contesta aparece marcado con un «no ha respondido».'),
+         ('Decimos qué han dicho y qué han hecho','Si lo que un partido contesta no cuadra con lo que votó en el pleno, te enseñamos las dos cosas.'),
          ('Tus respuestas no salen de tu móvil','No hay cuentas ni perfiles. El cálculo se hace en tu navegador.'),
-         ('Independiente','Sin financiación de ningún partido ni administración. Metodología pública y abierta a crítica.')],
+         ('Independiente','Sin financiación de ningún partido ni administración. La metodología es pública y abierta a la crítica.')],
   'qui_titol':'Quién hay detrás',
   'qui':'Un proyecto independiente hecho en Cataluña. Todavía somos pocos: si eres periodista local, trabajas con datos abiertos o quieres ayudar con tu municipio, escríbenos.',
   'contacte':'hola@quivoto.cat',
@@ -322,6 +367,47 @@ MENU = [
 ]
 
 
+# El guió del botó «Menú», copiat de PLEC_JS a capcalera.ts: va en línia just
+# després de </header>, crea el botó davant del menú (perquè l'ordre del Tab
+# sigui el que es veu: logotip, Menú, els enllaços del full, Cerca, idioma),
+# marca la capçalera amb «amb-plec» —que és el que fa que styles.css plegui el
+# menú al mòbil— i obre i tanca el full: Esc el tanca i torna el focus al botó,
+# i un clic o un focus fora també el tanquen. Sense guió no hi ha botó ni
+# «amb-plec», i el menú es queda embolcallat a sota amb tots els enllaços a la
+# vista. Troba la capçalera com el germà d'abans del <script>, i no amb
+# querySelector, perquè quan s'executa la resta de la pàgina encara no existeix.
+# Si allà canvia, aquí també: el botó ha de fer el mateix a tot el web.
+PLEC_JS = r"""(function () {
+  var cap = document.currentScript && document.currentScript.previousElementSibling;
+  if (!cap || !cap.classList.contains("capcalera")) return;
+  var menu = cap.querySelector(".menu");
+  if (!menu) return;
+  var boto = document.createElement("button");
+  boto.type = "button";
+  boto.className = "obre-menu";
+  boto.textContent = "Menú";
+  boto.setAttribute("aria-expanded", "false");
+  boto.setAttribute("aria-controls", menu.id);
+  cap.insertBefore(boto, menu);
+  cap.classList.add("amb-plec");
+  function obert() { return boto.getAttribute("aria-expanded") === "true"; }
+  function posa(si) {
+    boto.setAttribute("aria-expanded", si ? "true" : "false");
+    cap.classList.toggle("obert", si);
+  }
+  boto.addEventListener("click", function () { posa(!obert()); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && obert()) { posa(false); boto.focus(); }
+  });
+  document.addEventListener("click", function (e) {
+    if (obert() && !menu.contains(e.target) && !boto.contains(e.target)) posa(false);
+  });
+  cap.addEventListener("focusout", function (e) {
+    if (obert() && e.relatedTarget && !menu.contains(e.relatedTarget) && e.relatedTarget !== boto) posa(false);
+  });
+})();"""
+
+
 def capcalera(lang, actual='cap'):
     """La mateixa capçalera que l'Observatori, a totes les pàgines de la landing.
 
@@ -336,6 +422,11 @@ def capcalera(lang, actual='cap'):
     els noms del menú no es tradueixen i a la versió castellana porten
     hreflang="ca", igual que la resta d'enllaços de la pàgina cap allà.
 
+    Al mòbil el menú es plega darrere d'un botó «Menú», com a l'Observatori: el
+    botó el crea PLEC_JS, que va just després de </header>, i el menú porta
+    l'id «menu-seccions» perquè el botó en digui aria-controls. «Menú» és la
+    mateixa paraula en català i en castellà.
+
     `actual` és la clau del destí on som; a la landing no n'hi ha cap, perquè
     la portada no és una secció de l'Observatori, i per tant no s'hi subratlla res.
     """
@@ -349,20 +440,61 @@ def capcalera(lang, actual='cap'):
     arrel = '/' if lang == 'ca' else '/es/'
     return f'''<header class="capcalera">
   <a class="logo" href="{arrel}">{wordmark(t, 30)}</a>
-  <nav class="menu" aria-label="{t['menu_aria']}">{items}</nav>
+  <nav class="menu" id="menu-seccions" aria-label="{t['menu_aria']}">{items}</nav>
   <span class="ranura-cerca"></span>
   <span class="etiqueta">{t['aviat']}</span>
   <a href="{t['altra_url']}" hreflang="{t['altra_lang']}" class="idioma">{t['altra']}</a>
-</header>'''
+</header>
+<script id="capcalera-menu">{PLEC_JS}</script>'''
 
 
 def xifres(t):
     return '\n'.join(
       f'      <div class="xifra"><b>{n}</b><span>{lab}</span></div>' for n, lab in t['xifres'])
 
-def obs_xifres(t):
-    return '\n'.join(
-      f'      <li><b>{n}</b><span>{lab}</span></li>' for n, lab in t['obs_xifres'])
+def nombre(n):
+    """4807 → «4.807». El punt de milers és el mateix en català i en castellà."""
+    return f'{n:,}'.replace(',', '.')
+
+
+def recomptes_portada():
+    """Els recomptes que la portada ensenya a la banda de l'Observatori, llegits
+    de web/public/observatori/xifres.json (l'escriu publish.ts a cada publicació).
+
+    No és xifres_observatori(), la del peu, perquè aquella demana les quatre
+    claus o res, i aquí cada xifra va per lliure: si la J38 no ha corregut, el
+    fitxer porta «diputacions» i «consells» a null, i llavors aquestes dues no
+    surten però les altres sí. Només val un enter positiu: un null, un zero, un
+    text o una clau que falta vol dir que no ho sabem, i un buit és un buit, no
+    un zero. Sense fitxer (un clon net, sense cap publicació), un diccionari buit
+    i la banda va sense xifres.
+    """
+    import json
+    cami = os.path.join(OUT, 'observatori', 'xifres.json')
+    try:
+        with open(cami, encoding='utf-8') as f:
+            x = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(x, dict):
+        return {}
+    return {k: v for k, v in x.items()
+            if k in ('municipis', 'electes', 'candidatures', 'diputacions', 'consells')
+            and isinstance(v, int) and not isinstance(v, bool) and v > 0}
+
+
+def obs_xifres(t, x):
+    """Quatre xifres que importen a qui hi viu —quants municipis, quants electes,
+    quantes diputacions i quants consells—, i no les de qui fa el web (fitxers,
+    pàgines). Les candidatures no hi són: ja surten al peu, just a sota, i aquí
+    hi sobrava una xifra que el veí no sap llegir. La que falta, no surt; si no
+    en queda cap, no hi ha llista."""
+    etq = t['obs_xifres_etq']
+    files = [f'      <li><b>{nombre(x[k])}</b><span>{etq[k]}</span></li>'
+             for k in ('municipis', 'electes', 'diputacions', 'consells') if k in x]
+    if not files:
+        return ''
+    return '<ul class="obs-xifres">\n' + '\n'.join(files) + '\n    </ul>'
 
 def parada(t):
     """El veïnat com una cinta d'adhesius, cada un amb la seva inclinació."""
@@ -459,13 +591,52 @@ def escala():
     return out
 
 
-def obs_reixa(t):
-    """Les portes de l'Observatori. Cada targeta és una cosa que ja existeix."""
+def obs_nou(t, x):
+    """El que l'Observatori té de nou, en dues cartes que no s'assemblen: la
+    fitxa del poble, amb la llista del que hi ha entrat, i les diputacions i els
+    consells, amb tres pisos que diuen d'una ullada què vol dir «per sobre».
+
+    Els pisos són un dibuix i prou (aria-hidden): tot el que diuen ja ho diu el
+    text de la carta. El nombre de diputacions i de consells surt de xifres.json,
+    i si no hi és la frase es llegeix igual sense número («Les diputacions i els
+    consells comarcals»). Els enllaços porten a l'Observatori, que només és en
+    català: a la versió castellana van amb hreflang="ca", com els del menú.
+    """
     base = t['obs_url']
+    hl = '' if t['lang'] == 'ca' else ' hreflang="ca"'
+    f, e = t['obs_fitxa'], t['obs_ens']
+    items = '\n'.join(f'          <li><b>{h}</b>: {txt}</li>' for h, txt in f['items'])
+    d = f"{nombre(x['diputacions'])} " if 'diputacions' in x else ''
+    c = f"{nombre(x['consells'])} " if 'consells' in x else ''
+    pisos = ''.join(f'<li>{p}</li>' for p in e['pisos'])
+    return f'''<h3 class="obs-subtitol">{t['obs_nou_titol']}</h3>
+    <div class="obs-nou">
+      <article class="obs-carta">
+        <h4>{f['titol']}</h4>
+        <p>{f['entrada']}</p>
+        <ul class="obs-llista">
+{items}
+        </ul>
+        <p class="obs-enllac"><a href="{base}{f['url']}"{hl}>{f['enllac']}</a></p>
+      </article>
+      <article class="obs-carta obs-carta-ens">
+        <ol class="obs-pisos" aria-hidden="true">{pisos}</ol>
+        <h4>{e['titol']}</h4>
+        <p>{e['entrada'].format(d=d, c=c)} {e['text']}</p>
+        <p class="obs-enllac"><a href="{base}{e['url']}"{hl}>{e['enllac']}</a></p>
+      </article>
+    </div>'''
+
+
+def obs_portes(t):
+    """La resta de portes de l'Observatori, una per fila i sense caixa: el títol
+    subratllat ja diu que és un enllaç, i tota la fila hi porta perquè al mòbil
+    el dit hi encerti. Cada porta és una cosa que ja existeix."""
+    base = t['obs_url']
+    hl = '' if t['lang'] == 'ca' else ' hreflang="ca"'
     return '\n'.join(
-      f'      <li><a href="{base}{u}"><span class="obs-etiqueta">{et}</span>'
-      f'<b>{tit}</b><span class="obs-txt">{txt}</span></a></li>'
-      for u, et, tit, txt in t['obs_reixa'])
+      f'      <li><a href="{base}{u}"{hl}><b>{tit}</b><span>{txt}</span></a></li>'
+      for u, tit, txt in t['obs_portes'])
 
 
 def xifres_observatori():
@@ -484,61 +655,107 @@ def xifres_observatori():
 
 
 def footer_complet(t):
-    """El mateix peu editorial a la landing, els documents i l'Observatori:
-    la targeta de qui som, les pastilles per anar a mirar coses i la lletra
-    petita de les fonts. És la còpia en Python de peu.ts; si allà canvia una
-    pastilla, aquí també."""
+    """El mateix peu editorial a la landing, els documents i l'Observatori: qui
+    som amb les tres xifres, els enllaços en tres grups (Explora, Territori, Com
+    està fet), la lletra petita de les fonts i, en una ratlla discreta, l'avís
+    legal i els crèdits. Per damunt de la ratlla hi treu el cap la Catalunya de
+    la mascota, com un veí per sobre de la tanca.
+
+    És la còpia en Python de peu.ts (`peu()` i `grupsPeu()`), amb el CSS a
+    web/public/assets/styles.css: si allà canvia un grup, un enllaç o una frase,
+    aquí també. L'únic que no copia és l'avís d'esborrany: la landing sempre és
+    pública, i el peu de l'Observatori només el diu quan la publicació es fa amb
+    QUIVOTO_NOINDEX=1."""
     es = t['lang'] == 'es'
-    noms = (
-      ('Los 947', 'El mapa', 'Rankings', 'El comparador', 'Las comarcas', 'El Área Metropolitana',
-       'Las preguntas', 'Los datos', 'Todas las fuentes', 'Aviso legal', 'Privacidad') if es else
-      ('Els 947', 'El mapa', 'Rànquings', 'El comparador', 'Les comarques', "L’Àrea Metropolitana",
-       'Les preguntes', 'Les dades', 'Totes les fonts', 'Avís legal', 'Privadesa')
-    )
     base = t['obs_url']
-    urls = ('els947.html', 'mapa/', 'ranquings/', 'comparador/', 'c/', 'amb/', 'preguntes/', 'dades/', 'dades/#fonts')
-    nav = ''.join(f'<a href="{base}{u}">{n}</a>' for n, u in zip(noms[:9], urls))
+    # Els mateixos grups i el mateix ordre que grupsPeu() a peu.ts.
+    grups = (
+      ('Explora', (('Los 947', 'els947.html'), ('El mapa', 'mapa/'), ('Rankings', 'ranquings/'),
+                   ('El comparador', 'comparador/'))),
+      ('Territorio', (('Las comarcas', 'c/'), ('El Área Metropolitana', 'amb/'),
+                      ('Diputaciones y consejos', 'ens/'))),
+      ('Cómo está hecho', (('Las preguntas', 'preguntes/'), ('Los datos', 'dades/'),
+                           ('Todas las fuentes', 'dades/#fonts'))),
+    ) if es else (
+      ('Explora', (('Els 947', 'els947.html'), ('El mapa', 'mapa/'), ('Rànquings', 'ranquings/'),
+                   ('El comparador', 'comparador/'))),
+      ('Territori', (('Les comarques', 'c/'), ('L’Àrea Metropolitana', 'amb/'),
+                     ('Diputacions i consells', 'ens/'))),
+      ('Com està fet', (('Les preguntes', 'preguntes/'), ('Les dades', 'dades/'),
+                        ('Totes les fonts', 'dades/#fonts'))),
+    )
+    nav = ''.join(
+      f'<div class="peu-grup"><h2>{nom}</h2><ul>'
+      + ''.join(f'<li><a href="{base}{u}">{text}</a></li>' for text, u in enllacos)
+      + '</ul></div>'
+      for nom, enllacos in grups)
+
+    def data_llegible(iso):
+        """«3 de setembre del 2026» / «3 de septiembre de 2026», amb l'ISO a
+        l'atribut datetime. En català, abril, agost i octubre demanen apòstrof
+        (com dataCurta() a lib/text.ts) i el dia u porta «l'» al davant."""
+        iso = str(iso)[:10]
+        try:
+            a, m, d = (int(p) for p in iso.split('-'))
+        except ValueError:
+            return None
+        if es:
+            mesos = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+                     'septiembre', 'octubre', 'noviembre', 'diciembre')
+            return f'el <time datetime="{iso}">{d} de {mesos[m - 1]} de {a}</time>'
+        mesos = ('gener', 'febrer', 'març', 'abril', 'maig', 'juny', 'juliol', 'agost',
+                 'setembre', 'octubre', 'novembre', 'desembre')
+        nom = mesos[m - 1]
+        de = 'd’' if nom[0] in 'aeiou' else 'de '
+        return f'{"l’" if d == 1 else "el "}<time datetime="{iso}">{d} {de}{nom} del {a}</time>'
+
     x = xifres_observatori()
     municipis = f"{x['municipis']:,}".replace(',', '.') if x else '947'
     lema = (
       f'Quién gobierna cada uno de los {municipis} municipios de Cataluña, qué paga la gente y qué se '
-      'prometió. <b>Sin ningún modelo de lenguaje por medio</b>: fuentes oficiales, cada cifra '
-      'con la suya al lado y cálculos que cualquiera puede repetir.' if es else
+      'prometió. <b>Sin ningún modelo de lenguaje por medio</b>: fuentes oficiales y cálculos que '
+      'cualquiera puede repetir.' if es else
       f'Qui mana a cada un dels {municipis} municipis de Catalunya, què hi paga la gent i què s’hi va '
-      'prometre. <b>Sense cap model de llenguatge pel mig</b>: fonts oficials, cada xifra amb la '
-      'seva al costat i càlculs que qualsevol pot repetir.'
+      'prometre. <b>Sense cap model de llenguatge pel mig</b>: fonts oficials i càlculs que '
+      'qualsevol pot repetir.'
     )
+    xifres = ''
+    quan = ''
     if x:
         compte = lambda n, de: f'<li><b>{n:,}</b><span>{de}</span></li>'.replace(',', '.')
-        xifres = ('<ul class="xifres">' + compte(x['municipis'], 'municipios' if es else 'municipis')
+        xifres = ('<ul class="peu-xifres">' + compte(x['municipis'], 'municipios' if es else 'municipis')
                   + compte(x['electes'], 'electos' if es else 'electes')
                   + compte(x['candidatures'], 'candidaturas' if es else 'candidatures') + '</ul>')
-        quan = (f'<b>Observatorio actualizado el {x["generatedAt"]}</b> con' if es else
-                f'<b>Observatori actualitzat el {x["generatedAt"]}</b> amb')
-    else:
-        xifres = ''
-        quan = '<b>Hecho</b> con' if es else '<b>Fet</b> amb'
+        data = data_llegible(x['generatedAt'])
+        if data:
+            quan = f' Observatorio actualizado {data}.' if es else f' Observatori actualitzat {data}.'
     fonts = (
-      f'{quan} datos abiertos de la Generalitat de Cataluña, el Consorcio AOC, Idescat, el '
-      f'Ministerio de Hacienda y el Síndic de Greuges. Consulta '
-      f'<a href="{base}dades/#fonts">el catálogo completo de fuentes, métodos y licencias</a>.' if es else
-      f'{quan} dades obertes de la Generalitat de Catalunya, el Consorci AOC, l’Idescat, el '
-      f'Ministeri d’Hisenda i el Síndic de Greuges. Consulta '
-      f'<a href="{base}dades/#fonts">el catàleg complet de fonts, mètodes i llicències</a>.'
+      'Los datos son de la Generalitat de Cataluña, el Consorcio AOC, Idescat, el Ministerio de '
+      'Hacienda y el Síndic de Greuges. <b>Puedes reutilizarlos citando la fuente</b> (los del portal '
+      'de la Seu-e son CC0). De dónde sale cada cifra y cómo se calcula, en el '
+      f'<a href="{base}dades/#fonts">catálogo de fuentes</a>.{quan}' if es else
+      'Les dades són de la Generalitat de Catalunya, el Consorci AOC, l’Idescat, el Ministeri '
+      'd’Hisenda i el Síndic de Greuges. <b>Les pots reutilitzar citant-ne la font</b> (les del portal '
+      'de la Seu-e són CC0). D’on surt cada xifra i com es calcula, al '
+      f'<a href="{base}dades/#fonts">catàleg de fonts</a>.{quan}'
     )
-    catalunya = '''<svg class="catalunya" width="88" height="88" viewBox="0 0 120 120" aria-hidden="true">
+    # La mateixa Catalunya que catalunya() a mascota.ts, sense parpelles: aquí
+    # no hi ha el CSS que les anima i no calen.
+    catalunya = '''<svg class="catalunya" width="84" height="84" viewBox="0 0 120 120" aria-hidden="true">
       <path d="M26 18Q36 20 48 25Q55 28 62 30Q70 33 77 33Q85 33 91 29L101 37Q98 47 91 57Q84 62 75 66Q67 72 59 77L41 83Q34 86 32 91L37 96 28 98 21 103Q14 100 14 93L16 79Q17 71 17 64Q19 57 24 52Q28 44 27 34Z" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
       <g fill="#E2735A"><circle cx="36" cy="30" r="2.6"/><circle cx="58" cy="37" r="2.6"/><circle cx="81" cy="42" r="2.6"/><circle cx="33" cy="39" r="2.6"/><circle cx="23" cy="68" r="2.6"/><circle cx="32" cy="85" r="2.6"/><circle cx="24" cy="94" r="2.6"/></g>
       <g class="ulls"><circle cx="40" cy="53" r="9" fill="#fff" stroke="#1E1B2E" stroke-width="3"/><circle cx="62" cy="53" r="9" fill="#fff" stroke="#1E1B2E" stroke-width="3"/><circle cx="40" cy="54" r="4.2" fill="#1E1B2E"/><circle cx="62" cy="54" r="4.2" fill="#1E1B2E"/><path d="M40 68q10 9 20 0" stroke="#1E1B2E" stroke-width="4" fill="none" stroke-linecap="round"/></g>
     </svg>'''
+    legal = ('Aviso legal', 'Privacidad') if es else ('Avís legal', 'Privadesa')
     return f'''<footer class="peu peu-complet"><div>
-      <div class="crida"><div class="cara">{catalunya}</div>
-        <div class="diu"><a class="marca-peu" href="/">{t['marca']}</a><p class="lema">{lema}</p></div>
-        {xifres}</div>
-      <nav class="anar" aria-label="{'Más del Observatorio' if es else 'Més de l’Observatori'}">{nav}</nav>
-      <p class="lletra">{fonts}</p>
-      <p class="legal"><a href="/avis-legal.html">{noms[9]}</a> · <a href="/privadesa.html">{noms[10]}</a> · <a href="{t['premsa_url']}">{t['peu_premsa']}</a></p>
-      <p class="credit">{t['credit']}</p>
+      <div class="peu-mascota">{catalunya}</div>
+      <div class="peu-qui"><div><a class="peu-marca" href="/">{t['marca']}</a><p class="peu-lema">{lema}</p></div>{xifres}</div>
+      <nav class="peu-anar" aria-label="{'Más del Observatorio' if es else 'Més de l’Observatori'}">{nav}</nav>
+      <p class="peu-fonts">{fonts}</p>
+      <div class="peu-baix">
+        <p class="peu-legal"><a href="/avis-legal.html">{legal[0]}</a> · <a href="/privadesa.html">{legal[1]}</a> · <a href="{t['premsa_url']}">{t['peu_premsa']}</a></p>
+        <p class="peu-credit">{t['credit']}</p>
+      </div>
     </div></footer>'''
 
 
@@ -585,40 +802,73 @@ def prova_html(t):
       <div class="prova-fet" id="prova-fet" hidden aria-live="polite"></div>
       <p class="peu-exemple" id="prova-peu">{p['compte'].format(n=1, t=len(p['preguntes']))} · {p['privadesa']}</p>
       <noscript><p class="peu-exemple">{p['sense_js']}
-        <a href="{t['obs_url']}preguntes/badalona/prova/">{p['boto']} →</a></p></noscript>
+        <a href="{t['obs_url']}preguntes/badalona/prova/">{p['boto']}</a></p></noscript>
     </div>
     <script id="prova-dades" type="application/json">{dades}</script>
     <script>{PROVA_JS}</script>'''
 
 CSS_EXTRA = '''<style>
-/* ---------- Observatori: el que ja es pot obrir avui ---------- */
+/* ---------- Observatori: el que ja es pot obrir avui ----------------------
+   Tres peces que no s'assemblen, perquè no fan la mateixa feina: les xifres,
+   números sobre una ratlla de tinta i sense caixa; el que hi ha de nou, dues
+   cartes diferents (la del poble, blanca i amb llista; la de per sobre,
+   lavanda i amb els tres pisos); i la resta de portes, files subratllades.
+   Abans eren deu caixes iguals amb la mateixa ombra.
+   L'amplada del contingut és la del hero (l'ample menys els dos marges), perquè
+   a l'escriptori el text d'aquesta banda comenci a la mateixa ratlla. */
 .observatori{background:var(--menta);border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);padding:var(--e5) var(--e3)}
-.obs-cos{max-width:var(--ample);margin:0 auto}
+.obs-cos{max-width:calc(var(--ample) - 2 * var(--e3));margin:0 auto}
 .observatori .micro{color:var(--ink)}
 .observatori h2{max-width:20ch;margin-bottom:var(--e2)}
 .obs-entrada{font-size:1.12rem;max-width:56ch}
-.obs-xifres{list-style:none;margin:var(--e3) 0 0;padding:0;
-  display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}
-.obs-xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:3px 3px 0 var(--ink);padding:var(--e2)}
+/* El text de sota de cada xifra va en tinta i no en el gris suau: sobre la
+   menta, el gris no arriba al contrast que demana el text petit. */
+.obs-xifres{list-style:none;margin:var(--e4) 0 0;padding:var(--e3) 0 0;border-top:2.5px solid var(--ink);
+  display:grid;gap:var(--e3);grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.obs-xifres li{margin:0;padding:0}
 .obs-xifres b{display:block;font-family:var(--display);font-weight:900;line-height:.95;
-  letter-spacing:-.04em;font-size:clamp(1.8rem,4.5vw,2.7rem)}
-.obs-xifres span{font-size:.85rem;color:var(--ink-suau)}
+  letter-spacing:-.04em;font-size:clamp(2.2rem,5vw,3.2rem);font-variant-numeric:tabular-nums}
+.obs-xifres span{display:block;margin-top:6px;font-size:.92rem;font-weight:700;line-height:1.35;max-width:22ch}
 
-.obs-reixa{list-style:none;margin:var(--e3) 0 0;padding:0;
-  display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-.obs-reixa a{display:block;height:100%;padding:var(--e2);text-decoration:none;
-  background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:4px 4px 0 var(--ink);transition:transform .14s ease,box-shadow .14s ease}
-.obs-reixa a:hover,.obs-reixa a:focus-visible{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
-.obs-etiqueta{display:inline-block;background:var(--presec);border-radius:var(--r-max);
-  padding:4px 11px;font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
-.obs-reixa b{display:block;font-family:var(--display);font-weight:900;letter-spacing:-.02em;
-  font-size:1.3rem;line-height:1.05;margin:10px 0 5px}
-.obs-txt{display:block;font-size:.9rem;line-height:1.45;color:var(--ink-suau)}
-@media(min-width:820px){.obs-reixa{grid-template-columns:repeat(3,1fr)}}
-.obs-accions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin:var(--e3) 0 0}
-.obs-nota{margin:var(--e2) 0 0;font-size:.9rem;color:var(--ink-suau);max-width:52ch}
+.obs-subtitol{font-size:clamp(1.3rem,2.6vw,1.6rem);letter-spacing:-.02em;margin:var(--e5) 0 var(--e3)}
+.obs-nou{display:grid;gap:var(--e3);grid-template-columns:minmax(0,1fr)}
+@media(min-width:860px){.obs-nou{grid-template-columns:1.2fr 1fr;align-items:start;gap:var(--e4)}}
+.obs-carta{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-l);
+  padding:var(--e3);box-shadow:5px 5px 0 var(--ink)}
+.obs-carta h4{font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:clamp(1.35rem,2.4vw,1.6rem);line-height:1.05;margin:0 0 var(--e1)}
+.obs-carta p{margin:0 0 var(--e2);line-height:1.5}
+.obs-llista{list-style:none;margin:0 0 var(--e1);padding:0;display:grid;gap:10px}
+.obs-llista li{position:relative;padding-left:24px;font-size:.95rem;line-height:1.45}
+.obs-llista li::before{content:"";position:absolute;left:0;top:.42em;width:9px;height:9px;
+  border-radius:50%;background:var(--coral);border:2px solid var(--ink)}
+.obs-carta-ens{background:var(--lavanda);transform:rotate(.6deg)}
+/* Els tres pisos: la diputació a dalt i estreta, l'ajuntament a baix i ample.
+   És un dibuix (aria-hidden): el text de la carta ja ho diu tot. */
+.obs-pisos{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:6px;justify-items:center}
+.obs-pisos li{width:100%;text-align:center;font-size:.82rem;font-weight:800;line-height:1.2;
+  padding:8px 10px;background:var(--paper-2);border:2px solid var(--ink);border-radius:var(--r-s)}
+.obs-pisos li:nth-child(1){width:54%}
+.obs-pisos li:nth-child(2){width:77%}
+.obs-pisos li:nth-child(3){background:var(--presec)}
+/* Enllaç de text, com «.navega» a l'Observatori: subratllat i prou, sense fletxa. */
+.obs-carta .obs-enllac{margin:0}
+.obs-enllac a{display:inline-flex;align-items:center;min-height:44px;font-weight:800;
+  text-decoration:underline;text-decoration-color:var(--coral);text-decoration-thickness:2.5px;text-underline-offset:5px}
+.obs-enllac a:hover{color:inherit;text-decoration-color:var(--ink)}
+
+.obs-portes{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);column-gap:var(--e4)}
+@media(min-width:700px){.obs-portes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1000px){.obs-portes{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.obs-portes li{margin:0;border-top:2px solid rgba(30,27,46,.28)}
+.obs-portes a{display:block;padding:14px 0 18px;text-decoration:none;color:var(--ink)}
+.obs-portes a:hover{color:var(--ink)}
+.obs-portes b{font-family:var(--display);font-weight:800;font-size:1.15rem;letter-spacing:-.01em;
+  text-decoration:underline;text-decoration-color:var(--coral);text-decoration-thickness:2.5px;text-underline-offset:4px}
+.obs-portes a:hover b{text-decoration-color:var(--ink)}
+.obs-portes span{display:block;margin-top:5px;font-size:.93rem;line-height:1.45}
+.obs-accions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin:var(--e4) 0 0}
+.obs-nota{margin:var(--e2) 0 0;font-size:.9rem;max-width:52ch}
 
 /* ---------- la demostració jugable ----------------------------------------
    Les afirmacions són reals i encara no estan validades. L'avís va a dalt de
@@ -663,7 +913,7 @@ CSS_EXTRA = '''<style>
 .prova-torna{background:none;border:0;padding:0;font:inherit;font-size:.88rem;font-weight:800;
   color:var(--ink-suau);text-decoration:underline;cursor:pointer}
 @media(prefers-reduced-motion:reduce){
-  .obs-reixa a,.cara-boto,.prova-barra i{transition:none}
+  .cara-boto,.prova-barra i{transition:none}
 }
 </style>'''
 
@@ -753,7 +1003,7 @@ PROVA_JS = r'''
     h += '</ol></details>';
     h += '<p class="prova-mes">' + esc(T.peu_mes) + '</p>';
     h += '<p class="prova-accions">' +
-         '<a class="boto" href="' + D.boto_url + '">' + esc(T.boto) + ' →</a>' +
+         '<a class="boto" href="' + D.boto_url + '">' + esc(T.boto) + '</a>' +
          '<a class="prova-altres" href="' + D.altres_url + '">' + esc(T.altres) + '</a>' +
          '<button type="button" class="prova-torna" id="prova-torna">' + esc(T.torna) + '</button></p>';
 
@@ -872,13 +1122,13 @@ PAGE = '''<!doctype html>
     <p class="micro">{obs_micro}</p>
     <h2>{obs_titol}</h2>
     <p class="obs-entrada">{obs_text}</p>
-    <ul class="obs-xifres">
-{obs_xifres_items}
+    {obs_xifres_html}
+    {obs_nou_html}
+    <h3 class="obs-subtitol">{obs_resta_titol}</h3>
+    <ul class="obs-portes">
+{obs_portes_items}
     </ul>
-    <ul class="obs-reixa">
-{obs_reixa_items}
-    </ul>
-    <p class="obs-accions"><a class="boto" href="{obs_url}">{obs_boto} →</a></p>
+    <p class="obs-accions"><a class="boto" href="{obs_url}"{obs_hl}>{obs_boto}</a></p>
     <p class="obs-nota">{obs_nota}</p>
   </div>
 </section>
@@ -1261,31 +1511,70 @@ def build_sitemap():
     open(os.path.join(OUT, 'sitemap.xml'), 'w', encoding='utf-8').write(xml)
 
 
+# Qui publica el web, copiat de packages/pipeline/src/publish/seo.ts
+# (ORGANITZACIO, FUNDADOR i els ID_*). Els @id han de ser idèntics als d'allà:
+# un @id és el nom propi d'una cosa dins del graf, i és el que fa que un
+# cercador entengui que l'organització de la portada, la de premsa i la de
+# cada fitxa de l'Observatori són la mateixa, i no tres que es diuen igual.
+# Per això el node també ha de dir el mateix que allà, camp per camp: si dues
+# pàgines del mateix lloc en diuen coses diferents, el cercador no sap a quina
+# fer cas. Si allà canvia un camp, aquí també.
+SITE = 'https://quivoto.cat'
+ID_ORGANITZACIO = f'{SITE}/#organitzacio'
+ID_FUNDADOR = f'{SITE}/#humbert-blanco'
+ID_LLOC = f'{SITE}/#lloc'
+
+# Els dos sameAs són els perfils que la pàgina de premsa enllaça, i cap més:
+# un sameAs és una afirmació d'identitat i només en fem de les que es poden
+# comprovar.
+FUNDADOR = {
+  '@type': 'Person',
+  '@id': ID_FUNDADOR,
+  'name': 'Humbert Blanco',
+  'sameAs': ['https://x.com/humbertblanco', 'https://github.com/humbertblanco'],
+}
+
+# La descripció és en català també a quienvoto.es: és el mateix node que
+# escriu l'Observatori, i un node que es fusiona ha de dir el mateix a tot arreu.
+ORGANITZACIO = {
+  '@type': 'Organization',
+  '@id': ID_ORGANITZACIO,
+  'name': 'quivoto',
+  'legalName': 'Damos en el Blanco, S.L.',
+  'url': f'{SITE}/',
+  'logo': f'{SITE}/assets/og.png',
+  'email': 'hola@quivoto.cat',
+  'description': 'Portal que reuneix les dades obertes dels 947 ajuntaments de Catalunya: qui governa, '
+                 "què s'hi ha votat des del 1979 i com estan els comptes, amb la font de cada xifra.",
+  'founder': FUNDADOR,
+  'areaServed': {'@type': 'AdministrativeArea', 'name': 'Catalunya'},
+  'knowsLanguage': 'ca',
+  'publishingPrinciples': f'{SITE}/premsa.html#com-treballem',
+  'sameAs': ['https://github.com/humbertblanco/quivoto'],
+}
+
+
 def json_ld(t):
     """El lloc web i qui el publica, en la mateixa forma que fa servir
-    l'Observatori (packages/pipeline/src/publish/seo.ts): un sol @id per a
-    l'organització perquè els cercadors lliguin totes les pàgines al mateix
-    editor. Amb SearchAction només en català: el cercador de l'Observatori
-    (`cercador.ts`) llegeix el paràmetre `?q=` de l'adreça i omple el camp,
-    i és el que un cercador necessita per oferir la caixa de cerca del lloc."""
+    l'Observatori (packages/pipeline/src/publish/seo.ts): l'organització és
+    ORGANITZACIO, el mateix node i el mateix @id que allà, perquè els cercadors
+    lliguin totes les pàgines al mateix editor. El lloc català porta ID_LLOC,
+    el @id que les pàgines de l'Observatori citen amb isPartOf. Amb
+    SearchAction només en català: el cercador de l'Observatori (`cercador.ts`)
+    llegeix el paràmetre `?q=` de l'adreça i omple el camp, i és el que un
+    cercador necessita per oferir la caixa de cerca del lloc."""
     import json
-    org_id = 'https://quivoto.cat/#organitzacio'
     lloc = {'@type': 'WebSite', '@id': f"https://{t['domini']}/#lloc", 'name': t['marca'],
             'url': f"https://{t['domini']}/", 'description': t['desc'], 'inLanguage': t['lang'],
-            'publisher': {'@id': org_id}}
+            'publisher': {'@id': ID_ORGANITZACIO}}
     if t['lang'] == 'ca':
         lloc['potentialAction'] = {'@type': 'SearchAction',
                                    'target': {'@type': 'EntryPoint', 'urlTemplate': 'https://quivoto.cat/observatori/?q={cerca}'},
                                    'query-input': 'required name=cerca'}
     return json.dumps({
         '@context': 'https://schema.org',
-        '@graph': [
-            {'@type': 'Organization', '@id': org_id, 'name': 'quivoto', 'url': 'https://quivoto.cat/',
-             'logo': 'https://quivoto.cat/assets/og.png',
-             'legalName': 'Damos en el Blanco, S.L.'},
-            lloc,
-        ],
-    }, ensure_ascii=False)
+        '@graph': [ORGANITZACIO, lloc],
+    }, ensure_ascii=False).replace('</', '<\\/')
 
 
 def build_404(lang):
@@ -1592,24 +1881,23 @@ def json_ld_premsa(lang, url, p):
     l'Observatori. Del qui som, només el que diu el web: nom legal, seu, correu,
     el codi i qui la fa; cap dada que no surti a l'avís legal o al peu. El
     contactPoint és el de premsa, amb el mateix correu que la pàgina escriu a
-    «Contacte de premsa»: és el que un cercador ensenya com a via de contacte."""
+    «Contacte de premsa»: és el que un cercador ensenya com a via de contacte.
+
+    L'organització és ORGANITZACIO (la de seo.ts) més la seu i el contacte de
+    premsa, que només diu aquesta pàgina: el fundador, els sameAs i els @id
+    són els mateixos que a la portada i a l'Observatori."""
     import json
-    org_id = 'https://quivoto.cat/#organitzacio'
     return json.dumps({
         '@context': 'https://schema.org',
         '@graph': [
-            {'@type': 'Organization', '@id': org_id, 'name': 'quivoto', 'url': 'https://quivoto.cat/',
-             'logo': 'https://quivoto.cat/assets/og.png', 'legalName': 'Damos en el Blanco, S.L.',
-             'email': 'hola@quivoto.cat',
+            {**ORGANITZACIO,
              'address': {'@type': 'PostalAddress', 'addressLocality': 'Sant Just Desvern',
                          'addressRegion': 'Barcelona', 'addressCountry': 'ES'},
-             'sameAs': ['https://github.com/humbertblanco/quivoto'],
              'contactPoint': {'@type': 'ContactPoint', 'contactType': 'press', 'email': 'hola@quivoto.cat',
-                              'availableLanguage': ['ca', 'es']},
-             'founder': {'@type': 'Person', 'name': 'Humbert Blanco', 'url': 'https://x.com/humbertblanco'}},
+                              'availableLanguage': ['ca', 'es']}},
             {'@type': 'AboutPage', '@id': url + '#pagina', 'url': url, 'name': p['titol'],
-             'description': p['desc'], 'inLanguage': lang, 'about': {'@id': org_id},
-             'isPartOf': {'@id': 'https://quivoto.cat/#lloc'}},
+             'description': p['desc'], 'inLanguage': lang, 'about': {'@id': ID_ORGANITZACIO},
+             'isPartOf': {'@id': ID_LLOC}},
         ],
     }, ensure_ascii=False)
 
@@ -1957,8 +2245,11 @@ def build(lang):
     ctx['com_steps'] = passos(t['com'])
     ctx['veinat_items'] = parada(t)
     ctx['xifres'] = xifres(t)
-    ctx['obs_xifres_items'] = obs_xifres(t)
-    ctx['obs_reixa_items'] = obs_reixa(t)
+    recomptes = recomptes_portada()
+    ctx['obs_xifres_html'] = obs_xifres(t, recomptes)
+    ctx['obs_nou_html'] = obs_nou(t, recomptes)
+    ctx['obs_portes_items'] = obs_portes(t)
+    ctx['obs_hl'] = '' if lang == 'ca' else ' hreflang="ca"'
     ctx['prova'] = prova_html(t)
     ctx['casella'] = casella_hero(t)
     ctx.update(ctx_cercador(lang))

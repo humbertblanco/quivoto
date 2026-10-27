@@ -30,9 +30,10 @@
   var normalize = function normalize(text){return text.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u00b7'\u2019`]/g," ").replace(/[^a-z0-9\s-]/g," ").replace(/\s+/g," ").trim()};
   var slugify = function slugify(text){return normalize(text).replace(/\s+/g,"-").replace(/-+/g,"-")};
   var de = function de(nom){if(/^l['’]/i.test(nom))return`de ${nom}`;if(/^els\s/i.test(nom))return`dels ${nom.slice(4)}`;if(/^el\s/i.test(nom))return`del ${nom.slice(3)}`;if(/^(la|les|sa|ses)\s/i.test(nom)||/^s['’]/i.test(nom))return`de ${nom}`;if(/^[aeiouàèéíòóúüh]/i.test(nom))return`d'${nom}`;return`de ${nom}`};
-  var TIPUS = {"Bloc":6,"Municipi":5,"Alcaldia":4,"Comarca":3,"Partit":3,"Candidatura":2,"Regidor":1,"Exalcaldia":0};
+  var TIPUS = {"Bloc":6,"Municipi":5,"Alcaldia":4,"Comarca":3,"Ens":3,"Partit":3,"Candidatura":2,"Regidor":1,"Exalcaldia":0};
   var qualitat = function qualitat(k,q){var p=k.indexOf(q);if(p<0)return 0;if(p===0)return 3;while(p>0){var abans=k.charAt(p-1);if(abans===" "||abans==="-")return 2;p=k.indexOf(q,p+1)}return 1};
   var classifica = function classifica(q,tots,quants){var puntuats=[];for(var i=0;i<tots.length;i++){var qual=qualitat(tots[i].k,q);if(qual>0)puntuats.push({c:tots[i],p:qual*8+TIPUS[tots[i].m]})}puntuats.sort(function(a,b){return b.p-a.p||b.c.w-a.c.w||a.c.t.localeCompare(b.c.t,"ca")});var triats=[];var vistos={};for(var j=0;j<puntuats.length&&triats.length<quants;j++){var seu=puntuats[j].c;var id=seu.m+" "+seu.i;if(vistos[id])continue;vistos[id]=true;triats.push(seu)}return triats};
+  var adrecaEns = function adrecaEns(tipus,slug){return tipus==="diputacio"?`diputacio/${slug}/`:`c/${slug}/consell/`};
 
   // Els blocs d'aquesta pàgina surten de l'índex, quan la pàgina en té.
   var blocs = [].map.call(document.querySelectorAll(".index a[href^='#']"), function(a){
@@ -87,6 +88,13 @@
       for (i = 0; i < dades.par.length; i++) {
         tots.push({ m: "Partit", k: clau(dades.par[i][0]), t: dades.par[i][0], w: dades.par[i][3], i: i });
         tots.push({ m: "Partit", k: clau(dades.par[i][1]), t: dades.par[i][0], w: dades.par[i][3], i: i });
+      }
+      // Les diputacions i els consells, si l'índex en porta: un cerca.json
+      // d'abans no té la clau i la cerca ha de continuar igual.
+      if (dades.ens) {
+        for (i = 0; i < dades.ens.length; i++) {
+          tots.push({ m: "Ens", k: clau(dades.ens[i][0]), t: dades.ens[i][0], w: dades.ens[i][3], i: i });
+        }
       }
       if (electes) {
         for (i = 0, n = electes.cand.length; i < n; i++) {
@@ -189,6 +197,12 @@
       return { mena: "Partit", text: p[0],
                sub: p[2] + (p[2] === 1 ? " alcaldia" : " alcaldies"),
                on: BASE + "partit/" + p[1] + "/" };
+    }
+    if (f.m === "Ens") {
+      var en = dades.ens[f.i];
+      return { mena: en[1] === "diputacio" ? "Diputació" : "Consell", text: en[0],
+               sub: en[4] + (en[4] === 1 ? " municipi" : " municipis"),
+               on: BASE + adrecaEns(en[1], en[2]) };
     }
     if (f.m === "Candidatura") {
       var cc = electes.cand[f.i];

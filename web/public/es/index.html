@@ -28,37 +28,70 @@
 <meta name="theme-color" content="#FBF7EE">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
-<link rel="stylesheet" href="/assets/styles.css?v=e14ea480">
-<link rel="stylesheet" href="/assets/cercador.css?v=13f0c534">
+<link rel="stylesheet" href="/assets/styles.css?v=3c16aea2">
+<link rel="stylesheet" href="/assets/cercador.css?v=52187249">
 <style>
-/* ---------- Observatori: el que ja es pot obrir avui ---------- */
+/* ---------- Observatori: el que ja es pot obrir avui ----------------------
+   Tres peces que no s'assemblen, perquè no fan la mateixa feina: les xifres,
+   números sobre una ratlla de tinta i sense caixa; el que hi ha de nou, dues
+   cartes diferents (la del poble, blanca i amb llista; la de per sobre,
+   lavanda i amb els tres pisos); i la resta de portes, files subratllades.
+   Abans eren deu caixes iguals amb la mateixa ombra.
+   L'amplada del contingut és la del hero (l'ample menys els dos marges), perquè
+   a l'escriptori el text d'aquesta banda comenci a la mateixa ratlla. */
 .observatori{background:var(--menta);border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);padding:var(--e5) var(--e3)}
-.obs-cos{max-width:var(--ample);margin:0 auto}
+.obs-cos{max-width:calc(var(--ample) - 2 * var(--e3));margin:0 auto}
 .observatori .micro{color:var(--ink)}
 .observatori h2{max-width:20ch;margin-bottom:var(--e2)}
 .obs-entrada{font-size:1.12rem;max-width:56ch}
-.obs-xifres{list-style:none;margin:var(--e3) 0 0;padding:0;
-  display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}
-.obs-xifres li{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:3px 3px 0 var(--ink);padding:var(--e2)}
+/* El text de sota de cada xifra va en tinta i no en el gris suau: sobre la
+   menta, el gris no arriba al contrast que demana el text petit. */
+.obs-xifres{list-style:none;margin:var(--e4) 0 0;padding:var(--e3) 0 0;border-top:2.5px solid var(--ink);
+  display:grid;gap:var(--e3);grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.obs-xifres li{margin:0;padding:0}
 .obs-xifres b{display:block;font-family:var(--display);font-weight:900;line-height:.95;
-  letter-spacing:-.04em;font-size:clamp(1.8rem,4.5vw,2.7rem)}
-.obs-xifres span{font-size:.85rem;color:var(--ink-suau)}
+  letter-spacing:-.04em;font-size:clamp(2.2rem,5vw,3.2rem);font-variant-numeric:tabular-nums}
+.obs-xifres span{display:block;margin-top:6px;font-size:.92rem;font-weight:700;line-height:1.35;max-width:22ch}
 
-.obs-reixa{list-style:none;margin:var(--e3) 0 0;padding:0;
-  display:grid;gap:var(--e2);grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-.obs-reixa a{display:block;height:100%;padding:var(--e2);text-decoration:none;
-  background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-m);
-  box-shadow:4px 4px 0 var(--ink);transition:transform .14s ease,box-shadow .14s ease}
-.obs-reixa a:hover,.obs-reixa a:focus-visible{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
-.obs-etiqueta{display:inline-block;background:var(--presec);border-radius:var(--r-max);
-  padding:4px 11px;font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
-.obs-reixa b{display:block;font-family:var(--display);font-weight:900;letter-spacing:-.02em;
-  font-size:1.3rem;line-height:1.05;margin:10px 0 5px}
-.obs-txt{display:block;font-size:.9rem;line-height:1.45;color:var(--ink-suau)}
-@media(min-width:820px){.obs-reixa{grid-template-columns:repeat(3,1fr)}}
-.obs-accions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin:var(--e3) 0 0}
-.obs-nota{margin:var(--e2) 0 0;font-size:.9rem;color:var(--ink-suau);max-width:52ch}
+.obs-subtitol{font-size:clamp(1.3rem,2.6vw,1.6rem);letter-spacing:-.02em;margin:var(--e5) 0 var(--e3)}
+.obs-nou{display:grid;gap:var(--e3);grid-template-columns:minmax(0,1fr)}
+@media(min-width:860px){.obs-nou{grid-template-columns:1.2fr 1fr;align-items:start;gap:var(--e4)}}
+.obs-carta{background:var(--paper-2);border:2.5px solid var(--ink);border-radius:var(--r-l);
+  padding:var(--e3);box-shadow:5px 5px 0 var(--ink)}
+.obs-carta h4{font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:clamp(1.35rem,2.4vw,1.6rem);line-height:1.05;margin:0 0 var(--e1)}
+.obs-carta p{margin:0 0 var(--e2);line-height:1.5}
+.obs-llista{list-style:none;margin:0 0 var(--e1);padding:0;display:grid;gap:10px}
+.obs-llista li{position:relative;padding-left:24px;font-size:.95rem;line-height:1.45}
+.obs-llista li::before{content:"";position:absolute;left:0;top:.42em;width:9px;height:9px;
+  border-radius:50%;background:var(--coral);border:2px solid var(--ink)}
+.obs-carta-ens{background:var(--lavanda);transform:rotate(.6deg)}
+/* Els tres pisos: la diputació a dalt i estreta, l'ajuntament a baix i ample.
+   És un dibuix (aria-hidden): el text de la carta ja ho diu tot. */
+.obs-pisos{list-style:none;margin:0 0 var(--e3);padding:0;display:grid;gap:6px;justify-items:center}
+.obs-pisos li{width:100%;text-align:center;font-size:.82rem;font-weight:800;line-height:1.2;
+  padding:8px 10px;background:var(--paper-2);border:2px solid var(--ink);border-radius:var(--r-s)}
+.obs-pisos li:nth-child(1){width:54%}
+.obs-pisos li:nth-child(2){width:77%}
+.obs-pisos li:nth-child(3){background:var(--presec)}
+/* Enllaç de text, com «.navega» a l'Observatori: subratllat i prou, sense fletxa. */
+.obs-carta .obs-enllac{margin:0}
+.obs-enllac a{display:inline-flex;align-items:center;min-height:44px;font-weight:800;
+  text-decoration:underline;text-decoration-color:var(--coral);text-decoration-thickness:2.5px;text-underline-offset:5px}
+.obs-enllac a:hover{color:inherit;text-decoration-color:var(--ink)}
+
+.obs-portes{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);column-gap:var(--e4)}
+@media(min-width:700px){.obs-portes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1000px){.obs-portes{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.obs-portes li{margin:0;border-top:2px solid rgba(30,27,46,.28)}
+.obs-portes a{display:block;padding:14px 0 18px;text-decoration:none;color:var(--ink)}
+.obs-portes a:hover{color:var(--ink)}
+.obs-portes b{font-family:var(--display);font-weight:800;font-size:1.15rem;letter-spacing:-.01em;
+  text-decoration:underline;text-decoration-color:var(--coral);text-decoration-thickness:2.5px;text-underline-offset:4px}
+.obs-portes a:hover b{text-decoration-color:var(--ink)}
+.obs-portes span{display:block;margin-top:5px;font-size:.93rem;line-height:1.45}
+.obs-accions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e2);margin:var(--e4) 0 0}
+.obs-nota{margin:var(--e2) 0 0;font-size:.9rem;max-width:52ch}
 
 /* ---------- la demostració jugable ----------------------------------------
    Les afirmacions són reals i encara no estan validades. L'avís va a dalt de
@@ -103,11 +136,11 @@
 .prova-torna{background:none;border:0;padding:0;font:inherit;font-size:.88rem;font-weight:800;
   color:var(--ink-suau);text-decoration:underline;cursor:pointer}
 @media(prefers-reduced-motion:reduce){
-  .obs-reixa a,.cara-boto,.prova-barra i{transition:none}
+  .cara-boto,.prova-barra i{transition:none}
 }
 </style>
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@graph": [{"@type": "Organization", "@id": "https://quivoto.cat/#organitzacio", "name": "quivoto", "url": "https://quivoto.cat/", "logo": "https://quivoto.cat/assets/og.png", "legalName": "Damos en el Blanco, S.L."}, {"@type": "WebSite", "@id": "https://quienvoto.es/#lloc", "name": "quienvoto", "url": "https://quienvoto.es/", "description": "Brújula electoral para las municipales del 23 de mayo de 2027 y observatorio de los 947 municipios de Cataluña. 25 afirmaciones para ver quién piensa como tú.", "inLanguage": "es", "publisher": {"@id": "https://quivoto.cat/#organitzacio"}}]}
+{"@context": "https://schema.org", "@graph": [{"@type": "Organization", "@id": "https://quivoto.cat/#organitzacio", "name": "quivoto", "legalName": "Damos en el Blanco, S.L.", "url": "https://quivoto.cat/", "logo": "https://quivoto.cat/assets/og.png", "email": "hola@quivoto.cat", "description": "Portal que reuneix les dades obertes dels 947 ajuntaments de Catalunya: qui governa, què s'hi ha votat des del 1979 i com estan els comptes, amb la font de cada xifra.", "founder": {"@type": "Person", "@id": "https://quivoto.cat/#humbert-blanco", "name": "Humbert Blanco", "sameAs": ["https://x.com/humbertblanco", "https://github.com/humbertblanco"]}, "areaServed": {"@type": "AdministrativeArea", "name": "Catalunya"}, "knowsLanguage": "ca", "publishingPrinciples": "https://quivoto.cat/premsa.html#com-treballem", "sameAs": ["https://github.com/humbertblanco/quivoto"]}, {"@type": "WebSite", "@id": "https://quienvoto.es/#lloc", "name": "quienvoto", "url": "https://quienvoto.es/", "description": "Brújula electoral para las municipales del 23 de mayo de 2027 y observatorio de los 947 municipios de Cataluña. 25 afirmaciones para ver quién piensa como tú.", "inLanguage": "es", "publisher": {"@id": "https://quivoto.cat/#organitzacio"}}]}
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-9ZB1XZ3LHT"></script>
@@ -124,11 +157,40 @@
 
 <header class="capcalera">
   <a class="logo" href="/es/"><span class="marca" style="font-size:30px">quienvoto</span></a>
-  <nav class="menu" aria-label="Secciones del Observatorio"><a href="https://quivoto.cat/observatori/" hreflang="ca">Observatori</a><a href="https://quivoto.cat/observatori/els947.html" hreflang="ca">Els 947</a><a href="https://quivoto.cat/observatori/mapa/" hreflang="ca">Mapa</a><a href="https://quivoto.cat/observatori/ranquings/" hreflang="ca">Rànquings</a><a href="https://quivoto.cat/observatori/c/" hreflang="ca">Comarques</a><a href="https://quivoto.cat/observatori/partit/" hreflang="ca">Partits</a><a href="https://quivoto.cat/observatori/trajectoria/" hreflang="ca">Trajectòries</a><a href="https://quivoto.cat/observatori/comparador/" hreflang="ca">Comparador</a></nav>
+  <nav class="menu" id="menu-seccions" aria-label="Secciones del Observatorio"><a href="https://quivoto.cat/observatori/" hreflang="ca">Observatori</a><a href="https://quivoto.cat/observatori/els947.html" hreflang="ca">Els 947</a><a href="https://quivoto.cat/observatori/mapa/" hreflang="ca">Mapa</a><a href="https://quivoto.cat/observatori/ranquings/" hreflang="ca">Rànquings</a><a href="https://quivoto.cat/observatori/c/" hreflang="ca">Comarques</a><a href="https://quivoto.cat/observatori/partit/" hreflang="ca">Partits</a><a href="https://quivoto.cat/observatori/trajectoria/" hreflang="ca">Trajectòries</a><a href="https://quivoto.cat/observatori/comparador/" hreflang="ca">Comparador</a></nav>
   <span class="ranura-cerca"></span>
   <span class="etiqueta">Pronto</span>
   <a href="https://quivoto.cat" hreflang="ca" class="idioma">Català</a>
 </header>
+<script id="capcalera-menu">(function () {
+  var cap = document.currentScript && document.currentScript.previousElementSibling;
+  if (!cap || !cap.classList.contains("capcalera")) return;
+  var menu = cap.querySelector(".menu");
+  if (!menu) return;
+  var boto = document.createElement("button");
+  boto.type = "button";
+  boto.className = "obre-menu";
+  boto.textContent = "Menú";
+  boto.setAttribute("aria-expanded", "false");
+  boto.setAttribute("aria-controls", menu.id);
+  cap.insertBefore(boto, menu);
+  cap.classList.add("amb-plec");
+  function obert() { return boto.getAttribute("aria-expanded") === "true"; }
+  function posa(si) {
+    boto.setAttribute("aria-expanded", si ? "true" : "false");
+    cap.classList.toggle("obert", si);
+  }
+  boto.addEventListener("click", function () { posa(!obert()); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && obert()) { posa(false); boto.focus(); }
+  });
+  document.addEventListener("click", function (e) {
+    if (obert() && !menu.contains(e.target) && !boto.contains(e.target)) posa(false);
+  });
+  cap.addEventListener("focusout", function (e) {
+    if (obert() && e.relatedTarget && !menu.contains(e.relatedTarget) && e.relatedTarget !== boto) posa(false);
+  });
+})();</script>
 <!-- generat per packages/pipeline/src/publish/cercador.ts: no editar a mà -->
 <dialog class="cercador" data-base="/observatori/" aria-label="Cerca un municipi, una persona, un partit o un bloc d'aquesta pàgina">
   <form method="dialog" class="cerca-cap">
@@ -136,7 +198,7 @@
          stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>
     <input type="search" id="cerca-camp" autocomplete="off" spellcheck="false"
            role="combobox" aria-expanded="false" aria-controls="cerca-llista" aria-autocomplete="list"
-           placeholder="Busca tu municipio, alcaldía o concejal" aria-label="Cerca">
+           placeholder="Busca tu pueblo o un concejal" aria-label="Cerca">
     <button value="tanca" class="cerca-tanca">Esc</button>
   </form>
   <div class="cerca-resultats" id="cerca-llista" role="listbox" aria-label="Resultats"></div>
@@ -150,8 +212,8 @@
   <div class="hero-cos">
     <div>
       <form class="cerca-hero" role="search" action="https://quivoto.cat/observatori/" method="get">
-        <label for="cerca-hero-camp"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg><span class="nomes-lectors">Busca tu municipio, alcaldía o concejal</span></label>
-        <input id="cerca-hero-camp" type="search" name="q" data-cerca-camp autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Busca tu municipio, alcaldía o concejal">
+        <label for="cerca-hero-camp"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg><span class="nomes-lectors">Busca tu pueblo o un concejal</span></label>
+        <input id="cerca-hero-camp" type="search" name="q" data-cerca-camp autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Busca tu pueblo o un concejal">
       </form>
       <p class="entrada">Las municipales no van de siglas: van de si se quita un carril, de si sube el IBI, de si se compran pisos. <strong>quienvoto</strong> te hace 25 preguntas sobre tu municipio y te dice quién piensa como tú.</p>
       <form class="form-rapid" method="post" action="/api/subscribe.php" novalidate data-idioma="es">
@@ -188,7 +250,7 @@
     <path class="creu" d="M31 46 l7 8 l14 -16" stroke="#E2735A" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>
-      <span class="segell" id="compte" data-plantilla="Faltan {dies} días para el 23 de mayo de 2027">Faltan 262 días para el 23 de mayo de 2027</span>
+      <span class="segell" id="compte" data-plantilla="Faltan {dies} días para el 23 de mayo de 2027">Faltan 208 días para el 23 de mayo de 2027</span>
     </div>
   </div>
 </section>
@@ -208,20 +270,43 @@
     <h2>La brújula es en 2027. El Observatorio ya está</h2>
     <p class="obs-entrada">Quién manda en tu pueblo y con quién, qué se ha votado desde 1979, cómo están las cuentas y qué paga cada cual: los 947 municipios de Cataluña, uno a uno. Todo hecho con datos abiertos y cálculos que cualquiera puede repetir —ningún modelo de lenguaje de por medio— y cada cifra con su fuente al lado.</p>
     <ul class="obs-xifres">
-      <li><b>947</b><span>fichas municipales</span></li>
-      <li><b>2.626</b><span>páginas de candidatura</span></li>
-      <li><b>43</b><span>comarcas</span></li>
-      <li><b>1.894</b><span>ficheros de datos</span></li>
+      <li><b>947</b><span>municipios, cada uno con su ficha</span></li>
+      <li><b>4.807</b><span>electos que puedes buscar por su nombre</span></li>
+      <li><b>4</b><span>diputaciones y quién se sienta en ellas</span></li>
+      <li><b>40</b><span>consejos comarcales y quién se sienta en ellos</span></li>
     </ul>
-    <ul class="obs-reixa">
-      <li><a href="https://quivoto.cat/observatori/els947.html"><span class="obs-etiqueta">toda Cataluña</span><b>Los 947</b><span class="obs-txt">Todos los municipios en una lista, con buscador y filtros: dónde hubo pacto, dónde ha cambiado la alcaldía a mitad de mandato, dónde manda siempre la misma fuerza, dónde no hay oposición.</span></a></li>
-      <li><a href="https://quivoto.cat/observatori/m/esplugues-de-llobregat/"><span class="obs-etiqueta">una por municipio</span><b>La ficha de un pueblo</b><span class="obs-txt">Quién manda y con quién, el pleno con nombres y apellidos, las doce elecciones desde 1979, las cuentas, los impuestos, y qué sabemos y qué no.</span></a></li>
-      <li><a href="https://quivoto.cat/observatori/comparador/"><span class="obs-etiqueta">lado a lado</span><b>El comparador</b><span class="obs-txt">Hasta cuatro municipios medidos con la misma vara: deuda, gasto por habitante, impuestos, participación y fragmentación del pleno.</span></a></li>
-      <li><a href="https://quivoto.cat/observatori/c/barcelones/"><span class="obs-etiqueta">43 comarcas</span><b>Quién manda en la comarca</b><span class="obs-txt">Cuántas alcaldías tiene cada fuerza, cómo queda cada municipio respecto de la media comarcal y dónde están las excepciones.</span></a></li>
-      <li><a href="https://quivoto.cat/observatori/dades/"><span class="obs-etiqueta">abiertos</span><b>Descarga los datos</b><span class="obs-txt">1.894 ficheros en CSV y JSON, con el esquema documentado campo a campo y la fuente de cada cifra. Para que puedas comprobarnos y reutilizarlos.</span></a></li>
-      <li><a href="https://quivoto.cat/observatori/preguntes/"><span class="obs-etiqueta">demostración</span><b>Las preguntas</b><span class="obs-txt">Las 25 preguntas que hará la brújula, escritas leyendo las actas del pleno. Siete municipios, y ya se pueden responder.</span></a></li>
+    <h3 class="obs-subtitol">Qué hay de nuevo</h3>
+    <div class="obs-nou">
+      <article class="obs-carta">
+        <h4>La ficha de tu pueblo</h4>
+        <p>Quién manda y con quién, el pleno con nombres y apellidos, las elecciones desde 1979, las cuentas y los impuestos. Y ahora también:</p>
+        <ul class="obs-llista">
+          <li><b>La tira del pueblo</b>: quién ha tenido la alcaldía de 1979 a 2027, en una sola franja de colores.</li>
+          <li><b>Tus vecinos</b>: la deuda, el IBI y la participación, al lado de los pueblos con los que linda.</li>
+          <li><b>La casa</b>: el plan urbanístico, los pisos turísticos y lo que cuesta vivir allí.</li>
+          <li><b>El dinero de la Generalitat</b>: qué recibe el ayuntamiento y si le envía las cuentas.</li>
+          <li><b>Los servicios sociales</b>: a cuánta gente atienden y quién los presta.</li>
+          <li><b>Donde se vota a personas</b>: en los pueblos de menos de 250 habitantes, cuántos votos sacó cada persona en 2023.</li>
+        </ul>
+        <p class="obs-enllac"><a href="https://quivoto.cat/observatori/m/esplugues-de-llobregat/" hreflang="ca">Mira la de Esplugues de Llobregat</a></p>
+      </article>
+      <article class="obs-carta obs-carta-ens">
+        <ol class="obs-pisos" aria-hidden="true"><li>Diputación</li><li>Consejo comarcal</li><li>Tu ayuntamiento</li></ol>
+        <h4>Quién gobierna por encima de tu ayuntamiento</h4>
+        <p>Las 4 diputaciones y los 40 consejos comarcales. Nadie los vota directamente: quien se sienta en ellos sale de las municipales. Encontrarás quiénes son, cómo han llegado, qué cobran, qué gastan y qué reparten a los ayuntamientos.</p>
+        <p class="obs-enllac"><a href="https://quivoto.cat/observatori/ens/" hreflang="ca">Busca tu consejo y tu diputación</a></p>
+      </article>
+    </div>
+    <h3 class="obs-subtitol">Y lo que ya estaba</h3>
+    <ul class="obs-portes">
+      <li><a href="https://quivoto.cat/observatori/els947.html" hreflang="ca"><b>Los 947</b><span>Todos los municipios en una lista: dónde hubo pacto, dónde ha cambiado la alcaldía a mitad de mandato, dónde no hay oposición.</span></a></li>
+      <li><a href="https://quivoto.cat/observatori/mapa/" hreflang="ca"><b>El mapa</b><span>Los 947 pintados según quién manda, con los pactos, las mayorías y dónde se vota más a cada partido.</span></a></li>
+      <li><a href="https://quivoto.cat/observatori/comparador/" hreflang="ca"><b>El comparador</b><span>Hasta cuatro municipios medidos con la misma vara: deuda, gasto por habitante, impuestos y participación.</span></a></li>
+      <li><a href="https://quivoto.cat/observatori/c/" hreflang="ca"><b>Las comarcas</b><span>Cuántas alcaldías tiene cada fuerza en cada comarca, y dónde están las excepciones.</span></a></li>
+      <li><a href="https://quivoto.cat/observatori/dades/" hreflang="ca"><b>Los datos</b><span>Todo en CSV y JSON, con cada campo explicado y la fuente de cada cifra. Para comprobarnos y reutilizarlo.</span></a></li>
+      <li><a href="https://quivoto.cat/observatori/preguntes/" hreflang="ca"><b>Las preguntas</b><span>Las 25 preguntas de la brújula, escritas leyendo las actas del pleno. En siete municipios ya se pueden responder.</span></a></li>
     </ul>
-    <p class="obs-accions"><a class="boto" href="https://quivoto.cat/observatori/">Abre el Observatorio →</a></p>
+    <p class="obs-accions"><a class="boto" href="https://quivoto.cat/observatori/" hreflang="ca">Abre el Observatorio</a></p>
     <p class="obs-nota">Gratuito y sin registro. Google Analytics solo mide visitas de forma agregada. Las fichas están en catalán, que es la lengua de las fuentes oficiales. Es un borrador: trabajamos a la vista de todos y todavía no está revisado del todo.</p>
   </div>
 </section>
@@ -246,7 +331,7 @@
       <div class="prova-fet" id="prova-fet" hidden aria-live="polite"></div>
       <p class="peu-exemple" id="prova-peu">Afirmación 1 de 5 · Tus respuestas se quedan en el navegador. No se envía ninguna a ninguna parte.</p>
       <noscript><p class="peu-exemple">Necesitas JavaScript para responder aquí. También puedes hacer la demostración entera en el Observatorio.
-        <a href="https://quivoto.cat/observatori/preguntes/badalona/prova/">Haz las 25 de Badalona →</a></p></noscript>
+        <a href="https://quivoto.cat/observatori/preguntes/badalona/prova/">Haz las 25 de Badalona</a></p></noscript>
     </div>
     <script id="prova-dades" type="application/json">{"q": [{"t": "El Ayuntamiento debe congelar el tipo del impuesto sobre bienes inmuebles durante todo el próximo mandato.", "tema": "Fiscalidad", "ple": "Pleno del 27-10-2025: se aprueba subir un 2,4% los tipos del IBI para 2026, con 17 votos a favor (PP) y 9 en contra (PSC, ERC, BeCP y Guanyem).", "u": "https://media.seu-e.cat/acteca/801550006/2025/64b00b33-64ad-43a1-b1e0-2c42b8ca9dfe/Acta_15_Ple_27-10-2025.pdf", "p": [-2, 2, 2, 2, 2]}, {"t": "El Ayuntamiento debe prohibir las viviendas de uso turístico en todo el término municipal.", "tema": "Vivienda", "ple": "Pleno del 02-03-2026: la moción para prohibirlas en toda la ciudad a partir de octubre de 2028 se rechaza con 9 votos a favor y 18 en contra.", "u": "https://media.seu-e.cat/acteca/801550006/2026/6fb28919-82bb-4720-9c22-769aae94dcf8/ACTA_04_Ple_02-03-2026.pdf", "p": [-2, 2, 2, 2, 2]}, {"t": "El Ayuntamiento debe ampliar la red de cámaras de videovigilancia en las calles de la ciudad.", "tema": "Seguridad", "ple": "Pleno del 02-06-2025: modificación de presupuesto de 12.000.000 € para la red de videovigilancia, aprobada con 22 votos a favor (PP y PSC) y 5 en contra (ERC, BeCP y Guanyem), con informe desfavorable de la intervención.", "u": "https://media.seu-e.cat/acteca/801550006/2025/b671500a-56cc-44e2-ae1b-2109148680c4/Acta_07_Ple_02-06-2025.pdf", "p": [2, 2, -2, -2, -2]}, {"t": "El Ayuntamiento debe convertir la Guardia Urbana en una policía de barrio y de proximidad.", "tema": "Seguridad", "ple": "Pleno del 02-02-2026: la moción por un nuevo modelo de seguridad urbana basado en la proximidad se rechaza con 9 votos a favor y 18 en contra.", "u": "https://media.seu-e.cat/acteca/801550006/2026/51f8b74c-9fac-4d36-8aed-0ae3b19e3ece/ACTA_03_Ple_02-02-2026.pdf", "p": [-2, 2, 2, 2, 2]}, {"t": "El Ayuntamiento debe garantizar que todas las bibliotecas municipales abran todo el año.", "tema": "Cultura", "ple": "Pleno del 19-01-2026: la moción para la reapertura de las bibliotecas de Can Casacuberta, Llefià y Sant Roc se rechaza con 9 votos a favor y 18 en contra.", "u": "https://media.seu-e.cat/acteca/801550006/2026/041dcf67-5f41-4a30-9252-680e65776fdd/ACTA_02_Ple_19-01-2026.pdf", "p": [-2, 2, 2, 2, 2]}], "g": [{"nom": "Partit Popular", "sub": "18 concejales · gobierno"}, {"nom": "PSC-CP", "sub": "4 concejales"}, {"nom": "Esquerra Republicana", "sub": "2 concejales"}, {"nom": "Badalona En Comú Podem", "sub": "2 concejales"}, {"nom": "Guanyem Badalona", "sub": "1 concejal"}], "txt": {"compte": "Afirmación {n} de {t}", "resultat": "Con quién coincides", "ningu": "No has respondido ninguna afirmación.", "la_teva": "Tú:", "el_ple": "En el pleno:", "acta": "el acta", "detall": "Mira qué se votó en cada punto", "peu_nota": "Estas posiciones no son lo que el partido <em>dice<\/em> que piensa: se deducen de su voto en el pleno. Un partido puede votar en contra de una moción por quien la presenta y no por lo que dice. En 2027 serán las candidaturas quienes respondan, y entonces se podrán comparar las dos cosas.", "peu_mes": "Cinco afirmaciones es el mínimo que nos ponemos para dar un número. En Badalona hay veinticinco, y de momento siete municipios las tienen. La demostración completa está en catalán, que es la lengua de las actas.", "boto": "Haz las 25 de Badalona", "altres": "Los otros seis municipios", "torna": "Empezar de nuevo", "privadesa": "Tus respuestas se quedan en el navegador. No se envía ninguna a ninguna parte."}, "escala": ["Muy en desacuerdo", "Más bien no", "Ni sí ni no", "Más bien sí", "Muy de acuerdo"], "boto_url": "https://quivoto.cat/observatori/preguntes/badalona/prova/", "altres_url": "https://quivoto.cat/observatori/preguntes/"}</script>
     <script>
@@ -329,7 +414,7 @@
     h += '</ol></details>';
     h += '<p class="prova-mes">' + esc(T.peu_mes) + '</p>';
     h += '<p class="prova-accions">' +
-         '<a class="boto" href="' + D.boto_url + '">' + esc(T.boto) + ' →</a>' +
+         '<a class="boto" href="' + D.boto_url + '">' + esc(T.boto) + '</a>' +
          '<a class="prova-altres" href="' + D.altres_url + '">' + esc(T.altres) + '</a>' +
          '<button type="button" class="prova-torna" id="prova-torna">' + esc(T.torna) + '</button></p>';
 
@@ -373,32 +458,32 @@
     <p>Dieciséis temas que no salen en los debates de la tele y que deciden cómo es la calle donde vives. En quienvoto cada uno tiene su vecino, y es él quien te pregunta.</p>
   </div>
   <ul class="veinat-cinta">
-      <li style="--gir: -4deg; --retard: 0.0s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Habitatge" style="--retard: 0.0s"><path d="M8 22 L24 8 L40 22 V40 H8 Z" fill="#E2735A"/><path d="M8 22 L24 8 L40 22" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linejoin="round"/><g class="cara"><circle cx="19" cy="33" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="33" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="33.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="33.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="28.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="28.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 40.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Habitatge</span></li>
-      <li style="--gir: 3deg; --retard: 0.9s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Mobilitat" style="--retard: 0.9s"><rect x="6" y="12" width="36" height="24" rx="6" fill="#BFE8D2"/><rect x="10" y="17" width="9" height="8" rx="2" fill="#1E1B2E"/><rect x="22" y="17" width="9" height="8" rx="2" fill="#1E1B2E"/><rect x="34" y="17" width="4" height="8" rx="2" fill="#1E1B2E"/><circle cx="14" cy="39" r="4" fill="#1E1B2E"/><circle cx="34" cy="39" r="4" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="30" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="30" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="30.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="30.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="25.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="25.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 37.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Mobilitat</span></li>
-      <li style="--gir: -2deg; --retard: 1.8s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Urbanisme" style="--retard: 1.8s"><rect x="6" y="26" width="16" height="16" fill="#C9C4F2"/><path d="M36 42 V8 M36 8 H10 M10 8 V16 M40 8 H44" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 16 L10 22 L22 22 Z" fill="#1E1B2E"/><g class="cara"><circle cx="10" cy="34" r="3.6" fill="#FBF7EE"/><circle cx="18" cy="34" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="10" cy="34.4" r="1.9" fill="#1E1B2E"/><circle cx="18" cy="34.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="6" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="14" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M10 41.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Urbanisme</span></li>
-      <li style="--gir: 5deg; --retard: 2.7s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Seguretat" style="--retard: 2.7s"><path d="M24 5 L40 11 V24 C40 34 32 40 24 43 C16 40 8 34 8 24 V11 Z" fill="#FFD8B8"/><g class="cara"><circle cx="19" cy="21" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="21" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="21.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="21.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="16.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="16.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 28.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Seguretat</span></li>
-      <li style="--gir: -3deg; --retard: 3.6s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Fiscalitat" style="--retard: 3.6s"><circle cx="24" cy="24" r="17" fill="#BFE8D2"/><path d="M30 16 A9 9 0 1 0 30 32 M14 21 H27 M14 27 H27" fill="none" stroke="#1E1B2E" stroke-width="3.5" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="14" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="14" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="14.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="14.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="9.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="9.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 21.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Fiscalitat</span></li>
-      <li style="--gir: 2deg; --retard: 4.5s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Medi ambient" style="--retard: 4.5s"><path d="M40 8 C20 8 8 20 10 40 C30 40 42 28 40 8 Z" fill="#BFE8D2"/><g class="cara"><circle cx="21" cy="24" r="3.6" fill="#FBF7EE"/><circle cx="31" cy="24" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="21" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="31" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="17" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="27" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M22 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Medi ambient</span></li>
-      <li style="--gir: -5deg; --retard: 5.4s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Cultura" style="--retard: 5.4s"><path d="M6 14 H42 V22 A4 4 0 0 0 42 30 V38 H6 V30 A4 4 0 0 0 6 22 Z" fill="#C9C4F2"/><path d="M30 19 L32.2 24 L37.5 24.4 L33.4 27.8 L34.7 33 L30 30.2 L25.3 33 L26.6 27.8 L22.5 24.4 L27.8 24 Z" fill="#1E1B2E"/><g class="cara"><circle cx="13" cy="26" r="3.6" fill="#FBF7EE"/><circle cx="23" cy="26" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="13" cy="26.4" r="1.9" fill="#1E1B2E"/><circle cx="23" cy="26.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="9" y="21.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="19" y="21.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M14 33.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Cultura</span></li>
-      <li style="--gir: 4deg; --retard: 0.0s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Educació" style="--retard: 0.0s"><path d="M6 12 H22 A4 4 0 0 1 24 14 A4 4 0 0 1 26 12 H42 V36 H26 A4 4 0 0 0 24 38 A4 4 0 0 0 22 36 H6 Z" fill="#FFD8B8"/><path d="M11 19 H19 M11 25 H19 M29 19 H37 M29 25 H37" fill="none" stroke="#1E1B2E" stroke-width="2.5" stroke-linecap="round"/><g class="cara"><circle cx="18" cy="31" r="3.6" fill="#FBF7EE"/><circle cx="30" cy="31" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="18" cy="31.4" r="1.9" fill="#1E1B2E"/><circle cx="30" cy="31.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="14" y="26.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="26" y="26.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 38.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Educació</span></li>
-      <li style="--gir: -2deg; --retard: 0.9s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Serveis socials" style="--retard: 0.9s"><path d="M24 42 C10 32 4 24 6 16 C8 8 18 8 24 16 C30 8 40 8 42 16 C44 24 38 32 24 42 Z" fill="#E2735A"/><g class="cara"><circle cx="19" cy="17" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="17" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="17.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="17.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="12.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="12.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 24.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Serveis socials</span></li>
-      <li style="--gir: 3deg; --retard: 1.8s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Comerç" style="--retard: 1.8s"><rect x="8" y="20" width="32" height="22" fill="#FFD8B8"/><path d="M6 12 H42 L44 20 H4 Z" fill="#FFD8B8"/><path d="M4 20 H44" stroke="#1E1B2E" stroke-width="3"/><path d="M12 12 V20 M20 12 V20 M28 12 V20 M36 12 V20" stroke="#1E1B2E" stroke-width="2.5"/><g class="cara"><circle cx="19" cy="27" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="27" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="27.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="27.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="22.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="22.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 34.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Comerç</span></li>
-      <li style="--gir: -4deg; --retard: 2.7s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Participació" style="--retard: 2.7s"><rect x="10.2" y="23" width="5.6" height="13" rx="2.8" fill="#C9C4F2" transform="rotate(-32 13 29.5)"/><rect x="17.4" y="14" width="5.8" height="15" rx="2.9" fill="#C9C4F2"/><rect x="24.6" y="10" width="5.8" height="19" rx="2.9" fill="#C9C4F2"/><rect x="31.8" y="15" width="5.8" height="14" rx="2.9" fill="#C9C4F2"/><path d="M14 27 H38 V35 A8 8 0 0 1 30 43 H22 A8 8 0 0 1 14 35 Z" fill="#C9C4F2"/><g class="cara"><circle cx="21" cy="34" r="3.6" fill="#FBF7EE"/><circle cx="31" cy="34" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="21" cy="34.4" r="1.9" fill="#1E1B2E"/><circle cx="31" cy="34.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="17" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="27" y="29.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M22 41.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Participació</span></li>
-      <li style="--gir: 2deg; --retard: 3.6s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Llengua" style="--retard: 3.6s"><path d="M8 8 H40 V32 H22 L12 40 V32 H8 Z" fill="#E2735A"/><g class="cara"><circle cx="19" cy="18" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="18" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="18.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="18.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="13.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="13.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 25.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Llengua</span></li>
-      <li style="--gir: -3deg; --retard: 4.5s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Esports" style="--retard: 4.5s"><circle cx="24" cy="24" r="17" fill="#BFE8D2"/><g class="cara"><circle cx="19" cy="22" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="22" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="22.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="22.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="17.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="17.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 29.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Esports</span></li>
-      <li style="--gir: 5deg; --retard: 5.4s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Turisme" style="--retard: 5.4s"><path d="M24 44 C14 32 8 25 8 18 A16 16 0 0 1 40 18 C40 25 34 32 24 44 Z" fill="#FFD8B8"/><path d="M24 7 V4 M35 18 H38 M10 18 H13 M31.8 10.2 L34 8 M16.2 10.2 L14 8" stroke="#1E1B2E" stroke-width="2.2" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="18" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="18" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="18.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="18.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="13.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="13.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 25.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Turisme</span></li>
-      <li style="--gir: -2deg; --retard: 0.0s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Neteja" style="--retard: 0.0s"><path d="M10 14 H38 L35 42 H13 Z" fill="#C9C4F2"/><rect x="6" y="8" width="36" height="6" rx="3" fill="#1E1B2E"/><path d="M19 20 V36 M29 20 V36" stroke="#1E1B2E" stroke-width="2.5" stroke-linecap="round"/><g class="cara"><circle cx="19" cy="28" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="28" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="28.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="28.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 35.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Neteja</span></li>
-      <li style="--gir: 4deg; --retard: 0.9s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="El ple" style="--retard: 0.9s"><path d="M6 30 A18 18 0 0 1 42 30 Z" fill="#E2735A"/><path d="M6 30 A18 18 0 0 1 42 30" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round"/><rect x="18" y="34" width="12" height="8" rx="2" fill="#1E1B2E"/><g class="cara"><circle cx="19" cy="24" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="24" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="24.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="24.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="19.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 31.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>El ple</span></li>
+      <li style="--gir: -4deg; --retard: 0.0s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Habitatge" style="--retard: 0.0s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M7 22 L24 8 L41 22 V41 H7 Z"/><rect x="30" y="9" width="5" height="9"/></g><g fill="#E2735A"><path d="M7 22 L24 8 L41 22 V41 H7 Z"/><rect x="30" y="9" width="5" height="9"/></g><g class="cara"><circle cx="19" cy="28" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="28" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="28.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="28.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 35.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Habitatge</span></li>
+      <li style="--gir: 3deg; --retard: 0.9s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Mobilitat" style="--retard: 0.9s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="7" y="8" width="34" height="28" rx="6"/></g><g fill="#BFE8D2"><rect x="7" y="8" width="34" height="28" rx="6"/></g><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><circle cx="13" cy="37.5" r="3.5"/><circle cx="35" cy="37.5" r="3.5"/></g><g fill="#BFE8D2"><circle cx="13" cy="37.5" r="3.5"/><circle cx="35" cy="37.5" r="3.5"/></g><rect x="11" y="11" width="26" height="7.5" rx="2" fill="#FBF7EE" stroke="#1E1B2E" stroke-width="3"/><g class="cara"><circle cx="19" cy="25.5" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="25.5" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="25.9" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="25.9" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="21.3" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="21.3" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 32.9 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Mobilitat</span></li>
+      <li style="--gir: -2deg; --retard: 1.8s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Urbanisme" style="--retard: 1.8s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="32" y="8" width="5" height="33"/><rect x="10" y="8" width="31" height="5"/><rect x="7" y="21" width="18" height="20" rx="2"/></g><g fill="#C9C4F2"><rect x="32" y="8" width="5" height="33"/><rect x="10" y="8" width="31" height="5"/><rect x="7" y="21" width="18" height="20" rx="2"/></g><g class="cara"><circle cx="12" cy="28" r="3.6" fill="#FBF7EE"/><circle cx="20" cy="28" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="12" cy="28.4" r="1.9" fill="#1E1B2E"/><circle cx="20" cy="28.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="8" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="16" y="23.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M12 35.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Urbanisme</span></li>
+      <li style="--gir: 5deg; --retard: 2.7s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Seguretat" style="--retard: 2.7s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M24 7 L40 12 V23 C40 32 33 38 24 41 C15 38 8 32 8 23 V12 Z"/></g><g fill="#FFD8B8"><path d="M24 7 L40 12 V23 C40 32 33 38 24 41 C15 38 8 32 8 23 V12 Z"/></g><g class="cara"><circle cx="19" cy="20" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="20" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="20.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="20.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="15.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="15.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 27.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Seguretat</span></li>
+      <li style="--gir: -3deg; --retard: 3.6s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Fiscalitat" style="--retard: 3.6s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><circle cx="24" cy="24" r="17"/></g><g fill="#BFE8D2"><circle cx="24" cy="24" r="17"/></g><circle cx="24" cy="24" r="12.5" fill="none" stroke="#1E1B2E" stroke-width="3"/><g class="cara"><circle cx="19" cy="23" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="23" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="23.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="23.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="18.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="18.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 30.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Fiscalitat</span></li>
+      <li style="--gir: 2deg; --retard: 4.5s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Medi ambient" style="--retard: 4.5s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M40 8 C21 8 8 20 9 40 C29 41 41 28 40 8 Z"/></g><g fill="#BFE8D2"><path d="M40 8 C21 8 8 20 9 40 C29 41 41 28 40 8 Z"/></g><g class="cara"><circle cx="20" cy="23" r="3.6" fill="#FBF7EE"/><circle cx="30" cy="23" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="20" cy="23.4" r="1.9" fill="#1E1B2E"/><circle cx="30" cy="23.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="16" y="18.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="26" y="18.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M21 30.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Medi ambient</span></li>
+      <li style="--gir: -5deg; --retard: 5.4s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Cultura" style="--retard: 5.4s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M7 13 H27 A2.5 2.5 0 0 0 32 13 H41 V35 H32 A2.5 2.5 0 0 0 27 35 H7 Z"/></g><g fill="#C9C4F2"><path d="M7 13 H27 A2.5 2.5 0 0 0 32 13 H41 V35 H32 A2.5 2.5 0 0 0 27 35 H7 Z"/></g><path d="M36.0 19.4 L37.2 22.4 L40.4 22.6 L37.9 24.6 L38.7 27.7 L36.0 26.0 L33.3 27.7 L34.1 24.6 L31.6 22.6 L34.8 22.4 Z" fill="#1E1B2E" stroke="#1E1B2E" stroke-width="3" stroke-linejoin="round"/><g class="cara"><circle cx="13" cy="22" r="3.6" fill="#FBF7EE"/><circle cx="21" cy="22" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="13" cy="22.4" r="1.9" fill="#1E1B2E"/><circle cx="21" cy="22.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="9" y="17.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="17" y="17.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M13 29.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Cultura</span></li>
+      <li style="--gir: 4deg; --retard: 0.0s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Educació" style="--retard: 0.0s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M7 12 H20 A4 4 0 0 1 24 15 A4 4 0 0 1 28 12 H41 V36 H28 A4 4 0 0 0 24 39 A4 4 0 0 0 20 36 H7 Z"/></g><g fill="#FFD8B8"><path d="M7 12 H20 A4 4 0 0 1 24 15 A4 4 0 0 1 28 12 H41 V36 H28 A4 4 0 0 0 24 39 A4 4 0 0 0 20 36 H7 Z"/></g><path d="M11 17 H19 M29 17 H37" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><g class="cara"><circle cx="18" cy="26" r="3.6" fill="#FBF7EE"/><circle cx="30" cy="26" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="18" cy="26.4" r="1.9" fill="#1E1B2E"/><circle cx="30" cy="26.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="14" y="21.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="26" y="21.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 33.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Educació</span></li>
+      <li style="--gir: -2deg; --retard: 0.9s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Serveis socials" style="--retard: 0.9s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M24 41 C11 32 7 25 7.5 17 C9 9.5 18.5 9 24 16 C29.5 9 39 9.5 40.5 17 C41 25 37 32 24 41 Z"/></g><g fill="#E2735A"><path d="M24 41 C11 32 7 25 7.5 17 C9 9.5 18.5 9 24 16 C29.5 9 39 9.5 40.5 17 C41 25 37 32 24 41 Z"/></g><g class="cara"><circle cx="19" cy="20.5" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="20.5" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="20.9" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="20.9" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="16.3" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="16.3" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 27.9 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Serveis socials</span></li>
+      <li style="--gir: 3deg; --retard: 1.8s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Comerç" style="--retard: 1.8s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="9" y="20" width="30" height="21"/><path d="M10 10 H38 L41 20 H7 Z"/></g><g fill="#FFD8B8"><rect x="9" y="20" width="30" height="21"/><path d="M10 10 H38 L41 20 H7 Z"/></g><path d="M7 20 H41" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 11.5 L16.5 18.5 M24 11.5 V18.5 M30.5 11.5 L31.5 18.5" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><g class="cara"><circle cx="19" cy="26.5" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="26.5" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="26.9" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="26.9" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="22.3" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="22.3" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 33.9 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Comerç</span></li>
+      <li style="--gir: -4deg; --retard: 2.7s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Participació" style="--retard: 2.7s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="9" y="21" width="6" height="13" rx="3" transform="rotate(-28 12 31)"/><rect x="15" y="13" width="6" height="14" rx="3"/><rect x="21" y="8" width="6" height="19" rx="3"/><rect x="27" y="10" width="6" height="17" rx="3"/><rect x="33" y="14" width="6" height="13" rx="3"/><path d="M15 23 H39 V33 A8 8 0 0 1 31 41 H23 A8 8 0 0 1 15 33 Z"/></g><g fill="#C9C4F2"><rect x="9" y="21" width="6" height="13" rx="3" transform="rotate(-28 12 31)"/><rect x="15" y="13" width="6" height="14" rx="3"/><rect x="21" y="8" width="6" height="19" rx="3"/><rect x="27" y="10" width="6" height="17" rx="3"/><rect x="33" y="14" width="6" height="13" rx="3"/><path d="M15 23 H39 V33 A8 8 0 0 1 31 41 H23 A8 8 0 0 1 15 33 Z"/></g><path d="M21 17 V22 M27 13 V22 M33 17 V22" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><g class="cara"><circle cx="22" cy="29" r="3.6" fill="#FBF7EE"/><circle cx="32" cy="29" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="22" cy="29.4" r="1.9" fill="#1E1B2E"/><circle cx="32" cy="29.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="18" y="24.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="28" y="24.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M23 36.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Participació</span></li>
+      <li style="--gir: 2deg; --retard: 3.6s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Llengua" style="--retard: 3.6s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M11 8 H37 A4 4 0 0 1 41 12 V28 A4 4 0 0 1 37 32 H23 L14 40 V32 H11 A4 4 0 0 1 7 28 V12 A4 4 0 0 1 11 8 Z"/></g><g fill="#E2735A"><path d="M11 8 H37 A4 4 0 0 1 41 12 V28 A4 4 0 0 1 37 32 H23 L14 40 V32 H11 A4 4 0 0 1 7 28 V12 A4 4 0 0 1 11 8 Z"/></g><g class="cara"><circle cx="19" cy="17" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="17" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="17.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="17.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="12.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="12.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 24.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Llengua</span></li>
+      <li style="--gir: -3deg; --retard: 4.5s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Esports" style="--retard: 4.5s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><circle cx="24" cy="24" r="17"/></g><g fill="#BFE8D2"><circle cx="24" cy="24" r="17"/></g><path d="M11 13 C15 19 15 29 11 35 M37 13 C33 19 33 29 37 35" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><g class="cara"><circle cx="20" cy="22" r="3.6" fill="#FBF7EE"/><circle cx="28" cy="22" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="20" cy="22.4" r="1.9" fill="#1E1B2E"/><circle cx="28" cy="22.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="16" y="17.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="24" y="17.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 29.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Esports</span></li>
+      <li style="--gir: 5deg; --retard: 5.4s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Turisme" style="--retard: 5.4s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="7" y="15" width="34" height="25" rx="4"/><path d="M17 16 V12 A4 4 0 0 1 21 8 H27 A4 4 0 0 1 31 12 V16 H27 V12 H21 V16 Z"/></g><g fill="#FFD8B8"><rect x="7" y="15" width="34" height="25" rx="4"/><path d="M17 16 V12 A4 4 0 0 1 21 8 H27 A4 4 0 0 1 31 12 V16 H27 V12 H21 V16 Z"/></g><path d="M13 15 V40 M35 15 V40" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><g class="cara"><circle cx="20" cy="25" r="3.6" fill="#FBF7EE"/><circle cx="28" cy="25" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="20" cy="25.4" r="1.9" fill="#1E1B2E"/><circle cx="28" cy="25.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="16" y="20.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="24" y="20.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 32.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Turisme</span></li>
+      <li style="--gir: -2deg; --retard: 0.0s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Neteja" style="--retard: 0.0s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><rect x="20" y="7" width="8" height="5" rx="2"/><rect x="7" y="11" width="34" height="5" rx="2.5"/><path d="M10 16 H38 L35.5 41 H12.5 Z"/></g><g fill="#C9C4F2"><rect x="20" y="7" width="8" height="5" rx="2"/><rect x="7" y="11" width="34" height="5" rx="2.5"/><path d="M10 16 H38 L35.5 41 H12.5 Z"/></g><path d="M8.5 16 H39.5" fill="none" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><g class="cara"><circle cx="19" cy="25" r="3.6" fill="#FBF7EE"/><circle cx="29" cy="25" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="19" cy="25.4" r="1.9" fill="#1E1B2E"/><circle cx="29" cy="25.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="15" y="20.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="25" y="20.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 32.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>Neteja</span></li>
+      <li style="--gir: 4deg; --retard: 0.9s"><svg class="icona" width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="El ple" style="--retard: 0.9s"><g fill="#1E1B2E" stroke="#1E1B2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><path d="M7 33 A17 17 0 0 1 41 33 Z"/></g><g fill="#E2735A"><path d="M7 33 A17 17 0 0 1 41 33 Z"/></g><g class="cara"><circle cx="20" cy="22" r="3.6" fill="#FBF7EE"/><circle cx="28" cy="22" r="3.6" fill="#FBF7EE"/><g class="pupilles"><circle cx="20" cy="22.4" r="1.9" fill="#1E1B2E"/><circle cx="28" cy="22.4" r="1.9" fill="#1E1B2E"/></g><g class="parpelles"><rect x="16" y="17.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/><rect x="24" y="17.8" width="8" height="8.4" rx="3.4" fill="#FBF7EE"/></g><path class="boca" d="M20 29.4 q4 3 8 0" stroke="#1E1B2E" stroke-width="2.1" fill="none" stroke-linecap="round"/></g></svg><span>El ple</span></li>
   </ul>
 </section>
 
 <section class="dif">
   <h2>Por qué no es una encuesta más</h2>
   <ul class="editorial">
-      <li><h3>Los partidos responden, y si no responden también se ve</h3><p>Invitamos a cada candidatura a contestar el mismo cuestionario. Quien no contesta, aparece marcado como “no ha respondido”.</p></li>
-      <li><h3>Decimos qué han dicho y qué han hecho</h3><p>Si lo que un partido contesta no cuadra con lo que votó en el pleno, lo enseñamos todo.</p></li>
+      <li><h3>Los partidos responden, y si no responden también se ve</h3><p>Invitamos a cada candidatura a contestar el mismo cuestionario. Quien no contesta aparece marcado con un «no ha respondido».</p></li>
+      <li><h3>Decimos qué han dicho y qué han hecho</h3><p>Si lo que un partido contesta no cuadra con lo que votó en el pleno, te enseñamos las dos cosas.</p></li>
       <li><h3>Tus respuestas no salen de tu móvil</h3><p>No hay cuentas ni perfiles. El cálculo se hace en tu navegador.</p></li>
-      <li><h3>Independiente</h3><p>Sin financiación de ningún partido ni administración. Metodología pública y abierta a crítica.</p></li>
+      <li><h3>Independiente</h3><p>Sin financiación de ningún partido ni administración. La metodología es pública y abierta a la crítica.</p></li>
   </ul>
 </section>
 
@@ -452,20 +537,21 @@
 </main>
 
 <footer class="peu peu-complet"><div>
-      <div class="crida"><div class="cara"><svg class="catalunya" width="88" height="88" viewBox="0 0 120 120" aria-hidden="true">
+      <div class="peu-mascota"><svg class="catalunya" width="84" height="84" viewBox="0 0 120 120" aria-hidden="true">
       <path d="M26 18Q36 20 48 25Q55 28 62 30Q70 33 77 33Q85 33 91 29L101 37Q98 47 91 57Q84 62 75 66Q67 72 59 77L41 83Q34 86 32 91L37 96 28 98 21 103Q14 100 14 93L16 79Q17 71 17 64Q19 57 24 52Q28 44 27 34Z" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
       <g fill="#E2735A"><circle cx="36" cy="30" r="2.6"/><circle cx="58" cy="37" r="2.6"/><circle cx="81" cy="42" r="2.6"/><circle cx="33" cy="39" r="2.6"/><circle cx="23" cy="68" r="2.6"/><circle cx="32" cy="85" r="2.6"/><circle cx="24" cy="94" r="2.6"/></g>
       <g class="ulls"><circle cx="40" cy="53" r="9" fill="#fff" stroke="#1E1B2E" stroke-width="3"/><circle cx="62" cy="53" r="9" fill="#fff" stroke="#1E1B2E" stroke-width="3"/><circle cx="40" cy="54" r="4.2" fill="#1E1B2E"/><circle cx="62" cy="54" r="4.2" fill="#1E1B2E"/><path d="M40 68q10 9 20 0" stroke="#1E1B2E" stroke-width="4" fill="none" stroke-linecap="round"/></g>
     </svg></div>
-        <div class="diu"><a class="marca-peu" href="/">quienvoto</a><p class="lema">Quién gobierna cada uno de los 947 municipios de Cataluña, qué paga la gente y qué se prometió. <b>Sin ningún modelo de lenguaje por medio</b>: fuentes oficiales, cada cifra con la suya al lado y cálculos que cualquiera puede repetir.</p></div>
-        <ul class="xifres"><li><b>947</b><span>municipios</span></li><li><b>4.807</b><span>electos</span></li><li><b>2.626</b><span>candidaturas</span></li></ul></div>
-      <nav class="anar" aria-label="Más del Observatorio"><a href="https://quivoto.cat/observatori/els947.html">Los 947</a><a href="https://quivoto.cat/observatori/mapa/">El mapa</a><a href="https://quivoto.cat/observatori/ranquings/">Rankings</a><a href="https://quivoto.cat/observatori/comparador/">El comparador</a><a href="https://quivoto.cat/observatori/c/">Las comarcas</a><a href="https://quivoto.cat/observatori/amb/">El Área Metropolitana</a><a href="https://quivoto.cat/observatori/preguntes/">Las preguntas</a><a href="https://quivoto.cat/observatori/dades/">Los datos</a><a href="https://quivoto.cat/observatori/dades/#fonts">Todas las fuentes</a></nav>
-      <p class="lletra"><b>Observatorio actualizado el 2026-09-03</b> con datos abiertos de la Generalitat de Cataluña, el Consorcio AOC, Idescat, el Ministerio de Hacienda y el Síndic de Greuges. Consulta <a href="https://quivoto.cat/observatori/dades/#fonts">el catálogo completo de fuentes, métodos y licencias</a>.</p>
-      <p class="legal"><a href="/avis-legal.html">Aviso legal</a> · <a href="/privadesa.html">Privacidad</a> · <a href="/es/prensa.html">Prensa</a></p>
-      <p class="credit">Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a></p>
+      <div class="peu-qui"><div><a class="peu-marca" href="/">quienvoto</a><p class="peu-lema">Quién gobierna cada uno de los 947 municipios de Cataluña, qué paga la gente y qué se prometió. <b>Sin ningún modelo de lenguaje por medio</b>: fuentes oficiales y cálculos que cualquiera puede repetir.</p></div><ul class="peu-xifres"><li><b>947</b><span>municipios</span></li><li><b>4.807</b><span>electos</span></li><li><b>2.626</b><span>candidaturas</span></li></ul></div>
+      <nav class="peu-anar" aria-label="Más del Observatorio"><div class="peu-grup"><h2>Explora</h2><ul><li><a href="https://quivoto.cat/observatori/els947.html">Los 947</a></li><li><a href="https://quivoto.cat/observatori/mapa/">El mapa</a></li><li><a href="https://quivoto.cat/observatori/ranquings/">Rankings</a></li><li><a href="https://quivoto.cat/observatori/comparador/">El comparador</a></li></ul></div><div class="peu-grup"><h2>Territorio</h2><ul><li><a href="https://quivoto.cat/observatori/c/">Las comarcas</a></li><li><a href="https://quivoto.cat/observatori/amb/">El Área Metropolitana</a></li><li><a href="https://quivoto.cat/observatori/ens/">Diputaciones y consejos</a></li></ul></div><div class="peu-grup"><h2>Cómo está hecho</h2><ul><li><a href="https://quivoto.cat/observatori/preguntes/">Las preguntas</a></li><li><a href="https://quivoto.cat/observatori/dades/">Los datos</a></li><li><a href="https://quivoto.cat/observatori/dades/#fonts">Todas las fuentes</a></li></ul></div></nav>
+      <p class="peu-fonts">Los datos son de la Generalitat de Cataluña, el Consorcio AOC, Idescat, el Ministerio de Hacienda y el Síndic de Greuges. <b>Puedes reutilizarlos citando la fuente</b> (los del portal de la Seu-e son CC0). De dónde sale cada cifra y cómo se calcula, en el <a href="https://quivoto.cat/observatori/dades/#fonts">catálogo de fuentes</a>. Observatorio actualizado el <time datetime="2026-10-27">27 de octubre de 2026</time>.</p>
+      <div class="peu-baix">
+        <p class="peu-legal"><a href="/avis-legal.html">Aviso legal</a> · <a href="/privadesa.html">Privacidad</a> · <a href="/es/prensa.html">Prensa</a></p>
+        <p class="peu-credit">Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a></p>
+      </div>
     </div></footer>
 
 <script src="/assets/app.js" defer></script>
-<script src="/assets/cercador.js?v=7003944b" defer></script>
+<script src="/assets/cercador.js?v=c175a28e" defer></script>
 </body>
 </html>

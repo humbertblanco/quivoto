@@ -8,8 +8,8 @@
 <meta name="description" content="Te avisaremos cuando abramos tu municipio. Mientras, ya puedes cerrar esta pestaña.">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
-<link rel="stylesheet" href="/assets/styles.css?v=e14ea480">
-<link rel="stylesheet" href="/assets/cercador.css?v=13f0c534">
+<link rel="stylesheet" href="/assets/styles.css?v=3c16aea2">
+<link rel="stylesheet" href="/assets/cercador.css?v=52187249">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-9ZB1XZ3LHT"></script>
 <script>
@@ -24,11 +24,40 @@
 <a class="salta" href="#contingut">Ir al contenido</a>
 <header class="capcalera">
   <a class="logo" href="/es/"><span class="marca" style="font-size:30px">quienvoto</span></a>
-  <nav class="menu" aria-label="Secciones del Observatorio"><a href="https://quivoto.cat/observatori/" hreflang="ca">Observatori</a><a href="https://quivoto.cat/observatori/els947.html" hreflang="ca">Els 947</a><a href="https://quivoto.cat/observatori/mapa/" hreflang="ca">Mapa</a><a href="https://quivoto.cat/observatori/ranquings/" hreflang="ca">Rànquings</a><a href="https://quivoto.cat/observatori/c/" hreflang="ca">Comarques</a><a href="https://quivoto.cat/observatori/partit/" hreflang="ca">Partits</a><a href="https://quivoto.cat/observatori/trajectoria/" hreflang="ca">Trajectòries</a><a href="https://quivoto.cat/observatori/comparador/" hreflang="ca">Comparador</a></nav>
+  <nav class="menu" id="menu-seccions" aria-label="Secciones del Observatorio"><a href="https://quivoto.cat/observatori/" hreflang="ca">Observatori</a><a href="https://quivoto.cat/observatori/els947.html" hreflang="ca">Els 947</a><a href="https://quivoto.cat/observatori/mapa/" hreflang="ca">Mapa</a><a href="https://quivoto.cat/observatori/ranquings/" hreflang="ca">Rànquings</a><a href="https://quivoto.cat/observatori/c/" hreflang="ca">Comarques</a><a href="https://quivoto.cat/observatori/partit/" hreflang="ca">Partits</a><a href="https://quivoto.cat/observatori/trajectoria/" hreflang="ca">Trajectòries</a><a href="https://quivoto.cat/observatori/comparador/" hreflang="ca">Comparador</a></nav>
   <span class="ranura-cerca"></span>
   <span class="etiqueta">Pronto</span>
   <a href="https://quivoto.cat" hreflang="ca" class="idioma">Català</a>
 </header>
+<script id="capcalera-menu">(function () {
+  var cap = document.currentScript && document.currentScript.previousElementSibling;
+  if (!cap || !cap.classList.contains("capcalera")) return;
+  var menu = cap.querySelector(".menu");
+  if (!menu) return;
+  var boto = document.createElement("button");
+  boto.type = "button";
+  boto.className = "obre-menu";
+  boto.textContent = "Menú";
+  boto.setAttribute("aria-expanded", "false");
+  boto.setAttribute("aria-controls", menu.id);
+  cap.insertBefore(boto, menu);
+  cap.classList.add("amb-plec");
+  function obert() { return boto.getAttribute("aria-expanded") === "true"; }
+  function posa(si) {
+    boto.setAttribute("aria-expanded", si ? "true" : "false");
+    cap.classList.toggle("obert", si);
+  }
+  boto.addEventListener("click", function () { posa(!obert()); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && obert()) { posa(false); boto.focus(); }
+  });
+  document.addEventListener("click", function (e) {
+    if (obert() && !menu.contains(e.target) && !boto.contains(e.target)) posa(false);
+  });
+  cap.addEventListener("focusout", function (e) {
+    if (obert() && e.relatedTarget && !menu.contains(e.relatedTarget) && e.relatedTarget !== boto) posa(false);
+  });
+})();</script>
 <!-- generat per packages/pipeline/src/publish/cercador.ts: no editar a mà -->
 <dialog class="cercador" data-base="/observatori/" aria-label="Cerca un municipi, una persona, un partit o un bloc d'aquesta pàgina">
   <form method="dialog" class="cerca-cap">
@@ -36,7 +65,7 @@
          stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>
     <input type="search" id="cerca-camp" autocomplete="off" spellcheck="false"
            role="combobox" aria-expanded="false" aria-controls="cerca-llista" aria-autocomplete="list"
-           placeholder="Busca tu municipio, alcaldía o concejal" aria-label="Cerca">
+           placeholder="Busca tu pueblo o un concejal" aria-label="Cerca">
     <button value="tanca" class="cerca-tanca">Esc</button>
   </form>
   <div class="cerca-resultats" id="cerca-llista" role="listbox" aria-label="Resultats"></div>
@@ -68,18 +97,19 @@
   <p><a class="boto" href="/">Volver al inicio</a></p>
 </main>
 <footer class="peu peu-complet"><div>
-      <div class="crida"><div class="cara"><svg class="catalunya" width="88" height="88" viewBox="0 0 120 120" aria-hidden="true">
+      <div class="peu-mascota"><svg class="catalunya" width="84" height="84" viewBox="0 0 120 120" aria-hidden="true">
       <path d="M26 18Q36 20 48 25Q55 28 62 30Q70 33 77 33Q85 33 91 29L101 37Q98 47 91 57Q84 62 75 66Q67 72 59 77L41 83Q34 86 32 91L37 96 28 98 21 103Q14 100 14 93L16 79Q17 71 17 64Q19 57 24 52Q28 44 27 34Z" fill="#BFE8D2" stroke="#1E1B2E" stroke-width="4" stroke-linejoin="round"/>
       <g fill="#E2735A"><circle cx="36" cy="30" r="2.6"/><circle cx="58" cy="37" r="2.6"/><circle cx="81" cy="42" r="2.6"/><circle cx="33" cy="39" r="2.6"/><circle cx="23" cy="68" r="2.6"/><circle cx="32" cy="85" r="2.6"/><circle cx="24" cy="94" r="2.6"/></g>
       <g class="ulls"><circle cx="40" cy="53" r="9" fill="#fff" stroke="#1E1B2E" stroke-width="3"/><circle cx="62" cy="53" r="9" fill="#fff" stroke="#1E1B2E" stroke-width="3"/><circle cx="40" cy="54" r="4.2" fill="#1E1B2E"/><circle cx="62" cy="54" r="4.2" fill="#1E1B2E"/><path d="M40 68q10 9 20 0" stroke="#1E1B2E" stroke-width="4" fill="none" stroke-linecap="round"/></g>
     </svg></div>
-        <div class="diu"><a class="marca-peu" href="/">quienvoto</a><p class="lema">Quién gobierna cada uno de los 947 municipios de Cataluña, qué paga la gente y qué se prometió. <b>Sin ningún modelo de lenguaje por medio</b>: fuentes oficiales, cada cifra con la suya al lado y cálculos que cualquiera puede repetir.</p></div>
-        <ul class="xifres"><li><b>947</b><span>municipios</span></li><li><b>4.807</b><span>electos</span></li><li><b>2.626</b><span>candidaturas</span></li></ul></div>
-      <nav class="anar" aria-label="Más del Observatorio"><a href="https://quivoto.cat/observatori/els947.html">Los 947</a><a href="https://quivoto.cat/observatori/mapa/">El mapa</a><a href="https://quivoto.cat/observatori/ranquings/">Rankings</a><a href="https://quivoto.cat/observatori/comparador/">El comparador</a><a href="https://quivoto.cat/observatori/c/">Las comarcas</a><a href="https://quivoto.cat/observatori/amb/">El Área Metropolitana</a><a href="https://quivoto.cat/observatori/preguntes/">Las preguntas</a><a href="https://quivoto.cat/observatori/dades/">Los datos</a><a href="https://quivoto.cat/observatori/dades/#fonts">Todas las fuentes</a></nav>
-      <p class="lletra"><b>Observatorio actualizado el 2026-09-03</b> con datos abiertos de la Generalitat de Cataluña, el Consorcio AOC, Idescat, el Ministerio de Hacienda y el Síndic de Greuges. Consulta <a href="https://quivoto.cat/observatori/dades/#fonts">el catálogo completo de fuentes, métodos y licencias</a>.</p>
-      <p class="legal"><a href="/avis-legal.html">Aviso legal</a> · <a href="/privadesa.html">Privacidad</a> · <a href="/es/prensa.html">Prensa</a></p>
-      <p class="credit">Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a></p>
+      <div class="peu-qui"><div><a class="peu-marca" href="/">quienvoto</a><p class="peu-lema">Quién gobierna cada uno de los 947 municipios de Cataluña, qué paga la gente y qué se prometió. <b>Sin ningún modelo de lenguaje por medio</b>: fuentes oficiales y cálculos que cualquiera puede repetir.</p></div><ul class="peu-xifres"><li><b>947</b><span>municipios</span></li><li><b>4.807</b><span>electos</span></li><li><b>2.626</b><span>candidaturas</span></li></ul></div>
+      <nav class="peu-anar" aria-label="Más del Observatorio"><div class="peu-grup"><h2>Explora</h2><ul><li><a href="https://quivoto.cat/observatori/els947.html">Los 947</a></li><li><a href="https://quivoto.cat/observatori/mapa/">El mapa</a></li><li><a href="https://quivoto.cat/observatori/ranquings/">Rankings</a></li><li><a href="https://quivoto.cat/observatori/comparador/">El comparador</a></li></ul></div><div class="peu-grup"><h2>Territorio</h2><ul><li><a href="https://quivoto.cat/observatori/c/">Las comarcas</a></li><li><a href="https://quivoto.cat/observatori/amb/">El Área Metropolitana</a></li><li><a href="https://quivoto.cat/observatori/ens/">Diputaciones y consejos</a></li></ul></div><div class="peu-grup"><h2>Cómo está hecho</h2><ul><li><a href="https://quivoto.cat/observatori/preguntes/">Las preguntas</a></li><li><a href="https://quivoto.cat/observatori/dades/">Los datos</a></li><li><a href="https://quivoto.cat/observatori/dades/#fonts">Todas las fuentes</a></li></ul></div></nav>
+      <p class="peu-fonts">Los datos son de la Generalitat de Cataluña, el Consorcio AOC, Idescat, el Ministerio de Hacienda y el Síndic de Greuges. <b>Puedes reutilizarlos citando la fuente</b> (los del portal de la Seu-e son CC0). De dónde sale cada cifra y cómo se calcula, en el <a href="https://quivoto.cat/observatori/dades/#fonts">catálogo de fuentes</a>. Observatorio actualizado el <time datetime="2026-10-27">27 de octubre de 2026</time>.</p>
+      <div class="peu-baix">
+        <p class="peu-legal"><a href="/avis-legal.html">Aviso legal</a> · <a href="/privadesa.html">Privacidad</a> · <a href="/es/prensa.html">Prensa</a></p>
+        <p class="peu-credit">Un proyecto de <a href="https://x.com/humbertblanco">Humbert Blanco</a> gracias a <a href="https://damosenelblanco.com/?utm_source=quivoto&amp;utm_medium=referral&amp;utm_campaign=credits">Damos en el Blanco</a> · <a href="https://github.com/humbertblanco/quivoto">GitHub</a></p>
+      </div>
     </div></footer>
-<script src="/assets/cercador.js?v=7003944b" defer></script>
+<script src="/assets/cercador.js?v=c175a28e" defer></script>
 </body>
 </html>
