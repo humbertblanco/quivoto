@@ -1,9 +1,9 @@
-import { eq, sql, type SQLWrapper } from "drizzle-orm";
+import { and, eq, inArray, sql, type SQLWrapper } from "drizzle-orm";
 import { electionParticipation, municipalities, municipalityMetrics, type Db } from "@quivoto/db";
 import { BRANDS_BY_ID } from "@quivoto/shared-schemas/brands";
 import { buildPeerGroups, medianOf, percentileOf, type PeerGroup } from "../derive/peers";
 import { slugify } from "../lib/text";
-import { RADIOGRAFIA_CSS } from "./estil";
+import { RADIOGRAFIA_CSS, senseComentaris } from "./estil";
 import { SITE } from "./config";
 import { ARREL_OBSERVATORI, capSeo, filAriadna, FITXER_OG, imatgeOg } from "./seo";
 import { llocsContinguts } from "./seo-ld";
@@ -20,6 +20,9 @@ import { TERRITORI_CSS, renderBlocsPoder } from "./territori";
 import { projecta } from "./mapa";
 import { capcalera, tipografia } from "./capcalera";
 import { cercador } from "./cercador";
+import { combinaMunicipis } from "./vot-seccions-amb";
+import { VOT_SECCIONS_CSS, renderVotSeccionsBloc } from "./vot-seccions-fitxa";
+import { URL_XAMFRA, type VotSeccionsMetric } from "../jobs/j47-vot-seccions";
 import { peu } from "./peu";
 
 /**
@@ -138,6 +141,8 @@ export type AmbData = {
   comarques: AmbComarca[];
   /** El conjunt on s'ha de llegir cada xifra metropolitana: els 947 sencers. */
   catalunya: ComarcaData["catalunya"];
+  /** El vot per secció dels 36 en un sol mapa (J47), si n'hi ha prou. */
+  votSeccions?: ReturnType<typeof combinaMunicipis>;
 };
 
 // -------------------------------------------------------------- presentació
@@ -698,7 +703,19 @@ export async function loadAmb(db: Db, comarques: readonly ComarcaData[]): Promis
     .map(([def, lectures]) => buildIndicador(def, lectures, dins, peers))
     .filter((i): i is AmbIndicador => i !== null);
 
+  // ---- el vot per secció dels 36, en un sol mapa (J47) ----------------
+  const ids = [...dins];
+  const votRows = ids.length
+    ? await db
+        .select({ data: municipalityMetrics.data, ine5: municipalities.ine5, nom: municipalities.name })
+        .from(municipalityMetrics)
+        .innerJoin(municipalities, eq(municipalities.id, municipalityMetrics.municipalityId))
+        .where(and(eq(municipalityMetrics.kind, "votSeccions"), inArray(municipalityMetrics.municipalityId, ids)))
+    : [];
+  const votSeccions = combinaMunicipis(votRows.map((r) => ({ ine5: r.ine5, nom: r.nom, m: r.data as VotSeccionsMetric })));
+
   return {
+    votSeccions,
     nom: membres[0]?.nom ?? "Àrea Metropolitana de Barcelona",
     municipis,
     habitants,
@@ -1216,7 +1233,7 @@ export function renderAmb(data: AmbData, generatedAt: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${cap}
 ${tipografia("../")}
-<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${AMB_CSS}${data.municipis.some((m) => m.tira) ? TIRA_POBLE_CSS : ""}</style>
+<style>${RADIOGRAFIA_CSS}${MASCOTA_CSS}${AMB_CSS}${data.municipis.some((m) => m.tira) ? TIRA_POBLE_CSS : ""}${data.votSeccions ? senseComentaris(VOT_SECCIONS_CSS) : ""}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -1306,6 +1323,17 @@ ${cercador("../")}
       })()
     : ""}</p>
 </section>
+
+${data.votSeccions ? `<section class="bloc" id="vot-seccions">
+  <h2>Com vota l'àrea, barri a barri</h2>
+  ${renderVotSeccionsBloc(data.votSeccions.m, {
+    nom: "l'àrea metropolitana",
+    municipis: data.votSeccions.municipis,
+    tot: "Tota l'àrea metropolitana",
+    xamfra: `${URL_XAMFRA}/`,
+    entrada: `Les ${data.votSeccions.m.seccions.length.toLocaleString("ca-ES")} seccions censals dels ${Object.keys(data.votSeccions.municipis).length} municipis en un sol mapa. Cada llista municipal es pinta amb la seva força (PSC, Junts, Comuns…) i les llistes locals van juntes. Fet amb el mètode de Xamfrà, el visor 3D de l'àrea metropolitana.`,
+  })}
+</section>` : ""}
 
 ${renderBlocsPoder(data, { base: "../", ambit: "amb" })}
 
