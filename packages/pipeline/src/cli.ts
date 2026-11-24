@@ -44,6 +44,7 @@ import { j43AltresEleccions } from "./jobs/j43-altres-eleccions";
 import { j44Socioeconomia } from "./jobs/j44-socioeconomia";
 import { j45Gaip } from "./jobs/j45-gaip";
 import { j46HabitatgesTuristics } from "./jobs/j46-habitatges-turistics";
+import { j47VotSeccions } from "./jobs/j47-vot-seccions";
 import { deriveMetrics } from "./derive/metrics";
 import { deriveMayorChanges } from "./derive/mayor-changes";
 import { deriveFinances } from "./derive/finances";
@@ -137,6 +138,10 @@ const COMMANDS = {
   j45: j45Gaip,
   // J46 a mà, després de J1: registre de turisme viu, consulta agregada (cap titular). No és a `ORDER`.
   j46: j46HabitatgesTuristics,
+  // J47 a mà, després de J1: el vot per secció censal (municipals 2023 i Parlament 2024), les
+  // seccions de l'ICGC i la renda per secció de l'ADRH. Amb QUIVOTO_XAMFRA_DADES llegeix els
+  // fitxers que Xamfrà ja publica (36 de l'AMB) i no demana res a la xarxa. No és a `ORDER`.
+  j47: j47VotSeccions,
   derive: deriveMetrics,
   alcaldies: deriveMayorChanges,
   comptes: deriveFinances,

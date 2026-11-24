@@ -26,6 +26,8 @@ import type { FitxaCuriositatsWikidata } from "../jobs/j33-municipi-wikidata";
 import { renderVehiclesBloc } from "./vehicles-fitxa";
 import type { VehiclesMetric } from "../jobs/j34-vehicles";
 import { ALTRES_ELECCIONS_CSS, renderAltresEleccionsBloc } from "./altres-eleccions-fitxa";
+import { CURT_VOT_SECCIONS, TITOL_VOT_SECCIONS, VOT_SECCIONS_CSS, renderVotSeccionsBloc } from "./vot-seccions-fitxa";
+import type { VotSeccionsMetric } from "../jobs/j47-vot-seccions";
 import type { AltresEleccionsMetric } from "../jobs/j43-altres-eleccions";
 import { MARGES_CSS, renderMargesBloc } from "./marges-fitxa";
 import type { MargesMetric } from "../derive/marges";
@@ -2632,6 +2634,8 @@ export type RadiografiaData = {
   censElectoral?: CensElectoralMetric | null;
   /** Com vota el municipi al Parlament, al Congrés i al Parlament Europeu (J43). */
   altresEleccions?: AltresEleccionsMetric | null;
+  /** J47: el vot per secció censal, dibuixat (col·laboració amb Xamfrà). */
+  votSeccions?: VotSeccionsMetric | null;
   /** Per quants vots es va decidir cada regidoria: marges de d'Hondt (derive/marges.ts). */
   marges?: MargesMetric | null;
   /** El pla urbanístic, els pisos turístics, l'habitatge protegit i la zona tensa (J40). */
@@ -7472,6 +7476,10 @@ export function renderRadiografia(
           participacio: data.participation.find((p) => p.electionId === "M20231") ?? null,
           resultats: data.results["M20231"] ?? null,
         }) },
+      // Just després de com vota el municipi sencer, com vota cada barri (J47).
+      // Torna buit als municipis d'una sola secció i el registre no el publica.
+      { id: "vot-seccions", capitol: "qui-mana", titol: TITOL_VOT_SECCIONS, curt: CURT_VOT_SECCIONS,
+        html: renderVotSeccionsBloc(data.votSeccions ?? null, { nom: m.name }) },
       // Al final de «Qui mana»: gairebé totes les preguntes són d'aquest
       // capítol (l'alcaldia, qui governa, el ple, les eleccions, el vot).
       { id: "preguntes-rapides", capitol: "qui-mana", titol: "Preguntes ràpides", classe: "geo-preguntes", html: rapides.cos },
@@ -7682,7 +7690,7 @@ ${capSeo({
   ],
 })}
 ${tipografia(BASE)}
-<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}${WIKIDATA_FITXA_CSS}${CENS_FITXA_CSS}${ALTRES_ELECCIONS_CSS}${data.marges ? MARGES_CSS : ""}${data.socioeconomia ? senseComentaris(SOCIOECONOMIA_CSS) : ""}${data.gaip ? senseComentaris(GAIP_FITXA_CSS) : ""}${LLISTES_OBERTES_CSS}${perSobre ? PER_SOBRE_CSS : ""}${senseComentaris(CRIMINALITAT_CSS)}${senseComentaris(TIRA_POBLE_CSS)}${senseComentaris(PAPERETA_POSTURES_CSS)}${veins ? senseComentaris(VEINS_CSS) : ""}${senseComentaris(URBANISME_FITXA_CSS)}${senseComentaris(COOPERACIO_CSS)}${serveisSocials ? senseComentaris(SERVEIS_ENS_CSS) : ""}${rapides.cos ? senseComentaris(GEO_CSS) : ""}${FITXA_CSS}</style>
+<style>${RADIOGRAFIA_CSS}${senseComentaris(MASCOTA_CSS)}${FOTOS_WIKIMEDIA_CSS}${WIKIDATA_FITXA_CSS}${CENS_FITXA_CSS}${ALTRES_ELECCIONS_CSS}${data.votSeccions ? senseComentaris(VOT_SECCIONS_CSS) : ""}${data.marges ? MARGES_CSS : ""}${data.socioeconomia ? senseComentaris(SOCIOECONOMIA_CSS) : ""}${data.gaip ? senseComentaris(GAIP_FITXA_CSS) : ""}${LLISTES_OBERTES_CSS}${perSobre ? PER_SOBRE_CSS : ""}${senseComentaris(CRIMINALITAT_CSS)}${senseComentaris(TIRA_POBLE_CSS)}${senseComentaris(PAPERETA_POSTURES_CSS)}${veins ? senseComentaris(VEINS_CSS) : ""}${senseComentaris(URBANISME_FITXA_CSS)}${senseComentaris(COOPERACIO_CSS)}${serveisSocials ? senseComentaris(SERVEIS_ENS_CSS) : ""}${rapides.cos ? senseComentaris(GEO_CSS) : ""}${FITXA_CSS}</style>
 </head>
 <body>
 <a class="salta" href="#contingut">Ves al contingut</a>
@@ -7897,6 +7905,7 @@ export async function loadRadiografia(db: Db, slug: string, generatedAt: string)
     llistesObertes: (byKind.get("llistesObertes") ?? null) as LlistesObertesMetric | null,
     censElectoral: (byKind.get("censElectoral") ?? null) as CensElectoralMetric | null,
     altresEleccions: (byKind.get("altresEleccions") ?? null) as AltresEleccionsMetric | null,
+    votSeccions: (byKind.get("votSeccions") ?? null) as VotSeccionsMetric | null,
     marges: (byKind.get("marges") ?? null) as MargesMetric | null,
     urbanismeHabitatge: (byKind.get("urbanismeHabitatge") ?? null) as UrbanismeHabitatgeMetric | null,
     // L'adaptador comprova la forma: una fila d'una versió vella de J41 surt
