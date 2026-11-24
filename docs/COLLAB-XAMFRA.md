@@ -30,6 +30,10 @@ El ZIP i el shapefile es llegeixen sense dependències (`lib/zip.ts`, `lib/shape
 - Amb JavaScript es pot canviar d'elecció; pintar el guanyador, la participació, la renda o el vot de cada llista; tocar una secció per veure-la sencera; i veure un gràfic de punts de renda contra participació (o contra el vot de la llista triada) enllaçat amb el mapa.
 - Segueix `design/MOVIMENT.md`: els colors de dades no fan transicions, els controls fan servir `--t-rapid` i `--corba-seca`, i `prefers-reduced-motion` ho apaga tot.
 
+**Vot dual** (mode «Ajuntament o Parlament» del mateix bloc): pinta les seccions on la força que guanya les municipals no és la que guanya el Parlament, amb el color de qui guanya al Parlament i el recompte de cada combinació. Compara per família (PSC-CP i PSC són la mateixa força). Una llista local que guanya l'ajuntament compta sempre com a diferent, perquè al Parlament no s'hi presenta.
+
+**Pàgina de l'AMB** (`publish/vot-seccions-amb.ts`): el bloc «Com vota l'àrea, barri a barri» posa les 2.151 seccions dels 36 municipis en un sol mapa. Ajunta les mètriques de J47 sense tornar a llegir cap geometria, gràcies al marc que cada mètrica desa des del 24-11-2026. Les llistes municipals es pinten per família i les locals van juntes. Pesa uns 660 kB d'HTML (190 kB comprimit) i només surt a la pàgina de l'AMB. Cal tornar a executar J47 perquè les mètriques portin el marc.
+
 ## Com es fa córrer
 
 ```bash
@@ -55,4 +59,3 @@ Les dades de l'AMB s'han comprovat amb els fitxers de Xamfrà. Les crides a la G
 
 - Afegir el Congrés 2023 i les europees 2024, que J47 ja sabria llegir.
 - Fer servir el mateix mapa a les **municipals del 2027**, la nit electoral i l'endemà, per comparar amb el 2023 secció a secció.
-- Fer una pàgina de l'AMB que posi els 36 municipis de costat amb el mateix mapa.

@@ -118,6 +118,8 @@ export type VotSeccionsMetric = {
   amplada: number;
   alcada: number;
   seccions: SeccioMapa[];
+  /** El marc del llenç; no hi és a les mètriques desades abans del 24-11-2026. */
+  marc?: MarcMapa;
   eleccions: EleccioSeccions[];
   /** Renda neta per persona de cada secció, si n'hi ha. */
   renda: { any: number; font: string; url: string; valors: Record<string, number> } | null;
@@ -132,6 +134,13 @@ export type VotSeccionsMetric = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type SeccioGeo = { codi: string; anells: Anell[] };
+
+/**
+ * Com s'ha passat de les coordenades d'origen al llenç: x = (X − x0) · escala
+ * + marge, y = (y1 − Y) · escala + marge. Amb això la pàgina de l'AMB posa els
+ * 36 mapes al mateix llenç sense tornar a llegir cap geometria.
+ */
+export type MarcMapa = { x0: number; y1: number; escala: number; marge: number };
 
 /** Douglas–Peucker: treu els punts que es desvien menys de `tol` de la recta. */
 export function simplifica(punts: Anell, tol: number): Anell {
@@ -189,7 +198,7 @@ const areaAnell = (a: Anell): number => {
 export function geometriaMunicipi(
   seccions: readonly SeccioGeo[],
   amplada = AMPLADA_MAPA,
-): { amplada: number; alcada: number; seccions: SeccioMapa[] } {
+): { amplada: number; alcada: number; seccions: SeccioMapa[]; marc: MarcMapa } {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const s of seccions) for (const anell of s.anells) for (const [x, y] of anell) {
     if (x < x0) x0 = x;
@@ -228,7 +237,7 @@ export function geometriaMunicipi(
     }
     if (d) fora.push({ codi: s.codi, d });
   }
-  return { amplada, alcada, seccions: fora };
+  return { amplada, alcada, seccions: fora, marc: { x0, y1, escala, marge } };
 }
 
 /** Longitud i latitud a un pla on un grau d'est fa el mateix que un de nord a l'alçada del municipi. */
@@ -463,6 +472,7 @@ export function metricaDelMunicipi(params: {
     amplada: mapa.amplada,
     alcada: mapa.alcada,
     seccions: mapa.seccions,
+    marc: mapa.marc,
     eleccions: [...params.eleccions],
     renda,
     xamfra: XAMFRA_MUNICIPIS[params.ine5] ?? null,

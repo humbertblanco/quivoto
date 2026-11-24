@@ -46,8 +46,9 @@ const enter = (n: number): string => Math.round(n).toLocaleString("ca-ES");
 const euros = (n: number): string => `${enter(n)}&nbsp;€`;
 
 /** «Districte 2, secció 15» a partir del codi de deu xifres. */
-export function nomSeccio(codi: string): string {
-  return `Districte ${Number(codi.slice(5, 7))}, secció ${Number(codi.slice(7))}`;
+export function nomSeccio(codi: string, municipis?: Record<string, string>): string {
+  const mu = municipis?.[codi.slice(0, 5)];
+  return `${mu ? `${mu}, d` : "D"}istricte ${Number(codi.slice(5, 7))}, secció ${Number(codi.slice(7))}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,7 +77,7 @@ export function talls(min: number, max: number, rodo: number): number[] {
 }
 
 /** Les frases de dalt de tot: qui guanya on, i com d'ample és el ventall de la participació. */
-export function frases(m: VotSeccionsMetric, e: EleccioSeccions): string[] {
+export function frases(m: VotSeccionsMetric, e: EleccioSeccions, municipis?: Record<string, string>): string[] {
   const codis = m.seccions.map((s) => s.codi).filter((c) => e.files[c]);
   const guanyades = new Map<number, number>();
   for (const c of codis) {
@@ -101,8 +102,14 @@ export function frases(m: VotSeccionsMetric, e: EleccioSeccions): string[] {
     parts.sort((a, b) => a.p - b.p);
     const baix = parts[0]!, alt = parts.at(-1)!;
     sortida.push(
-      `La participació va del <strong>${pct(baix.p)}</strong> (${nomSeccio(baix.c).toLowerCase()}) al <strong>${pct(alt.p)}</strong>` +
-        ` (${nomSeccio(alt.c).toLowerCase()}): ${enter(alt.p - baix.p)} punts de diferència dins del mateix municipi.`,
+      `La participació va del <strong>${pct(baix.p)}</strong> (${escape(nomSeccio(baix.c, municipis)).replace(/Districte/, "districte")}) al <strong>${pct(alt.p)}</strong>` +
+        ` (${escape(nomSeccio(alt.c, municipis)).replace(/Districte/, "districte")}): ${enter(alt.p - baix.p)} punts de diferència ${municipis ? "dins de la mateixa àrea" : "dins del mateix municipi"}.`,
+    );
+  }
+  const dual = votDual(m);
+  if (dual && dual.diferents > 0) {
+    sortida.push(
+      `A <strong>${enter(dual.diferents)}</strong> de les ${enter(dual.total)} seccions, la força que va guanyar l'ajuntament no és la que va guanyar el Parlament un any després.`,
     );
   }
   const rq = rendaQuarts(m, e);
@@ -112,6 +119,30 @@ export function frases(m: VotSeccionsMetric, e: EleccioSeccions): string[] {
     );
   }
   return sortida;
+}
+
+/**
+ * Quantes seccions donen la victòria a una força a les municipals i a una
+ * altra al Parlament, comparant per família (PSC amb PSC-CP, Junts amb les
+ * seves marques locals). Una llista local que guanya l'ajuntament sempre
+ * compta com a diferent: al Parlament no es presenta.
+ */
+export function votDual(m: VotSeccionsMetric): { diferents: number; total: number } | null {
+  const mun = m.eleccions.find((e) => e.id === "M20231");
+  const par = m.eleccions.find((e) => e.id === "A20241");
+  if (!mun || !par) return null;
+  let diferents = 0, total = 0;
+  for (const s of m.seccions) {
+    const a = mun.files[s.codi], b = par.files[s.codi];
+    if (!a || !b) continue;
+    const ga = guanyador(a), gb = guanyador(b);
+    if (ga < 0 || gb < 0) continue;
+    total += 1;
+    const fa = mun.llistes[ga]!.familia ?? mun.llistes[ga]!.sigles;
+    const fb = par.llistes[gb]!.familia ?? par.llistes[gb]!.sigles;
+    if (fa !== fb) diferents += 1;
+  }
+  return total ? { diferents, total } : null;
 }
 
 /** Participació del quart de seccions amb més renda i del quart amb menys, sumant vots i cens. */
@@ -174,14 +205,14 @@ function llegendaGuanyador(m: VotSeccionsMetric, e: EleccioSeccions): string {
 }
 
 /** La taula equivalent: per secció fins a 250, per districte a partir d'aquí. */
-export function taulaEquivalent(m: VotSeccionsMetric, e: EleccioSeccions): string {
-  const perSeccio = m.seccions.length <= 250;
+export function taulaEquivalent(m: VotSeccionsMetric, e: EleccioSeccions, municipis?: Record<string, string>): string {
+  const perSeccio = m.seccions.length <= 250 && !municipis;
   const grups = new Map<string, { nom: string; fila: number[]; renda: number[] }>();
   for (const s of m.seccions) {
     const f = e.files[s.codi];
     if (!f) continue;
-    const clau = perSeccio ? s.codi : s.codi.slice(5, 7);
-    const nom = perSeccio ? nomSeccio(s.codi) : `Districte ${Number(clau)}`;
+    const clau = perSeccio ? s.codi : municipis ? s.codi.slice(0, 5) : s.codi.slice(5, 7);
+    const nom = perSeccio ? nomSeccio(s.codi) : municipis ? municipis[clau] ?? clau : `Districte ${Number(clau)}`;
     const g = grups.get(clau) ?? { nom, fila: f.map(() => 0), renda: [] };
     f.forEach((v, i) => (g.fila[i]! += v));
     const r = m.renda?.valors[s.codi];
@@ -197,8 +228,8 @@ export function taulaEquivalent(m: VotSeccionsMetric, e: EleccioSeccions): strin
     const r = renda.length ? euros(renda.reduce((a, b) => a + b, 0) / renda.length) : "—";
     return `<tr><th scope="row">${escape(nom)}</th><td>${enter(fila[0]!)}</td><td>${p === null ? "—" : pct(p)}</td><td class="vs-qui">${qui}</td>${ambRenda ? `<td>${r}</td>` : ""}</tr>`;
   });
-  return `<details class="vs-detall"><summary>${perSeccio ? "Les xifres de cada secció" : "Les xifres de cada districte"}</summary>
-<div class="taula-envolta"><table class="balanc vs-taula"><thead><tr><th scope="col">${perSeccio ? "Secció" : "Districte"}</th><th scope="col">Cens</th><th scope="col">Participació</th><th scope="col">Més votada</th>${ambRenda ? `<th scope="col">Renda per persona${perSeccio ? "" : " (mitjana de seccions)"}</th>` : ""}</tr></thead>
+  return `<details class="vs-detall"><summary>${perSeccio ? "Les xifres de cada secció" : municipis ? "Les xifres de cada municipi" : "Les xifres de cada districte"}</summary>
+<div class="taula-envolta"><table class="balanc vs-taula"><thead><tr><th scope="col">${perSeccio ? "Secció" : municipis ? "Municipi" : "Districte"}</th><th scope="col">Cens</th><th scope="col">Participació</th><th scope="col">Més votada</th>${ambRenda ? `<th scope="col">Renda per persona${perSeccio ? "" : " (mitjana de seccions)"}</th>` : ""}</tr></thead>
 <tbody>${files.join("")}</tbody></table></div>
 <p class="nota">${escape(e.etiqueta)}. Percentatges sobre els vots a candidatures, sense blancs ni nuls; participació sobre el cens.</p></details>`;
 }
@@ -208,18 +239,20 @@ export function taulaEquivalent(m: VotSeccionsMetric, e: EleccioSeccions): strin
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** El JSON compacte del bloc: tot alineat amb l'ordre de les seccions del mapa. */
-export function dadesNavegador(m: VotSeccionsMetric): string {
+export function dadesNavegador(m: VotSeccionsMetric, opcions: { municipis?: Record<string, string>; tot?: string } = {}): string {
   const codis = m.seccions.map((s) => s.codi);
   const dades = {
     c: codis,
     e: m.eleccions.map((e) => ({
       id: e.id,
       et: e.etiqueta,
-      ll: e.llistes.map((l) => [l.sigles, l.color]),
+      ll: e.llistes.map((l) => [l.sigles, l.color, l.familia ?? ""]),
       f: codis.map((c) => e.files[c] ?? null),
     })),
     r: m.renda ? codis.map((c) => m.renda!.valors[c] ?? null) : null,
     ra: m.renda?.any ?? null,
+    mu: opcions.municipis ?? null,
+    tt: opcions.tot ?? null,
   };
   // `</` no pot sortir mai dins d'un <script>.
   return JSON.stringify(dades).replace(/</g, "\\u003c");
@@ -229,19 +262,34 @@ export function dadesNavegador(m: VotSeccionsMetric): string {
 // El bloc
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function renderVotSeccionsBloc(m: VotSeccionsMetric | null, opcions: { nom: string }): string {
+export type OpcionsBloc = {
+  nom: string;
+  /** Pàgines de diversos municipis (l'AMB): nom de cada municipi pel codi INE de 5 xifres. */
+  municipis?: Record<string, string>;
+  /** El paràgraf d'entrada, si no és el de la fitxa d'un municipi. */
+  entrada?: string;
+  /** Com es diu el conjunt a la fitxa lateral («Tot el municipi»). */
+  tot?: string;
+  /** L'adreça de Xamfrà que s'enllaça si la mètrica no en porta cap. */
+  xamfra?: string;
+};
+
+export function renderVotSeccionsBloc(m: VotSeccionsMetric | null, opcions: OpcionsBloc): string {
   if (!m || m.seccions.length < 2 || m.eleccions.length === 0) return "";
   const e = m.eleccions[0]!;
   const titolMapa = `Mapa de les ${m.seccions.length} seccions censals de ${opcions.nom}, pintades per la llista més votada a les ${e.etiqueta.toLowerCase()}.`;
   const botonsEleccio = m.eleccions
     .map((x, i) => `<button type="button" role="radio" aria-checked="${i === 0}" data-e="${i}">${escape(x.etiqueta)}</button>`)
     .join("");
-  const fr = frases(m, e).map((f) => `<li>${f}</li>`).join("");
-  const xamfra = m.xamfra
-    ? `<a class="vs-xamfra" href="${URL_XAMFRA}/municipis/${escape(m.xamfra)}.html" rel="noopener">
+  const fr = frases(m, e, opcions.municipis).map((f) => `<li>${f}</li>`).join("");
+  const hrefXamfra = m.xamfra ? `${URL_XAMFRA}/municipis/${escape(m.xamfra)}.html` : opcions.xamfra ?? null;
+  const xamfra = hrefXamfra
+    ? `<a class="vs-xamfra" href="${hrefXamfra}" rel="noopener">
 <span class="vs-xamfra-cub" aria-hidden="true"></span><span><b>Mira aquest vot en 3D a Xamfrà</b><br><span class="vs-xamfra-sub">El visor urbà de l'àrea metropolitana: el mateix mapa sobre els edificis, amb renda, edat i serveis de cada barri.</span></span></a>`
     : "";
-  return `<p class="entrada-bloc">Cada municipi vota diferent d'un carrer a l'altre. Aquí hi ha les ${enter(m.seccions.length)} seccions censals de ${escape(opcions.nom)}, els trossos més petits on es compten els vots, de 600 a 2.500 electors cadascun.</p>
+  const entrada = opcions.entrada ??
+    `Cada municipi vota diferent d'un carrer a l'altre. Aquí hi ha les ${enter(m.seccions.length)} seccions censals de ${escape(opcions.nom)}, els trossos més petits on es compten els vots, de 600 a 2.500 electors cadascun.`;
+  return `<p class="entrada-bloc">${entrada}</p>
 <ul class="vs-frases" data-vs-frases>${fr}</ul>
 <div class="vs" data-vs>
   <div class="vs-controls">
@@ -250,15 +298,15 @@ export function renderVotSeccionsBloc(m: VotSeccionsMetric | null, opcions: { no
   </div>
   <div class="vs-cos">
     <div class="vs-mapa-envolta">${mapaInicial(m, e, titolMapa)}</div>
-    <aside class="vs-fitxa" aria-live="polite" data-vs-fitxa><p class="vs-fitxa-titol">${escape(opcions.nom)} sencer</p><p class="nota">Toca una secció del mapa per veure-la.</p></aside>
+    <aside class="vs-fitxa" aria-live="polite" data-vs-fitxa><p class="vs-fitxa-titol">${escape(opcions.tot ?? `${opcions.nom} sencer`)}</p><p class="nota">Toca una secció del mapa per veure-la.</p></aside>
   </div>
   <div class="vs-llegenda" data-vs-llegenda>${llegendaGuanyador(m, e)}</div>
   ${m.renda ? `<figure class="vs-punts" data-vs-punts hidden><figcaption class="vs-punts-titol" data-vs-punts-titol></figcaption><svg viewBox="0 0 640 300" role="img" data-vs-punts-svg></svg></figure>` : ""}
-  <div data-vs-taula>${taulaEquivalent(m, e)}</div>
+  <div data-vs-taula>${taulaEquivalent(m, e, opcions.municipis)}</div>
   ${xamfra}
   <p class="peu-nota vs-fonts">Fonts: vots i participació per secció, <a href="${URL_VOTS_SECCIO}" rel="noopener nofollow">Generalitat de Catalunya</a> (<a href="${URL_PARTICIPACIO_SECCIO}" rel="noopener nofollow">participació</a>); seccions censals de l'<a href="${URL_FITXA_ICGC_SECCIONS}" rel="noopener nofollow">ICGC</a> (CC BY 4.0)${m.renda ? `; renda neta per persona ${m.renda.any}, <a href="${escape(m.renda.url)}" rel="noopener nofollow">INE (ADRH)</a>: elaboració pròpia amb dades extretes del web de l'INE` : ""}. Mètode compartit amb <a href="${URL_XAMFRA}" rel="noopener">Xamfrà</a>. Les seccions es dibuixen amb els límits del 2025; una secció sense dada és un buit, no un zero.</p>
 </div>
-<script type="application/json" class="vs-dades">${dadesNavegador(m)}</script>
+<script type="application/json" class="vs-dades">${dadesNavegador(m, { municipis: opcions.municipis, tot: opcions.tot })}</script>
 ${VOT_SECCIONS_JS}`;
 }
 
@@ -272,7 +320,8 @@ export const VOT_SECCIONS_JS = `<script>
   var NS = "http://www.w3.org/2000/svg";
   function fmt(n, d) { return n.toLocaleString("ca-ES", { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); }
   function pc(n) { return fmt(n, 1) + "\\u00a0%"; }
-  function nom(c) { return "Districte " + Number(c.slice(5, 7)) + ", secció " + Number(c.slice(7)); }
+  var MU = null;
+  function nom(c) { return (MU && MU[c.slice(0, 5)] ? MU[c.slice(0, 5)] + " · d" : "D") + "istricte " + Number(c.slice(5, 7)) + ", secció " + Number(c.slice(7)); }
   function esc(t) { return String(t).replace(/[&<>"]/g, function (x) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[x]; }); }
   function cand(f) { var s = 0; for (var i = 4; i < f.length; i++) s += f[i]; return s; }
   function guany(f) { var m = -1, x = 0, emp = false; for (var i = 4; i < f.length; i++) { if (f[i] > x) { x = f[i]; m = i - 4; emp = false; } else if (f[i] === x && x > 0) emp = true; } return emp ? -2 : m; }
@@ -286,6 +335,7 @@ export const VOT_SECCIONS_JS = `<script>
     arrel.dataset.vsViu = "1";
     var bloc = arrel.parentNode;
     var dades = JSON.parse(bloc.querySelector(".vs-dades").textContent);
+    MU = dades.mu || null;
     var paths = arrel.querySelectorAll(".vs-seccions path");
     var sel = arrel.querySelector(".vs-sel");
     var fitxa = arrel.querySelector("[data-vs-fitxa]");
@@ -316,7 +366,34 @@ export const VOT_SECCIONS_JS = `<script>
       return E().ll[estat.mode][1];
     }
 
+    // ---- El vot dual: la força que guanya a les municipals i al Parlament, secció a secció
+    function fam(e, g) { return e.ll[g][2] || e.ll[g][0]; }
+    function dual(i) {
+      var a = dades.e[0].f[i], b = dades.e[1] && dades.e[1].f[i]; if (!a || !b) return null;
+      var ga = guany(a), gb = guany(b); if (ga < 0 || gb < 0) return null;
+      return { a: ga, b: gb, igual: fam(dades.e[0], ga) === fam(dades.e[1], gb) };
+    }
+    function pintaDual() {
+      var combos = {}, iguals = 0, buides = 0;
+      for (var i = 0; i < paths.length; i++) {
+        var d = dual(i), p = paths[i];
+        if (!d) { p.style.fill = "var(--vs-buit)"; p.style.fillOpacity = 1; buides++; continue; }
+        if (d.igual) { p.style.fill = "var(--vs-igual)"; p.style.fillOpacity = 1; iguals++; continue; }
+        p.style.fill = dades.e[1].ll[d.b][1]; p.style.fillOpacity = 1;
+        var k = d.a + ">" + d.b; combos[k] = (combos[k] || 0) + 1;
+      }
+      var e0 = dades.e[0], e1 = dades.e[1];
+      var ks = Object.keys(combos).sort(function (x, y) { return combos[y] - combos[x]; });
+      var h = '<li><span class="mostra" style="--c:var(--vs-igual)"></span>Guanya la mateixa força a les dues <b>' + iguals + "</b></li>";
+      h += ks.slice(0, 6).map(function (k) { var ab = k.split(">"); return '<li><span class="vs-parell"><span class="mostra" style="--c:' + e0.ll[ab[0]][1] + '"></span><span class="mostra" style="--c:' + e1.ll[ab[1]][1] + '"></span></span>' + esc(e0.ll[ab[0]][0]) + " a l'ajuntament, " + esc(e1.ll[ab[1]][0]) + " al Parlament <b>" + combos[k] + "</b></li>"; }).join("");
+      var resta = ks.slice(6).reduce(function (s, k) { return s + combos[k]; }, 0);
+      if (resta) h += '<li><span class="mostra" style="--c:var(--ink-suau)"></span>Altres combinacions <b>' + resta + "</b></li>";
+      if (buides) h += '<li><span class="mostra vs-buit"></span>Sense dada <b>' + buides + "</b></li>";
+      llegenda.innerHTML = '<ul class="vs-claus vs-claus-dual">' + h + '</ul><p class="vs-marge">Pintada amb el color de qui guanya al Parlament quan no és la mateixa força que guanya l’ajuntament. Les llistes locals només es presenten a les municipals.</p>';
+    }
+
     function pinta() {
+      if (estat.mode === "dual") { pintaDual(); pintaPunts(); if (estat.fixat >= 0) mostra(estat.fixat); else fitxa.innerHTML = resumMunicipi(); return; }
       var e = E(), t = estat.mode === "guanya" ? null : escala(), c = estat.mode === "guanya" ? null : colorMode();
       for (var i = 0; i < paths.length; i++) {
         var f = e.f[i], p = paths[i];
@@ -355,10 +432,11 @@ export const VOT_SECCIONS_JS = `<script>
       llegenda.innerHTML = '<p class="vs-escala-titol">' + cap + '</p><ol class="vs-escala">' + gr + "</ol>";
     }
 
-    function barres(f, e) {
+    function barres(f, e, max) {
       var t = cand(f), files = [];
       for (var k = 0; k < e.ll.length; k++) files.push({ k: k, v: f[4 + k] });
       files.sort(function (a, b) { return b.v - a.v; });
+      if (max) files = files.slice(0, max);
       return '<ol class="vs-barres">' + files.map(function (x) {
         var p = t ? 100 * x.v / t : 0;
         return '<li><span class="vs-b-nom"><span class="mostra" style="--c:' + e.ll[x.k][1] + '"></span>' + esc(e.ll[x.k][0]) + '</span><span class="vs-b-pct">' + pc(p) + '</span><span class="vs-b-pista" aria-hidden="true"><i style="--c:' + e.ll[x.k][1] + ";transform:scaleX(" + (p / 100).toFixed(3) + ')"></i></span></li>';
@@ -369,17 +447,24 @@ export const VOT_SECCIONS_JS = `<script>
       var e = E(), tot = null;
       for (var i = 0; i < e.f.length; i++) { var f = e.f[i]; if (!f) continue; if (!tot) tot = f.map(function () { return 0; }); for (var j = 0; j < f.length; j++) tot[j] += f[j]; }
       if (!tot) return resumInicial;
-      return '<p class="vs-fitxa-titol">Tot el municipi</p><p class="vs-fitxa-sub">' + esc(e.et) + " · participació " + pc(100 * tot[1] / tot[0]) + "</p>" + barres(tot, e) + '<p class="nota">Toca una secció del mapa per comparar-la.</p>';
+      return '<p class="vs-fitxa-titol">' + esc(dades.tt || "Tot el municipi") + '</p><p class="vs-fitxa-sub">' + esc(e.et) + " · participació " + pc(100 * tot[1] / tot[0]) + "</p>" + barres(tot, e) + '<p class="nota">Toca una secció del mapa per comparar-la.</p>';
     }
 
     function mostra(i) {
       var e = E(), f = e.f[i], c = dades.c[i];
       paths[i].parentNode.appendChild(paths[i]);
       sel.setAttribute("d", paths[i].getAttribute("d"));
+      if (estat.mode === "dual") {
+        var hh = '<p class="vs-fitxa-titol">' + nom(c) + "</p>";
+        dades.e.forEach(function (ee) { var ff = ee.f[i]; hh += '<p class="vs-fitxa-sub vs-fitxa-el">' + esc(ee.et) + (ff ? " · participació " + pc(100 * ff[1] / ff[0]) : "") + "</p>" + (ff ? barres(ff, ee, 3) : '<p class="nota">Sense dada.</p>'); });
+        fitxa.innerHTML = hh + (estat.fixat === i ? '<button type="button" class="vs-tanca" data-vs-tanca>Tanca</button>' : "");
+        pintaPuntSel(i);
+        return;
+      }
       if (!f) { fitxa.innerHTML = '<p class="vs-fitxa-titol">' + nom(c) + '</p><p class="nota">Sense dada en aquesta elecció: és un buit, no un zero.</p>'; return; }
       var r = dades.r && dades.r[i] !== null ? '<p class="vs-fitxa-sub">Renda neta per persona (' + dades.ra + "): <b>" + fmt(dades.r[i]) + "\\u00a0€</b></p>" : "";
       fitxa.innerHTML = '<p class="vs-fitxa-titol">' + nom(c) + '</p><p class="vs-fitxa-sub">' + fmt(f[0]) + " electors · participació <b>" + pc(100 * f[1] / f[0]) + "</b></p>" + r + barres(f, e) +
-        (estat.fixat === i ? '<button type="button" class="vs-tanca" data-vs-tanca>Torna al municipi</button>' : "");
+        (estat.fixat === i ? '<button type="button" class="vs-tanca" data-vs-tanca>Torna al conjunt</button>' : "");
       pintaPuntSel(i);
     }
     function amaga() { sel.setAttribute("d", ""); fitxa.innerHTML = resumMunicipi(); pintaPuntSel(-1); }
@@ -387,9 +472,10 @@ export const VOT_SECCIONS_JS = `<script>
     function botonsModes() {
       var e = E(), h = '<button type="button" role="radio" data-m="guanya">Qui guanya</button><button type="button" role="radio" data-m="part">Participació</button>';
       if (dades.r) h += '<button type="button" role="radio" data-m="renda">Renda</button>';
+      if (dades.e.length > 1) h += '<button type="button" role="radio" data-m="dual">Ajuntament o Parlament</button>';
       for (var k = 0; k < e.ll.length; k++) if (e.ll[k][0] !== "Altres") h += '<button type="button" role="radio" data-m="' + k + '"><span class="mostra" style="--c:' + e.ll[k][1] + '"></span>' + esc(e.ll[k][0]) + "</button>";
       modes.innerHTML = h;
-      if (estat.mode !== "guanya" && estat.mode !== "part" && estat.mode !== "renda" && estat.mode >= e.ll.length) estat.mode = "guanya";
+      if (typeof estat.mode === "number" && estat.mode >= e.ll.length) estat.mode = "guanya";
       marca();
     }
     function marca() {
@@ -402,7 +488,7 @@ export const VOT_SECCIONS_JS = `<script>
     var cercles = [];
     function pintaPunts() {
       if (!punts) return;
-      var e = E(), modeY = estat.mode === "guanya" || estat.mode === "renda" ? "part" : estat.mode;
+      var e = E(), modeY = typeof estat.mode === "number" ? estat.mode : "part";
       var xs = [], ys = [], is = [];
       for (var i = 0; i < dades.c.length; i++) {
         var f = e.f[i], r = dades.r[i]; if (!f || r === null || f[0] <= 0) continue;
@@ -458,7 +544,7 @@ export const VOT_SECCIONS_JS = `<script>
     modes.addEventListener("click", function (ev) { var b = ev.target.closest("button"); if (!b) return; var m = b.dataset.m; estat.mode = isNaN(Number(m)) ? m : Number(m); marca(); pinta(); });
     arrel.querySelector(".vs-segment").addEventListener("click", function (ev) {
       var b = ev.target.closest("button"); if (!b) return;
-      var abans = estat.mode !== "guanya" && estat.mode !== "part" && estat.mode !== "renda" ? E().ll[estat.mode][0] : null;
+      var abans = typeof estat.mode === "number" ? E().ll[estat.mode][0] : null;
       estat.e = Number(b.dataset.e);
       botonsModes();
       if (abans !== null) { var k = E().ll.map(function (l) { return l[0]; }).indexOf(abans); estat.mode = k >= 0 ? k : "guanya"; marca(); }
@@ -478,7 +564,7 @@ export const VOT_SECCIONS_JS = `<script>
 
 /** L'estil del bloc, amb el prefix `vs-`. Els colors de dades no fan cap transició. */
 export const VOT_SECCIONS_CSS = `
-.vs{--vs-buit:#DDD8CE;--vs-part:#5B4FC4;--vs-renda:#2E8B6A;margin-top:var(--e2)}
+.vs{--vs-buit:#DDD8CE;--vs-igual:#ECE7DC;--vs-part:#5B4FC4;--vs-renda:#2E8B6A;margin-top:var(--e2)}
 .vs-frases{list-style:none;padding:0;margin:var(--e2) 0 0;display:grid;gap:6px}
 .vs-frases li{padding-left:18px;position:relative}
 .vs-frases li::before{content:"";position:absolute;left:2px;top:.55em;width:8px;height:8px;border-radius:50%;background:var(--coral)}
@@ -515,7 +601,10 @@ export const VOT_SECCIONS_CSS = `
 .vs-claus b{font-variant-numeric:tabular-nums}
 .vs-empat{background:var(--ink-suau)!important}
 .vs-buit{background:var(--vs-buit)!important}
-@media (prefers-color-scheme:dark){.vs{--vs-buit:#3A3546}}
+@media (prefers-color-scheme:dark){.vs{--vs-buit:#3A3546;--vs-igual:#2B2735}}
+.vs-claus-dual{flex-direction:column;gap:4px}
+.vs-parell{display:inline-flex;gap:2px}
+.vs-fitxa-el{margin-top:10px;font-weight:700;color:var(--ink)}
 .vs-marge{font-size:.8rem;color:var(--ink-suau);margin:6px 0 0;display:flex;gap:8px;align-items:center}
 .vs-graons{display:inline-flex;gap:2px}
 .vs-graons i{display:block;width:14px;height:10px;border-radius:3px;background:var(--ink)}
